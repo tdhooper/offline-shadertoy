@@ -1,0 +1,11 @@
+Nothing special, just a harness so I can live edit shaders with glslify, and use the Shadertoy uniforms.
+
+Run with:
+
+    npm start
+
+
+From the console, start and pause playback with:
+
+	play()
+	pause()

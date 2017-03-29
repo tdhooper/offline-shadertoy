@@ -1,0 +1,22 @@
+{
+  "name": "test",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "budo index.js --live -- -t glslify"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "budo": "^9.4.7",
+    "gl-geometry": "^3.1.1",
+    "gl-shader": "^4.2.1",
+    "glsl-random": "0.0.5",
+    "glslify": "^6.0.2",
+    "mouse-change": "^1.4.0",
+    "raf-loop": "^1.1.3"
+  }
+}
