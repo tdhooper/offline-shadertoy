@@ -20,6 +20,7 @@ void main() {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-	vec2 uv = fragCoord.xy / iResolution.xy;
-	fragColor = vec4(uv,0.5+0.5*sin(iGlobalTime),1.0);
+	vec2 rg = (fragCoord.xy + iMouse.xy) / 2. / iResolution.xy;
+	float b = sin(iGlobalTime) * .5 + .5;
+	fragColor = vec4(rg, b, 1.);
 }

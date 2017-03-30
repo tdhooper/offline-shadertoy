@@ -38,11 +38,17 @@ var program = glShader(gl, vert, frag);
 
 gl.clearColor(1,0,1,1);
 
-var isPlaying = false;
+var startPlaying = false;
 var time = 0;
 var mouse = [0,0,0,0];
 
+var engine = loop(function(dt) {
+    time += dt;
+    render();
+});
+
 function render() {
+    saveState();
     gl.clear(gl.COLOR_BUFFER_BIT);
     program.bind();
     program.uniforms.iResolution = [canvas.width, canvas.height];
@@ -52,12 +58,28 @@ function render() {
     quad.draw();
 }
 
-var engine = loop(function(dt) {
-    time += dt;
-    render();  
-});
+function saveState() {
+    var state = {
+        startPlaying: engine.running,
+        mouse: mouse,
+        time: time
+    };
+    localStorage.setItem('uniformsState', JSON.stringify(state))
+}
 
-render();
+function restoreState() {
+    var stateStr = localStorage.getItem('uniformsState');
+    var state = stateStr && JSON.parse(stateStr);
+    if (state && state.hasOwnProperty('mouse')) {
+        mouse = state.mouse;
+    }
+    if (state && state.hasOwnProperty('time')) {
+        time = state.time;
+    }
+    if (state && state.hasOwnProperty('startPlaying')) {
+        startPlaying = state.startPlaying;
+    }
+}
 
 window.play = function() { engine.start(); };
 window.pause = function() { engine.stop(); };
@@ -78,3 +100,10 @@ mouseChange(canvas, function(buttons, x, y, mods) {
         }
     }
 });
+
+restoreState();
+render();
+
+if (startPlaying) {
+    engine.start();
+}
