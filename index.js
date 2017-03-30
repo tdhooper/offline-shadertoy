@@ -1,109 +1,103 @@
-var Geometry = require('gl-geometry');
-var glShader = require('gl-shader');
+var regl = require('regl')();
 var glslify = require('glslify');
-var loop = require('raf-loop');
 var mouseChange = require('mouse-change');
-
-var canvas = document.createElement('canvas');
-canvas.style.width = '100%';
-canvas.style.height = '100%';
-canvas.style.position = 'fixed';
-canvas.style.top = '0';
-canvas.style.left = '0';
-document.body.appendChild(canvas);
-
-var gl = canvas.getContext('webgl');
-
-function setDimensions() {    
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-};
-
-setDimensions();
-
-var quad = Geometry(gl)
-    .attr('aPosition', [
-        -1, -1, 0,
-         1, -1, 0,
-         1,  1, 0,
-        -1, -1, 0,
-         1,  1, 0,
-        -1,  1, 0
-    ]);
+var Timer = require('./lib/timer')
+var stateStore = require('./lib/state-store');
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./quad.frag')
-var program = glShader(gl, vert, frag);
+var frag = glslify('./quad.frag');
 
-gl.clearColor(1,0,1,1);
+const drawTriangle = regl({
+    frag: frag,
+    vert: vert,
+    attributes: {
+        position: [
+            [-2, 0],
+            [0, -2],
+            [2,  2]
+        ]
+    },
+    uniforms: {
+        iResolution: function(context) {
+            return [context.viewportWidth, context.viewportHeight];
+        },
+        iGlobalTime: regl.prop('time'),
+        iMouse: regl.prop('mouse'),
+    },
 
-var startPlaying = false;
-var time = 0;
-var mouse = [0,0,0,0];
-
-var engine = loop(function(dt) {
-    time += dt;
-    render();
+    // This tells regl the number of vertices to draw in this command
+    count: 3
 });
 
-function render() {
-    saveState();
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    program.bind();
-    program.uniforms.iResolution = [canvas.width, canvas.height];
-    program.uniforms.iGlobalTime = time/1000.0;
-    program.uniforms.iMouse = mouse;
-    quad.bind(program);
-    quad.draw();
-}
+
+var timer = new Timer();
+var mouse = [0,0,0,0];
 
 function saveState() {
-    var state = {
-        startPlaying: engine.running,
-        mouse: mouse,
-        time: time
-    };
-    localStorage.setItem('uniformsState', JSON.stringify(state))
+    stateStore.save('state', {
+        timer: timer.serialize(),
+        mouse: mouse
+    });
 }
 
 function restoreState() {
-    var stateStr = localStorage.getItem('uniformsState');
-    var state = stateStr && JSON.parse(stateStr);
-    if (state && state.hasOwnProperty('mouse')) {
-        mouse = state.mouse;
+    var state = stateStore.restore('state');
+    if ( ! state) {
+        return;
     }
-    if (state && state.hasOwnProperty('time')) {
-        time = state.time;
+    if (state.timer) {
+        timer = Timer.fromObject(state.timer);    
     }
-    if (state && state.hasOwnProperty('startPlaying')) {
-        startPlaying = state.startPlaying;
+    mouse = state.mouse || mouse;
+}
+
+function render() {
+    var time = timer.elapsed();
+    saveState();
+    drawTriangle({
+        time: time / 1000,
+        mouse: mouse
+    });
+}
+
+function play() {
+    timer.play();
+    tick = regl.frame(render);
+}
+
+function pause() {
+    if (timer.running) {
+        timer.pause();
+        tick && tick.cancel()
+        saveState();
     }
 }
 
-window.play = function() { engine.start(); };
-window.pause = function() { engine.stop(); };
+function stop() {
+    pause();
+    timer.reset();
+    render();
+}
 
-window.onresize = function() {
-    setDimensions();
-    if ( ! engine.running) {
-        render();
-    }
-};
+window.play = play;
+window.pause = pause;
+window.stop = stop;
 
+var canvas = regl._gl.canvas;
 mouseChange(canvas, function(buttons, x, y, mods) {
     var lmbPressed = buttons == 1;
     if (lmbPressed) {
         mouse = [x, canvas.height - y, 0, 0];
-        if ( ! engine.running) {
+        if ( ! timer.running) {
             render();
         }
     }
 });
 
 restoreState();
-render();
 
-if (startPlaying) {
-    engine.start();
+if (timer.running) {
+    play();
+} else {
+    render();    
 }
