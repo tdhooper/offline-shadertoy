@@ -37,7 +37,13 @@ const drawTriangle = regl({
             return [context.viewportWidth, context.viewportHeight];
         },
         iGlobalTime: regl.prop('time'),
-        iMouse: regl.prop('mouse'),
+        iMouse: function(context, props) {
+            var mouse = props.mouse.map(function(value) {
+                return value * context.pixelRatio;
+            });
+            mouse[1] = context.viewportHeight - mouse[1];
+            return mouse;
+        },
         iChannel0: texture
     },
 
@@ -103,7 +109,7 @@ var canvas = regl._gl.canvas;
 mouseChange(canvas, function(buttons, x, y, mods) {
     var lmbPressed = buttons == 1;
     if (lmbPressed) {
-        mouse = [x, canvas.height - y, 0, 0];
+        mouse = [x, y, 0, 0];
         if ( ! timer.running) {
             render();
         }
