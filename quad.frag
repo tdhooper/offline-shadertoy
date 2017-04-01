@@ -17,7 +17,7 @@ void main() {
 
 /* SHADERTOY FROM HERE */
 
-#pragma glslify: renderSuperstructure = require(./shaders/intergalactic.glsl, iChannel0=iChannel0)
+#pragma glslify: renderSuperstructure = require(./shaders/intergalactic.glsl, iChannel0=iChannel0, iGlobalTime=iGlobalTime)
 #pragma glslify: space = require(./shaders/space.glsl)
 
 // Author:
@@ -988,7 +988,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	}
 
     #ifndef DEBUG
-      color.rgb = linearToScreen(color.rgb);
+      //color.rgb = linearToScreen(color.rgb);
     #endif
 
     fragColor = color;

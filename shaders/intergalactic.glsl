@@ -64,7 +64,7 @@ vec3 hsv2rgb(float x, float y, float z) {
 // Based on "Type 2 Supernova" by Duke (https://www.shadertoy.com/view/lsyXDK) 
 //-------------------------------------------------------------------------------------
 vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
-    const float max_dist=20.;
+    const float max_dist=50.;
 	float ld, td=0., w, d, t, noi, lDist, a,         
     	  rRef = 2.*id.x,
           h = .05+.25*id.z;
@@ -76,14 +76,17 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
 
     float alphaMultiplier = .0;
    	
-    t = .3*hash(vec3(hash(rd))); 
+    float nearCull = 8. * (sin(iGlobalTime * 3.) * .5 + .5);
+
+    //t = .3*hash(vec3(hash(rd))); 
+    t = nearCull;
 
     for (int i=0; i<200; i++)  {
 		// Loop break conditions.
 	    if(/*td>.9 ||  */sum.a > .99 || t>max_dist) break;
         
         if (t > model.w) {
-           break;
+          break;
         }
         
         // Color attenuation according to distance
@@ -105,11 +108,13 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
        
         lightColor = vec3(1);
 
-        alphaMultiplier = clamp((t - 5.) * .1, 0., 1.);
-        //alphaMultiplier = .1;
+        alphaMultiplier = clamp((t - nearCull) * .1, 0., 1.);
+        //alphaMultiplier = 1.;
 
         //if (t > 10.) {
             sum.rgb += (a*lightColor/exp(lDist*lDist*lDist*.08)/30.) * alphaMultiplier;
+            //float contrib = .002 * lDist;
+            //sum += vec4(vec3(contrib), .02 * alphaMultiplier);
             sum.a += .02 * alphaMultiplier;
         //}
 
@@ -123,6 +128,7 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
         t += max(d * .08 * max(min(lDist,d),2.), .01);  // trying to optimize step size
     }
 
+    //return vec4(sum.rgb, 1.);
     sum = mix(model, sum, sum.a);
     sum.a = 1.;
     
