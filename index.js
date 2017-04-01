@@ -7,6 +7,21 @@ var stateStore = require('./lib/state-store');
 var vert = glslify('./quad.vert');
 var frag = glslify('./quad.frag');
 
+var texture = regl.texture();
+
+var image = new Image()
+image.src = '/images/noise.png'
+image.onload = function() {
+    texture({
+        data: image,
+        mag: 'linear',
+        min: 'mipmap',
+        wrapS: 'repeat',
+        wrapT: 'repeat'
+    });
+  render();
+}
+
 const drawTriangle = regl({
     frag: frag,
     vert: vert,
@@ -23,6 +38,7 @@ const drawTriangle = regl({
         },
         iGlobalTime: regl.prop('time'),
         iMouse: regl.prop('mouse'),
+        iChannel0: texture
     },
 
     // This tells regl the number of vertices to draw in this command
