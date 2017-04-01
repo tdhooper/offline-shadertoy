@@ -980,15 +980,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec4 color = render(hit);
 
-    //if ( ! hit.isBackground) {
+    if ( ! hit.isBackground) {
 		vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
 		sliderVal = vec4(0.5,0.4,0.2,0.4);
 
 		color = renderSuperstructure(ray.origin, ray.direction, sliderVal, color);
-	//}
+	}
 
     #ifndef DEBUG
-      //color.rgb = linearToScreen(color.rgb);
+      color.rgb = linearToScreen(color.rgb);
     #endif
 
     fragColor = color;

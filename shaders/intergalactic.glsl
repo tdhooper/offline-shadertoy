@@ -45,9 +45,12 @@ float SpiralNoiseC(vec3 p, vec4 id) {
 }
 
 float map(vec3 p, vec4 id) {
-    p *= 1.;
-	float k = 2.*id.w +.1; //  p/=k;
-    return k*(.5 + SpiralNoiseC(p.zxy*.4132+333., id)*3. + pn(p*8.5)*.12);
+    //p *= 2.;
+    //float limit = dot(normalize(p), vec3(0,0,1)) - 2.;
+    float k = 2.*id.w +.1; //  p/=k;
+    float d = k*(.5 + SpiralNoiseC(p.zxy*.4132+333., id)*3. + pn(p*8.5)*.12);
+    return d;
+    //return max(d, -limit);
 }
 
 //-------------------------------------------------------------------------------------
@@ -71,13 +74,13 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
     
     lDist = 0.;
 
-    float alphaMultiplier = 1.;
+    float alphaMultiplier = .0;
    	
     t = .3*hash(vec3(hash(rd))); 
 
     for (int i=0; i<200; i++)  {
 		// Loop break conditions.
-	    if(td>.9 ||  sum.a > .99 || t>max_dist) break;
+	    if(/*td>.9 ||  */sum.a > .99 || t>max_dist) break;
         
         if (t > model.w) {
            break;
@@ -93,6 +96,8 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
         
         // Light calculations 
         lDist = max(length(mod(pos+2.5,5.)-2.5), .001); // TODO add random offset
+        //lDist = max(length(pos), .001); // TODO add random offset
+        
         noi = pn(0.03*pos);
         lightColor = mix(hsv2rgb(noi,.5,.6), 
                          hsv2rgb(noi+.3,.5,.6), 
@@ -100,15 +105,18 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
        
         lightColor = vec3(1);
 
+        alphaMultiplier = clamp((t - 5.) * .1, 0., 1.);
+        //alphaMultiplier = .1;
+
         //if (t > 10.) {
             sum.rgb += (a*lightColor/exp(lDist*lDist*lDist*.08)/30.) * alphaMultiplier;
-            sum.a += .04 * alphaMultiplier;
+            sum.a += .02 * alphaMultiplier;
         //}
 
         if (d<h) {
-			td += (1.-td)*(h-d)+.005;  // accumulate density
-            sum.rgb += sum.a * sum.rgb * .25 / lDist;  // emission	
-			sum += (1.-sum.a)*.05*td*a;  // uniform scale density + alpha blend in contribution 
+			//td += (1.-td)*(h-d)+.005;  // accumulate density
+            //sum.rgb += sum.a * sum.rgb * .25 / lDist;  // emission	
+			//sum += (1.-sum.a)*.05*td*a;  // uniform scale density + alpha blend in contribution 
         } 
 		
         td += .015;
