@@ -45,6 +45,7 @@ float SpiralNoiseC(vec3 p, vec4 id) {
 }
 
 float map(vec3 p, vec4 id) {
+    p *= 1.;
 	float k = 2.*id.w +.1; //  p/=k;
     return k*(.5 + SpiralNoiseC(p.zxy*.4132+333., id)*3. + pn(p*8.5)*.12);
 }
@@ -69,6 +70,8 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
     vec4 sum = vec4(0);
     
     lDist = 0.;
+
+    float alphaMultiplier = 1.;
    	
     t = .3*hash(vec3(hash(rd))); 
 
@@ -77,15 +80,16 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
 	    if(td>.9 ||  sum.a > .99 || t>max_dist) break;
         
         if (t > model.w) {
-            sum = mix(model, sum, sum.a);
-            break;
+           break;
         }
         
         // Color attenuation according to distance
         a = smoothstep(max_dist,0.,t);
-        
+
+        vec3 pos = ro + t*rd;
+
         // Evaluate distance function
-        d = abs(map(pos = ro + t*rd, id))+.07;
+        d = abs(map(pos, id))+.07;
         
         // Light calculations 
         lDist = max(length(mod(pos+2.5,5.)-2.5), .001); // TODO add random offset
@@ -95,9 +99,12 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
                          smoothstep(rRef*.5,rRef*2.,lDist));
        
         lightColor = vec3(1);
-        sum.rgb += a*lightColor/exp(lDist*lDist*lDist*.08)/30.;
-		sum.a += .04;
-        
+
+        //if (t > 10.) {
+            sum.rgb += (a*lightColor/exp(lDist*lDist*lDist*.08)/30.) * alphaMultiplier;
+            sum.a += .04 * alphaMultiplier;
+        //}
+
         if (d<h) {
 			td += (1.-td)*(h-d)+.005;  // accumulate density
             sum.rgb += sum.a * sum.rgb * .25 / lDist;  // emission	
@@ -107,6 +114,9 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
         td += .015;
         t += max(d * .08 * max(min(lDist,d),2.), .01);  // trying to optimize step size
     }
+
+    sum = mix(model, sum, sum.a);
+    sum.a = 1.;
     
     // simple scattering
     //sum *= 1. / exp(lDist*.2)*.9;
