@@ -866,7 +866,13 @@ void shadeModel(inout Hit hit) {
     lin += 0.3 * bac * vec3(.25, .25, .25) * occ;
     lin += 0.2 * fre * vec3(1.,1., 1.) * occ;
     vec3 col = albedo*lin;
-    
+
+    float fog = smoothstep(hit.ray.len, 6., 9.);
+    //fog *= .5;
+    col = mix(col, vec3(.7,.4,1.), fog * .4);
+    col *= 1. + fog * .6;
+    //col = vec3(fog);
+
     hit.color = col;
 }
     
@@ -908,7 +914,9 @@ void shadeSurface(inout Hit hit){
         return;
     }
     
-    shadeModel(hit);
+    if (hit.model.id == 1.) {
+    	shadeModel(hit);
+   	}
 }
 
 
