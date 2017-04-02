@@ -891,7 +891,7 @@ void shadeModel(inout Hit hit) {
 
     float fog = smoothstep(hit.ray.len, 6., 9.);
     //fog *= .5;
-    col = mix(col, vec3(.7,.4,1.), fog * .4);
+    col = mix(col, vec3(.7,.4,1.), fog * .5);
     col *= 1. + fog * .6;
     //col = vec3(fog);
 
