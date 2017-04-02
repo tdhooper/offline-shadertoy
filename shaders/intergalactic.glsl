@@ -190,7 +190,7 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
 
         alphaMultiplier = cubicPulse(clipNear + clipBlend, clipBlend, t);
 
-        alphaMultiplier *= 1.;
+        alphaMultiplier *= 1.2;
 
         //if (t > 10.) {
             sum.rgb += (a * lightColor * .02) * alphaMultiplier;
@@ -202,7 +202,7 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
         if (d<h) {
 			td += (1.-td)*(h-d)+.005;  // accumulate density
             sum.rgb += sum.a * sum.rgb * .15 / lDist;  // emission	
-			//sum += (1.-sum.a)*.01*td*a;  // uniform scale density + alpha blend in contribution 
+			sum += (1.-sum.a)*.02*td*a;  // uniform scale density + alpha blend in contribution 
         } 
 		
         td += .015;

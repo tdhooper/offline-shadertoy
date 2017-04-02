@@ -570,7 +570,7 @@ Model model7(vec3 p) {
     
     Model proto = modelProto0(p);
 
-    if ( ! useBounds || bounds > 0.2) {
+    if ( ! isMasked || ! useBounds || bounds > 0.2) {
       return proto;
     }
 
@@ -590,7 +590,7 @@ Model model8(vec3 p) {
     pIcosahedron(p);    
     Model proto = modelProto1(p);
 
-    if ( ! useBounds || bounds > 0.2) {
+    if ( ! isMasked || ! useBounds || bounds > 0.2) {
      return proto;
     }
 
@@ -611,7 +611,7 @@ Model model9(vec3 p) {
     pIcosahedron(p);    
 	Model proto = modelProto2(p);
 
-    if ( ! useBounds || bounds > 0.2) {
+    if ( ! isMasked || ! useBounds || bounds > 0.2) {
       return proto;
     }
 
@@ -916,7 +916,7 @@ void shadeModel(inout Hit hit) {
 
     float fog = smoothstep(hit.ray.len, 6., 9.);
     //fog *= .5;
-    col = mix(col, vec3(.7,.4,1.), fog * .5);
+    col = mix(col, vec3(.7,.4,1.), fog * .75);
     col *= 1. + fog * .6;
     //col = vec3(fog);
 
