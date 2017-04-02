@@ -19,7 +19,7 @@ image.onload = function() {
         wrapS: 'repeat',
         wrapT: 'repeat'
     });
-  render();
+    render();
 }
 
 const drawTriangle = regl({

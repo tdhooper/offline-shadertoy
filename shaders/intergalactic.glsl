@@ -29,7 +29,7 @@ vec3 nebulaPal(float t) {
 
 
 
-#define SPIRAL_NOISE_ITER 8
+#define SPIRAL_NOISE_ITER 5
 
 float hash( const in vec3 p ) {
     return fract(sin(dot(p,vec3(127.1,311.7,758.5453123)))*43758.5453123);
@@ -70,12 +70,14 @@ float SpiralNoiseC(vec3 p, vec4 id) {
 
 float map(vec3 p, vec4 id) {
     //p += iGlobalTime;
-    //p *= 1.5;
     p *= .5;
+   // p *= mix(.5, 1., sin(iGlobalTime) * .5 + .5);
     //p += vec3(6., 7., 6.) * iGlobalTime * .2;
-    p += 50.;
-    //p.xy -= mousee* 20.;
-    p.xy -= (vec2(0.6328301654671723, 0.17047622090294248) - .5) * 20.;
+    p += 1000.;
+    //p.xy -= mousee * 20.;
+
+    p.xy -= (vec2(0.4446096695045556, 0.4677165305520606) - .5) * 20.;
+    //p.xy -= (vec2(0.6328301654671723, 0.17047622090294248) - .5) * 20.;
     //p *= 2.;
     //float limit = dot(normalize(p), vec3(0,0,1)) - 2.;
     float k = 2.*id.w +.1; //  p/=k;
@@ -96,6 +98,16 @@ void pR(inout vec2 p, float a) {
 }
 
 
+
+float cubicPulse( float c, float w, float x )
+{
+    x = abs(x - c);
+    if( x>w ) return 0.;
+    x /= w;
+    return 1. - x*x*(3.-2.*x);
+}
+
+
 //-------------------------------------------------------------------------------------
 // Based on "Type 2 Supernova" by Duke (https://www.shadertoy.com/view/lsyXDK) 
 //-------------------------------------------------------------------------------------
@@ -113,7 +125,10 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
     float alphaMultiplier = .0;
    	
     float clipNear = 8. * (sin(iGlobalTime * 3.) * .5 + .5);
-    clipNear = 8.;
+    clipNear = 7.5;
+    float clipFar = mix(8., 15., sin(iGlobalTime/2.) *.5 + .5);
+    clipFar = 20.9;
+    float clipBlend = (clipFar - clipNear) / 2.;
 
     //t = .3*hash(vec3(hash(rd))); 
     t = clipNear;
@@ -122,6 +137,10 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
 		// Loop break conditions.
 	    if(/*td>.9 ||  */sum.a > .99 || t>max_dist) break;
         
+        if (t > clipFar) {
+            break;
+        } 
+
         if (t > model.w) {
           break;
         }
@@ -152,23 +171,29 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
                          hsv2rgb(noi+.3,.5,.6), 
                          smoothstep(rRef*.5,rRef*2.,lDist));
        
-        float lightBlend = sin(lDist * .7) * .5 + .5; 
+        float lightBlend = sin(lDist * lightRepeat * .08 + .8) * .5 + .5; 
 //        lightColor = mix(vec3(.3,.1,1), vec3(1.,.2,.7), lightBlend);
         lightColor = nebulaPal(lightBlend);
 
+
         alphaMultiplier = clamp((t - clipNear) * .5, 0., 1.);
-        alphaMultiplier *= .5;
+        
+        alphaMultiplier = smoothstep((t - clipNear) * .5, clipNear, clipFar);
+
+        alphaMultiplier = cubicPulse(clipNear + clipBlend, clipBlend, t);
+
+        alphaMultiplier *= 1.;
 
         //if (t > 10.) {
-            sum.rgb += (a * lightColor * .04) * alphaMultiplier;
+            sum.rgb += (a * lightColor * .025) * alphaMultiplier;
             //float contrib = .002 * lDist;
             //sum += vec4(vec3(contrib), .02 * alphaMultiplier);
-            sum.a += .04 * alphaMultiplier;
+            sum.a += .02 * alphaMultiplier;
         //}
 
         if (d<h) {
 			td += (1.-td)*(h-d)+.005;  // accumulate density
-            sum.rgb += sum.a * sum.rgb * .25 / lDist;  // emission	
+            sum.rgb += sum.a * sum.rgb * .15 / lDist;  // emission	
 			sum += (1.-sum.a)*.05*td*a;  // uniform scale density + alpha blend in contribution 
         } 
 		
@@ -177,9 +202,15 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
     }
     //return model;
     //return vec4(sum.rgb, 1.);
+
+    float bl = 1. - smoothstep(dot(rd, vec3(0,0,-1)), 1., .98);
+    bl = max(bl, .5);
+    //sum.a *= bl;
     sum = mix(model, sum, sum.a);
     sum.a = 1.;
-    
+
+    //return vec4(vec3(bl), 1.);
+ 
     // simple scattering
     //sum *= 1. / exp(lDist*.2)*.9;
    	//sum = clamp(sum, 0., 1.);   

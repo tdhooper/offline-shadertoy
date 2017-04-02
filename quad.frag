@@ -585,7 +585,7 @@ Model model9(vec3 p) {
 Model backPlane(vec3 p) {
     float d = 1e12;
     if ( ! isMasked) {
-    	d = dot(p, vec3(0,0,1)) + 4.;    
+    	d = dot(p, vec3(0,0,1)) + 10.;    
     }
     return Model(d, 10.);
 }
@@ -950,7 +950,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     camTar = vec3(0,0,0);
     camPos = vec3(0,0,dist);
     camPos += camTar;
-    camPos *= sphericalMatrix(mouse * 2.);
+    //camPos *= sphericalMatrix(mouse * 2.);
 }
 
 
@@ -985,7 +985,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     if ( ! hit.isBackground) {
 		vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
-		sliderVal = vec4(0.5,0.5,0.15,0.7);
+		sliderVal = vec4(0.5,0.7,0.2,0.9);
 
 		color = renderSuperstructure(ray.origin, ray.direction, sliderVal, color);
 	}
