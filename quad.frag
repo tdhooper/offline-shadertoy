@@ -1002,7 +1002,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 	if (hit.model.id == 10.) {
         #ifdef SHOW_SPACE
-	    	color = vec4(pow(space(p * 7.) * 1.2, vec3(1.5)), hit.ray.len);
+            vec2 sp = p * 10. + vec2(-.2);
+	    	color = vec4(pow(space(sp) * 1.2, vec3(1.5)), hit.ray.len);
 	    #else
 	    	color = vec4(vec3(.8,.0,.4), hit.ray.len);
 	    #endif
