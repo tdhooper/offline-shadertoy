@@ -1,6 +1,7 @@
 var regl = require('regl')();
 var glslify = require('glslify');
 var mouseChange = require('mouse-change');
+var debounce = require('debounce');
 var Timer = require('./lib/timer')
 var stateStore = require('./lib/state-store');
 
@@ -134,3 +135,14 @@ if (timer.running) {
 } else {
     render();    
 }
+
+window.addEventListener(
+    'resize',
+    debounce(
+        function() {
+            regl._refresh();
+            render();
+        },
+        50
+    )
+);
