@@ -191,7 +191,7 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
         alphaMultiplier *= 1.;
 
         //if (t > 10.) {
-            sum.rgb += (a * lightColor * .025) * alphaMultiplier;
+            sum.rgb += (a * lightColor * .02) * alphaMultiplier;
             //float contrib = .002 * lDist;
             //sum += vec4(vec3(contrib), .02 * alphaMultiplier);
             sum.a += .02 * alphaMultiplier;
@@ -208,6 +208,8 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
     }
     //return model;
     //return vec4(sum.rgb, 1.);
+
+    sum.rgb = pow(sum.rgb, vec3(1.2));
 
     float bl = 1. - smoothstep(dot(rd, vec3(0,0,-1)), 1., .98);
     bl = max(bl, .5);

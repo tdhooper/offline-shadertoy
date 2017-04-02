@@ -365,12 +365,25 @@ Model modelDots(vec3 p, float bounds) {
 	if (bounds > 0.2) {
         return Model(bounds, 20.);
     }
-	vec3 point = geodesicPoint(p, 6.);
+	vec3 point = geodesicPoint(p, 5.);
 	float size = .03;
 	if (isMasked) {
 		size = .02;
 	}
     float d = length(p - point * 3.5) - size;
+    return Model(d, 20.);
+}
+
+Model modelLines(vec3 p, float bounds) {
+    if (bounds > 0.2) {
+        return Model(bounds, 20.);
+    }
+    vec3 point = geodesicPoint(p, 2.);
+    float size = .02;
+    if (isMasked) {
+        size = .01;
+    }
+    float d = fCapsule(p, point * 3.5, point * 4., size);
     return Model(d, 20.);
 }
 
@@ -584,7 +597,8 @@ Model model9(vec3 p) {
     pIcosahedron(p);    
 	Model proto = modelProto2(p);
    	Model dots = modelDots(p, bounds);
-   	return opU(proto, dots);    
+    //Model lines = modelLines(p, bounds);
+    return opU(proto, dots);    
 }
 
     
@@ -850,7 +864,10 @@ void shadeModel(inout Hit hit) {
     vec3 backLightPos = normalize(vec3(0,-.3,1));
     vec3 ambientPos = vec3(0,1,0);
 
-    mat3 m = sphericalMatrix(vec2(1.9, 1.05) * PI);
+    mat3 m;
+    //m = sphericalMatrix((iMouse.xy / iResolution.xy - .5) * 8.);
+    vec2 mouseSetting = vec2(0.45607896335673687, 0.8963768106439839);
+    m = sphericalMatrix((mouseSetting - .5) * 8.);
     lightPos *= m;
     backLightPos *= m;
     
@@ -863,11 +880,11 @@ void shadeModel(inout Hit hit) {
     float bac = pow(clamp(dot(nor, backLightPos), 0., 1.), 1.5);
     float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
     
-    dif *= mix(softshadow(pos, lig, 0.02, 2.5), 1., 0.4);
+    dif *= mix(softshadow(pos, lig, 0.02, 2.5), 1., 0.3);
 
     vec3 lin = vec3(0.0);
     lin += 1.2 * dif * vec3(.95, .8, .8);
-    lin += 0.8 * amb * vec3(.4, .6, .9) * occ;
+    lin += 1.1 * amb * vec3(.4, .6, .9) * occ;
     lin += 0.3 * bac * vec3(.25, .25, .25) * occ;
     lin += 0.2 * fre * vec3(1.,1., 1.) * occ;
     vec3 col = albedo*lin;
@@ -877,6 +894,8 @@ void shadeModel(inout Hit hit) {
     col = mix(col, vec3(.7,.4,1.), fog * .4);
     col *= 1. + fog * .6;
     //col = vec3(fog);
+
+    //col = vec3(occ);
 
     hit.color = col;
 }
@@ -983,7 +1002,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 	if (hit.model.id == 10.) {
         #ifdef SHOW_SPACE
-	    	color = vec4(space(p * 7.) * 1.5, hit.ray.len);
+	    	color = vec4(pow(space(p * 7.) * 1.2, vec3(1.5)), hit.ray.len);
 	    #else
 	    	color = vec4(vec3(.8,.0,.4), hit.ray.len);
 	    #endif
