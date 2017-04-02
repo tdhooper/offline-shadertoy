@@ -361,12 +361,16 @@ Model opU( Model m1, Model m2 ){
     }
 }
 
-Model modelDots(vec3 p) {
-    if (p.z < 0.) {
-        return Model(1e12, 20.);
+Model modelDots(vec3 p, float bounds) {
+	if (bounds > 0.2) {
+        return Model(bounds, 20.);
     }
-	vec3 point = geodesicPoint(p, 5.);
-    float d = length(p - point * 3.5) - .02;
+	vec3 point = geodesicPoint(p, 6.);
+	float size = .03;
+	if (isMasked) {
+		size = .02;
+	}
+    float d = length(p - point * 3.5) - size;
     return Model(d, 20.);
 }
 
@@ -576,9 +580,10 @@ Model modelProto2(vec3 p) {
     
     
 Model model9(vec3 p) {
+	float bounds = dot(p, vec3(0,0,-1)) + 1.;
     pIcosahedron(p);    
 	Model proto = modelProto2(p);
-   	Model dots = modelDots(p);
+   	Model dots = modelDots(p, bounds);
    	return opU(proto, dots);    
 }
 
@@ -901,12 +906,10 @@ void shadeSurface(inout Hit hit){
         hit.color = hit.normal * .5 + .5;
         return;
     #endif
-
-    
     
     if (hit.model.id == 20.) {
         if (isMasked) {
-        	hit.color = vec3(0.);
+        	hit.color = vec3(.05,.02,.3);
         } else {
             hit.color = vec3(1.);
         }
@@ -987,7 +990,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	}     
 
 	#ifdef SHOW_FOG
-	    if ( ! hit.isBackground) {
+	    if ( ! hit.isBackground && hit.model.id != 20.) {
 			vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
 			sliderVal = vec4(0.5,0.7,0.2,0.9);
 
