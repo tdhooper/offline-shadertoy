@@ -41,7 +41,7 @@ float time;
 //#define SHOW_ZOOM
 
 #define SHOW_FOG
-//#define SHADOWS
+#define SHADOWS
 #define SHOW_SPACE
 
 
@@ -570,7 +570,7 @@ Model model7(vec3 p) {
     
     Model proto = modelProto0(p);
 
-    if (bounds > 0.2) {
+    if ( ! useBounds || bounds > 0.2) {
       return proto;
     }
 
@@ -590,7 +590,7 @@ Model model8(vec3 p) {
     pIcosahedron(p);    
     Model proto = modelProto1(p);
 
-    if (bounds > 0.2) {
+    if ( ! useBounds || bounds > 0.2) {
      return proto;
     }
 
@@ -611,7 +611,7 @@ Model model9(vec3 p) {
     pIcosahedron(p);    
 	Model proto = modelProto2(p);
 
-    if (bounds > 0.2) {
+    if ( ! useBounds || bounds > 0.2) {
       return proto;
     }
 
