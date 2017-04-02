@@ -40,6 +40,7 @@ float time;
 #define FAST_COMPILE
 #define SHOW_ZOOM
 
+#define SHOW_FOG
 //#define SHADOWS
 #define SHOW_SPACE
 
@@ -830,14 +831,6 @@ bool backMask(vec2 uv) {
     return hex > 0.;
 }
 
-void shadeBackPlane(inout Hit hit) {
-    #ifdef SHOW_SPACE
-		vec2 p = hit.pos.xy;	
-    	hit.color = space(p);
-    #else
-    	hit.color = vec3(.8,.0,.4);
-    #endif
-} 
     
 
 void shadeModel(inout Hit hit) {
@@ -902,11 +895,7 @@ void shadeSurface(inout Hit hit){
         hit.color = hit.normal * .5 + .5;
         return;
     #endif
-    
-    if (hit.model.id == 10.) {
-        shadeBackPlane(hit);
-        return;
-    }
+
     
     
     if (hit.model.id == 20.) {
@@ -950,7 +939,6 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     camTar = vec3(0,0,0);
     camPos = vec3(0,0,dist);
     camPos += camTar;
-    //camPos *= sphericalMatrix(mouse * 2.);
 }
 
 
@@ -973,7 +961,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     doCamera(camPos, camTar, camRoll, m);
     mat3 camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
     vec3 rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
-
     CastRay ray = CastRay(camPos, rd);
 
     isMasked = backMask(p);
@@ -983,12 +970,29 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec4 color = render(hit);
 
-    if ( ! hit.isBackground) {
-		vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
-		sliderVal = vec4(0.5,0.7,0.2,0.9);
+	if (hit.model.id == 10.) {
+        #ifdef SHOW_SPACE
+	    	color = vec4(space(p * 10.) * 1.2, hit.ray.len);
+	    #else
+	    	color = vec4(vec3(.8,.0,.4), hit.ray.len);
+	    #endif
+	}     
 
-		color = renderSuperstructure(ray.origin, ray.direction, sliderVal, color);
-	}
+	#ifdef SHOW_FOG
+	    if ( ! hit.isBackground) {
+			vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
+			sliderVal = vec4(0.5,0.7,0.2,0.9);
+
+    //0.4848822844959103
+	//0.553018368604615
+    camPos *= sphericalMatrix(m * 8.);
+    camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
+    rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
+    ray = CastRay(camPos, rd);
+
+			color = renderSuperstructure(ray.origin, ray.direction, sliderVal, color);
+		}
+	#endif
 
     #ifndef DEBUG
       color.rgb = linearToScreen(color.rgb);

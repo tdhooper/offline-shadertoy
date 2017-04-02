@@ -28,6 +28,11 @@ vec3 nebulaPal(float t) {
 }
 
 
+void pR(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+
 
 #define SPIRAL_NOISE_ITER 5
 
@@ -77,6 +82,7 @@ float map(vec3 p, vec4 id) {
     //p.xy -= mousee * 20.;
 
     p.xy -= (vec2(0.4446096695045556, 0.4677165305520606) - .5) * 20.;
+    p.y -= .1;
     //p.xy -= (vec2(0.6328301654671723, 0.17047622090294248) - .5) * 20.;
     //p *= 2.;
     //float limit = dot(normalize(p), vec3(0,0,1)) - 2.;
@@ -93,9 +99,6 @@ vec3 hsv2rgb(float x, float y, float z) {
 	return z+z*y*(clamp(abs(mod(x*6.+vec3(0,4,2),6.)-3.)-1.,0.,1.)-1.);
 }
 
-void pR(inout vec2 p, float a) {
-    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
-}
 
 
 
