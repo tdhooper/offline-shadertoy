@@ -361,31 +361,6 @@ Model opU( Model m1, Model m2 ){
     }
 }
 
-Model modelDots(vec3 p, float bounds) {
-	if (bounds > 0.2) {
-        return Model(bounds, 20.);
-    }
-	vec3 point = geodesicPoint(p, 5.);
-	float size = .03;
-	if (isMasked) {
-		size = .02;
-	}
-    float d = length(p - point * 3.5) - size;
-    return Model(d, 20.);
-}
-
-Model modelLines(vec3 p, float bounds) {
-    if (bounds > 0.2) {
-        return Model(bounds, 20.);
-    }
-    vec3 point = geodesicPoint(p, 1.);
-    float size = .02;
-    if (isMasked) {
-        size = .01;
-    }
-    float d = fCapsule(p, point * 2.5, point * 3., size);
-    return Model(d, 20.);
-}
 
 
 Model modelProto0(vec3 p) {
@@ -584,6 +559,7 @@ Model modelProto2(vec3 p) {
 }
 
 
+
 Model model7(vec3 p) {
     float bounds = dot(p, normalize(vec3(0,0,-1))) - 1.;
     
@@ -593,28 +569,61 @@ Model model7(vec3 p) {
     pIcosahedron(p);
     
     Model proto = modelProto0(p);
-    Model dots = modelLines(p, bounds);
-    //Model lines = modelLines(p, bounds);
-    return opU(proto, dots);    
+
+    if (bounds > 0.2) {
+      return proto;
+    }
+
+    vec3 point = geodesicPoint(p, 2.);
+    float size = .02;
+    if (isMasked) {
+        size = .015;
+    }
+    float d = length(p - point * 2.75) - size;
+    Model decal = Model(d, 20.);
+
+    return opU(proto, decal);
 }    
 
 Model model8(vec3 p) {
-    float bounds = dot(p, vec3(0,0,-1)) + 1.;
+    float bounds = dot(p, vec3(0,0,-1)) + 0.;
     pIcosahedron(p);    
     Model proto = modelProto1(p);
-    return proto;
-    Model dots = modelLines(p, bounds);
-    //Model lines = modelLines(p, bounds);
-    return opU(proto, dots);    
+
+    if (bounds > 0.2) {
+     return proto;
+    }
+
+    vec3 point = geodesicPoint(p, 6.);
+    float size = .02;
+    if (isMasked) {
+        size = .01;
+    }
+    float d = length(p - point * 1.8) - size;
+    Model decal = Model(d, 20.);
+
+    return opU(proto, decal);
+
 }    
     
 Model model9(vec3 p) {
 	float bounds = dot(p, vec3(0,0,-1)) + 1.;
     pIcosahedron(p);    
 	Model proto = modelProto2(p);
-   	Model dots = modelDots(p, bounds);
-    //Model lines = modelLines(p, bounds);
-    return opU(proto, dots);    
+
+    if (bounds > 0.2) {
+      return proto;
+    }
+
+    vec3 point = geodesicPoint(p, 2.);
+    float size = .02;
+    if (isMasked) {
+        size = .01;
+    }
+    float d = fCapsule(p, point * 3., point * 3.5, size);
+    Model decal = Model(d, 20.);
+
+    return opU(proto, decal);  
 }
 
     
