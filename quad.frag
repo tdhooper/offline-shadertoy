@@ -38,7 +38,7 @@ float time;
 //#define SHOW_STEPS
 //#define SHOW_BOUNDS
 #define FAST_COMPILE
-#define SHOW_ZOOM
+//#define SHOW_ZOOM
 
 #define SHOW_FOG
 //#define SHADOWS
@@ -378,28 +378,22 @@ Model modelLines(vec3 p, float bounds) {
     if (bounds > 0.2) {
         return Model(bounds, 20.);
     }
-    vec3 point = geodesicPoint(p, 2.);
+    vec3 point = geodesicPoint(p, 1.);
     float size = .02;
     if (isMasked) {
         size = .01;
     }
-    float d = fCapsule(p, point * 3.5, point * 4., size);
+    float d = fCapsule(p, point * 2.5, point * 3., size);
     return Model(d, 20.);
 }
 
 
-Model model7(vec3 p) {
+Model modelProto0(vec3 p) {
         
     float d;
     vec3 n, n1;
     d = 1e12;
      
-    pR(p.xy, -.2);
-    pR(p.xz, -.45);
-    pR(p.yz, .32);
-    
-    pIcosahedron(p);
-  
     if (useBounds) {
         float bounds;
         bounds = length(p) - 3.;
@@ -475,7 +469,7 @@ Model model7(vec3 p) {
     return Model(d, 1.);
 }
 
-Model model8(vec3 p) {
+Model modelProto1(vec3 p) {
     
     if (isMasked) {
         // return Model(1., 1.);
@@ -484,8 +478,6 @@ Model model8(vec3 p) {
     float d;
     vec3 n, n1;
     d = 1e12;
-        
-    pIcosahedron(p);
     
     if (useBounds) {
         float bounds;
@@ -590,7 +582,31 @@ Model modelProto2(vec3 p) {
             
     return Model(d, 1.);
 }
+
+
+Model model7(vec3 p) {
+    float bounds = dot(p, normalize(vec3(0,0,-1))) - 1.;
     
+    pR(p.xy, -.2);
+    pR(p.xz, -.45);
+    pR(p.yz, .32);
+    pIcosahedron(p);
+    
+    Model proto = modelProto0(p);
+    Model dots = modelLines(p, bounds);
+    //Model lines = modelLines(p, bounds);
+    return opU(proto, dots);    
+}    
+
+Model model8(vec3 p) {
+    float bounds = dot(p, vec3(0,0,-1)) + 1.;
+    pIcosahedron(p);    
+    Model proto = modelProto1(p);
+    return proto;
+    Model dots = modelLines(p, bounds);
+    //Model lines = modelLines(p, bounds);
+    return opU(proto, dots);    
+}    
     
 Model model9(vec3 p) {
 	float bounds = dot(p, vec3(0,0,-1)) + 1.;
