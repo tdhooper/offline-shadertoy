@@ -36,7 +36,7 @@ float time;
 
 //#define DEBUG
 //#define SHOW_STEPS
-#define SHOW_BOUNDS
+//#define SHOW_BOUNDS
 #define FAST_COMPILE
 #define SHOW_ZOOM
 
@@ -972,7 +972,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 	if (hit.model.id == 10.) {
         #ifdef SHOW_SPACE
-	    	color = vec4(space(p * 10.) * 1.2, hit.ray.len);
+	    	color = vec4(space(p * 7.) * 1.5, hit.ray.len);
 	    #else
 	    	color = vec4(vec3(.8,.0,.4), hit.ray.len);
 	    #endif
@@ -985,10 +985,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     //0.4848822844959103
 	//0.553018368604615
-    camPos *= sphericalMatrix(m * 8.);
-    camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
-    rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
-    ray = CastRay(camPos, rd);
+    //camPos *= sphericalMatrix(m * 8.);
+    //camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
+    //rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
+    //ray = CastRay(camPos, rd);
 
 			color = renderSuperstructure(ray.origin, ray.direction, sliderVal, color);
 		}

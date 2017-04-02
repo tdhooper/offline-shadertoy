@@ -75,14 +75,17 @@ float SpiralNoiseC(vec3 p, vec4 id) {
 
 float map(vec3 p, vec4 id) {
     //p += iGlobalTime;
+    pR(p.yz, -.5);
+    pR(p.xz, .3);
+    
     p *= .5;
    // p *= mix(.5, 1., sin(iGlobalTime) * .5 + .5);
     //p += vec3(6., 7., 6.) * iGlobalTime * .2;
     p += 1000.;
     //p.xy -= mousee * 20.;
-
+    
     p.xy -= (vec2(0.4446096695045556, 0.4677165305520606) - .5) * 20.;
-    p.y -= .1;
+    p.y -= .05;
     //p.xy -= (vec2(0.6328301654671723, 0.17047622090294248) - .5) * 20.;
     //p *= 2.;
     //float limit = dot(normalize(p), vec3(0,0,1)) - 2.;
@@ -196,7 +199,7 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
 
         if (d<h) {
 			td += (1.-td)*(h-d)+.005;  // accumulate density
-            sum.rgb += sum.a * sum.rgb * .15 / lDist;  // emission	
+            sum.rgb += sum.a * sum.rgb * .12 / lDist;  // emission	
 			sum += (1.-sum.a)*.05*td*a;  // uniform scale density + alpha blend in contribution 
         } 
 		
