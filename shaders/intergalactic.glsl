@@ -5,6 +5,30 @@
 // License: Creative Commons Attribution-NonCommercial-ShareAlike 3.0 Unported License
 //-------------------------------------------------------------------------------------
 
+const float GAMMA = 2.2;
+
+vec3 gamma(vec3 color, float g) {
+    return pow(color, vec3(g));
+}
+
+vec3 linearToScreen(vec3 linearRGB) {
+    return gamma(linearRGB, 1.0 / GAMMA);
+}
+
+vec3 screenToLinear(vec3 screenRGB) {
+    return gamma(screenRGB, GAMMA);
+}
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 nebulaPal(float t) {
+    return screenToLinear(pal(t, vec3(1.,.9,1.),vec3(0.4,0.3,0.),vec3(1.5,1.5,0.),vec3(.2,0.05,0.0)));    
+}
+
+
+
 #define SPIRAL_NOISE_ITER 8
 
 float hash( const in vec3 p ) {
@@ -45,6 +69,13 @@ float SpiralNoiseC(vec3 p, vec4 id) {
 }
 
 float map(vec3 p, vec4 id) {
+    //p += iGlobalTime;
+    //p *= 1.5;
+    p *= .5;
+    //p += vec3(6., 7., 6.) * iGlobalTime * .2;
+    p += 50.;
+    //p.xy -= mousee* 20.;
+    p.xy -= (vec2(0.6328301654671723, 0.17047622090294248) - .5) * 20.;
     //p *= 2.;
     //float limit = dot(normalize(p), vec3(0,0,1)) - 2.;
     float k = 2.*id.w +.1; //  p/=k;
@@ -59,6 +90,11 @@ float map(vec3 p, vec4 id) {
 vec3 hsv2rgb(float x, float y, float z) {	
 	return z+z*y*(clamp(abs(mod(x*6.+vec3(0,4,2),6.)-3.)-1.,0.,1.)-1.);
 }
+
+void pR(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
 
 //-------------------------------------------------------------------------------------
 // Based on "Type 2 Supernova" by Duke (https://www.shadertoy.com/view/lsyXDK) 
@@ -76,10 +112,11 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
 
     float alphaMultiplier = .0;
    	
-    float nearCull = 8. * (sin(iGlobalTime * 3.) * .5 + .5);
+    float clipNear = 8. * (sin(iGlobalTime * 3.) * .5 + .5);
+    clipNear = 8.;
 
     //t = .3*hash(vec3(hash(rd))); 
-    t = nearCull;
+    t = clipNear;
 
     for (int i=0; i<200; i++)  {
 		// Loop break conditions.
@@ -93,41 +130,52 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
         a = smoothstep(max_dist,0.,t);
 
         vec3 pos = ro + t*rd;
+        vec3 ppos = pos;
 
         // Evaluate distance function
         d = abs(map(pos, id))+.07;
         
-        // Light calculations 
-        lDist = max(length(mod(pos+2.5,5.)-2.5), .001); // TODO add random offset
-        //lDist = max(length(pos), .001); // TODO add random offset
+        // Light calculations
+        float lightRepeat = 5.;
+        float lightOffset = lightRepeat / 2.;
+        //pR(pos.xz, iGlobalTime);
+        //pos += iGlobalTime;
+        pos = mod(pos + lightOffset, lightRepeat);
+        lDist = length(pos - lightOffset);
+        //lDist = max(lDist, .001); // TODO add random offset
+        //lDist = max(length(pos) - lightOffset, .001); // TODO add random offset
         
+        pos = ppos;
+
         noi = pn(0.03*pos);
         lightColor = mix(hsv2rgb(noi,.5,.6), 
                          hsv2rgb(noi+.3,.5,.6), 
                          smoothstep(rRef*.5,rRef*2.,lDist));
        
-        lightColor = vec3(1);
+        float lightBlend = sin(lDist * .7) * .5 + .5; 
+//        lightColor = mix(vec3(.3,.1,1), vec3(1.,.2,.7), lightBlend);
+        lightColor = nebulaPal(lightBlend);
 
-        alphaMultiplier = clamp((t - nearCull) * .1, 0., 1.);
-        //alphaMultiplier = 1.;
+        alphaMultiplier = clamp((t - clipNear) * .5, 0., 1.);
+        alphaMultiplier *= .5;
 
         //if (t > 10.) {
-            sum.rgb += (a*lightColor/exp(lDist*lDist*lDist*.08)/30.) * alphaMultiplier;
+            sum.rgb += (a * lightColor * .04) * alphaMultiplier;
             //float contrib = .002 * lDist;
             //sum += vec4(vec3(contrib), .02 * alphaMultiplier);
-            sum.a += .02 * alphaMultiplier;
+            sum.a += .04 * alphaMultiplier;
         //}
 
         if (d<h) {
-			//td += (1.-td)*(h-d)+.005;  // accumulate density
-            //sum.rgb += sum.a * sum.rgb * .25 / lDist;  // emission	
-			//sum += (1.-sum.a)*.05*td*a;  // uniform scale density + alpha blend in contribution 
+			td += (1.-td)*(h-d)+.005;  // accumulate density
+            sum.rgb += sum.a * sum.rgb * .25 / lDist;  // emission	
+			sum += (1.-sum.a)*.05*td*a;  // uniform scale density + alpha blend in contribution 
         } 
 		
         td += .015;
         t += max(d * .08 * max(min(lDist,d),2.), .01);  // trying to optimize step size
     }
-
+    //return model;
     //return vec4(sum.rgb, 1.);
     sum = mix(model, sum, sum.a);
     sum.a = 1.;

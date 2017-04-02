@@ -110,7 +110,8 @@ vec3 space(vec2 uv) {
 
     vec3 seam = nebulaSeam(uv);
     
-    vec3 col = field + stars - seam;
+    vec3 col = field + stars;
+    //col -= seam;
     
     col *= .9;
     col += .2;

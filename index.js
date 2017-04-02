@@ -42,6 +42,8 @@ const drawTriangle = regl({
                 return value * context.pixelRatio;
             });
             mouse[1] = context.viewportHeight - mouse[1];
+            console.log(mouse[0] / context.viewportWidth);
+            console.log(mouse[1] / context.viewportHeight)
             return mouse;
         },
         iChannel0: texture
@@ -101,9 +103,18 @@ function stop() {
     render();
 }
 
+function toggle() {
+    if (timer.running) {
+        pause();
+    } else {
+        play();
+    }
+}
+
 window.play = play;
 window.pause = pause;
 window.stop = stop;
+window.toggle = toggle;
 
 var canvas = regl._gl.canvas;
 mouseChange(canvas, function(buttons, x, y, mods) {

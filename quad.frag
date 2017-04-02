@@ -16,8 +16,9 @@ void main() {
 
 
 /* SHADERTOY FROM HERE */
+vec2 mousee;
 
-#pragma glslify: renderSuperstructure = require(./shaders/intergalactic.glsl, iChannel0=iChannel0, iGlobalTime=iGlobalTime)
+#pragma glslify: renderSuperstructure = require(./shaders/intergalactic.glsl, iChannel0=iChannel0, iGlobalTime=iGlobalTime, mousee=mousee)
 #pragma glslify: space = require(./shaders/space.glsl)
 
 // Author:
@@ -37,7 +38,7 @@ float time;
 //#define SHOW_STEPS
 #define SHOW_BOUNDS
 #define FAST_COMPILE
-//#define SHOW_ZOOM
+#define SHOW_ZOOM
 
 //#define SHADOWS
 #define SHOW_SPACE
@@ -949,7 +950,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     camTar = vec3(0,0,0);
     camPos = vec3(0,0,dist);
     camPos += camTar;
-    camPos *= sphericalMatrix(mouse * 5.);
+    camPos *= sphericalMatrix(mouse * 2.);
 }
 
 
@@ -965,6 +966,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     	p *= .7;
     #endif
     vec2 m = iMouse.xy / iResolution.xy - .5;
+    mousee = m;
 
     vec3 camPos, camTar;
     float camRoll;
@@ -975,6 +977,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     CastRay ray = CastRay(camPos, rd);
 
     isMasked = backMask(p);
+    //isMasked = false;
     useBounds = true;
     Hit hit = raymarch(ray);
 
@@ -982,13 +985,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     if ( ! hit.isBackground) {
 		vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
-		sliderVal = vec4(0.5,0.4,0.2,0.4);
+		sliderVal = vec4(0.5,0.5,0.15,0.7);
 
 		color = renderSuperstructure(ray.origin, ray.direction, sliderVal, color);
 	}
 
     #ifndef DEBUG
-      //color.rgb = linearToScreen(color.rgb);
+      color.rgb = linearToScreen(color.rgb);
     #endif
 
     fragColor = color;
