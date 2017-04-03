@@ -36,9 +36,11 @@ float time;
 
 //#define DEBUG
 //#define SHOW_STEPS
-#define SHOW_BOUNDS
+//#define SHOW_BOUNDS
 #define FAST_COMPILE
 //#define SHOW_ZOOM
+//#define DEBUG_MODEL
+//#define CAMERA_CONTROL
 
 #define SHOW_FOG
 //#define SHADOWS
@@ -385,7 +387,10 @@ Model opU( Model m1, Model m2 ){
     }
 }
 
-
+float addSeam(float d, float part, float round) {
+    part = max(part, -part - .0005);
+    return smax(d, -part, round);
+}
 
 Model modelProto0(vec3 p) {
         
@@ -408,6 +413,8 @@ Model modelProto0(vec3 p) {
         }
     }
     
+    // Core
+
     float outer, inner, hole, spike;
 
     outer = length(p) - 1.;
@@ -446,36 +453,53 @@ Model modelProto0(vec3 p) {
     spike = fCone(p, width, n1 * 0., n1 * len) - thickness;
     outer = smin(outer, spike, round);
 
+
+    // Core seams
+
+    float seam, spikeSeam, ringSeam, lineSeam;
+    float outerSeamed;    
+    float seamRound = .02;
+
+    spikeSeam = length(p);
+
+    seam = max(-spikeSeam + 1.15, spikeSeam - 1.25);
+    outer = addSeam(outer, seam, seamRound);
+
+    lineSeam = fPlane(p, triP.ca, 0.);
+    outerSeamed = addSeam(outer, lineSeam, seamRound);
+    outer = mix(outer, outerSeamed, step(seam, 0.));
+
+    spikeSeam = max(-spikeSeam + 2.3, spikeSeam - 2.8);
+    outer = addSeam(outer, spikeSeam, seamRound);
+
+    float core = outer;
     
-    float outer1, inner1;
+
+    // Shell
     
-    outer1 = length(p) - 1.9;
-    inner1 = -outer1 - .2;
+    outer = length(p) - 1.9;
+    inner = -outer - .2;
 
     n = bToCn(0,0,1);
     spike = fCone(p, 1.3, n * 0., n * 2.35) - thickness;
-    outer1 = smin(outer1, spike, .2);    
+    outer = smin(outer, spike, .2);    
     
     n = bToCn(1,0,0);
     hole = fCone(p, 1.55, n * 3., n * 0.);
-    outer1 = smax(outer1, -hole, .13);
+    outer = smax(outer, -hole, .13);
 
-    outer1 = smax(outer1, inner1, .1);
+    outer = smax(outer, inner, .1);
 
-    float seam, seam2, seamSplit;
-    round = .02;
 
-    seam = fPaper(p, triV.c, -2.);
-    outer1 = smax(outer1, -seam, round);
+    // Shell seams
 
-    seam2 = fPaper(p, triP.bc, 0.);
-    float outer1a = smax(outer1, -seam2, round);
-    
-    seamSplit = fPlane(p, triV.c, -2.);
-    outer1 = mix(outer1, outer1a, step(seamSplit, 0.));
-    
-    d = min(outer1, outer);
+    spikeSeam = fPlane(p, triV.c, -2.);
+    ringSeam = fPlane(p, triP.ab, .28);
+    seam = max(ringSeam, spikeSeam);
+    outer = addSeam(outer, seam, seamRound);
 
+
+    d = min(core, outer);
     return Model(d, 1.);
 }
 
@@ -661,14 +685,6 @@ Model model9(vec3 p) {
     return opU(proto, decal);  
 }
 
-    
-Model backPlane(vec3 p) {
-    float d = 1e12;
-    if ( ! isMasked) {
-    	d = dot(p, vec3(0,0,1)) + 10.;    
-    }
-    return Model(d, 10.);
-}
 
 Model debugPlane(vec3 p) {
 
@@ -705,16 +721,15 @@ Model scene( vec3 p ){
     
     float scale;
 
-    //scale = 1.9;
-    //p /= scale;
-    //model= model7(p);
-    //model.dist *= scale;
-    //return model;
-	
-     //pR(p.xz, time*5.);
-    
-    Model bp = backPlane(p);
-   
+    #ifdef DEBUG_MODEL
+        scale = 1.6;
+        p /= scale;
+        model= model7(p);
+        model.dist *= scale;
+        return model;
+	#endif
+
+    //pR(p.xz, time*5.);
         
     p = pp;
     scale = .9;
@@ -739,8 +754,6 @@ Model scene( vec3 p ){
    	part = model9(p);
     part.dist *= scale;    
     model = opU(model, part);
-    
-    model = opU(model, bp);
     
     return model;
 }
@@ -987,18 +1000,11 @@ void shadeSurface(inout Hit hit){
     #endif
     
     if (hit.model.id == 20.) {
-        if (isMasked) {
-        	hit.color = vec3(.05,.02,.3);
-        } else {
-            hit.color = vec3(1.);
-        }
-        
+        hit.color = vec3(.05,.02,.3);
         return;
     }
     
-    if (hit.model.id == 1.) {
-    	shadeModel(hit);
-   	}
+    shadeModel(hit);
 }
 
 
@@ -1029,7 +1035,9 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     camTar = vec3(0,0,0);
     camPos = vec3(0,0,dist);
     camPos += camTar;
-    //camPos *= sphericalMatrix(mouse * 5.);
+    #ifdef CAMERA_CONTROL
+        camPos *= sphericalMatrix(mouse * 5.);
+    #endif
 }
 
 
@@ -1061,7 +1069,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec4 color = render(hit);
 
-	if (hit.model.id == 10.) {
+	if ( ! isMasked && hit.isBackground) {
         #ifdef SHOW_SPACE
             vec2 sp = p * 10. + vec2(-.2);
 	    	color = vec4(pow(space(sp) * 1.2, vec3(1.5)), hit.ray.len);
@@ -1071,7 +1079,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 	}     
 
 	#ifdef SHOW_FOG
-	    if ( ! hit.isBackground && hit.model.id != 20.) {
+	    if ( ! isMasked || ! hit.isBackground) {
 			vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
 			sliderVal = vec4(0.5,0.7,0.2,0.9);
 
