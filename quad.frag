@@ -86,6 +86,30 @@ float smin(float a, float b, float r) {
     #endif
 }
 
+// The "Chamfer" flavour makes a 45-degree chamfered edge (the diagonal of a square of size <r>):
+float cmin(float a, float b, float r) {
+    float m = min(a, b);
+    //if ((a < r) && (b < r)) {
+        return min(m, (a - r + b)*sqrt(0.5));
+    //} else {
+        return m;
+    //}
+}
+
+// Intersection has to deal with what is normally the inside of the resulting object
+// when using union, which we normally don't care about too much. Thus, intersection
+// implementations sometimes differ from union implementations.
+float cmax(float a, float b, float r) {
+    float m = max(a, b);
+    if (r <= 0.) return m;
+    if (((-a < r) && (-b < r)) || (m < 0.)) {
+        return max(m, (a + r + b)*sqrt(0.5));
+    } else {
+        return m;
+    }
+}
+
+
 // Rotate around a coordinate axis (i.e. in a plane perpendicular to that axis) by angle <a>.
 // Read like this: R(p.xz, a) rotates "x towards z".
 // This is fast if <a> is a compile-time constant and slower (but still practical) if not.
@@ -681,11 +705,11 @@ Model scene( vec3 p ){
     
     float scale;
 
-    // scale = 1.9;
-    // p /= scale;
-    // model= model7(p);
-    // model.dist *= scale;
-    // return model;
+    //scale = 1.9;
+    //p /= scale;
+    //model= model7(p);
+    //model.dist *= scale;
+    //return model;
 	
      //pR(p.xz, time*5.);
     
