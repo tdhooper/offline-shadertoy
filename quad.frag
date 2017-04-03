@@ -437,10 +437,21 @@ Model modelProto0(vec3 p) {
     outer1 = smax(outer1, -hole, .13);
 
     outer1 = smax(outer1, inner1, .1);
+
+    float seam, seam2, seamSplit;
+    round = .02;
+
+    seam = fPaper(p, triV.c, -2.);
+    outer1 = smax(outer1, -seam, round);
+
+    seam2 = fPaper(p, triP.bc, 0.);
+    float outer1a = smax(outer1, -seam2, round);
+    
+    seamSplit = fPlane(p, triV.c, -2.);
+    outer1 = mix(outer1, outer1a, step(seamSplit, 0.));
     
     d = min(outer1, outer);
-    //d = outer;
-    
+
     return Model(d, 1.);
 }
 
@@ -668,19 +679,19 @@ Model scene( vec3 p ){
     vec3 p1 = vec3(1.3, -2.5, -1.);
     vec3 p2 = vec3(2.7, .5, -2.5);
     
-    
-    //p /= 1.;
-    //model= model7(p);
-    //model.dist *= 1.;
-    //return model;
+    float scale;
+
+    // scale = 1.9;
+    // p /= scale;
+    // model= model7(p);
+    // model.dist *= scale;
+    // return model;
 	
      //pR(p.xz, time*5.);
     
     Model bp = backPlane(p);
    
-    
-   	float scale;
-    
+        
     p = pp;
     scale = .9;
     p -= p0;
@@ -756,7 +767,7 @@ vec3 screenToLinear(vec3 screenRGB) {
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
-const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
+const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
@@ -994,6 +1005,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     camTar = vec3(0,0,0);
     camPos = vec3(0,0,dist);
     camPos += camTar;
+    //camPos *= sphericalMatrix(mouse * 5.);
 }
 
 
