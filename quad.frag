@@ -47,6 +47,21 @@ float time;
 #define SHOW_SPACE
 
 
+
+// --------------------------------------------------------
+// Spectrum colour palette
+// IQ https://www.shadertoy.com/view/ll2GD3
+// --------------------------------------------------------
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+
 // --------------------------------------------------------
 // HG_SDF
 // https://www.shadertoy.com/view/Xs3GRB
@@ -394,6 +409,7 @@ float addSeam(float d, float part, float round) {
 
 Model modelProto0(vec3 p) {
         
+    float id = 1.;
     float d;
     vec3 n, n1;
     d = 1e12;
@@ -409,7 +425,7 @@ Model modelProto0(vec3 p) {
         #else
         if (bounds > .02) {
         #endif
-            return Model(bounds, 1.);
+            return Model(bounds, id);
         }
     }
     
@@ -456,23 +472,37 @@ Model modelProto0(vec3 p) {
 
     // Core seams
 
-    float seam, spikeSeam, ringSeam, lineSeam;
+    float seam, spikeSeam, ringSeam, lineSeam, baseSeam, tipSeam;
     float outerSeamed;    
     float seamRound = .02;
 
     spikeSeam = length(p);
 
-    seam = max(-spikeSeam + 1.15, spikeSeam - 1.25);
+    baseSeam = spikeSeam - 1.15;
+    tipSeam = spikeSeam - 1.25;
+    seam = max(-baseSeam, tipSeam);
     outer = addSeam(outer, seam, seamRound);
+
+    id += step(-baseSeam, 0.);
+    id += step(-tipSeam, 0.);
+
+    float split = fPlane(p, triP.bc, .3);
+    float idSeam = mix(tipSeam, -1e12, step(-split, 0.));
+    id += step(-idSeam, 0.);
 
     lineSeam = fPlane(p, triP.ca, 0.);
     outerSeamed = addSeam(outer, lineSeam, seamRound);
     outer = mix(outer, outerSeamed, step(seam, 0.));
 
-    spikeSeam = max(-spikeSeam + 2.3, spikeSeam - 2.8);
-    outer = addSeam(outer, spikeSeam, seamRound);
+    baseSeam = spikeSeam - 2.3;
+    tipSeam = spikeSeam - 2.8;
+    seam = max(-baseSeam, tipSeam);
+    outer = addSeam(outer, seam, seamRound);
 
-    float core = outer;
+    id += step(-baseSeam, 0.);
+    id += step(-tipSeam, 0.);
+
+    Model core = Model(outer, id);
     
 
     // Shell
@@ -498,9 +528,13 @@ Model modelProto0(vec3 p) {
     seam = max(ringSeam, spikeSeam);
     outer = addSeam(outer, seam, seamRound);
 
+    id = 7.;
+    id += step(ringSeam, 0.);
+    id += step(-spikeSeam, 0.);
+    
+    Model shell = Model(outer, id);
 
-    d = min(core, outer);
-    return Model(d, 1.);
+    return opU(core, shell);
 }
 
 Model modelProto1(vec3 p) {
@@ -929,7 +963,33 @@ void shadeModel(inout Hit hit) {
     vec3 pos = hit.pos;
     vec3 nor = hit.normal;
     vec3 rd = hit.ray.direction;
-    vec3 albedo = vec3(.7);
+    vec3 albedo;
+    
+    vec3 col1 = vec3(.7, .65, .7);
+    vec3 col2 = vec3(.9, .5, .8);
+    vec3 col3 = vec3(.8);
+
+    col2 = mix(col2, vec3(.74, .5, .99), .5);
+
+    //col2.xz = iMouse.xy / iResolution.xy;
+
+    float id = hit.model.id;
+
+    albedo = vec3(0);
+
+    if (id == 1.) { albedo = col1; }
+    if (id == 2.) { albedo = col3; }
+    if (id == 3.) { albedo = col1; }
+
+    if (id == 4.) { albedo = col1; }
+    if (id == 5.) { albedo = col2; }
+    if (id == 6.) { albedo = col3; }
+
+    if (id == 7.) { albedo = col1; }
+    if (id == 8.) { albedo = col2; }
+    if (id == 9.) { albedo = col3; } 
+
+    //albedo = spectrum((hit.model.id - 1.) / 9. - iGlobalTime / 2.);
     
     useBounds = false;
     
@@ -1074,7 +1134,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             vec2 sp = p * 10. + vec2(-.2);
 	    	color = vec4(pow(space(sp) * 1.2, vec3(1.5)), hit.ray.len);
 	    #else
-	    	color = vec4(vec3(.8,.0,.4), hit.ray.len);
+	    	//color = vec4(vec3(.8,.0,.4), hit.ray.len);
 	    #endif
 	}     
 
