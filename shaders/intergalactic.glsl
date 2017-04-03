@@ -92,7 +92,10 @@ float map(vec3 p, vec4 id) {
     //p *= 2.;
     //float limit = dot(normalize(p), vec3(0,0,1)) - 2.;
     float k = 2.*id.w +.1; //  p/=k;
-    float d = k*(.5 + SpiralNoiseC(p.zxy*.4132+333., id)*3. + pn(p*8.5)*.12);
+    float surfaceAmp = .12;
+    float surfaceFeq = 8.5;
+    float surfaceNoise = pn(p * surfaceFeq) * surfaceAmp;
+    float d = k*(.5 + SpiralNoiseC(p.zxy*.4132+333., id)*3. + surfaceNoise);
     return d;
     //return max(d, -limit);
 }

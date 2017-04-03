@@ -36,12 +36,12 @@ float time;
 
 //#define DEBUG
 //#define SHOW_STEPS
-//#define SHOW_BOUNDS
+#define SHOW_BOUNDS
 #define FAST_COMPILE
 //#define SHOW_ZOOM
 
 #define SHOW_FOG
-#define SHADOWS
+//#define SHADOWS
 #define SHOW_SPACE
 
 
