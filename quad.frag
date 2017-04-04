@@ -37,7 +37,7 @@ float time;
 //#define SHOW_STEPS
 //#define SHOW_BOUNDS
 //#define FAST_COMPILE
-//#define SHOW_ZOOM
+#define SHOW_ZOOM
 //#define DEBUG_MODEL
 //#define CAMERA_CONTROL
 
@@ -794,7 +794,7 @@ Model scene( vec3 p ){
     
     vec3 p0 = vec3(-1., .7, 1.5);
     vec3 p1 = vec3(1.3, -2.5, -1.);
-    vec3 p2 = vec3(2.7, .5, -2.5);
+    vec3 p2 = vec3(2.8, .55, -3.);
     
     float scale;
 
@@ -825,7 +825,7 @@ Model scene( vec3 p ){
 	model = opU(model, part);
     
     p = pp;
-    scale = .6;
+    scale = .62;
     p-= p2;
     p /= scale;
    	part = model9(p);
@@ -1061,7 +1061,7 @@ void shadeModel(inout Hit hit) {
 
     float fog = smoothstep(hit.ray.len, 6., 9.);
     //fog *= .5;
-    col = mix(col, vec3(.7,.4,1.), fog * .75);
+    col = mix(col, vec3(.7,.4,1.), fog * .65);
     col *= 1. + fog * .6;
     //col = vec3(fog);
 
