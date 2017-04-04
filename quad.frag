@@ -36,13 +36,13 @@ float time;
 //#define DEBUG
 //#define SHOW_STEPS
 //#define SHOW_BOUNDS
-#define FAST_COMPILE
+//#define FAST_COMPILE
 //#define SHOW_ZOOM
 //#define DEBUG_MODEL
 //#define CAMERA_CONTROL
 
 #define SHOW_FOG
-//#define SHADOWS
+#define SHADOWS
 #define SHOW_SPACE
 #define SHOW_MODELS
 
@@ -803,8 +803,10 @@ Model scene( vec3 p ){
     vec3 pp = p;
     
     vec3 p0 = vec3(-1.2, .9, 1.5);
-    vec3 p1 = vec3(1.3, -2.5, -1.);
+    vec3 p1 = vec3(1.5, -2.8, -1.);
     vec3 p2 = vec3(2.8, .55, -3.);
+
+    //p1.xy += mousee * 3.;
     
     float scale;
 
@@ -827,7 +829,7 @@ Model scene( vec3 p ){
 	model = part;
     
     p = pp;
-    scale = .95;
+    scale = 1.05;
     p -= p1;
     p /= scale;
     part = model8(p);
