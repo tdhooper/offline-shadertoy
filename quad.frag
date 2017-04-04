@@ -38,13 +38,14 @@ float time;
 //#define SHOW_STEPS
 //#define SHOW_BOUNDS
 #define FAST_COMPILE
-//#define SHOW_ZOOM
+#define SHOW_ZOOM
 //#define DEBUG_MODEL
 //#define CAMERA_CONTROL
 
 #define SHOW_FOG
 //#define SHADOWS
 #define SHOW_SPACE
+#define SHOW_MODELS
 
 
 
@@ -800,8 +801,12 @@ Model map(vec3 p) {
     //float d = length(p - vec3(1.)) - .4;
     //return Model(d, 1.);
 
-    Model model = scene(p); 
-    
+    #ifdef SHOW_MODELS
+        Model model = scene(p); 
+    #else
+        Model model = Model(1e12, 0.);
+    #endif
+
     #ifdef DEBUG
         model = opU(model, debugPlane(p));
     #endif
@@ -969,8 +974,8 @@ void shadeModel(inout Hit hit) {
     vec3 col2 = vec3(.9, .5, .8);
     vec3 col3 = vec3(.8);
 
-    col2 = mix(col2, vec3(.74, .5, .99), .5);
-
+    //col2 = mix(col2, vec3(.74, .5, .99), .5);
+    col2 = vec3(.74, .5, .99);
     //col2.xz = iMouse.xy / iResolution.xy;
 
     float id = hit.model.id;

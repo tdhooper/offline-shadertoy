@@ -24,6 +24,7 @@ vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
 }
 
 vec3 nebulaPal(float t) {
+    return screenToLinear(pal(t, vec3(.75,.7,1.),vec3(.2,.2,.0),vec3(1.0,1.0,0.0),vec3(.0,.3,.0)));
     return screenToLinear(pal(t, vec3(1.,.9,1.),vec3(0.4,0.3,0.),vec3(1.5,1.5,0.),vec3(.2,0.05,0.0)));    
 }
 
@@ -182,29 +183,23 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
                          hsv2rgb(noi+.3,.5,.6), 
                          smoothstep(rRef*.5,rRef*2.,lDist));
        
-        float lightBlend = sin(lDist * lightRepeat * .08 + .8) * .5 + .5; 
+        float lightBlend = sin(-lDist * lightRepeat * .2 + .0) * .5 + .5; 
 //        lightColor = mix(vec3(.3,.1,1), vec3(1.,.2,.7), lightBlend);
         lightColor = nebulaPal(lightBlend);
 
-
-        alphaMultiplier = clamp((t - clipNear) * .5, 0., 1.);
-        
-        alphaMultiplier = smoothstep((t - clipNear) * .5, clipNear, clipFar);
-
         alphaMultiplier = cubicPulse(clipNear + clipBlend, clipBlend, t);
-
         alphaMultiplier *= 1.2;
 
         //if (t > 10.) {
             sum.rgb += (a * lightColor * .02) * alphaMultiplier;
             //float contrib = .002 * lDist;
             //sum += vec4(vec3(contrib), .02 * alphaMultiplier);
-            sum.a += .02 * alphaMultiplier;
+            sum.a += .017 * alphaMultiplier;
         //}
 
         if (d<h) {
 			td += (1.-td)*(h-d)+.005;  // accumulate density
-            sum.rgb += sum.a * sum.rgb * .15 / lDist;  // emission	
+            sum.rgb += sum.a * sum.rgb * .1 / lDist;  // emission	
 			sum += (1.-sum.a)*.02*td*a;  // uniform scale density + alpha blend in contribution 
         } 
 		
