@@ -1006,11 +1006,12 @@ float calcAO( in vec3 pos, in vec3 nor )
 
     
 bool backMask(vec2 uv) {
+    float size = .53;
     pR(uv, PI/2.);
     pModPolar(uv, 6.);
-        
-    float hex = dot(uv, vec2(1,0)) - .56;
-
+    float hex = dot(uv, vec2(1,0)) - size;
+    float border = max(hex - .12, -hex + .03);
+    hex = min(hex, border);     
     return hex > 0.;
 }
 
