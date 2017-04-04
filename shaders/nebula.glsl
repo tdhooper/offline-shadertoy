@@ -1,6 +1,4 @@
 
-#pragma glslify: starField = require(./starfield.glsl)
-
 // --------------------------------------------------------
 // Gamma
 // https://www.shadertoy.com/view/Xds3zN
@@ -72,55 +70,6 @@ vec3 nebulaField(vec2 uv) {
     return col;
 }
 
-vec3 nebulaSeam(vec2 uv) {
-    vec3 seed = vec3(-.34, -.55, -1.579);     
-    
-    vec3 offset = vec3(170. + 10., -70. + 100., 40. + 120.);
-    
-    uv *= .7;
-    vec3 p = vec3(uv / .1, 0.) + offset;
-	float strength = 20.;
-
-    
-    float r, accum = 0., prev = 0., tw = 0.;
-    vec3 col = vec3(0);
-	for (int i = 0; i < 32; ++i) {
-        nebulaCalc(i, strength, p, seed, r, prev);
-        if (i < 18) {
-            accum += r * .9;
-        } else {
-            accum -= r * .7;
-        }
-	}
-    accum -= .05;
-    accum = pow(accum, 10.);
-    accum = clamp(accum, 0., 1.);
-    col = vec3(accum);
- 	           
-    return col;
-}
 
 
-vec3 space(vec2 uv) {
-    
-    vec3 soffset = vec3(7.9,3.001,0.15);
-    vec3 stars = starField(uv, soffset) * .01;
-    
-    vec3 field = nebulaField(uv);
-
-    vec3 seam = nebulaSeam(uv);
-    
-    vec3 col = field + stars;
-    //col -= seam;
-    
-    col *= .9;
-    col += .2;
-    
-    col = clamp(col, 0., 1.);
-    col = screenToLinear(col);
-    
-    return col;
-}
-
-
-#pragma glslify: export(space)
+#pragma glslify: export(nebulaField)

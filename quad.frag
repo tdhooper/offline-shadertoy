@@ -19,7 +19,6 @@ void main() {
 vec2 mousee;
 
 #pragma glslify: renderSuperstructure = require(./shaders/intergalactic.glsl, iChannel0=iChannel0, iGlobalTime=iGlobalTime, mousee=mousee)
-#pragma glslify: space = require(./shaders/space.glsl)
 
 // Author:
 // Title:
@@ -37,13 +36,13 @@ float time;
 //#define DEBUG
 //#define SHOW_STEPS
 //#define SHOW_BOUNDS
-#define FAST_COMPILE
+//#define FAST_COMPILE
 #define SHOW_ZOOM
 //#define DEBUG_MODEL
 //#define CAMERA_CONTROL
 
 #define SHOW_FOG
-//#define SHADOWS
+#define SHADOWS
 #define SHOW_SPACE
 #define SHOW_MODELS
 
@@ -970,7 +969,7 @@ void shadeModel(inout Hit hit) {
     vec3 rd = hit.ray.direction;
     vec3 albedo;
     
-    vec3 col1 = vec3(.7, .65, .7);
+    vec3 col1 = vec3(.65, .65, .75);
     vec3 col2 = vec3(.9, .5, .8);
     vec3 col3 = vec3(.8);
 
@@ -1105,6 +1104,8 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     #endif
 }
 
+#pragma glslify: starField = require(./shaders/starfield.glsl)
+#pragma glslify: nebulaField = require(./shaders/nebula.glsl)
 
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -1135,33 +1136,39 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec4 color = render(hit);
 
 	if ( ! isMasked && hit.isBackground) {
-        #ifdef SHOW_SPACE
-            vec2 sp = p * 10. + vec2(-.2);
-	    	color = vec4(pow(space(sp) * 1.2, vec3(1.5)), hit.ray.len);
-	    #else
-	    	//color = vec4(vec3(.8,.0,.4), hit.ray.len);
-	    #endif
-	}     
 
-	#ifdef SHOW_FOG
-	    if ( ! isMasked || ! hit.isBackground) {
+        vec2 sp = p * 10. + vec2(-.2);
+        vec3 soffset = vec3(7.9,3.001,0.15);
+        vec3 stars = starField(sp, soffset) * .01;
+        vec3 field = nebulaField(sp);
+        vec3 bg = (field + stars) * .9 + .2;
+        bg = clamp(bg, 0., 1.); 
+
+        color = vec4(screenToLinear(bg), hit.ray.len);
+
+    	//color = vec4(pow(spaceCol * 1.2, vec3(1.5)), hit.ray.len);
+
+    	#ifdef SHOW_FOG
 			vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
 			sliderVal = vec4(0.5,0.7,0.2,0.9);
 
-    //0.4848822844959103
-	//0.553018368604615
-    //camPos *= sphericalMatrix(m * 8.);
-    //camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
-    //rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
-    //ray = CastRay(camPos, rd);
+            //0.4848822844959103
+        	//0.553018368604615
+            //camPos *= sphericalMatrix(m * 8.);
+            //camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
+            //rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
+            //ray = CastRay(camPos, rd);
 
 			color = renderSuperstructure(ray.origin, ray.direction, sliderVal, color);
-		}
-	#endif
+    	#endif
+
+        color.rgb += pow(stars * .4, vec3(2.));
+    }
 
     #ifndef DEBUG
       color.rgb = linearToScreen(color.rgb);
     #endif
+
 
     fragColor = color;
 }
