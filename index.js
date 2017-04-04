@@ -43,8 +43,8 @@ const drawTriangle = regl({
                 return value * context.pixelRatio;
             });
             mouse[1] = context.viewportHeight - mouse[1];
-            //console.log(mouse[0] / context.viewportWidth);
-            //console.log(mouse[1] / context.viewportHeight)
+            console.log(mouse[0] / context.viewportWidth);
+            console.log(mouse[1] / context.viewportHeight)
             return mouse;
         },
         iChannel0: texture

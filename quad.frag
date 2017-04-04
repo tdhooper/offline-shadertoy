@@ -36,13 +36,13 @@ float time;
 //#define DEBUG
 //#define SHOW_STEPS
 //#define SHOW_BOUNDS
-//#define FAST_COMPILE
-#define SHOW_ZOOM
+#define FAST_COMPILE
+//#define SHOW_ZOOM
 //#define DEBUG_MODEL
 //#define CAMERA_CONTROL
 
 #define SHOW_FOG
-#define SHADOWS
+//#define SHADOWS
 #define SHOW_SPACE
 #define SHOW_MODELS
 
@@ -696,7 +696,12 @@ Model modelProto2(vec3 p) {
 
 Model model7(vec3 p) {
     float bounds = dot(p, normalize(vec3(0,0,-1))) - 1.;
+
+    pR(p.xy, .075);
     
+    vec2 m = vec2(0.585, 0.528) - .5;
+    //p *= sphericalMatrix(m * 5.);
+
     pR(p.xy, -.2);
     pR(p.xz, -.45);
     pR(p.yz, .32);
@@ -721,6 +726,11 @@ Model model7(vec3 p) {
 
 Model model8(vec3 p) {
     float bounds = dot(p, vec3(0,0,-1)) + 0.;
+
+    pR(p.xy, .47);
+    //pR(p.xz, -.45);
+    //pR(p.yz, .32);
+
     pIcosahedron(p);    
     Model proto = modelProto1(p);
 
@@ -792,7 +802,7 @@ Model scene( vec3 p ){
     
     vec3 pp = p;
     
-    vec3 p0 = vec3(-1., .7, 1.5);
+    vec3 p0 = vec3(-1.2, .9, 1.5);
     vec3 p1 = vec3(1.3, -2.5, -1.);
     vec3 p2 = vec3(2.8, .55, -3.);
     
@@ -809,7 +819,7 @@ Model scene( vec3 p ){
     //pR(p.xz, time*5.);
         
     p = pp;
-    scale = .9;
+    scale = .95;
     p -= p0;
     p /= scale;
    	part = model7(p);
@@ -999,7 +1009,7 @@ bool backMask(vec2 uv) {
     pR(uv, PI/2.);
     pModPolar(uv, 6.);
         
-    float hex = dot(uv, vec2(1,0)) - .58;
+    float hex = dot(uv, vec2(1,0)) - .56;
 
     return hex > 0.;
 }
