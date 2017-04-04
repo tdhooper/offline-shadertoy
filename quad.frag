@@ -614,26 +614,30 @@ Model modelProto1(vec3 p) {
     
     d = smax(outer, inner, .05);
     
-    // Core seams
+    // Seams
 
-    float seam, ringSeam, baseSeam, tipSeam;
-    float outerSeamed;    
+    float faceSeam, lineSeamA, lineSeamB, baseSeam;
+    float dSeamed;
     float seamRound = .01;
 
-    baseSeam = length(p) - 1.05;
-    tipSeam = length(p) - 1.15;
-    seam = max(-baseSeam, tipSeam);
-    d = addSeam(d, seam, seamRound);
+    lineSeamA = fPlane(p, triP.ab, 0.);
+    
+    blend = 1./3.;
+    n1 = bToCn(blend, 1. - blend, .0);
+    n = cross(n1, reflect(n1, triP.ca));
+    lineSeamB = fPlane(p, n, 0.);
+    
+    faceSeam = max(-lineSeamB, lineSeamA);
+    dSeamed = addSeam(d, faceSeam, seamRound);
 
-    ringSeam = fPlane(p, triP.bc, .0);
-    d = addSeam(d, ringSeam, seamRound);
+    baseSeam = length(p) - 1.07;
+    d = addSeam(d, baseSeam, seamRound);
 
-    ringSeam = fPlane(p, triP.ca, .0);
-    d = addSeam(d, ringSeam, seamRound);
+    d = mix(d, dSeamed, step(baseSeam, 0.));
 
     float material = 1.;
-    material += step(-baseSeam, 0.) * 1.;
-    material += step(-tipSeam, 0.) * 1.;
+    material += step(-faceSeam, 0.) * step(baseSeam, 0.);
+    material += step(-baseSeam, 0.) * 2.;
 
     return Model(d, 1., material);
 }    
