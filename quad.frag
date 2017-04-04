@@ -1137,7 +1137,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 	if ( ! isMasked && hit.isBackground) {
 
-        vec2 sp = p * 10. + vec2(-.2);
+        vec2 sp = p * 10. + vec2(-.2,1.);
         vec3 soffset = vec3(7.9,3.001,0.15);
         vec3 stars = starField(sp, soffset) * .01;
         vec3 field = nebulaField(sp);
