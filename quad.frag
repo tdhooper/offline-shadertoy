@@ -981,9 +981,9 @@ void shadeModel(inout Hit hit) {
 
     albedo = vec3(0);
 
-    if (id == 1.) { albedo = col1; }
-    if (id == 2.) { albedo = col3; }
-    if (id == 3.) { albedo = col1; }
+    if (id == 1.) { albedo = col3; }
+    if (id == 2.) { albedo = col1; }
+    if (id == 3.) { albedo = col3; }
 
     if (id == 4.) { albedo = col1; }
     if (id == 5.) { albedo = col2; }
@@ -1135,35 +1135,37 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec4 color = render(hit);
 
-	if ( ! isMasked && hit.isBackground) {
+    #ifdef SHOW_SPACE
+    	if ( ! isMasked && hit.isBackground) {
 
-        vec2 sp = p * 10. + vec2(-.2,1.);
-        vec3 soffset = vec3(7.9,3.001,0.15);
-        vec3 stars = starField(sp, soffset) * .01;
-        vec3 field = nebulaField(sp);
-        vec3 bg = (field + stars) * .9 + .2;
-        bg = clamp(bg, 0., 1.); 
+            vec2 sp = p * 10. + vec2(-.2,1.);
+            vec3 soffset = vec3(7.9,3.001,0.15);
+            vec3 stars = starField(sp, soffset) * .01;
+            vec3 field = nebulaField(sp);
+            vec3 bg = (field + stars) * .9 + .2;
+            bg = clamp(bg, 0., 1.); 
 
-        color = vec4(screenToLinear(bg), hit.ray.len);
+            color = vec4(screenToLinear(bg), hit.ray.len);
 
-    	//color = vec4(pow(spaceCol * 1.2, vec3(1.5)), hit.ray.len);
+        	//color = vec4(pow(spaceCol * 1.2, vec3(1.5)), hit.ray.len);
 
-    	#ifdef SHOW_FOG
-			vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
-			sliderVal = vec4(0.5,0.7,0.2,0.9);
+        	#ifdef SHOW_FOG
+    			vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
+    			sliderVal = vec4(0.5,0.7,0.2,0.9);
 
-            //0.4848822844959103
-        	//0.553018368604615
-            //camPos *= sphericalMatrix(m * 8.);
-            //camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
-            //rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
-            //ray = CastRay(camPos, rd);
+                //0.4848822844959103
+            	//0.553018368604615
+                //camPos *= sphericalMatrix(m * 8.);
+                //camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
+                //rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
+                //ray = CastRay(camPos, rd);
 
-			color = renderSuperstructure(ray.origin, ray.direction, sliderVal, color);
-    	#endif
+    			color = renderSuperstructure(ray.origin, ray.direction, sliderVal, color);
+        	#endif
 
-        color.rgb += pow(stars * .4, vec3(2.));
-    }
+            color.rgb += pow(stars * .4, vec3(2.));
+        }
+    #endif
 
     #ifndef DEBUG
       color.rgb = linearToScreen(color.rgb);
