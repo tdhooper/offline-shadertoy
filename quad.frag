@@ -36,8 +36,8 @@ float time;
 //#define DEBUG
 //#define SHOW_STEPS
 //#define SHOW_BOUNDS
-//#define FAST_COMPILE
-#define SHOW_ZOOM
+#define FAST_COMPILE
+//#define SHOW_ZOOM
 //#define DEBUG_MODEL
 //#define CAMERA_CONTROL
 
@@ -391,6 +391,7 @@ bool useBounds;
 struct Model {
     float dist;
     float id;
+    float material;
 };
     
 // checks to see which intersection is closer
@@ -425,7 +426,7 @@ Model modelProto0(vec3 p) {
         #else
         if (bounds > .02) {
         #endif
-            return Model(bounds, id);
+            return Model(bounds, id, 0.);
         }
     }
     
@@ -502,7 +503,18 @@ Model modelProto0(vec3 p) {
     id += step(-baseSeam, 0.);
     id += step(-tipSeam, 0.);
 
-    Model core = Model(outer, id);
+
+    float material = 1.;
+
+    if (id == 1.) { material = 3.; }
+    if (id == 2.) { material = 1.; }
+    if (id == 3.) { material = 3.; }
+
+    if (id == 4.) { material = 1.; }
+    if (id == 5.) { material = 2.; }
+    if (id == 6.) { material = 3.; }
+
+    Model core = Model(outer, id, material);
     
 
     // Shell
@@ -531,8 +543,12 @@ Model modelProto0(vec3 p) {
     id = 7.;
     id += step(ringSeam, 0.);
     id += step(-spikeSeam, 0.);
+
+    if (id == 7.) { material = 1.; }
+    if (id == 8.) { material = 2.; }
+    if (id == 9.) { material = 3.; }     
     
-    Model shell = Model(outer, id);
+    Model shell = Model(outer, id, material);
 
     return opU(core, shell);
 }
@@ -558,7 +574,7 @@ Model modelProto1(vec3 p) {
         #else
         if (bounds > .02) {
         #endif
-            return Model(bounds, 1.);
+            return Model(bounds, 1., 0.);
         }
     }
     
@@ -598,7 +614,7 @@ Model modelProto1(vec3 p) {
     
     d = smax(outer, inner, .05);
     
-    return Model(d, 1.);
+    return Model(d, 1., 0.);
 }    
     
 Model modelProto2(vec3 p) {
@@ -617,7 +633,7 @@ Model modelProto2(vec3 p) {
         #else
         if (bounds > .02) {
         #endif
-            return Model(bounds, 1.);
+            return Model(bounds, 1., .0);
         }
    	}
 
@@ -648,7 +664,7 @@ Model modelProto2(vec3 p) {
 
     d = smax(outer, inner, .05);
             
-    return Model(d, 1.);
+    return Model(d, 1., 0.);
 }
 
 
@@ -673,7 +689,7 @@ Model model7(vec3 p) {
         size = .015;
     }
     float d = length(p - point * 2.75) - size;
-    Model decal = Model(d, 20.);
+    Model decal = Model(d, 20., 0.);
 
     return opU(proto, decal);
 }    
@@ -693,7 +709,7 @@ Model model8(vec3 p) {
         size = .01;
     }
     float d = length(p - point * 1.8) - size;
-    Model decal = Model(d, 20.);
+    Model decal = Model(d, 20., 0.);
 
     return opU(proto, decal);
 
@@ -714,7 +730,7 @@ Model model9(vec3 p) {
         size = .01;
     }
     float d = fCapsule(p, point * 3., point * 3.5, size);
-    Model decal = Model(d, 20.);
+    Model decal = Model(d, 20., 0.);
 
     return opU(proto, decal);  
 }
@@ -729,7 +745,7 @@ Model debugPlane(vec3 p) {
     float d = 10000.;
     //return Model(d, 99.);
     
-    return Model(fPaper(p, vec3(0,.1,1), 0.), 101.);
+    return Model(fPaper(p, vec3(0,.1,1), 0.), 101., 0.);
 
     float a = fPaper(p, cross(pbc, pca), 0.);
     float b = fPaper(p, cross(pab, pbc), 0.);
@@ -741,7 +757,7 @@ Model debugPlane(vec3 p) {
     
     d = max(d, length(p) - 1.4);
     d = max(d, -(length(p) - .0));
-    return Model(d, 101.);
+    return Model(d, 101., .0);
 }
 
 Model scene( vec3 p ){
@@ -803,7 +819,7 @@ Model map(vec3 p) {
     #ifdef SHOW_MODELS
         Model model = scene(p); 
     #else
-        Model model = Model(1e12, 0.);
+        Model model = Model(1e12, 0., 0.);
     #endif
 
     #ifdef DEBUG
@@ -977,21 +993,11 @@ void shadeModel(inout Hit hit) {
     col2 = vec3(.74, .5, .99);
     //col2.xz = iMouse.xy / iResolution.xy;
 
-    float id = hit.model.id;
+    float material = hit.model.material;
 
-    albedo = vec3(0);
-
-    if (id == 1.) { albedo = col3; }
-    if (id == 2.) { albedo = col1; }
-    if (id == 3.) { albedo = col3; }
-
-    if (id == 4.) { albedo = col1; }
-    if (id == 5.) { albedo = col2; }
-    if (id == 6.) { albedo = col3; }
-
-    if (id == 7.) { albedo = col1; }
-    if (id == 8.) { albedo = col2; }
-    if (id == 9.) { albedo = col3; } 
+    if (material == 1.) { albedo = col1; }
+    if (material == 2.) { albedo = col2; }
+    if (material == 3.) { albedo = col3; }
 
     //albedo = spectrum((hit.model.id - 1.) / 9. - iGlobalTime / 2.);
     
