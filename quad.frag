@@ -36,7 +36,7 @@ float time;
 //#define DEBUG
 //#define SHOW_STEPS
 //#define SHOW_BOUNDS
-#define FAST_COMPILE
+//#define FAST_COMPILE
 //#define SHOW_ZOOM
 //#define DEBUG_MODEL
 //#define CAMERA_CONTROL
@@ -614,7 +614,28 @@ Model modelProto1(vec3 p) {
     
     d = smax(outer, inner, .05);
     
-    return Model(d, 1., 0.);
+    // Core seams
+
+    float seam, ringSeam, baseSeam, tipSeam;
+    float outerSeamed;    
+    float seamRound = .01;
+
+    baseSeam = length(p) - 1.05;
+    tipSeam = length(p) - 1.15;
+    seam = max(-baseSeam, tipSeam);
+    d = addSeam(d, seam, seamRound);
+
+    ringSeam = fPlane(p, triP.bc, .0);
+    d = addSeam(d, ringSeam, seamRound);
+
+    ringSeam = fPlane(p, triP.ca, .0);
+    d = addSeam(d, ringSeam, seamRound);
+
+    float material = 1.;
+    material += step(-baseSeam, 0.) * 1.;
+    material += step(-tipSeam, 0.) * 1.;
+
+    return Model(d, 1., material);
 }    
     
 Model modelProto2(vec3 p) {
@@ -699,8 +720,10 @@ Model model8(vec3 p) {
     pIcosahedron(p);    
     Model proto = modelProto1(p);
 
+    return proto;
+
     if ( ! isMasked || ! useBounds || bounds > 0.2) {
-     return proto;
+        return proto;
     }
 
     vec3 point = geodesicPoint(p, 6.);
@@ -772,9 +795,9 @@ Model scene( vec3 p ){
     float scale;
 
     #ifdef DEBUG_MODEL
-        scale = 1.6;
+        scale = 4.;
         p /= scale;
-        model= model7(p);
+        model= model8(p);
         model.dist *= scale;
         return model;
 	#endif
