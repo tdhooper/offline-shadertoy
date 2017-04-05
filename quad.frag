@@ -689,7 +689,41 @@ Model modelProto2(vec3 p) {
 
     d = smax(outer, inner, .05);
             
-    return Model(d, 1., 1.);
+
+    // Seams
+
+    float holeSeam, lineSeam, baseSeam, tipSeam, seamSplit;
+    float dSeamed, dSeamed2;
+    float seamRound = .015;
+
+    lineSeam = fPlane(p, triP.ca, 0.);
+    dSeamed = addSeam(d, lineSeam, seamRound);
+
+    holeSeam = length(p - triV.a) - .425;
+    dSeamed = addSeam(dSeamed, holeSeam, seamRound);
+
+    lineSeam = fPlane(p, triP.ab, 0.);
+    dSeamed2 = addSeam(dSeamed, lineSeam, seamRound);
+
+    dSeamed = mix(dSeamed, dSeamed2, step(-holeSeam, 0.));
+
+    baseSeam = length(p) - 1.07;
+    d = addSeam(d, baseSeam, seamRound);
+
+    tipSeam = length(p) - 1.25;
+    seamSplit = fPlane(p, triP.ab, .15);
+    tipSeam = max(tipSeam, seamSplit);
+    d = addSeam(d, tipSeam, seamRound);
+
+    d = mix(d, dSeamed, step(baseSeam, 0.));
+
+    float material = 1.;
+
+    material += step(-baseSeam, 0.) * 2.;
+    material -= step(max(-baseSeam, tipSeam), 0.);
+    material += step(holeSeam, 0.) * 2.;
+
+    return Model(d, 1., material);
 }
 
 
@@ -733,8 +767,6 @@ Model model8(vec3 p) {
 
     pIcosahedron(p);    
     Model proto = modelProto1(p);
-
-    return proto;
 
     if ( ! isMasked || ! useBounds || bounds > 0.2) {
         return proto;
@@ -811,9 +843,9 @@ Model scene( vec3 p ){
     float scale;
 
     #ifdef DEBUG_MODEL
-        scale = 4.;
+        scale = 3.;
         p /= scale;
-        model= model8(p);
+        model= model9(p);
         model.dist *= scale;
         return model;
 	#endif
