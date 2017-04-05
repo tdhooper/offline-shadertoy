@@ -1031,10 +1031,11 @@ void shadeModel(inout Hit hit) {
     
     vec3 col1 = vec3(.65, .65, .75);
     vec3 col2 = vec3(.9, .5, .8);
-    vec3 col3 = vec3(.8);
+    vec3 col3 = vec3(.95);
 
     //col2 = mix(col2, vec3(.74, .5, .99), .5);
     col2 = vec3(.74, .5, .99);
+    col1 = vec3(.7, .7, .8);
     // col2 = vec3(.3, .1, .9);
     // col2 = vec3(.8);
     // col1 = vec3(.2, .5, .99);
