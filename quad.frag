@@ -619,7 +619,6 @@ Model modelProto1(vec3 p) {
     float faceSeam, lineSeamA, lineSeamB, baseSeam;
     float dSeamed;
     float seamRound = .01;
-    float spikeSeamRound = .04;
 
     lineSeamA = fPlane(p, triP.ab, 0.);
     
@@ -629,12 +628,11 @@ Model modelProto1(vec3 p) {
     lineSeamB = fPlane(p, n, 0.);
     
     faceSeam = max(-lineSeamB, lineSeamA);
-    baseSeam = length(p) - 1.03;
+    dSeamed = addSeam(d, faceSeam, seamRound);
 
-    dSeamed = smax(d, baseSeam, spikeSeamRound);
-    dSeamed = addSeam(dSeamed, faceSeam, seamRound);
+    baseSeam = length(p) - 1.07;
+    d = addSeam(d, baseSeam, seamRound);
 
-    d = smax(d, -baseSeam, spikeSeamRound);
     d = mix(d, dSeamed, step(baseSeam, 0.));
 
     float material = 1.;
