@@ -785,7 +785,13 @@ Model model8(vec3 p) {
 }    
     
 Model model9(vec3 p) {
+
 	float bounds = dot(p, vec3(0,0,-1)) + 1.;
+
+    pR(p.xy, -.12);
+    pR(p.xz, .5);
+    pR(p.yz, -.3);
+
     pIcosahedron(p);    
 	Model proto = modelProto2(p);
 
