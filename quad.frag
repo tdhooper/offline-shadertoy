@@ -689,7 +689,7 @@ Model modelProto2(vec3 p) {
 
     d = smax(outer, inner, .05);
             
-    return Model(d, 1., 0.);
+    return Model(d, 1., 1.);
 }
 
 
@@ -1006,12 +1006,16 @@ float calcAO( in vec3 pos, in vec3 nor )
     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
 }
 
-    
-bool backMask(vec2 uv) {
-    float size = .53;
+float hexDist(vec2 uv) {
     pR(uv, PI/2.);
     pModPolar(uv, 6.);
-    float hex = dot(uv, vec2(1,0)) - size;
+    return dot(uv, vec2(1,0));
+}
+
+   
+bool backMask(vec2 uv) {
+    float size = .53;
+    float hex = hexDist(uv) - size;
     float border = max(hex - .12, -hex + .03);
     hex = min(hex, border);     
     return hex > 0.;
@@ -1031,7 +1035,15 @@ void shadeModel(inout Hit hit) {
 
     //col2 = mix(col2, vec3(.74, .5, .99), .5);
     col2 = vec3(.74, .5, .99);
+    // col2 = vec3(.3, .1, .9);
+    // col2 = vec3(.8);
+    // col1 = vec3(.2, .5, .99);
+    //col1 = vec3(.3, .2, .9);
+    //col2 = vec3(.3, .2, .9);
     //col2.xz = iMouse.xy / iResolution.xy;
+
+    // col2 = vec3(1.);
+    // col3 = vec3(.2, .5, .99) * .6 + .4;
 
     float material = hit.model.material;
 
@@ -1050,6 +1062,7 @@ void shadeModel(inout Hit hit) {
     mat3 m;
     //m = sphericalMatrix((iMouse.xy / iResolution.xy - .5) * 8.);
     vec2 mouseSetting = vec2(0.45607896335673687, 0.8963768106439839);
+    //mouseSetting = mousee + .5;
     m = sphericalMatrix((mouseSetting - .5) * 8.);
     lightPos *= m;
     backLightPos *= m;
@@ -1090,14 +1103,7 @@ void shadeSurface(inout Hit hit){
     	hit.color = vec3(hit.steps / 40.);
     	return;
     #endif
-    
-    vec3 background = vec3(1.);
-    
-    if (hit.isBackground) {
-        hit.color = background;
-        return;
-    }
-    
+        
     if (hit.model.id > 100.) {
         float dist = scene(hit.pos).dist;
         hit.color = vec3(mod(dist * 10., 1.));
@@ -1179,7 +1185,18 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     useBounds = true;
     Hit hit = raymarch(ray);
 
-    vec4 color = render(hit);
+    vec3 background = vec3(.3, .1, .5);
+    background = mix(background, vec3(1.), .8);
+    float hex = hexDist(p) - .6;
+    background = mix(background, vec3(1.), step(hex, 0.));
+
+    //background = vec3(1);
+
+    vec4 color = vec4(background, 1e12);
+
+    if ( ! hit.isBackground) {
+        color = render(hit);
+    }
 
     vec3 stars;
 
@@ -1224,6 +1241,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     #ifndef DEBUG
       color.rgb = linearToScreen(color.rgb);
+      color.rgb = pow(color.rgb, vec3(1.2));
     #endif
 
 
