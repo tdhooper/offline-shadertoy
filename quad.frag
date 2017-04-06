@@ -728,7 +728,9 @@ Model modelProto2(vec3 p) {
     return Model(d, 1., material);
 }
 
-
+float alias(float i, float resolution) {
+    return floor(i * (1. / resolution)) * resolution;
+}
 
 Model model7(vec3 p, float decalBounds) {
     pR(p.xy, .075);
@@ -740,12 +742,28 @@ Model model7(vec3 p, float decalBounds) {
 
     if (renderDecals) {
         if (decalBounds < -.02) {
-            return Model(-decalBounds, 20., 0.);
+           return Model(-decalBounds, 20., 0.);
         }
-        vec3 point = geodesicPoint(p, 1.);
-        float rad = clamp((floor(length(p) * 2.) * .5) - .25, 1., 4.);
+
+        float spacing = .25;
         float size = .02;
-        float d = length(p - point * rad) - size;
+
+        vec3 point = geodesicPoint(p, 1.);
+        float radA = alias(length(p) + spacing / 2., spacing);
+        float radB = alias(length(p) + spacing / 2., spacing) - spacing;
+
+        float part;
+        float d = 1e12;
+
+        part = length(p - point * radA) - size;
+        d = min(d, part);
+
+        part = length(p - point * radB) - size;
+        d = min(d, part);
+
+        d = max(d, -length(p) + 1.);
+        d = max(d, length(p) - 3.9);
+
         d = max(d, -decalBounds);
         return Model(d, 20., 0.);
     }
@@ -830,25 +848,26 @@ Model scene( vec3 p ){
     //p1.xy += mousee * 3.;
     
     float scale;
+    float decalBounds;
 
     #ifdef DEBUG_MODEL
+        decalBounds = length(camPos);
         scale = 2.;
         p /= scale;
-        model= model9(p);
+        model= model7(p, decalBounds);
         model.dist *= scale;
         return model;
 	#endif
 
     //pR(p.xz, time*5.);
 
-    float decalBounds;
         
     p = pp;
     decalBounds = length(p - camPos) - 9.3;
     scale = .95;
     p -= p0;
     p /= scale;
-   	part = model7(p, decalBounds);
+   	part = model7(p, 0.);
     part.dist *= scale;
 	model = part;
     
