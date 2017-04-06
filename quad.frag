@@ -36,7 +36,7 @@ float time;
 //#define DEBUG
 //#define SHOW_STEPS
 //#define SHOW_BOUNDS
-//#define FAST_COMPILE
+#define FAST_COMPILE
 //#define SHOW_ZOOM
 //#define DEBUG_MODEL
 //#define CAMERA_CONTROL
@@ -45,7 +45,7 @@ float time;
 #define SHADOWS
 #define SHOW_SPACE
 #define SHOW_MODELS
-
+#define SHOW_DECALS
 
 
 // --------------------------------------------------------
@@ -387,6 +387,8 @@ vec3 geodesicPoint(vec3 p, float subdivisions) {
 
 bool isMasked;
 bool useBounds;
+bool renderDecals = false;
+vec3 camPos;
 
 struct Model {
     float dist;
@@ -728,86 +730,67 @@ Model modelProto2(vec3 p) {
 
 
 
-Model model7(vec3 p) {
-    float bounds = dot(p, normalize(vec3(0,0,-1))) - 1.;
-
+Model model7(vec3 p, float decalBounds) {
     pR(p.xy, .075);
-    
-    vec2 m = vec2(0.585, 0.528) - .5;
-    //p *= sphericalMatrix(m * 5.);
-
     pR(p.xy, -.2);
     pR(p.xz, -.45);
     pR(p.yz, .32);
+
     pIcosahedron(p);
+
+    if (renderDecals) {
+        if (decalBounds < -.02) {
+            return Model(-decalBounds, 20., 0.);
+        }
+        vec3 point = geodesicPoint(p, 1.);
+        float rad = clamp((floor(length(p) * 2.) * .5) - .25, 1., 4.);
+        float size = .02;
+        float d = length(p - point * rad) - size;
+        d = max(d, -decalBounds);
+        return Model(d, 20., 0.);
+    }
     
-    Model proto = modelProto0(p);
-
-    if ( ! isMasked || ! useBounds || bounds > 0.2) {
-      return proto;
-    }
-
-    vec3 point = geodesicPoint(p, 2.);
-    float size = .02;
-    if (isMasked) {
-        size = .015;
-    }
-    float d = length(p - point * 2.75) - size;
-    Model decal = Model(d, 20., 0.);
-
-    return opU(proto, decal);
+    return modelProto0(p);
 }    
 
-Model model8(vec3 p) {
-    float bounds = dot(p, vec3(0,0,-1)) + 0.;
-
+Model model8(vec3 p, float decalBounds) {
     pR(p.xy, .47);
-    //pR(p.xz, -.45);
-    //pR(p.yz, .32);
 
-    pIcosahedron(p);    
-    Model proto = modelProto1(p);
+    pIcosahedron(p);
 
-    if ( ! isMasked || ! useBounds || bounds > 0.2) {
-        return proto;
+    if (renderDecals) {
+        if (decalBounds < -.02) {
+            return Model(-decalBounds, 20., 0.);
+        }
+        vec3 point = geodesicPoint(p, 6.);
+        float size = .02;
+        float d = length(p - point * 1.8) - size;
+        d = max(d, -decalBounds);
+        return Model(d, 20., 0.);
     }
-
-    vec3 point = geodesicPoint(p, 6.);
-    float size = .02;
-    if (isMasked) {
-        size = .01;
-    }
-    float d = length(p - point * 1.8) - size;
-    Model decal = Model(d, 20., 0.);
-
-    return opU(proto, decal);
-
+    
+    return modelProto1(p);
 }    
     
-Model model9(vec3 p) {
-
-	float bounds = dot(p, vec3(0,0,-1)) + 1.;
-
+Model model9(vec3 p, float decalBounds) {
     pR(p.xy, -.12);
     pR(p.xz, .5);
     pR(p.yz, -.3);
 
     pIcosahedron(p);    
-	Model proto = modelProto2(p);
 
-    if ( ! isMasked || ! useBounds || bounds > 0.2) {
-      return proto;
+    if (renderDecals) {
+        if (decalBounds < -.02) {
+            return Model(-decalBounds, 20., 0.);
+        }
+        vec3 point = geodesicPoint(p, 2.);
+        float size = .02;
+        float d = fCapsule(p, point * 3., point * 4.5, size);
+        d = max(d, -decalBounds);
+        return Model(d, 20., 0.);
     }
 
-    vec3 point = geodesicPoint(p, 2.);
-    float size = .02;
-    if (isMasked) {
-        size = .01;
-    }
-    float d = fCapsule(p, point * 3., point * 3.5, size);
-    Model decal = Model(d, 20., 0.);
-
-    return opU(proto, decal);  
+	return modelProto2(p);
 }
 
 
@@ -849,7 +832,7 @@ Model scene( vec3 p ){
     float scale;
 
     #ifdef DEBUG_MODEL
-        scale = 3.;
+        scale = 2.;
         p /= scale;
         model= model9(p);
         model.dist *= scale;
@@ -857,28 +840,33 @@ Model scene( vec3 p ){
 	#endif
 
     //pR(p.xz, time*5.);
+
+    float decalBounds;
         
     p = pp;
+    decalBounds = length(p - camPos) - 9.3;
     scale = .95;
     p -= p0;
     p /= scale;
-   	part = model7(p);
+   	part = model7(p, decalBounds);
     part.dist *= scale;
 	model = part;
     
     p = pp;
+    decalBounds = length(p - camPos) - 11.8;
     scale = 1.05;
     p -= p1;
     p /= scale;
-    part = model8(p);
+    part = model8(p, decalBounds);
     part.dist *= scale;
 	model = opU(model, part);
     
     p = pp;
+    decalBounds = length(p - camPos) - 14.;
     scale = .62;
     p-= p2;
     p /= scale;
-   	part = model9(p);
+   	part = model9(p, decalBounds);
     part.dist *= scale;    
     model = opU(model, part);
     
@@ -893,11 +881,7 @@ Model map(vec3 p) {
     //float d = length(p - vec3(1.)) - .4;
     //return Model(d, 1.);
 
-    #ifdef SHOW_MODELS
-        Model model = scene(p); 
-    #else
-        Model model = Model(1e12, 0., 0.);
-    #endif
+    Model model = scene(p); 
 
     #ifdef DEBUG
         model = opU(model, debugPlane(p));
@@ -967,7 +951,7 @@ vec3 calcNormal( in vec3 pos ){
     return normalize(nor);
 }
 
-Hit raymarch(CastRay castRay){
+Hit raymarch(CastRay castRay, float fudgeFactor){
 	float steps = 0.;
     float currentDist = INTERSECTION_PRECISION * 2.0;
     Model model;
@@ -980,7 +964,7 @@ Hit raymarch(CastRay castRay){
         }
         model = map(ray.origin + ray.direction * ray.len);
         currentDist = model.dist;
-        ray.len += currentDist * FUDGE_FACTOR;
+        ray.len += currentDist * fudgeFactor;
         steps += 1.;
     }
 
@@ -1212,35 +1196,52 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 m = iMouse.xy / iResolution.xy - .5;
     mousee = m;
 
-    vec3 camPos, camTar;
+    vec3 background = vec3(.3, .1, .5);
+    background = mix(background, vec3(1.), .8);
+    float hex = hexDist(p) - .6;
+    background = mix(background, vec3(1.), step(hex, 0.));
+    vec4 color = vec4(background, 1e12);
+
+    isMasked = backMask(p);
+    //isMasked = true;
+    useBounds = true;
+
+    vec3 camTar;
     float camRoll;
     doCamera(camPos, camTar, camRoll, m);
     mat3 camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
     vec3 rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
     CastRay ray = CastRay(camPos, rd);
 
-    isMasked = backMask(p);
-    //isMasked = false;
-    useBounds = true;
-    Hit hit = raymarch(ray);
+    bool isBackground = true;
+    bool isDecal = false;
+    Hit hit;
 
-    vec3 background = vec3(.3, .1, .5);
-    background = mix(background, vec3(1.), .8);
-    float hex = hexDist(p) - .6;
-    background = mix(background, vec3(1.), step(hex, 0.));
+    #ifdef SHOW_MODELS
+        hit = raymarch(ray, FUDGE_FACTOR);
+        isBackground = hit.isBackground;    
 
-    //background = vec3(1);
+        if ( ! isBackground) {
+            color = render(hit);
+        }
+    #endif
 
-    vec4 color = vec4(background, 1e12);
-
-    if ( ! hit.isBackground) {
-        color = render(hit);
-    }
+    #ifdef SHOW_DECALS
+        if (isBackground && isMasked) {
+            renderDecals = true;
+            hit = raymarch(ray, 1.);
+            if ( ! hit.isBackground) {
+                isDecal = true;
+                color.rgb = vec3(1.);
+                //color.rgb = hit.normal * .5 + .5;
+            }
+        }
+    #endif
 
     vec3 stars;
 
     #ifdef SHOW_SPACE
-    	if ( ! isMasked && hit.isBackground) {
+    	if ( ! isDecal && ! isMasked && isBackground) {
 
             vec2 sp = p * 10. + vec2(-.2,1.);
             vec3 soffset = vec3(7.9,3.001,0.15);
@@ -1249,14 +1250,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             vec3 bg = (field + stars) * .9 + .2;
             bg = clamp(bg, 0., 1.); 
 
-            color = vec4(screenToLinear(bg), hit.ray.len);
+            color = vec4(screenToLinear(bg), 1e12);
 
         	//color = vec4(pow(spaceCol * 1.2, vec3(1.5)), hit.ray.len);
         }
     #endif
 
     #ifdef SHOW_FOG
-        if ( ! isMasked || ! hit.isBackground) {
+        if ( ! isDecal && ! (isMasked && isBackground)) {
         
             vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
             sliderVal = vec4(0.5,0.7,0.2,0.9);
@@ -1273,7 +1274,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
    #endif
  
     #ifdef SHOW_SPACE
-        if ( ! isMasked && hit.isBackground) {
+        if ( ! isMasked && isBackground) {
            color.rgb += pow(stars * .4, vec3(2.));
         }
     #endif
