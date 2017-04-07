@@ -3,6 +3,7 @@
 precision highp float;
 
 uniform vec2 iResolution;
+uniform vec2 iOffset;
 uniform float iGlobalTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
@@ -932,10 +933,21 @@ vec3 screenToLinear(vec3 screenRGB) {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
+/*
+// Preview settings
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
+/*/ 
+// Export settings
+const float MAX_TRACE_DISTANCE = 30.; // max trace distance
+const float INTERSECTION_PRECISION = .001; // precision of the intersection
+const int NUM_OF_TRACE_STEPS = 300;
+const float FUDGE_FACTOR = .6; // Default is 1, reduce to fix overshoots
+//*/
+
+
 
 struct CastRay {
     vec3 origin;
@@ -1202,7 +1214,9 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     initPolyhedron(5);
-    
+
+    fragCoord.xy += iOffset.xy;
+
     time = iGlobalTime;
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;

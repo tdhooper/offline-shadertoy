@@ -51,8 +51,12 @@ const drawTriangle = regl({
         ]
     },
     uniforms: {
-        iResolution: function(context) {
-            return [context.viewportWidth, context.viewportHeight];
+        iResolution: function(context, props) {
+            var resolution = [context.viewportWidth, context.viewportHeight];
+            return props.resolution || resolution;
+        },
+        iOffset: function(context, props) {
+            return props.offset || [0, 0];
         },
         iGlobalTime: regl.prop('time'),
         iMouse: function(context, props) {
@@ -93,12 +97,14 @@ function restoreState() {
     mouse = state.mouse || mouse;
 }
 
-function render() {
+function render(offset, resolution) {
     var time = timer.elapsed();
     saveState();
     drawTriangle({
         time: time / 1000,
-        mouse: mouse
+        mouse: mouse,
+        offset: offset,
+        resolution: resolution
     });
 }
 
@@ -165,17 +171,83 @@ window.addEventListener(
     )
 );
 
-function save(width, height) {
-    canvas.width = width || 500;
-    canvas.height = height || 500;
-    regl._refresh();
-    render();
-    canvas.toBlob(function(blob) {
-        FileSaver.saveAs(blob, "image.png");
+
+function chunkDimension(size, maxSize) {
+    var count = Math.ceil(size / maxSize);
+    var chunkSize = Math.ceil(size / count);
+    var chunks = [];
+    var offset = 0;
+    while (size > 0) {
+        size -= chunkSize;
+        if (size > 0) {
+            chunks.push({
+                offset: offset,
+                size: chunkSize
+            });
+            offset += chunkSize;
+        } else {
+            chunks.push({
+                offset: offset,
+                size: chunkSize + size
+            });
+        }
+    }
+    return chunks;
+}
+
+function chunkDimensions(width, height, maxSize) {
+    var widthChunks = chunkDimension(width, maxCanvasSize);
+    var heightChunks = chunkDimension(height, maxCanvasSize);
+
+    var chunks = [];
+
+    widthChunks.forEach(function(widthChunk) {
+        heightChunks.forEach(function(heightChunk) {
+            chunks.push({
+                offset: [widthChunk.offset, heightChunk.offset],
+                size: [widthChunk.size, heightChunk.size]
+            });
+        });
     });
-    setDimensions();
-    regl._refresh();
-    render();
+
+    return chunks;
+}
+
+var maxCanvasSize = 4000;
+
+function save(width, height) {
+    width = width || 500;
+    height = height || 500;
+
+    var resolution = [width, height];
+    var chunks = chunkDimensions(width, height, maxCanvasSize);
+
+    var saveChunk = function(index) {
+        var chunk = chunks[index];
+
+        canvas.width = chunk.size[0];
+        canvas.height = chunk.size[1];
+        canvas.style.width = chunk.size[0] + 'px';
+        canvas.style.height = chunk.size[1] + 'px';
+
+        regl._refresh();
+        render(chunk.offset, resolution);
+
+        canvas.toBlob(function(blob) {
+            FileSaver.saveAs(blob, "image.png");
+            if (index < chunks.length - 1) {
+                saveChunk(index + 1);
+            } else {
+                canvas.style.width = null;
+                canvas.style.height = null;
+                setDimensions();
+                regl._refresh();
+                render();
+            }
+        });
+    };
+
+    saveChunk(0);
 }
 
 window.save = save;
