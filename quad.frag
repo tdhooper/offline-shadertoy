@@ -441,10 +441,10 @@ Model modelProto0(vec3 p) {
     outer = length(p) - 1.;
     inner = -(length(p) - .9);
 
-    float len = 3.3;
-    float width = .35;
-    float round = .4;
-    float thickness = .01;
+    float len = 2.9;
+    float width = .31;
+    float round = .45;
+    float thickness = .05;
     
     n = bToCn(1,0,0);
     spike = fCone(p, width, n * 0., n * len) - thickness;
@@ -458,9 +458,13 @@ Model modelProto0(vec3 p) {
     spike = fCone(p, width, n1 * 0., n1 * len) - thickness;
     outer = smin(outer, spike, round);
 
+    // outer = max(outer, length(p) - 2.8);
+    // outer = min(outer, length(p - n * 2.8) - .07);
+
     len = 1.5;
     width = .8;
     round = .2;
+    thickness = .01;
     
     n = bToCn(0,1,0);
     spike = fCone(p, width, n * 0., n * len) - thickness;
@@ -733,10 +737,20 @@ float alias(float i, float resolution) {
 Model model7(vec3 p, float decalBounds) {
     vec2 xy = p.xy;
 
-    pR(p.xy, .075);
-    pR(p.xy, -.2);
-    pR(p.xz, -.45);
-    pR(p.yz, .32);
+    //pR(p.xy, .075);
+    //pR(p.xy, -.2);
+    //pR(p.xz, -.45);
+    //pR(p.yz, .32);
+
+
+    pR(p.xy, -1.04);
+    //pR(p.xz, mousee.x);
+    //pR(p.yz, mousee.y);
+
+    pR(p.xz, 0.2887323943661972 - .5);
+    pR(p.yz, 0.6033210332103321 - .5);
+    //p *= sphericalMatrix(mousee * vec2(1,1) * 5.);
+    //
 
     pIcosahedron(p);
 
@@ -752,7 +766,7 @@ Model model7(vec3 p, float decalBounds) {
         part = length(p - point * 2.6) - .02;
         d = part;
 
-        part = fCapsule(p, triV.c * 2.7, triV.c * 3., .01);
+        part = fCapsule(p, triV.c * 2.7, triV.c * 3.1, .01);
         d = min(d, part);
 
         d = max(d, -decalBounds);
@@ -839,7 +853,7 @@ Model scene( vec3 p ){
     
     vec3 pp = p;
     
-    vec3 p0 = vec3(-1.2, .9, 1.5);
+    vec3 p0 = vec3(-1., .8, 1.5);
     vec3 p1 = vec3(1.5, -2.8, -1.);
     vec3 p2 = vec3(2.8, .55, -3.);
 
@@ -850,7 +864,7 @@ Model scene( vec3 p ){
 
     #ifdef DEBUG_MODEL
         decalBounds = length(camPos);
-        scale = 2.;
+        scale = 1.5;
         p /= scale;
         model= model7(p, decalBounds);
         model.dist *= scale;
@@ -862,7 +876,7 @@ Model scene( vec3 p ){
         
     p = pp;
     decalBounds = length(p - camPos) - 8.6;
-    scale = .95;
+    scale = 1.;
     p -= p0;
     p /= scale;
    	part = model7(p, decalBounds);
@@ -938,7 +952,7 @@ vec3 screenToLinear(vec3 screenRGB) {
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
-const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
+const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
 /*/ 
 // Export settings
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
@@ -1113,6 +1127,8 @@ void shadeModel(inout Hit hit) {
     mat3 m;
     //m = sphericalMatrix((iMouse.xy / iResolution.xy - .5) * 8.);
     vec2 mouseSetting = vec2(0.45607896335673687, 0.8963768106439839);
+    mouseSetting = mix(mouseSetting, vec2(0.4734, 0.9221), .5);
+
     //mouseSetting = mousee + .5;
     m = sphericalMatrix((mouseSetting - .5) * 8.);
     lightPos *= m;
@@ -1219,10 +1235,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     time = iGlobalTime;
 
-    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
+    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.x;
     #ifdef SHOW_ZOOM
     	p *= .7;
     #endif
+
+    //p.x = -p.x;
+
     vec2 m = iMouse.xy / iResolution.xy - .5;
     mousee = m;
 
