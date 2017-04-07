@@ -1,17 +1,34 @@
-var regl = require('regl')();
+var Regl = require('regl');
 var glslify = require('glslify');
 var mouseChange = require('mouse-change');
 var debounce = require('debounce');
-var Timer = require('./lib/timer')
+var Timer = require('./lib/timer');
 var stateStore = require('./lib/state-store');
+var FileSaver = require('file-saver');
+
+var pixelRatio = window.devicePixelRatio;
+
+var canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
+
+function setDimensions() {
+    canvas.width = canvas.offsetWidth * pixelRatio;
+    canvas.height = canvas.offsetHeight * pixelRatio;
+}
+setDimensions();
+
+var regl = Regl({
+    canvas: canvas,
+    pixelRatio: pixelRatio
+});
 
 var vert = glslify('./quad.vert');
 var frag = glslify('./quad.frag');
 
 var texture = regl.texture();
 
-var image = new Image()
-image.src = '/images/noise.png'
+var image = new Image();
+image.src = '/images/noise.png';
 image.onload = function() {
     texture({
         data: image,
@@ -21,7 +38,7 @@ image.onload = function() {
         wrapT: 'repeat'
     });
     render();
-}
+};
 
 const drawTriangle = regl({
     frag: frag,
@@ -43,8 +60,8 @@ const drawTriangle = regl({
                 return value * context.pixelRatio;
             });
             mouse[1] = context.viewportHeight - mouse[1];
-            console.log(mouse[0] / context.viewportWidth);
-            console.log(mouse[1] / context.viewportHeight)
+            //console.log(mouse[0] / context.viewportWidth);
+            //console.log(mouse[1] / context.viewportHeight)
             return mouse;
         },
         iChannel0: texture
@@ -93,7 +110,7 @@ function play() {
 function pause() {
     if (timer.running) {
         timer.pause();
-        tick && tick.cancel()
+        tick && tick.cancel();
         saveState();
     }
 }
@@ -140,9 +157,25 @@ window.addEventListener(
     'resize',
     debounce(
         function() {
+            setDimensions();
             regl._refresh();
             render();
         },
         50
     )
 );
+
+function save(width, height) {
+    canvas.width = width || 500;
+    canvas.height = height || 500;
+    regl._refresh();
+    render();
+    canvas.toBlob(function(blob) {
+        FileSaver.saveAs(blob, "image.png");
+    });
+    setDimensions();
+    regl._refresh();
+    render();
+}
+
+window.save = save;
