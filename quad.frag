@@ -19,6 +19,7 @@ void main() {
 vec2 mousee;
 
 #pragma glslify: renderSuperstructure = require(./shaders/intergalactic.glsl, iChannel0=iChannel0, iGlobalTime=iGlobalTime, mousee=mousee)
+#pragma glslify: scaleLinear = require('glsl-scale-linear')
 
 // Author:
 // Title:
@@ -557,10 +558,6 @@ Model modelProto0(vec3 p) {
 
 Model modelProto1(vec3 p) {
     
-    if (isMasked) {
-        // return Model(1., 1.);
-    }
-
     float d;
     vec3 n, n1;
     d = 1e12;
@@ -733,6 +730,8 @@ float alias(float i, float resolution) {
 }
 
 Model model7(vec3 p, float decalBounds) {
+    vec2 xy = p.xy;
+
     pR(p.xy, .075);
     pR(p.xy, -.2);
     pR(p.xz, -.45);
@@ -745,24 +744,15 @@ Model model7(vec3 p, float decalBounds) {
            return Model(-decalBounds, 20., 0.);
         }
 
-        float spacing = .25;
-        float size = .02;
+        vec3 point = geodesicPoint(p, 2.);
 
-        vec3 point = geodesicPoint(p, 1.);
-        float radA = alias(length(p) + spacing / 2., spacing);
-        float radB = alias(length(p) + spacing / 2., spacing) - spacing;
+        float d, part;
 
-        float part;
-        float d = 1e12;
+        part = length(p - point * 2.6) - .02;
+        d = part;
 
-        part = length(p - point * radA) - size;
+        part = fCapsule(p, triV.c * 2.7, triV.c * 3., .01);
         d = min(d, part);
-
-        part = length(p - point * radB) - size;
-        d = min(d, part);
-
-        d = max(d, -length(p) + 1.);
-        d = max(d, length(p) - 3.9);
 
         d = max(d, -decalBounds);
         return Model(d, 20., 0.);
@@ -770,6 +760,27 @@ Model model7(vec3 p, float decalBounds) {
     
     return modelProto0(p);
 }    
+
+        // float spacing = .25;
+        // float size = .02;
+
+        // vec3 point = geodesicPoint(p, 2.);
+        // float radA = alias(length(p) + spacing / 2., spacing);
+        // float radB = alias(length(p) + spacing / 2., spacing) - spacing;
+
+        // float part;
+        // float d = 1e12;
+
+        // part = length(p - point * radA) - size;
+        // d = min(d, part);
+
+        // part = length(p - point * radB) - size;
+        // d = min(d, part);
+
+        // d = max(d, -length(p) + 1.);
+        // d = max(d, length(p) - 3.9);
+
+
 
 Model model8(vec3 p, float decalBounds) {
     pR(p.xy, .47);
@@ -863,11 +874,11 @@ Model scene( vec3 p ){
 
         
     p = pp;
-    decalBounds = length(p - camPos) - 9.3;
+    decalBounds = length(p - camPos) - 8.6;
     scale = .95;
     p -= p0;
     p /= scale;
-   	part = model7(p, 0.);
+   	part = model7(p, decalBounds);
     part.dist *= scale;
 	model = part;
     
@@ -1054,12 +1065,14 @@ float hexDist(vec2 uv) {
 }
 
    
-bool backMask(vec2 uv) {
-    float size = .53;
-    float hex = hexDist(uv) - size;
-    float border = max(hex - .12, -hex + .03);
-    hex = min(hex, border);     
-    return hex > 0.;
+float backMaskLevel(vec2 uv) {
+    float sizeA = .53 + .12;
+    float sizeB = .53 + .03;
+    float sizeC = .53;
+    
+    float hex = hexDist(uv);
+
+    return step(hex, sizeA) + step(hex, sizeB) + step(hex, sizeC);
 }
 
     
@@ -1217,12 +1230,21 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec3 background = vec3(.3, .1, .5);
     background = mix(background, vec3(1.), .8);
-    float hex = hexDist(p) - .6;
-    background = mix(background, vec3(1.), step(hex, 0.));
     vec4 color = vec4(background, 1e12);
 
-    isMasked = backMask(p);
-    //isMasked = true;
+
+    float maskLevel = backMaskLevel(p);
+
+    bool showSpace = maskLevel > 0. && maskLevel != 2.;
+    bool showFog = showSpace;
+    bool showDecals = maskLevel < 2.;
+    bool blendDecal = maskLevel > 0.;
+    bool showBorder = maskLevel == 2.;
+
+    if (showBorder) {
+        color.rgb = vec3(1);
+    }
+
     useBounds = true;
 
     vec3 camTar;
@@ -1246,12 +1268,15 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
 
     #ifdef SHOW_DECALS
-        if (isBackground && isMasked) {
+        if (isBackground && showDecals) {
             renderDecals = true;
             hit = raymarch(ray, 1.);
             if ( ! hit.isBackground) {
                 isDecal = true;
-                color.rgb = vec3(1.);
+                color = vec4(vec3(1.), 1e12);
+                if (blendDecal) {
+                    color.rgb = (vec3(.5,.0,1) + .25) * 3.;
+                }
                 //color.rgb = hit.normal * .5 + .5;
             }
         }
@@ -1260,7 +1285,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 stars;
 
     #ifdef SHOW_SPACE
-    	if ( ! isDecal && ! isMasked && isBackground) {
+    	if ( ! isDecal && showSpace && isBackground) {
 
             vec2 sp = p * 10. + vec2(-.2,1.);
             vec3 soffset = vec3(7.9,3.001,0.15);
@@ -1276,7 +1301,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
 
     #ifdef SHOW_FOG
-        if ( ! isDecal && ! (isMasked && isBackground)) {
+        if ( ( ! isDecal || blendDecal) && (showFog || ! isBackground)) {
         
             vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
             sliderVal = vec4(0.5,0.7,0.2,0.9);
@@ -1293,7 +1318,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
    #endif
  
     #ifdef SHOW_SPACE
-        if ( ! isMasked && isBackground) {
+        if (showSpace && isBackground) {
            color.rgb += pow(stars * .4, vec3(2.));
         }
     #endif
