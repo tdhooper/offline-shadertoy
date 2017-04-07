@@ -43,7 +43,7 @@ float time;
 //#define CAMERA_CONTROL
 
 #define SHOW_FOG
-#define SHADOWS
+//#define SHADOWS
 #define SHOW_SPACE
 #define SHOW_MODELS
 #define SHOW_DECALS
@@ -761,26 +761,6 @@ Model model7(vec3 p, float decalBounds) {
     return modelProto0(p);
 }    
 
-        // float spacing = .25;
-        // float size = .02;
-
-        // vec3 point = geodesicPoint(p, 2.);
-        // float radA = alias(length(p) + spacing / 2., spacing);
-        // float radB = alias(length(p) + spacing / 2., spacing) - spacing;
-
-        // float part;
-        // float d = 1e12;
-
-        // part = length(p - point * radA) - size;
-        // d = min(d, part);
-
-        // part = length(p - point * radB) - size;
-        // d = min(d, part);
-
-        // d = max(d, -length(p) + 1.);
-        // d = max(d, length(p) - 3.9);
-
-
 
 Model model8(vec3 p, float decalBounds) {
     pR(p.xy, .47);
@@ -792,7 +772,7 @@ Model model8(vec3 p, float decalBounds) {
             return Model(-decalBounds, 20., 0.);
         }
         vec3 point = geodesicPoint(p, 6.);
-        float size = .02;
+        float size = .015;
         float d = length(p - point * 1.8) - size;
         d = max(d, -decalBounds);
         return Model(d, 20., 0.);
@@ -812,9 +792,15 @@ Model model9(vec3 p, float decalBounds) {
         if (decalBounds < -.02) {
             return Model(-decalBounds, 20., 0.);
         }
-        vec3 point = geodesicPoint(p, 2.);
+        vec3 point = geodesicPoint(p, 4.);
         float size = .02;
-        float d = fCapsule(p, point * 3., point * 4.5, size);
+        float part;
+
+        float d = fCapsule(p, point * 4.4, point * 4.5, size);
+
+        part = fCapsule(p, triV.c * 3.3, triV.c * 4.5, size);
+        d = min(d, part);
+
         d = max(d, -decalBounds);
         return Model(d, 20., 0.);
     }
