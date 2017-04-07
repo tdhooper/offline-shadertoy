@@ -37,13 +37,13 @@ float time;
 //#define DEBUG
 //#define SHOW_STEPS
 //#define SHOW_BOUNDS
-#define FAST_COMPILE
+//#define FAST_COMPILE
 //#define SHOW_ZOOM
 //#define DEBUG_MODEL
 //#define CAMERA_CONTROL
 
 #define SHOW_FOG
-//#define SHADOWS
+#define SHADOWS
 #define SHOW_SPACE
 #define SHOW_MODELS
 #define SHOW_DECALS
@@ -1061,8 +1061,6 @@ float backMaskLevel(vec2 uv) {
     return step(hex, sizeA) + step(hex, sizeB) + step(hex, sizeC);
 }
 
-    
-
 void shadeModel(inout Hit hit) {
     vec3 pos = hit.pos;
     vec3 nor = hit.normal;
@@ -1116,12 +1114,12 @@ void shadeModel(inout Hit hit) {
     float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
     float bac = pow(clamp(dot(nor, backLightPos), 0., 1.), 1.5);
     float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
-    
+
     dif *= mix(softshadow(pos, lig, 0.02, 2.5), 1., 0.3);
 
     vec3 lin = vec3(0.0);
     lin += 1.2 * dif * vec3(.95, .8, .8);
-    lin += 1.1 * amb * vec3(.4, .6, .9) * occ;
+    lin += 1.0 * amb * vec3(.44, .66, .99) * occ;
     lin += 0.3 * bac * vec3(.25, .25, .25) * occ;
     lin += 0.2 * fre * vec3(1.,1., 1.) * occ;
     vec3 col = albedo*lin;
