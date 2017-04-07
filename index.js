@@ -5,8 +5,10 @@ var debounce = require('debounce');
 var Timer = require('./lib/timer');
 var stateStore = require('./lib/state-store');
 var FileSaver = require('file-saver');
+var pad = require('pad-number');
 
 var pixelRatio = window.devicePixelRatio;
+//pixelRatio = 1;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -200,9 +202,10 @@ function chunkDimensions(width, height, maxSize) {
     var heightChunks = chunkDimension(height, maxCanvasSize);
 
     var chunks = [];
+    heightChunks.reverse();
 
-    widthChunks.forEach(function(widthChunk) {
-        heightChunks.forEach(function(heightChunk) {
+    heightChunks.forEach(function(heightChunk) {
+        widthChunks.forEach(function(widthChunk) {
             chunks.push({
                 offset: [widthChunk.offset, heightChunk.offset],
                 size: [widthChunk.size, heightChunk.size]
@@ -234,7 +237,9 @@ function save(width, height) {
         render(chunk.offset, resolution);
 
         canvas.toBlob(function(blob) {
-            FileSaver.saveAs(blob, "image.png");
+            var digits = chunks.length.toString().length;
+            var filename = 'image-' + pad(index + 1, digits) + '.png';
+            FileSaver.saveAs(blob, filename);
             if (index < chunks.length - 1) {
                 saveChunk(index + 1);
             } else {
