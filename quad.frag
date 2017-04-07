@@ -1222,7 +1222,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     bool showSpace = maskLevel > 0. && maskLevel != 2.;
     bool showFog = showSpace;
     bool showDecals = maskLevel < 2.;
-    bool blendDecal = maskLevel > 0.;
     bool showBorder = maskLevel == 2.;
 
     if (showBorder) {
@@ -1251,25 +1250,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         }
     #endif
 
-    #ifdef SHOW_DECALS
-        if (isBackground && showDecals) {
-            renderDecals = true;
-            hit = raymarch(ray, 1.);
-            if ( ! hit.isBackground) {
-                isDecal = true;
-                color = vec4(vec3(1.), 1e12);
-                if (blendDecal) {
-                    color.rgb = (vec3(.5,.0,1) + .25) * 3.;
-                }
-                //color.rgb = hit.normal * .5 + .5;
-            }
-        }
-    #endif
-
     vec3 stars;
 
     #ifdef SHOW_SPACE
-    	if ( ! isDecal && showSpace && isBackground) {
+    	if (showSpace && isBackground) {
 
             vec2 sp = p * 10. + vec2(-.2,1.);
             vec3 soffset = vec3(7.9,3.001,0.15);
@@ -1285,7 +1269,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
 
     #ifdef SHOW_FOG
-        if ( ( ! isDecal || blendDecal) && (showFog || ! isBackground)) {
+        if ( showFog || ! isBackground) {
         
             vec4 sliderVal = vec4(0.5,0.4,0.16,0.7);
             sliderVal = vec4(0.5,0.7,0.2,0.9);
@@ -1304,6 +1288,22 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #ifdef SHOW_SPACE
         if (showSpace && isBackground) {
            color.rgb += pow(stars * .4, vec3(2.));
+        }
+    #endif
+
+    #ifdef SHOW_DECALS
+        if (isBackground && showDecals) {
+            renderDecals = true;
+            hit = raymarch(ray, 1.);
+            if ( ! hit.isBackground) {
+                isDecal = true;
+                bool blendDecal = maskLevel > 0.;
+                float blend = blendDecal ? .5 : 1.;
+                color.rgb = mix(color.rgb, vec3(1.), blend);
+                if (blendDecal) {
+                    color.rgb = pow(color.rgb * 1.3, vec3(4.));
+                }
+            }
         }
     #endif
 
