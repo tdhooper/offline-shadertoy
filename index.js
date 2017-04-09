@@ -112,7 +112,9 @@ function render(offset, resolution) {
 
 function play() {
     timer.play();
-    tick = regl.frame(render);
+    tick = regl.frame(function() {
+        render();
+    });
 }
 
 function pause() {
