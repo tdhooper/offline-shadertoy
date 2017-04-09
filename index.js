@@ -25,7 +25,7 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/nebularia/quad.frag');
+var frag = glslify('./projects/geodesic-tiling/shader.glsl');
 
 var texture = regl.texture();
 
