@@ -95,7 +95,10 @@ float map(vec3 p, vec4 id) {
     float k = 2.*id.w +.1; //  p/=k;
     float surfaceAmp = .12;
     float surfaceFeq = 8.5;
-    float surfaceNoise = pn(p * surfaceFeq) * surfaceAmp;
+    vec3 surfaceOffset = vec3(2);
+    pR(surfaceOffset.xy, time * 3.142 * 2.);
+    //pR(surfaceOffset.yz, time * 3.142 * 2. * 2.);
+    float surfaceNoise = pn(p * surfaceFeq + surfaceOffset) * surfaceAmp;
     float d = k*(.5 + SpiralNoiseC(p.zxy*.4132+333., id)*3. + surfaceNoise);
     return d;
     //return max(d, -limit);
@@ -161,6 +164,7 @@ vec4 renderSuperstructure(vec3 ro, vec3 rd, const vec4 id, vec4 model) {
         a = smoothstep(max_dist,0.,t);
 
         vec3 pos = ro + t*rd;
+
         vec3 ppos = pos;
 
         // Evaluate distance function

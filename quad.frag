@@ -17,9 +17,11 @@ void main() {
 
 
 /* SHADERTOY FROM HERE */
+
+float time;
 vec2 mousee;
 
-#pragma glslify: renderSuperstructure = require(./shaders/intergalactic.glsl, iChannel0=iChannel0, iGlobalTime=iGlobalTime, mousee=mousee)
+#pragma glslify: renderSuperstructure = require(./shaders/intergalactic.glsl, iChannel0=iChannel0, iGlobalTime=iGlobalTime, time=time, mousee=mousee)
 #pragma glslify: scaleLinear = require('glsl-scale-linear')
 
 // Author:
@@ -33,7 +35,7 @@ uniform vec2 u_resolution;
 uniform vec2 u_mouse;
 uniform float u_time;
 
-float time;
+
 
 //#define DEBUG
 //#define SHOW_STEPS
@@ -243,6 +245,25 @@ mat3 sphericalMatrix(vec2 thetaphi) {
         sy, cy * -sx, cy * cx
     );
 }
+
+// --------------------------------------------------------
+// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
+// --------------------------------------------------------
+
+mat3 rotationMatrix(vec3 axis, float angle)
+{
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    return mat3(
+        oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
+        oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
+        oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c
+    );
+}
+
 
 
 // --------------------------------------------------------
@@ -735,7 +756,10 @@ float alias(float i, float resolution) {
 }
 
 Model model7(vec3 p, float decalBounds) {
+
     vec2 xy = p.xy;
+
+    p.y += sin(time * PI * 2.) * .1 - .1;
 
     //pR(p.xy, .075);
     //pR(p.xy, -.2);
@@ -751,6 +775,12 @@ Model model7(vec3 p, float decalBounds) {
     pR(p.yz, 0.6033210332103321 - .5);
     //p *= sphericalMatrix(mousee * vec2(1,1) * 5.);
     //
+
+    vec3 n = triV.a;
+    n = reflect(n, triP.bc);
+    p *= rotationMatrix(n, time * PI * 2. / 5.);
+
+
 
     pIcosahedron(p);
 
@@ -778,7 +808,14 @@ Model model7(vec3 p, float decalBounds) {
 
 
 Model model8(vec3 p, float decalBounds) {
+
+    p.y += sin(time * PI * 2. - PI/2.) * .1;
+
     pR(p.xy, .47);
+
+    vec3 n = triV.c;
+    n = reflect(n, triP.ab);
+    p *= rotationMatrix(n, time * PI * 2. / 3.);
 
     pIcosahedron(p);
 
@@ -797,9 +834,17 @@ Model model8(vec3 p, float decalBounds) {
 }    
     
 Model model9(vec3 p, float decalBounds) {
+
+    p.y += sin(time * PI * 2. - PI/2.) * .2;
+
     pR(p.xy, -.12);
     pR(p.xz, .5);
     pR(p.yz, -.3);
+
+    vec3 n = triV.a;
+    n = reflect(n, triP.bc);
+    p *= rotationMatrix(n, 2. * time * PI * 2. / -5.);
+
 
     pIcosahedron(p);    
 
@@ -1216,14 +1261,19 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     float dist = 10.5;
     camRoll = 0.;
     camTar = vec3(0,0,0);
-    camPos = vec3(0,0,dist);
+    float angle = PI/2. + sin(time * PI * 2.) * .05;
+    camPos = vec3(
+        cos(angle) * dist,
+        0,
+        sin(angle) * dist
+    );
     camPos += camTar;
     #ifdef CAMERA_CONTROL
         camPos *= sphericalMatrix(mouse * 5.);
     #endif
 }
 
-#pragma glslify: starField = require(./shaders/starfield.glsl)
+#pragma glslify: starField = require(./shaders/starfield.glsl, time=time, pR=pR)
 #pragma glslify: nebulaField = require(./shaders/nebula.glsl)
 
 
@@ -1234,6 +1284,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     fragCoord.xy += iOffset.xy;
 
     time = iGlobalTime;
+    time = mod(time / 12., 1.);
+
+    time *= 2.;
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.x;
     #ifdef SHOW_ZOOM
@@ -1287,13 +1340,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     #ifdef SHOW_SPACE
     	if (showSpace && isBackground) {
-
+            time /= 2.;
             vec2 sp = p * 10. + vec2(-.2,1.);
             vec3 soffset = vec3(7.9,3.001,0.15);
             stars = starField(sp, soffset) * .01;
             vec3 field = nebulaField(sp);
             vec3 bg = (field + stars) * .9 + .2;
             bg = clamp(bg, 0., 1.); 
+            time *= 2.;
 
             color = vec4(screenToLinear(bg), 1e12);
 

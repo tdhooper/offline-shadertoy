@@ -22,15 +22,25 @@ vec3 starField(vec2 uv, vec3 offset) {
 	vec3 from=vec3(1.,.5,0.5);
 	from+=offset;
 
+	float anim = (tile * 2.) * time;
+	from.xy += vec2(1,-1) * anim;
+
     float sampleShift = mod( from.z, stepsize );
 	float zoffset = -sampleShift;
 	sampleShift /= stepsize; // make from 0 to 1
 	
+	
+
+
+
 	//volumetric rendering
 	float s=0.1;
 	vec3 v=vec3(0.);
 	for (int r=0; r<STARFIELD_VOL_STEPS; r++) {
 		vec3 p=from+(s+zoffset)*dir;// + vec3(0.,0.,zoffset);
+		
+	//pR(p.xz, time * 3.142 * 2.);
+
 		p = abs(vec3(tile)-mod(p,vec3(tile*2.))); // tiling fold
 		float pa,a=pa=0.;
 		for (int i=0; i<STARFIELD_ITERATIONS; i++) { 
