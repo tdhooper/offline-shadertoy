@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "budo index.js --css /styles/main.css --live -- -t glslify"
+    "start": "budo index.js --css /styles/main.css --live -- -t glslify",
+    "build-glsl": "glslify quad.frag > build.glsl"
   },
   "keywords": [],
   "author": "",
