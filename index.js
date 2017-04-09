@@ -25,7 +25,7 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./quad.frag');
+var frag = glslify('./projects/nebularia/quad.frag');
 
 var texture = regl.texture();
 
