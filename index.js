@@ -25,7 +25,7 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/geodesic-tiling/shader.glsl');
+var frag = glslify('./projects/dod-fract/shader.glsl');
 
 var texture = regl.texture();
 
