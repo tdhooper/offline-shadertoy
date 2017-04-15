@@ -28,7 +28,7 @@ precision mediump float;
 // 0: Defaults
 // 1: Model
 // 2: Camera
-#define MOUSE_CONTROL 1
+#define MOUSE_CONTROL 2
 
 //#define DEBUG
 
@@ -64,6 +64,9 @@ mat3 mouseRotation(bool enable, vec2 xy) {
         }
     }
     float rx, ry;
+
+    xy.x -= .5;
+    //xy *= 2.;
 
     rx = (xy.y + .5) * PI;
     ry = (-xy.x) * 2. * PI;
@@ -230,78 +233,71 @@ float bDelay(float delay, float duration, float loop) {
 
 float LOOP = 3.5;
 
-float makeModel(vec3 p, float scale) {
-    float subScale = mix(1., .5, time / 6.);
-    //subScale = 1.;
-    p /= subScale;
-    float d = length(p) - .1;
-    return d * subScale * scale;
+float stepMove = 1.;
+float stepDuration = 2.;
+float stepCount = 3.;
+float loopDuration;
+
+float makeModel(vec3 p) {
+    float d = length(p) - .5;
+    return d;
 }
 
-void makeSpace(inout vec3 p, float scale, float startTime) {
-    //p /= scale;
+vec3 makeOffset(vec3 p, float startTime) {
+    float moveMax = stepMove;
+    float blend = max(0., time - startTime) / stepDuration;
+    blend = pow(blend, 3.);
+    return facePlane * mix(.0, moveMax, blend);
+}
+
+void makeSpace(inout vec3 p, float startTime) {
+    vec3 offset = makeOffset(p, startTime);
+    p += offset;
     fold(p);
-    float duration = 1.;
-    float blend = max(0., time - startTime) / duration;
-    float moveMax = .5 * scale;
-    p -= facePlane * mix(.0, moveMax, blend);
+    p -= offset;
 }
 
-float subDModel3(vec3 p, float scale, float startTime) {
-    makeSpace(p, scale, startTime);
-    return makeModel(p, scale);    
+float subDModel3(vec3 p, float startTime) {
+    makeSpace(p, startTime);
+    return makeModel(p);    
 }
 
-float subDModel2(vec3 p, float scale, float startTime) {
-    makeSpace(p, scale, startTime);
-    return subDModel3(p, scale * 1., startTime + 2.);    
+float subDModel2(vec3 p, float startTime) {
+    makeSpace(p, startTime);
+    return subDModel3(p, startTime + stepDuration);
 }
 
-float subDModel(vec3 p, float scale, float startTime) {
-    makeSpace(p, scale, startTime);
-    return subDModel2(p, scale * 1., startTime + 2.);    
+float subDModel(vec3 p, float startTime) {
+    makeSpace(p, startTime - stepDuration);
+    makeSpace(p, startTime);
+    return subDModel2(p, startTime + stepDuration);    
 }
-
-
-float modelC(vec3 p) {
-	float d;
-    fold(p);
-    p -= facePlane * mix(.0, .2, bDelay(0., LOOP, LOOP));
- 	return length(p) - .04;
-}
-
-float modelB(vec3 p) {
-    fold(p);
- 	//p -= facePlane * 1.23;
-    p -= facePlane * mix(.3, .9, bDelay(0., LOOP, LOOP));
-	float a = length(p) - .15;
-    float b = modelC(p);
-    //return a;
-    return mix(a, b, easeWithRest(bDelay(2.2, 1., LOOP)));
-}
-
-float modelA(vec3 p) {
-    fold(p);
- 	p -= facePlane * mix(1.5, 3., bDelay(0., LOOP, LOOP));
-    float a = length(p) - .55;
-    float b = modelB(p);
-    return mix(a, b, easeWithRest(bDelay(1.1, 1., LOOP)));
-}
-
-float modelX(vec3 p) {
-    float a = length(p) - 2.3;
-    float b = modelA(p);
-    return mix(a, b, easeWithRest(bDelay(0., 1., LOOP)));
-}
-
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
-    p *= m;
-    time = mod(time, 6.);
-    Model model = Model(subDModel(p, 1., 0.), 1.);
+    //p *= m;
+    Model model = Model(subDModel(p, 0.), 1.);
+    //model.dist = length(p - facePlane) - .1;
     return model;
 }
+
+
+float camDist;
+vec3 camTar;
+
+void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse) {
+
+    camDist = mix(2.,15., sin(time / loopDuration * PI * 2. - PI / 2.) * .5 + .5);
+    
+    camTar = vec3(0.);
+    
+    camRoll = 0.;
+    
+    camPos = vec3(0,0,-camDist);
+    camPos *= cameraRotation();
+    camPos += camTar;
+}
+
 
 
 // --------------------------------------------------------
@@ -309,7 +305,7 @@ Model map( vec3 p ){
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 30.; // max trace distance
+const float MAX_TRACE_DISTANCE = 50.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
@@ -396,12 +392,16 @@ void shadeSurface(inout Hit hit){
     vec3 colB = vec3(.75,.1,.75);
     
     float blend = sin(hit.model.id * TAU * 3.) * .5 + .5;
-    
+    blend = time / loopDuration;
+    blend = 0.;
+
     diffuse *= mix(colA, colB, blend);
     diffuse = sin(diffuse);
     diffuse *= 1.3;
     
     float fog = clamp((hit.ray.len - 5.) * .5, 0., 1.);
+    fog = mix(0., 1., length(camTar - hit.pos) / camDist) * .5;
+    fog = clamp(fog, 0., 1.);
     
     diffuse = mix(diffuse, background, fog);
     
@@ -435,14 +435,6 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
     return mat3( uu, vv, ww );
 }
 
-void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse) {
-    float dist = 2.;
-    camRoll = 0.;
-    camTar = vec3(0,0,0);
-    camPos = vec3(0,0,-dist);
-    camPos *= cameraRotation();
-    camPos += camTar;
-}
 
 
 // --------------------------------------------------------
@@ -464,7 +456,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     init();
     
+    loopDuration = (stepCount + .0) * stepDuration;
     time = iGlobalTime;
+    time = mod(time, loopDuration);
     //time /= 2.;
     //time = mod(time, 1.);
 
@@ -472,7 +466,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 m = iMouse.xy / iResolution.xy;
 
     vec3 camPos = vec3( 0., 0., 2.);
-    vec3 camTar = vec3( 0. , 0. , 0. );
+    camTar = vec3( 0. , 0. , 0. );
     float camRoll = 0.;
 
     // camera movement
