@@ -139,37 +139,75 @@ float fCone(vec3 p, float radius, float height, vec3 direction, float offset) {
     return fCone(p, radius, height);
 }
 
+
+
+
+
 // --------------------------------------------------------
-// Icosahedral domain mirroring
-// knighty https://www.shadertoy.com/view/MsKGzw
-// 
-// Also get the face normal, and tangent planes used to
-// calculate the uv coordinates later.
+// knighty
+// https://www.shadertoy.com/view/MsKGzw
 // --------------------------------------------------------
 
-#define PI 3.14159265359
-
+struct Tri {
+    vec3 a;
+    vec3 b;
+    vec3 c;
+};
+    
+struct TriPlanes {
+    vec3 ab;
+    vec3 bc;
+    vec3 ca;
+};
+    
+    
 vec3 facePlane;
 vec3 uPlane;
 vec3 vPlane;
 
-int Type=5;
-vec3 nc;
-vec3 pab;
-vec3 pbc;
-vec3 pca;
+vec3 nc,pab,pbc,pca;
+Tri triV;
+TriPlanes triP;
 
-void init() {
+int Type = 5;
+
+void init() {//setup folding planes and vertex
     float cospin=cos(PI/float(Type)), scospin=sqrt(0.75-cospin*cospin);
-    nc=vec3(-0.5,-cospin,scospin);
-    pbc=vec3(scospin,0.,0.5);
+    nc=vec3(-0.5,-cospin,scospin);//3rd folding plane. The two others are xz and yz planes
+    pab=vec3(0.,0.,1.);
+    pbc=vec3(scospin,0.,0.5);//No normalization in order to have 'barycentric' coordinates work evenly
     pca=vec3(0.,scospin,cospin);
-    pbc=normalize(pbc); pca=normalize(pca);
-	pab=vec3(0,0,1);
+    pbc=normalize(pbc); pca=normalize(pca);//for slightly better DE. In reality it's not necesary to apply normalization :) 
+
+    // Triangle vertices
+    triV = Tri(pbc, pab, pca);
+    // Triangle edge plane normals 
+    triP = TriPlanes( 
+        normalize(cross(triV.a, triV.b)),
+        normalize(cross(triV.b, triV.c)),
+        normalize(cross(triV.c, triV.a))
+    );
     
     facePlane = pca;
     uPlane = cross(vec3(1,0,0), facePlane);
-    vPlane = vec3(1,0,0);
+    vPlane = vec3(1,0,0);    
+}
+
+
+// Barycentric to Cartesian
+vec3 bToC(float a, float b, float c) {
+    return a * triV.a + b * triV.b + c * triV.c;
+}
+vec3 bToC(int a, int b, int c) {
+    return bToC(float(a), float(b), float(c));
+}
+
+// Barycentric to Cartesian normalized
+vec3 bToCn(float a, float b, float c) {
+    return normalize(bToC(a, b, c));
+}
+vec3 bToCn(int a, int b, int c) {
+    return bToCn(float(a), float(b), float(c));
 }
 
 void fold(inout vec3 p) {
@@ -238,16 +276,44 @@ float stepDuration = 2.;
 float stepCount = 3.;
 float loopDuration;
 
-float makeModel(vec3 p) {
-    float d = length(p) - .5;
-    return d;
-}
 
-vec3 makeOffset(vec3 p, float startTime) {
+float makeOffsetAmt(vec3 p, float startTime) {
     float moveMax = stepMove;
     float blend = max(0., time - startTime) / stepDuration;
     blend = pow(blend, 3.);
-    return facePlane * mix(.0, moveMax, blend);
+    return mix(.0, moveMax, blend);    
+}
+
+vec3 makeOffset(vec3 p, float startTime) {
+    return triV.c * makeOffsetAmt(p, startTime);
+}
+
+float makeModel(vec3 p, float startTime) {
+    float d, part;
+    
+    float amt = makeOffsetAmt(p, startTime);
+    float blend = max(0., time - startTime) / stepDuration;
+    float r = mix(0., .8, blend);
+
+    p += triV.c * amt;
+
+    fold(p);
+    
+    vec3 pp = p;
+
+    d = length(p - triV.c * amt) - .5;
+
+    p = pp;
+    vec3 rPlane = normalize(cross(triV.b, triV.a));
+    vec3 n = reflect(triV.c, rPlane);
+    part = length(p - n * amt) - .5;
+    d = smin(d, part, r);
+
+    n = reflect(n, triP.ca);
+    part = length(p - n * amt) - .5;
+    d = smin(d, part, r);
+
+    return d;
 }
 
 void makeSpace(inout vec3 p, float startTime) {
@@ -259,7 +325,7 @@ void makeSpace(inout vec3 p, float startTime) {
 
 float subDModel3(vec3 p, float startTime) {
     makeSpace(p, startTime);
-    return makeModel(p);    
+    return makeModel(p, startTime);    
 }
 
 float subDModel2(vec3 p, float startTime) {
@@ -277,6 +343,7 @@ Model map( vec3 p ){
     mat3 m = modelRotation();
     //p *= m;
     Model model = Model(subDModel(p, 0.), 1.);
+    //model = Model(makeModel(p, 0.), 1.);
     //model.dist = length(p - facePlane) - .1;
     return model;
 }
@@ -289,6 +356,8 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
 
     camDist = mix(2.,15., sin(time / loopDuration * PI * 2. - PI / 2.) * .5 + .5);
     
+    //camDist = 4.;
+
     camTar = vec3(0.);
     
     camRoll = 0.;
@@ -305,7 +374,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 50.; // max trace distance
+const float MAX_TRACE_DISTANCE = 40.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
