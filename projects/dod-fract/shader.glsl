@@ -278,9 +278,9 @@ float loopDuration;
 float transitionPoint = .35;
 
 
-float makeOffsetAmt(vec3 p, float startTime) {
+float makeOffsetAmt(vec3 p, float localTime) {
     float moveMax = stepMove;
-    float blend = max(0., time - startTime) / stepDuration;
+    float blend = max(0., localTime) / stepDuration;
     blend = pow(blend, 3.);
     return mix(.0, moveMax, blend);    
 }
@@ -289,16 +289,18 @@ vec3 makeOffset(vec3 p, float startTime) {
     return triV.c * makeOffsetAmt(p, startTime);
 }
 
-float makeModel(vec3 p, float startTime) {
+float makeModel(vec3 p, float localTime) {
     float d, part;
     
-    float amt = makeOffsetAmt(p, startTime);
-    float blend = max(0., time - startTime) / stepDuration / 1.5;
+    float amt = makeOffsetAmt(p, localTime);
+    float blend = max(0., localTime) / stepDuration / 1.5;
     blend = pow(blend, 4.);
     blend = clamp(blend, 0., 1.);
     //amt = 0.01;
     //blend = 0.;
     float r = mix(0., 1.5, blend);
+
+    float blend2 = clamp(localTime, 0., 1.);
 
     p += triV.c * amt;
 
@@ -330,30 +332,30 @@ void makeSpace(inout vec3 p, float startTime) {
     p -= offset;
 }
 
-float subDModel3(vec3 p, float startTime) {
-    return makeModel(p, startTime);    
-}
-
-float subDModel2(vec3 p, float startTime) {
-    if (time < startTime + stepDuration * (1. + transitionPoint)) {
-        return makeModel(p, startTime);
-    } else {
-        makeSpace(p, startTime);
-        return makeModel(p, startTime + stepDuration);    
-    }
-}
-
 float subDModel(vec3 p, float startTime) {
-    if (time < startTime + stepDuration * transitionPoint) {
-        return makeModel(p, startTime - stepDuration);
-    } else if (time < startTime + stepDuration * (1. + transitionPoint)) {
-        makeSpace(p, startTime - stepDuration);
-        return makeModel(p, startTime);
-    } else {
-        makeSpace(p, startTime - stepDuration);
-        makeSpace(p, startTime);
-        return subDModel2(p, startTime + stepDuration);    
+    float step1 = startTime + stepDuration * transitionPoint;
+    float step2 = startTime + stepDuration * (1. + transitionPoint);
+    float step3 = startTime + stepDuration * (2. + transitionPoint);
+
+    float count = -2.;
+
+    if (time > step1) {
+        count += 1.;
+        makeSpace(p, time - (stepDuration * count));
     }
+
+    if (time > step2) {
+        count += 1.;
+        makeSpace(p, time - (stepDuration * count));
+    }
+
+    if (time > step3) {
+        count += 1.;
+        makeSpace(p, time - (stepDuration * count));
+    }
+
+    count += 1.;
+    return makeModel(p, time - (stepDuration * count));
 }
 
 Model map( vec3 p ){
