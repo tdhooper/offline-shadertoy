@@ -300,9 +300,11 @@ float makeModel(vec3 p, float localTime) {
     //blend = 0.;
     float r = mix(0., 1.5, blend);
 
-    float blend2 = clamp(localTime, 0., 1.);
+    float blend2 = clamp((localTime - .5) / stepDuration, 0., 1.);
 
     p += triV.c * amt;
+
+    float original = length(p) - .5;
 
     fold(p);
     
@@ -321,6 +323,9 @@ float makeModel(vec3 p, float localTime) {
     n = reflect(n, triP.ca);
     part = length(p - n * amt) - .5;
     d = smin(d, part, r);
+
+    d = mix(original, d, blend2);
+
 
     return d;
 }
@@ -362,7 +367,7 @@ Model map( vec3 p ){
     mat3 m = modelRotation();
     //p *= m;
     Model model = Model(subDModel(p, 0.), 1.);
-    //model = Model(makeModel(p, 0.), 1.);
+    //model = Model(makeModel(p, time), 1.);
     //model.dist = length(p - facePlane) - .1;
     return model;
 }
