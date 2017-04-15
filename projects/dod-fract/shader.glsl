@@ -275,7 +275,7 @@ float stepMove = 1.;
 float stepDuration = 2.;
 float stepCount = 3.;
 float loopDuration;
-float transitionPoint = .2;
+float transitionPoint = .35;
 
 
 float makeOffsetAmt(vec3 p, float startTime) {
@@ -293,12 +293,12 @@ float makeModel(vec3 p, float startTime) {
     float d, part;
     
     float amt = makeOffsetAmt(p, startTime);
-    float blend = max(0., time - startTime) / stepDuration / 2.;
+    float blend = max(0., time - startTime) / stepDuration / 1.5;
+    blend = pow(blend, 4.);
     blend = clamp(blend, 0., 1.);
-    blend = pow(blend, 3.);
     //amt = 0.01;
     //blend = 0.;
-    float r = mix(0., .5, blend);
+    float r = mix(0., 1.5, blend);
 
     p += triV.c * amt;
 
@@ -335,7 +335,7 @@ float subDModel3(vec3 p, float startTime) {
 }
 
 float subDModel2(vec3 p, float startTime) {
-    if (time < startTime + stepDuration * 1.2) {
+    if (time < startTime + stepDuration * (1. + transitionPoint)) {
         return makeModel(p, startTime);
     } else {
         makeSpace(p, startTime);
@@ -544,6 +544,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     loopDuration = (stepCount + .0) * stepDuration;
     time = iGlobalTime;
+    //time += .1;
     time = mod(time, loopDuration);
     //time /= 2.;
     //time = mod(time, 1.);
