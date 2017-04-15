@@ -275,6 +275,7 @@ float stepMove = 1.;
 float stepDuration = 2.;
 float stepCount = 3.;
 float loopDuration;
+float transitionPoint = .2;
 
 
 float makeOffsetAmt(vec3 p, float startTime) {
@@ -292,8 +293,12 @@ float makeModel(vec3 p, float startTime) {
     float d, part;
     
     float amt = makeOffsetAmt(p, startTime);
-    float blend = max(0., time - startTime) / stepDuration;
-    float r = mix(0., .8, blend);
+    float blend = max(0., time - startTime) / stepDuration / 2.;
+    blend = clamp(blend, 0., 1.);
+    blend = pow(blend, 3.);
+    //amt = 0.01;
+    //blend = 0.;
+    float r = mix(0., .5, blend);
 
     p += triV.c * amt;
 
@@ -302,6 +307,8 @@ float makeModel(vec3 p, float startTime) {
     vec3 pp = p;
 
     d = length(p - triV.c * amt) - .5;
+
+    //return d;
 
     p = pp;
     vec3 rPlane = normalize(cross(triV.b, triV.a));
@@ -324,19 +331,29 @@ void makeSpace(inout vec3 p, float startTime) {
 }
 
 float subDModel3(vec3 p, float startTime) {
-    makeSpace(p, startTime);
     return makeModel(p, startTime);    
 }
 
 float subDModel2(vec3 p, float startTime) {
-    makeSpace(p, startTime);
-    return subDModel3(p, startTime + stepDuration);
+    if (time < startTime + stepDuration * 1.2) {
+        return makeModel(p, startTime);
+    } else {
+        makeSpace(p, startTime);
+        return makeModel(p, startTime + stepDuration);    
+    }
 }
 
 float subDModel(vec3 p, float startTime) {
-    makeSpace(p, startTime - stepDuration);
-    makeSpace(p, startTime);
-    return subDModel2(p, startTime + stepDuration);    
+    if (time < startTime + stepDuration * transitionPoint) {
+        return makeModel(p, startTime - stepDuration);
+    } else if (time < startTime + stepDuration * (1. + transitionPoint)) {
+        makeSpace(p, startTime - stepDuration);
+        return makeModel(p, startTime);
+    } else {
+        makeSpace(p, startTime - stepDuration);
+        makeSpace(p, startTime);
+        return subDModel2(p, startTime + stepDuration);    
+    }
 }
 
 Model map( vec3 p ){
