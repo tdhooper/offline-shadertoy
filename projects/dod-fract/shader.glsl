@@ -272,15 +272,15 @@ float bDelay(float delay, float duration, float loop) {
 float stepMove = 1.;
 float stepDuration = 2.;
 float loopDuration;
-float transitionPoint = .35;
+float transitionPoint = .0;
 
 const float MODEL_STEPS = 3.;
 
 
 float makeOffsetAmt(vec3 p, float localTime) {
     float moveMax = stepMove;
-    float blend = max(0., localTime) / stepDuration;
-    blend = pow(blend, 3.);
+    float blend = max(0., localTime + .5) / stepDuration;
+    blend = pow(blend, 3.25);
     return mix(.0, moveMax, blend);    
 }
 
@@ -292,38 +292,47 @@ float makeModel(vec3 p, float localTime) {
     float d, part;
     
     float amt = makeOffsetAmt(p, localTime);
-    float blend = max(0., localTime) / stepDuration / 1.5;
-    blend = pow(blend, 4.);
+
+    float blend = max(0., localTime) / stepDuration;
+    blend = pow(blend, 3.5);
     blend = clamp(blend, 0., 1.);
-    //amt = 0.01;
     //blend = 0.;
-    float r = mix(0., 1.5, blend);
+    float r = mix(0., .6, blend);
 
-    float blend2 = clamp((localTime - .5) / stepDuration, 0., 1.);
+    float size = .5;
 
+    float blend2 = clamp((localTime) / stepDuration * 2., 0., 1.);
+    blend2 = smoothstep(0., 1., blend2);
+    
+    float original = length(p) - size;
+    
+    
     p += triV.c * amt;
-
-    float original = length(p) - .5;
-
+    
+    
     fold(p);
+
+    //size = mix(size * .5, size, sin(blend * PI + PI * .25) * .5 + .5);
+    size = mix(size * .666, size, sin(mod(localTime / stepDuration, 1.) * PI * 2. - PI * -.3) * .5 + .5);
     
     vec3 pp = p;
 
-    d = length(p - triV.c * amt) - .5;
+    d = length(p - triV.c * amt) - size;
 
     //return d;
 
     p = pp;
     vec3 rPlane = normalize(cross(triV.b, triV.a));
     vec3 n = reflect(triV.c, rPlane);
-    part = length(p - n * amt) - .5;
+    part = length(p - n * amt) - size;
     d = smin(d, part, r);
 
     n = reflect(n, triP.ca);
-    part = length(p - n * amt) - .5;
+    part = length(p - n * amt) - size;
     d = smin(d, part, r);
 
-    d = mix(original, d, blend2);
+    //d = min(original, d);
+    //d = mix(original, d, blend2);
 
 
     return d;
@@ -366,7 +375,7 @@ vec3 camTar;
 
 void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse) {
 
-    camDist = mix(3.,15., sin(time / loopDuration * PI * 2. - PI / 2.) * .5 + .5);
+    camDist = mix(3.,20., sin(time / loopDuration * PI * 2. - PI * .5) * .5 + .5);
     
     //camDist = 4.;
 
@@ -386,7 +395,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 40.; // max trace distance
+const float MAX_TRACE_DISTANCE = 50.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
@@ -464,13 +473,13 @@ void shadeSurface(inout Hit hit){
         hit.color = background;
         return;
     }
-    
 
     vec3 light = normalize(vec3(.5,1,0));
     vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
     
     vec3 colA = vec3(.1,.75,.75);
     vec3 colB = vec3(.75,.1,.75);
+    colB = mix(colB, colA, .7);
     
     float blend = sin(hit.model.id * TAU * 3.) * .5 + .5;
     blend = time / loopDuration;
