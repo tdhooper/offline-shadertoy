@@ -139,6 +139,14 @@ float fCone(vec3 p, float radius, float height, vec3 direction, float offset) {
     return fCone(p, radius, height);
 }
 
+// Reflect space at a plane
+float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
+    float t = dot(p, planeNormal)+offset;
+    if (t < 0.) {
+        p = p - (2.*t)*planeNormal;
+    }
+    return sign(t);
+}
 
 
 
@@ -273,8 +281,9 @@ float stepMove = 1.;
 float stepDuration = 2.;
 float loopDuration;
 float transitionPoint = .0;
+float camOffset = 2.;
 
-const float MODEL_STEPS = 3.;
+const float MODEL_STEPS = 4.;
 
 
 float makeOffsetAmt(vec3 p, float localTime) {
@@ -348,6 +357,8 @@ void makeSpace(inout vec3 p, float startTime) {
 
 float subDModel(vec3 p) {
 
+    pReflect(p, -triV.c, camOffset);
+
     float level = -1.;
 
     for (float i = 0.; i < MODEL_STEPS; i++) {
@@ -377,22 +388,23 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     float x = time / loopDuration;
     float apex = .7;
     float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
-    camDist = mix(3.,20., blend);
+    camDist = mix(3.,30., blend);
     
-    camDist = 15.;
+    //camDist = 15.;
 
     camTar = vec3(0.);
+    camTar = -triV.c * camOffset;
 
-    camTar = triV.c * -makeOffsetAmt(vec3(0.), time) * 2.;
+    //camTar = triV.c * -makeOffsetAmt(vec3(0.), time) * 2.;
     
-    camRoll = PI * x * .5;
-    camRoll = 0.;
+    camRoll = (sin(PI * x) * .5 + .5) * PI * .25;
+    //camRoll = 0.;
 
     camPos = vec3(0,0,-camDist);
 
-    //pR(camPos.xz, x * PI * 1.5);    
+    pR(camPos.xz, x * PI * 2. + PI );    
 
-    camPos *= cameraRotation();
+   // camPos *= cameraRotation();
     camPos += camTar;
 
 }
