@@ -269,13 +269,12 @@ float bDelay(float delay, float duration, float loop) {
     //return sineInOut(t);
 }
 
-float LOOP = 3.5;
-
 float stepMove = 1.;
 float stepDuration = 2.;
-float stepCount = 3.;
 float loopDuration;
 float transitionPoint = .35;
+
+const float MODEL_STEPS = 3.;
 
 
 float makeOffsetAmt(vec3 p, float localTime) {
@@ -337,7 +336,6 @@ void makeSpace(inout vec3 p, float startTime) {
     p -= offset;
 }
 
-const float MODEL_STEPS = 3.;
 
 float subDModel(vec3 p) {
 
@@ -539,7 +537,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     init();
     
-    loopDuration = (stepCount + .0) * stepDuration;
+    loopDuration = (MODEL_STEPS + .0) * stepDuration;
     time = iGlobalTime;
     //time += .1;
     time = mod(time, loopDuration);
