@@ -337,36 +337,26 @@ void makeSpace(inout vec3 p, float startTime) {
     p -= offset;
 }
 
-float subDModel(vec3 p, float startTime) {
-    float step1 = startTime + stepDuration * transitionPoint;
-    float step2 = startTime + stepDuration * (1. + transitionPoint);
-    float step3 = startTime + stepDuration * (2. + transitionPoint);
+const float MODEL_STEPS = 3.;
 
-    float count = -2.;
+float subDModel(vec3 p) {
 
-    if (time > step1) {
-        count += 1.;
-        makeSpace(p, time - (stepDuration * count));
+    float level = -1.;
+
+    for (float i = 0.; i < MODEL_STEPS; i++) {
+        if (time > stepDuration * (i + transitionPoint)) {
+            level = i;
+            makeSpace(p, time - (stepDuration * (level - 1.)));
+        }
     }
 
-    if (time > step2) {
-        count += 1.;
-        makeSpace(p, time - (stepDuration * count));
-    }
-
-    if (time > step3) {
-        count += 1.;
-        makeSpace(p, time - (stepDuration * count));
-    }
-
-    count += 1.;
-    return makeModel(p, time - (stepDuration * count));
+    return makeModel(p, time - (stepDuration * level));
 }
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
     //p *= m;
-    Model model = Model(subDModel(p, 0.), 1.);
+    Model model = Model(subDModel(p), 1.);
     //model = Model(makeModel(p, time), 1.);
     //model.dist = length(p - facePlane) - .1;
     return model;
@@ -378,7 +368,7 @@ vec3 camTar;
 
 void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse) {
 
-    camDist = mix(2.,15., sin(time / loopDuration * PI * 2. - PI / 2.) * .5 + .5);
+    camDist = mix(3.,15., sin(time / loopDuration * PI * 2. - PI / 2.) * .5 + .5);
     
     //camDist = 4.;
 
