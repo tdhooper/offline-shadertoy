@@ -374,8 +374,10 @@ float camDist;
 vec3 camTar;
 
 void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse) {
-
-    camDist = mix(3.,20., sin(time / loopDuration * PI * 2. - PI * .5) * .5 + .5);
+    float x = time / loopDuration;
+    float apex = .7;
+    float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
+    camDist = mix(3.,20., blend);
     
     //camDist = 4.;
 
