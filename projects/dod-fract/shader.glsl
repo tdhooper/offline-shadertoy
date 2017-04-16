@@ -379,15 +379,22 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
     camDist = mix(3.,20., blend);
     
-    //camDist = 4.;
+    camDist = 15.;
 
     camTar = vec3(0.);
+
+    camTar = triV.c * -makeOffsetAmt(vec3(0.), time) * 2.;
     
+    camRoll = PI * x * .5;
     camRoll = 0.;
-    
+
     camPos = vec3(0,0,-camDist);
+
+    //pR(camPos.xz, x * PI * 1.5);    
+
     camPos *= cameraRotation();
     camPos += camTar;
+
 }
 
 
