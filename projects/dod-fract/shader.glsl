@@ -283,7 +283,7 @@ float loopDuration;
 float transitionPoint = .0;
 float camOffset = 2.;
 
-const float MODEL_STEPS = 4.;
+const float MODEL_STEPS = 3.;
 
 
 float makeOffsetAmt(vec3 p, float localTime) {
@@ -388,7 +388,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     float x = time / loopDuration;
     float apex = .7;
     float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
-    camDist = mix(3.,30., blend);
+    camDist = mix(2.,25., blend);
     
     //camDist = 15.;
 
@@ -397,12 +397,12 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
 
     //camTar = triV.c * -makeOffsetAmt(vec3(0.), time) * 2.;
     
-    camRoll = (sin(PI * x) * .5 + .5) * PI * .25;
+    camRoll = (sin(PI * x) * .5 + .5) * PI * .165;
     //camRoll = 0.;
 
     camPos = vec3(0,0,-camDist);
 
-    pR(camPos.xz, x * PI * 2. + PI );    
+    pR(camPos.xz, x * PI * 2. + PI * -.51);    
 
    // camPos *= cameraRotation();
     camPos += camTar;
@@ -416,7 +416,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 50.; // max trace distance
+const float MAX_TRACE_DISTANCE = 70.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
