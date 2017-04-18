@@ -278,7 +278,7 @@ float bDelay(float delay, float duration, float loop) {
     //return sineInOut(t);
 }
 
-float stepScale = .3;
+float stepScale = .25;
 float stepMove = 3.;
 float stepDuration = 3.;
 float loopDuration;
@@ -305,8 +305,8 @@ float makeOffsetAmt(vec3 p, float localTime) {
     return mix(.0, moveMax, blend);    
 }
 
-vec3 makeOffset(vec3 p, float startTime, float scale) {
-    return triV.c * makeOffsetAmt(p, startTime) * scale;
+vec3 makeOffset(vec3 p, float startTime) {
+    return triV.c * makeOffsetAmt(p, startTime);
 }
 
 float makeModel(vec3 p, float localTime, float scale) {
@@ -320,7 +320,7 @@ float makeModel(vec3 p, float localTime, float scale) {
     //blend = 0.;
     float r = mix(0., .6, blend);
 
-    float size = 1. * scale;
+    float size = 1.;
 
     float blend2 = clamp((localTime) / stepDuration * 2., 0., 1.);
     blend2 = smoothstep(0., 1., blend2);
@@ -329,7 +329,8 @@ float makeModel(vec3 p, float localTime, float scale) {
     
     
     //p += triV.c * amt;
-    
+    p /= scale;
+
     
     fold(p);
 
@@ -342,12 +343,18 @@ float makeModel(vec3 p, float localTime, float scale) {
 
     vec3 pp = p;
 
-    d = length(p - triV.c * amt * scale) - size;
+    
+
+    p -= triV.c * amt * 1.;
+
+    
+
+    d = length(p) - size;
 
     //d = min(d, dot(p, triV.a) - amt * scale * .8);
 
 
-    return d;
+    return d * scale;
 
     p = pp;
     vec3 rPlane = normalize(cross(triV.b, triV.a));
@@ -367,10 +374,11 @@ float makeModel(vec3 p, float localTime, float scale) {
 }
 
 void makeSpace(inout vec3 p, float startTime, float scale) {
-    vec3 offset = makeOffset(p, startTime, scale);
-    //p += offset;
+    vec3 offset = makeOffset(p, startTime);
+    p /= scale;
     fold(p);
     p -= offset;
+    p *= scale;
 }
 
 
@@ -387,19 +395,21 @@ float subDModel(vec3 p) {
 
 
     for (float i = 0.; i < MODEL_STEPS; i++) {
-        if (time > stepDuration * i) {
+        if (time >= stepDuration * i) {
             level = i;
             scale = pow(stepScale, level);
             makeSpace(pp, time - (stepDuration * (level - 1.)), scale);
         }
-        if (time > stepDuration * (i + 1.)) {
+        if (time >= stepDuration * (i + 1.)) {
             makeSpace(p, time - (stepDuration * (level - 1.)), pow(stepScale, level + 1.));
         }        
     }
 
     scale = pow(stepScale, level + 1.);
+ 
     d = makeModel(p, time - (stepDuration * level), scale);
-    d = min(d, makeModel(pp, time - (stepDuration * level), scale));
+    float part = makeModel(pp, time - (stepDuration * level), scale);
+    d = min(d, part);
     return d;
 }
 
