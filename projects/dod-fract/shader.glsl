@@ -22,6 +22,7 @@ precision mediump float;
 
 
 
+
 #define MODEL_ROTATION vec2(.5, .5)
 #define CAMERA_ROTATION vec2(.5, .5)
 
@@ -103,33 +104,33 @@ float smax(float a, float b, float r) {
 }
 
 float smin(float a, float b, float r) {
-	float m = min(a, b);
-	if ((a < r) && (b < r) ) {
-		return min(m, r - sqrt((r-a)*(r-a) + (r-b)*(r-b)));
-	} else {
-	 return m;
-	}
+    float m = min(a, b);
+    if ((a < r) && (b < r) ) {
+        return min(m, r - sqrt((r-a)*(r-a) + (r-b)*(r-b)));
+    } else {
+     return m;
+    }
 }
 
 // Cone with correct distances to tip and base circle. Y is up, 0 is in the middle of the base.
 float fCone(vec3 p, float radius, float height) {
-	vec2 q = vec2(length(p.xz), p.y);
-	vec2 tip = q - vec2(0, height);
-	vec2 mantleDir = normalize(vec2(height, radius));
-	float mantle = dot(tip, mantleDir);
-	float d = max(mantle, -q.y);
-	float projected = dot(tip, vec2(mantleDir.y, -mantleDir.x));
-	
-	// distance to tip
-	if ((q.y > height) && (projected < 0.)) {
-		d = max(d, length(tip));
-	}
-	
-	// distance to base ring
-	if ((q.x > radius) && (projected > length(vec2(height, radius)))) {
-		d = max(d, length(q - vec2(radius, 0)));
-	}
-	return d;
+    vec2 q = vec2(length(p.xz), p.y);
+    vec2 tip = q - vec2(0, height);
+    vec2 mantleDir = normalize(vec2(height, radius));
+    float mantle = dot(tip, mantleDir);
+    float d = max(mantle, -q.y);
+    float projected = dot(tip, vec2(mantleDir.y, -mantleDir.x));
+    
+    // distance to tip
+    if ((q.y > height) && (projected < 0.)) {
+        d = max(d, length(tip));
+    }
+    
+    // distance to base ring
+    if ((q.x > radius) && (projected > length(vec2(height, radius)))) {
+        d = max(d, length(q - vec2(radius, 0)));
+    }
+    return d;
 }
 
 float fCone(vec3 p, float radius, float height, vec3 direction, float offset) {
@@ -219,10 +220,10 @@ vec3 bToCn(int a, int b, int c) {
 }
 
 void fold(inout vec3 p) {
-	for(int i=0;i<5 /*Type*/;i++){
-		p.xy = abs(p.xy);
-		p -= 2. * min(0., dot(p,nc)) * nc;
-	}
+    for(int i=0;i<5 /*Type*/;i++){
+        p.xy = abs(p.xy);
+        p -= 2. * min(0., dot(p,nc)) * nc;
+    }
 }
 
 
@@ -255,7 +256,7 @@ float sineOutIn(float t) {
 }
 
 float easeWithRest(float t) {
-	float blend = cos(t * PI * 2.) * -.5 + .5;
+    float blend = cos(t * PI * 2.) * -.5 + .5;
     float slope = .2;
     float lin = (t - .5) * slope + .5;
     return mix(sineInOut(t), lin, blend);
@@ -264,10 +265,10 @@ float easeWithRest(float t) {
 float bDelay(float delay, float duration, float loop) {
     float t = mod(time, loop);
     if (t < delay) {
-    	return 0.;
+        return 0.;
     }
     if (t > duration + delay) {
-    	return 1.;
+        return 1.;
     }
     t -= delay;
     t /= duration;
@@ -497,8 +498,9 @@ void shadeSurface(inout Hit hit){
 
     vec3 light = normalize(vec3(.5,1,0));
     vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
+    diffuse = mix(diffuse, vec3(1), .1);
     
-    vec3 colA = vec3(.1,.75,.75);
+    vec3 colA = vec3(.1,.75,.75) * 1.5;
     vec3 colB = vec3(.75,.1,.75);
     colB = mix(colB, colA, .7);
     
@@ -597,6 +599,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #ifndef DEBUG
        color = linearToScreen(color);
     #endif
-
+   // color = linearToScreen(color);
+   
     fragColor = vec4(color,1.0);
 }
