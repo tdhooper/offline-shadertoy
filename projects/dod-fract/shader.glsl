@@ -278,27 +278,38 @@ float bDelay(float delay, float duration, float loop) {
     //return sineInOut(t);
 }
 
-float stepMove = 1.;
-float stepDuration = 2.;
+float stepScale = .3;
+float stepMove = 3.;
+float stepDuration = 3.;
 float loopDuration;
 float transitionPoint = .0;
 float camOffset = 2.;
 
-const float MODEL_STEPS = 3.;
+const float MODEL_STEPS = 2.;
+
+float squareSine(float x, float e) {
+    //return sin(x);
+    x = mod(x, PI * 2.);
+    float period = x / mod((PI / 2.), 4.);
+    float a = pow(period - 3., e) - 1.;
+    float b = -pow(period - 1., e) + 1.;
+    return period > 2. ? a : b;
+}
 
 
 float makeOffsetAmt(vec3 p, float localTime) {
     float moveMax = stepMove;
-    float blend = max(0., localTime + .5) / stepDuration;
-    blend = pow(blend, 3.25);
+    float blend = localTime / stepDuration;
+    blend = clamp(blend, 0., 1.);
+    blend = squareSine(blend * PI - PI * .5, 8.) * .5 + .5;
     return mix(.0, moveMax, blend);    
 }
 
-vec3 makeOffset(vec3 p, float startTime) {
-    return triV.c * makeOffsetAmt(p, startTime);
+vec3 makeOffset(vec3 p, float startTime, float scale) {
+    return triV.c * makeOffsetAmt(p, startTime) * scale;
 }
 
-float makeModel(vec3 p, float localTime) {
+float makeModel(vec3 p, float localTime, float scale) {
     float d, part;
     
     float amt = makeOffsetAmt(p, localTime);
@@ -309,7 +320,7 @@ float makeModel(vec3 p, float localTime) {
     //blend = 0.;
     float r = mix(0., .6, blend);
 
-    float size = .5;
+    float size = 1. * scale;
 
     float blend2 = clamp((localTime) / stepDuration * 2., 0., 1.);
     blend2 = smoothstep(0., 1., blend2);
@@ -317,19 +328,26 @@ float makeModel(vec3 p, float localTime) {
     float original = length(p) - size;
     
     
-    p += triV.c * amt;
+    //p += triV.c * amt;
     
     
     fold(p);
 
-    //size = mix(size * .5, size, sin(blend * PI + PI * .25) * .5 + .5);
-    size = mix(size * .666, size, sin(mod(localTime / stepDuration, 1.) * PI * 2. - PI * -.3) * .5 + .5);
+
+    //size = mix(size * .666, size, sin(mod(localTime / stepDuration, 1.) * PI * 2. - PI * -.3) * .5 + .5);
     
+    float lTime = clamp(localTime / stepDuration, 0., 1.);
+
+    size = mix(size, size * stepScale, lTime);
+
     vec3 pp = p;
 
-    d = length(p - triV.c * amt) - size;
+    d = length(p - triV.c * amt * scale) - size;
 
-    //return d;
+    //d = min(d, dot(p, triV.a) - amt * scale * .8);
+
+
+    return d;
 
     p = pp;
     vec3 rPlane = normalize(cross(triV.b, triV.a));
@@ -348,9 +366,9 @@ float makeModel(vec3 p, float localTime) {
     return d;
 }
 
-void makeSpace(inout vec3 p, float startTime) {
-    vec3 offset = makeOffset(p, startTime);
-    p += offset;
+void makeSpace(inout vec3 p, float startTime, float scale) {
+    vec3 offset = makeOffset(p, startTime, scale);
+    //p += offset;
     fold(p);
     p -= offset;
 }
@@ -358,18 +376,31 @@ void makeSpace(inout vec3 p, float startTime) {
 
 float subDModel(vec3 p) {
 
-    pReflect(p, -triV.c, camOffset);
+    //pReflect(p, -triV.c, camOffset);
 
+    float scale = 1.;
     float level = -1.;
 
+    vec3 pp = p;
+
+    float d;
+
+
     for (float i = 0.; i < MODEL_STEPS; i++) {
-        if (time > stepDuration * (i + transitionPoint)) {
+        if (time > stepDuration * i) {
             level = i;
-            makeSpace(p, time - (stepDuration * (level - 1.)));
+            scale = pow(stepScale, level);
+            makeSpace(pp, time - (stepDuration * (level - 1.)), scale);
         }
+        if (time > stepDuration * (i + 1.)) {
+            makeSpace(p, time - (stepDuration * (level - 1.)), pow(stepScale, level + 1.));
+        }        
     }
 
-    return makeModel(p, time - (stepDuration * level));
+    scale = pow(stepScale, level + 1.);
+    d = makeModel(p, time - (stepDuration * level), scale);
+    d = min(d, makeModel(pp, time - (stepDuration * level), scale));
+    return d;
 }
 
 Model map( vec3 p ){
@@ -391,21 +422,21 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
     camDist = mix(2.,25., blend);
     
-    //camDist = 15.;
+    camDist = 5.;
 
     camTar = vec3(0.);
-    camTar = -triV.c * camOffset;
+    //camTar = -triV.c * camOffset;
 
     //camTar = triV.c * -makeOffsetAmt(vec3(0.), time) * 2.;
     
     camRoll = (sin(PI * x) * .5 + .5) * PI * .165;
-    //camRoll = 0.;
+    camRoll = 0.;
 
     camPos = vec3(0,0,-camDist);
 
-    pR(camPos.xz, x * PI * 2. + PI * -.51);    
+    //pR(camPos.xz, x * PI * 2. + PI * -.51);    
 
-   // camPos *= cameraRotation();
+    camPos *= cameraRotation();
     camPos += camTar;
 
 }
@@ -516,7 +547,9 @@ void shadeSurface(inout Hit hit){
     fog = mix(0., 1., length(camTar - hit.pos) / camDist) * .5;
     fog = clamp(fog, 0., 1.);
     
-    diffuse = mix(diffuse, background, fog);
+    //diffuse = hit.normal * .5 + .5;
+
+    diffuse =  mix(diffuse, background, fog);
     
     
     hit.color = diffuse;
