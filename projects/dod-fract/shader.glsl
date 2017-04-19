@@ -285,6 +285,7 @@ float loopDuration;
 float transitionPoint = .0;
 float camOffset = 2.;
 float ballSize = 1.;
+float stepSpeed = .5;
 
 const float MODEL_STEPS = 2.;
 
@@ -298,15 +299,15 @@ float squareSine(float x, float e) {
 }
 
 float makeAnim(float localTime) {
-    float blend = localTime / stepDuration;
+    float blend = localTime / stepDuration * stepSpeed;
     blend = clamp(blend, 0., 1.);
-    blend = squareSine(blend * PI - PI * .5, 6.) * .5 + .5;
+    blend = squareSine(blend * PI - PI * .5, 2.) * .5 + .5;
     return blend;    
 }
 
 float makeOffsetAmt(vec3 p, float localTime) {
     float moveMax = stepMove;
-    float blend = localTime / stepDuration;
+    float blend = makeAnim(localTime);
     blend = clamp(blend, 0., 1.);
     //blend = squareSine(blend * PI - PI * .5, 2.) * .5 + .5;
     return mix(.0, moveMax, blend);    
@@ -354,12 +355,12 @@ float makeModel(vec3 p, float localTime, float scale) {
 */
 }
 
-void makeSpace(inout vec3 p, float startTime, float scale) {
-    float offsetAmt = makeOffsetAmt(p, startTime);
+void makeSpace(inout vec3 p, float localTime, float scale) {
+    float blend = makeAnim(localTime);
     p /= scale;
-    if (length(p) > stepMove * .5) {
+    if (length(p) > blend * stepMove * .5) {
         fold(p);
-        p -= offsetAmt * triV.c;
+        p -= triV.c * blend * stepMove;
     }
     p *= scale;
 }
@@ -376,20 +377,21 @@ float subDModel(vec3 p) {
 
     float d;
 
-
     for (float i = 0.; i < MODEL_STEPS; i++) {
         if (time >= stepDuration * i) {
             level = i;
             scale = pow(stepScale, level);
             makeSpace(pp, time - (stepDuration * (level - 1.)), scale);
         }
-        if (time >= stepDuration * (i + 1.)) {
-        //    makeSpace(p, time - (stepDuration * (level - 1.)), pow(stepScale, level + 1.));
-        }        
     }
 
-    scale = pow(stepScale, level + 1.);
- 
+    scale = mix(
+        pow(stepScale, level + 0.),
+        pow(stepScale, level + 1.),
+        //0.
+        makeAnim(time - (stepDuration * (level - 1.)))
+    );
+
     d = makeModel(pp, time - (stepDuration * level), scale);
     //float part = makeModel(pp, time - (stepDuration * level), scale);
     //d = min(d, part);
@@ -429,7 +431,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
 
     //pR(camPos.xz, x * PI * 2. + PI * -.51);    
 
-    camPos *= cameraRotation();
+    //camPos *= cameraRotation();
     camPos += camTar;
 
 }
@@ -604,6 +606,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = iMouse.xy / iResolution.xy;
+
+//    time = m.x * loopDuration;
 
     vec3 camPos = vec3( 0., 0., 2.);
     camTar = vec3( 0. , 0. , 0. );
