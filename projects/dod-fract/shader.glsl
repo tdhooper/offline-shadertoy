@@ -287,6 +287,7 @@ float camOffset = 2.;
 float ballSize = 1.;
 float stepSpeed = .5;
 
+const float initialStep = 1.;
 const float MODEL_STEPS = 2.;
 
 float squareSine(float x, float e) {
@@ -373,15 +374,21 @@ float subDModel(vec3 p) {
     float scale = 1.;
     float level = -1.;
 
-    vec3 pp = p;
+    float modelScale = mix(
+        pow(stepScale, MODEL_STEPS),
+        1.,
+        pow(time / loopDuration, 2.)
+    );
+    
+    p /= modelScale;
 
     float d;
 
-    for (float i = 0.; i < MODEL_STEPS; i++) {
-        if (time >= stepDuration * i) {
-            level = i;
+    for (float i = 0.; i < MODEL_STEPS + initialStep; i++) {
+        if (time >= stepDuration * (i - initialStep)) {
+            level = i - initialStep;
             scale = pow(stepScale, level);
-            makeSpace(pp, time - (stepDuration * (level - 1.)), scale);
+            makeSpace(p, time - (stepDuration * (level - 1.)), scale);
         }
     }
 
@@ -392,9 +399,11 @@ float subDModel(vec3 p) {
         makeAnim(time - (stepDuration * (level - 1.)))
     );
 
-    d = makeModel(pp, time - (stepDuration * level), scale);
+    d = makeModel(p, time - (stepDuration * level), scale);
     //float part = makeModel(pp, time - (stepDuration * level), scale);
     //d = min(d, part);
+
+    d *= modelScale;
     return d;
 }
 
@@ -415,9 +424,11 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     float x = time / loopDuration;
     float apex = .7;
     float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
-    camDist = mix(2.,25., blend);
+    camDist = mix(.3, 2., blend);
     
-    camDist = 3.;
+    //camDist = 2.;
+    //camDist = 1.;
+    //camDist = mix(camDist, camDist * pow(stepScale, MODEL_STEPS), pow(x, .4));
 
     camTar = vec3(0.);
     //camTar = -triV.c * camOffset;
@@ -431,7 +442,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
 
     //pR(camPos.xz, x * PI * 2. + PI * -.51);    
 
-    //camPos *= cameraRotation();
+    camPos *= cameraRotation();
     camPos += camTar;
 
 }
