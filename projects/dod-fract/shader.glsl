@@ -359,7 +359,7 @@ float makeModel(vec3 p, float localTime, float scale) {
 void makeSpace(inout vec3 p, float localTime, float scale) {
     float blend = makeAnim(localTime);
     p /= scale;
-    if (length(p) > blend * stepMove * .5) {
+    if (length(p) > blend * stepMove * .525) {
         fold(p);
         p -= triV.c * blend * stepMove;
     }
@@ -375,8 +375,8 @@ float subDModel(vec3 p) {
     float level = -1.;
 
     float modelScale = mix(
-        pow(stepScale, MODEL_STEPS),
         1.,
+        1. / pow(stepScale, MODEL_STEPS),
         pow(time / loopDuration, 2.)
     );
     
@@ -424,9 +424,9 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     float x = time / loopDuration;
     float apex = .7;
     float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
-    camDist = mix(.3, 2., blend);
+    camDist = mix(5., 30., blend);
     
-    //camDist = 2.;
+    //camDist = 5.;
     //camDist = 1.;
     //camDist = mix(camDist, camDist * pow(stepScale, MODEL_STEPS), pow(x, .4));
 
@@ -454,10 +454,10 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 70.; // max trace distance
+const float MAX_TRACE_DISTANCE = 100.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
-const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
+const float FUDGE_FACTOR = .9; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
