@@ -379,12 +379,14 @@ float subDModel(vec3 p) {
    p /= modelScale;
 
     float d;
-/*
-    p = mod(p, 1.) - .5;
-    d = length(p - vec3(.0,0,0)) - .1;
-    d *= modelScale;
-    return d;
-*/
+
+    //float time = .1;
+
+    // p = mod(p, 1.) - .5;
+    // d = length(p - vec3(.0,0,0)) - .1;
+    // d *= modelScale;
+    // return d;
+
 
     for (float i = 0.; i < MODEL_STEPS + initialStep; i++) {
         if (time >= stepDuration * (i - initialStep)) {
@@ -422,7 +424,43 @@ Model map( vec3 p ){
 float camDist;
 vec3 camTar;
 
-void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse) {
+
+vec3 camPath(float t) {
+    //t = t - .25;
+
+    vec3 A = vec3(triV.a) * 20.;
+    vec3 B = vec3(0);
+    vec3 D = triV.c * 120.;
+    vec3 C = D - A;
+    //end = vec3(20);
+
+    //return triV.c * (1./stepScale * stepMove);
+    
+    vec3 pathA = mix(A, B, smoothstep(0., 1., t));
+    vec3 pathB = mix(B, C, smoothstep(0., 1., t));
+    vec3 pathC = mix(C, D, smoothstep(0., 1., t));
+    
+    vec3 pos = mix(
+        mix(pathA, pathB, smoothstep(0., .5, t)),
+        mix(pathB, pathC, smoothstep(.5, 1., t)),
+        //1.
+        step(.5, t)
+    );
+
+    //pos = pathA;
+
+//    vec3 x = normalize(cross(triV.a, start - end));
+  //  vec3 y = normalize(cross(x, start - end));
+
+    //vec3 posTar = pos;
+    //pos += x * sin(t * PI * 2.) * 2.5;
+    //pos -= y * cos(t * PI * 2.) * 2.5;
+
+    return pos;
+}
+
+
+void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = time / loopDuration;
     float apex = .7;
     float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
@@ -445,7 +483,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
     camDist = mix(camDist, camDist * pow(stepScale, MODEL_STEPS), blend);
      
 
-    //camDist = 5.;
+    //camDist = 10.;
     //camDist = 1.;
     //camDist = mix(camDist, camDist * pow(stepScale, MODEL_STEPS), pow(x, .4));
 
@@ -454,15 +492,41 @@ void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in vec2 mouse
 
     //camTar = triV.c * -makeOffsetAmt(vec3(0.), time) * 2.;
     
-    camRoll = (sin(PI * x) * .5 + .5) * PI * .165;
-    camRoll = 0.;
+    //camRoll = (sin(PI * x) * .5 + .5) * PI * -.3;
+    //camRoll = 0.;
+    camUp = normalize(vec3(0,-1,0));
+    //pR(camUp.xy, x * PI * 2.);
 
     camPos = vec3(0,0,-camDist);
 
-    pR(camPos.xz, x * PI * 2. + PI * -.51);    
+    vec3 startTar = vec3(0);
+    vec3 endTar = triV.c * (stepMove * (1./stepScale));
+    
+    apex = .333;
+    float overshoot = 0.;
+    blend = smoothstep(0., apex, x) * (1. + overshoot);
+    blend -= smoothstep(apex, 1., x) * overshoot;
 
-    camPos *= cameraRotation();
-    camPos += camTar;
+    blend = smoothstep(0., 1., x);
+    camTar = mix(startTar, endTar, blend) * modelScale;
+
+    camPos = camPath(x - .1);
+    camTar = camPath(x);
+
+    //camTar = vec3(0.);
+
+    //camUp = normalize(cross(camUp, camTar - camPos));
+    //pR(camTar.yx, x * PI * -2.);    
+
+    //pR(camPos.xz, x * PI * 2.);    
+    
+    //camTar = vec3(0.);
+    //camPos = camTar - vec3(0,0,10.);
+    
+    //camPos = vec3(0,0,10);
+    
+    //camPos *= cameraRotation();
+    //camPos += camTar;
 
 }
 
@@ -572,7 +636,8 @@ void shadeSurface(inout Hit hit){
     fog = mix(0., 1., length(camTar - hit.pos) / camDist) * .5;
     fog = clamp(fog, 0., 1.);
     
-    //diffuse = hit.normal * .5 + .5;
+    diffuse = hit.normal * .5 + .5;
+    fog = 0.;
 
     diffuse =  mix(diffuse, background, fog);
     
@@ -598,10 +663,10 @@ vec3 render(Hit hit){
 // https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
+mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in vec3 up )
 {
     vec3 ww = normalize( ta - ro );
-    vec3 uu = normalize( cross(ww,vec3(sin(roll),cos(roll),0.0) ) );
+    vec3 uu = normalize( cross(ww,up));
     vec3 vv = normalize( cross(uu,ww));
     return mat3( uu, vv, ww );
 }
@@ -641,13 +706,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec3 camPos = vec3( 0., 0., 2.);
     camTar = vec3( 0. , 0. , 0. );
-    float camRoll = 0.;
+    vec3 camUp = vec3(0., 1., 0.);
 
     // camera movement
-    doCamera(camPos, camTar, camRoll, m);
+    doCamera(camPos, camTar, camUp, m);
 
     // camera matrix
-    mat3 camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll
+    mat3 camMat = calcLookAtMatrix( camPos, camTar, camUp );  // 0.0 is the camera roll
 
     // create view ray
     vec3 rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
