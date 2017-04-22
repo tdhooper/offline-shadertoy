@@ -284,7 +284,7 @@ float stepDuration = 2.;
 float loopDuration;
 float transitionPoint = .0;
 float camOffset = 2.;
-float ballSize = 1.;
+float ballSize = .5;
 float stepSpeed = .5;
 
 const float initialStep = 1.;
@@ -366,6 +366,63 @@ void makeSpace(inout vec3 p, float localTime, float scale) {
     p *= scale;
 }
 
+float hardstep(float a, float b, float t) {
+    float s = 1. / (b - a);
+    return clamp((t - a) * s, 0., 1.);
+}
+
+vec3 camPath(float t) {
+    //t = t - .25;
+
+    t = pow(t, 1.8);
+
+    vec3 A = vec3(-1.2,0,-6);
+    vec3 B = vec3(-1.2,0,0);
+    vec3 C = vec3(1.8,8,-6);
+    vec3 D = vec3(1.8,8,0);
+
+    vec3 startPoint = vec3(0);
+    vec3 endPoint = triV.c * (pow(1./stepScale, 3.) * stepMove);
+
+    vec3 lookLine = normalize(-triV.c - vec3(0,.5,0));
+    vec3 offsetA = lookLine * 3.;
+    vec3 offsetB = lookLine * 1.;
+    vec3 offsetC = offsetA + offsetB;
+    vec3 offsetD = offsetA;
+
+    A = startPoint + offsetA;
+    B = startPoint + offsetB;
+    C = endPoint + offsetC;
+    D = endPoint + offsetD;
+
+    //end = vec3(20);
+
+    //return triV.c * (1./stepScale * stepMove);
+    
+  
+    vec3 pathA = mix(A, B, hardstep(0., .5, t));
+    vec3 pathB = mix(B, C, hardstep(0., 1., t));
+    vec3 pathC = mix(C, D, hardstep(.5, 1., t));
+   
+  //  return pathA;
+
+    vec3 pos = mix(
+        mix(pathA, pathB, smoothstep(.0, .5, t)),
+        mix(pathB, pathC, smoothstep(.5, 1., t)),
+        step(.5, t)
+    );
+
+    //pos = pathA;
+
+//    vec3 x = normalize(cross(triV.a, start - end));
+  //  vec3 y = normalize(cross(x, start - end));
+
+    //vec3 posTar = pos;
+    //pos += x * sin(t * PI * 2.) * 2.5;
+    //pos -= y * cos(t * PI * 2.) * 2.5;
+
+    return pos;
+}
 
 float modelScale;
 
@@ -382,10 +439,12 @@ float subDModel(vec3 p) {
 
     //float time = .1;
 
-    // p = mod(p, 1.) - .5;
+    // p = mod(p + .5, 1.) - .5;
     // d = length(p - vec3(.0,0,0)) - .1;
     // d *= modelScale;
     // return d;
+
+    //float time = 1.;
 
 
     for (float i = 0.; i < MODEL_STEPS + initialStep; i++) {
@@ -425,39 +484,6 @@ float camDist;
 vec3 camTar;
 
 
-vec3 camPath(float t) {
-    //t = t - .25;
-
-    vec3 A = vec3(triV.a) * 20.;
-    vec3 B = vec3(0);
-    vec3 D = triV.c * 120.;
-    vec3 C = D - A;
-    //end = vec3(20);
-
-    //return triV.c * (1./stepScale * stepMove);
-    
-    vec3 pathA = mix(A, B, smoothstep(0., 1., t));
-    vec3 pathB = mix(B, C, smoothstep(0., 1., t));
-    vec3 pathC = mix(C, D, smoothstep(0., 1., t));
-    
-    vec3 pos = mix(
-        mix(pathA, pathB, smoothstep(0., .5, t)),
-        mix(pathB, pathC, smoothstep(.5, 1., t)),
-        //1.
-        step(.5, t)
-    );
-
-    //pos = pathA;
-
-//    vec3 x = normalize(cross(triV.a, start - end));
-  //  vec3 y = normalize(cross(x, start - end));
-
-    //vec3 posTar = pos;
-    //pos += x * sin(t * PI * 2.) * 2.5;
-    //pos -= y * cos(t * PI * 2.) * 2.5;
-
-    return pos;
-}
 
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
@@ -497,6 +523,8 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     camUp = normalize(vec3(0,-1,0));
     //pR(camUp.xy, x * PI * 2.);
 
+    camDist = 3.;
+
     camPos = vec3(0,0,-camDist);
 
     vec3 startTar = vec3(0);
@@ -510,8 +538,8 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     blend = smoothstep(0., 1., x);
     camTar = mix(startTar, endTar, blend) * modelScale;
 
-    camPos = camPath(x - .1);
-    camTar = camPath(x);
+    camPos = camPath(x);
+    camTar = camPath(x + .001);
 
     //camTar = vec3(0.);
 
@@ -520,13 +548,10 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 
     //pR(camPos.xz, x * PI * 2.);    
     
-    //camTar = vec3(0.);
-    //camPos = camTar - vec3(0,0,10.);
-    
-    //camPos = vec3(0,0,10);
-    
-    //camPos *= cameraRotation();
-    //camPos += camTar;
+    // camTar = vec3(0.);
+    // camPos = vec3(0,0,10);
+    // camPos *= cameraRotation();
+    // camPos += camTar;
 
 }
 
@@ -636,7 +661,7 @@ void shadeSurface(inout Hit hit){
     fog = mix(0., 1., length(camTar - hit.pos) / camDist) * .5;
     fog = clamp(fog, 0., 1.);
     
-    diffuse = hit.normal * .5 + .5;
+    //diffuse = hit.normal * .5 + .5;
     fog = 0.;
 
     diffuse =  mix(diffuse, background, fog);
