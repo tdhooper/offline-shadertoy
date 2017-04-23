@@ -480,9 +480,9 @@ vec3 camTar;
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = time / loopDuration;
 
-    float apex = .666;
+    float apex = .7;
     float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
-    camDist = mix(6., 150., blend);
+    camDist = mix(5., 65., blend);
 
     //camDist = 5.;
 
@@ -496,6 +496,8 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
      
     camUp = normalize(vec3(0,-1,0));
 
+    pR(camUp.zy, blend * .5);
+    
     // apex = .333;
     // float overshoot = 0.;
     // blend = smoothstep(0., apex, x) * (1. + overshoot);
@@ -515,7 +517,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 
     camPos = vec3(0,0,camDist);
     
-    //pR(camPos.xz, x * PI * -2.);
+    //pR(camPos.xz, x * PI * 1.);
 
     camPos *= cameraRotation();
     
@@ -630,7 +632,7 @@ void shadeSurface(inout Hit hit){
     diffuse *= 1.3;
     
     float fog = clamp((hit.ray.len - 5.) * .5, 0., 1.);
-    fog = mix(0., 1., length(camTar - hit.pos) / camDist) * .5;
+    fog = mix(0., 1., length(camTar - hit.pos) / pow(camDist, 1.25)) * 1.;
     fog = clamp(fog, 0., 1.);
     
     //diffuse = hit.normal * .5 + .5;
@@ -701,6 +703,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = iMouse.xy / iResolution.xy;
 
+    m= vec2(
+        0.4465875370919881,
+        0.5849514563106796
+    );
 //    time = m.x * loopDuration;
 
     vec3 camPos = vec3( 0., 0., 2.);
