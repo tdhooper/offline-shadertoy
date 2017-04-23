@@ -284,7 +284,7 @@ float stepDuration = 2.;
 float loopDuration;
 float transitionPoint = .0;
 float camOffset = 2.;
-float ballSize = .5;
+float ballSize = 1.;
 float stepSpeed = .5;
 
 const float initialStep = 1.;
@@ -356,6 +356,13 @@ float makeModel(vec3 p, float localTime, float scale) {
 */
 }
 
+vec3 makeOffset(float level) {
+    float localTime = time - (stepDuration * (level - 1.));
+    float blend = makeAnim(localTime);
+    float scale = pow(stepScale, level);
+    return triV.c * blend * stepMove * scale;
+}
+
 void makeSpace(inout vec3 p, float localTime, float scale) {
     float blend = makeAnim(localTime);
     p /= scale;
@@ -371,60 +378,31 @@ float hardstep(float a, float b, float t) {
     return clamp((t - a) * s, 0., 1.);
 }
 
+float modelScale;
+
 vec3 camPath(float t) {
     //t = t - .25;
 
-    t = pow(t, 1.8);
+    vec3 start = vec3(0);
+    vec3 end = triV.c * (stepMove * (1./stepScale));
 
-    vec3 A = vec3(-1.2,0,-6);
-    vec3 B = vec3(-1.2,0,0);
-    vec3 C = vec3(1.8,8,-6);
-    vec3 D = vec3(1.8,8,0);
+    float r = smoothstep(.1, .5, t) - smoothstep(.5, .9, t);
 
-    vec3 startPoint = vec3(0);
-    vec3 endPoint = triV.c * (pow(1./stepScale, 3.) * stepMove);
+    start += triV.b * 1.5 * r;
+    end += triV.b * 1.5 * r;
 
-    vec3 lookLine = normalize(-triV.c - vec3(0,.5,0));
-    vec3 offsetA = lookLine * 3.;
-    vec3 offsetB = lookLine * 1.;
-    vec3 offsetC = offsetA + offsetB;
-    vec3 offsetD = offsetA;
+    vec3 x = normalize(cross(start - end, triV.a));
+    vec3 y = normalize(cross(start - end, x));
 
-    A = startPoint + offsetA;
-    B = startPoint + offsetB;
-    C = endPoint + offsetC;
-    D = endPoint + offsetD;
-
-    //end = vec3(20);
-
-    //return triV.c * (1./stepScale * stepMove);
-    
-  
-    vec3 pathA = mix(A, B, hardstep(0., .5, t));
-    vec3 pathB = mix(B, C, hardstep(0., 1., t));
-    vec3 pathC = mix(C, D, hardstep(.5, 1., t));
-   
-  //  return pathA;
-
-    vec3 pos = mix(
-        mix(pathA, pathB, smoothstep(.0, .5, t)),
-        mix(pathB, pathC, smoothstep(.5, 1., t)),
-        step(.5, t)
-    );
-
-    //pos = pathA;
-
-//    vec3 x = normalize(cross(triV.a, start - end));
-  //  vec3 y = normalize(cross(x, start - end));
-
+    vec3 pos = mix(start, end, t);
     //vec3 posTar = pos;
     //pos += x * sin(t * PI * 2.) * 2.5;
     //pos -= y * cos(t * PI * 2.) * 2.5;
 
+    pos *= modelScale;
     return pos;
 }
 
-float modelScale;
 
 float subDModel(vec3 p) {
 
@@ -433,18 +411,15 @@ float subDModel(vec3 p) {
     float scale = 1.;
     float level = -1.;
 
-   p /= modelScale;
-
+ 
     float d;
 
-    //float time = .1;
+    //float time = loopDuration;
 
     // p = mod(p + .5, 1.) - .5;
     // d = length(p - vec3(.0,0,0)) - .1;
     // d *= modelScale;
     // return d;
-
-    //float time = 1.;
 
 
     for (float i = 0.; i < MODEL_STEPS + initialStep; i++) {
@@ -466,14 +441,30 @@ float subDModel(vec3 p) {
     //float part = makeModel(pp, time - (stepDuration * level), scale);
     //d = min(d, part);
 
-    d *= modelScale;
+    
     return d;
 }
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
     //p *= m;
-    Model model = Model(subDModel(p), 1.);
+
+     p /= modelScale;
+
+    float x = time / loopDuration;
+    vec3 offset = makeOffset(0.) + makeOffset(1.);
+    offset = mix(vec3(0.), offset, 1.-pow(1.-x, 2.));
+    p += offset;
+
+    float d = subDModel(p);
+
+    //d = min(d, length(p + offset) - .1);
+
+     d *= modelScale;
+
+    Model model = Model(d, 1.);
+
+
     //model = Model(makeModel(p, time), 1.);
     //model.dist = length(p - facePlane) - .1;
     return model;
@@ -488,70 +479,51 @@ vec3 camTar;
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = time / loopDuration;
-    float apex = .7;
+
+    float apex = .666;
     float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
-    camDist = mix(5., 30., blend);
+    camDist = mix(6., 150., blend);
 
+    //camDist = 5.;
 
-    blend = pow(x, 1.8);
-
+    float scaleBlend = pow(x, 1.8);
     modelScale = mix(
         1.,
         1. / pow(stepScale, MODEL_STEPS),
-        blend
+        scaleBlend
     );
     //modelScale = 1.;
-    
- 
-    camDist = 5. * modelScale;
-    
-    blend = smoothstep(.0, 1., x);
-    camDist = mix(camDist, camDist * pow(stepScale, MODEL_STEPS), blend);
      
+    camUp = normalize(vec3(0,-1,0));
 
-    //camDist = 10.;
-    //camDist = 1.;
-    //camDist = mix(camDist, camDist * pow(stepScale, MODEL_STEPS), pow(x, .4));
+    // apex = .333;
+    // float overshoot = 0.;
+    // blend = smoothstep(0., apex, x) * (1. + overshoot);
+    // blend -= smoothstep(apex, 1., x) * overshoot;
+
+    // blend = smoothstep(0., 1., x);
+    // camTar = mix(startTar, endTar, blend) * modelScale;
+
+    //camUp = vec3(1,0,0);
 
     camTar = vec3(0.);
-    //camTar = -triV.c * camOffset;
 
-    //camTar = triV.c * -makeOffsetAmt(vec3(0.), time) * 2.;
+    //blend = sin(x * PI * 2. - PI * .5) * .5 + .5;
+    //blend = .2;
+    //camTar += triV.b * blend * -20.;
+    //pR(camTar.xz, x * PI * 2.);
+
+    camPos = vec3(0,0,camDist);
     
-    //camRoll = (sin(PI * x) * .5 + .5) * PI * -.3;
-    //camRoll = 0.;
-    camUp = normalize(vec3(0,-1,0));
-    //pR(camUp.xy, x * PI * 2.);
+    //pR(camPos.xz, x * PI * -2.);
 
-    camDist = 3.;
-
-    camPos = vec3(0,0,-camDist);
-
-    vec3 startTar = vec3(0);
-    vec3 endTar = triV.c * (stepMove * (1./stepScale));
+    camPos *= cameraRotation();
     
-    apex = .333;
-    float overshoot = 0.;
-    blend = smoothstep(0., apex, x) * (1. + overshoot);
-    blend -= smoothstep(apex, 1., x) * overshoot;
+    //camTar = -camPos;
+    //pR(camTar.xz, x * PI * 2.);
+    //camTar += camPos;
 
-    blend = smoothstep(0., 1., x);
-    camTar = mix(startTar, endTar, blend) * modelScale;
-
-    camPos = camPath(x);
-    camTar = camPath(x + .001);
-
-    //camTar = vec3(0.);
-
-    //camUp = normalize(cross(camUp, camTar - camPos));
-    //pR(camTar.yx, x * PI * -2.);    
-
-    //pR(camPos.xz, x * PI * 2.);    
-    
-    // camTar = vec3(0.);
-    // camPos = vec3(0,0,10);
-    // camPos *= cameraRotation();
-    // camPos += camTar;
+    //camPos += camTar;
 
 }
 
@@ -662,7 +634,7 @@ void shadeSurface(inout Hit hit){
     fog = clamp(fog, 0., 1.);
     
     //diffuse = hit.normal * .5 + .5;
-    fog = 0.;
+    //fog = 0.;
 
     diffuse =  mix(diffuse, background, fog);
     
@@ -721,6 +693,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     time = iGlobalTime;
     //time += .1;
     time = mod(time, loopDuration);
+    //time = loopDuration;
+
     //time /= 2.;
     //time = mod(time, 1.);
 
