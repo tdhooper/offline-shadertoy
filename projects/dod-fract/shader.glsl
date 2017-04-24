@@ -21,7 +21,7 @@ precision mediump float;
 /* SHADERTOY FROM HERE */
 
 
-
+vec2 mousee;
 
 #define MODEL_ROTATION vec2(.5, .5)
 #define CAMERA_ROTATION vec2(.5, .5)
@@ -57,7 +57,7 @@ mat3 sphericalMatrix(float theta, float phi) {
 
 mat3 mouseRotation(bool enable, vec2 xy) {
     if (enable) {
-        vec2 mouse = iMouse.xy / iResolution.xy;
+        vec2 mouse = mousee.xy / iResolution.xy;
 
         if (mouse.x != 0. && mouse.y != 0.) {
             xy.x = mouse.x;
@@ -306,14 +306,6 @@ float makeAnim(float localTime) {
     return blend;    
 }
 
-float makeOffsetAmt(vec3 p, float localTime) {
-    float moveMax = stepMove;
-    float blend = makeAnim(localTime);
-    blend = clamp(blend, 0., 1.);
-    //blend = squareSine(blend * PI - PI * .5, 2.) * .5 + .5;
-    return mix(.0, moveMax, blend);    
-}
-
 float makeModel(vec3 p, float localTime, float scale) {
     float d, part;
     
@@ -356,11 +348,18 @@ float makeModel(vec3 p, float localTime, float scale) {
 */
 }
 
-vec3 makeOffset(float level) {
-    float localTime = time - (stepDuration * (level - 1.));
-    float blend = makeAnim(localTime);
+float makeOffsetMax(float level) {
     float scale = pow(stepScale, level);
-    return triV.c * blend * stepMove * scale;
+    return stepMove * scale;
+}
+
+float makeOffsetAmt(float level) {
+    float localTime = time - (stepDuration * (level - 1.));
+    return makeAnim(localTime) * makeOffsetMax(level);
+}
+
+vec3 makeOffset(float level) {
+    return triV.c * makeOffsetAmt(level);
 }
 
 void makeSpace(inout vec3 p, float localTime, float scale) {
@@ -454,7 +453,7 @@ Model map( vec3 p ){
     float x = time / loopDuration;
     vec3 offset = makeOffset(0.) + makeOffset(1.);
     offset = mix(vec3(0.), offset, 1.-pow(1.-x, 2.));
-    p += offset;
+    //p += offset;
 
     float d = subDModel(p);
 
@@ -484,17 +483,36 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
     camDist = mix(5., 65., blend);
 
-    //camDist = 5.;
+    camDist = 10.;
 
-    float scaleBlend = pow(x, 1.8);
+    //x -= .5;
+    float scaleBlend = pow(1./stepScale, x * (MODEL_STEPS + 3.)) / pow(1./stepScale, MODEL_STEPS + 3.);
+    scaleBlend = makeOffsetAmt(0.) + makeOffsetAmt(1.) + makeOffsetAmt(2.) + makeOffsetAmt(3.);
+    scaleBlend /= 4.;
+    //scaleBlend = 1.;
+    scaleBlend = (pow(1./.275, x) / pow(1./.275, 1.) - .5) * 2.;
+
+    float a = 1./stepScale;
+    a = 50.;
+    float m = 1. / (a - 1.);
+    scaleBlend = (pow(a, x) / a) * (1. + m) - m;
+
+    //scaleBlend = .5;
     modelScale = mix(
         1.,
-        1. / pow(stepScale, MODEL_STEPS),
+        pow(1. / stepScale, MODEL_STEPS),
         scaleBlend
     );
     //modelScale = 1.;
      
     camUp = normalize(vec3(0,-1,0));
+
+    apex = .5;
+    x = mod(x + .5, 1.);
+    blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
+    blend = blend * 2. - 1.;
+
+    blend = 0.;
 
     pR(camUp.zy, blend * .5);
     
@@ -517,6 +535,8 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 
     camPos = vec3(0,0,camDist);
     
+    pR(camPos.xz, blend * .22);
+
     //pR(camPos.xz, x * PI * 1.);
 
     camPos *= cameraRotation();
@@ -539,7 +559,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 const float MAX_TRACE_DISTANCE = 500.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
-const float FUDGE_FACTOR = .9; // Default is 1, reduce to fix overshoots
+const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
@@ -700,13 +720,16 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //time /= 2.;
     //time = mod(time, 1.);
 
-    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
-    vec2 m = iMouse.xy / iResolution.xy;
+    mousee = iMouse.xy;
 
-    m= vec2(
+    mousee = (vec2(
         0.4465875370919881,
         0.5849514563106796
-    );
+    )) * iResolution.xy;
+
+    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
+    vec2 m = mousee.xy / iResolution.xy;
+
 //    time = m.x * loopDuration;
 
     vec3 camPos = vec3( 0., 0., 2.);
