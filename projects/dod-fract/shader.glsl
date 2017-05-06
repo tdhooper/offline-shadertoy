@@ -413,6 +413,7 @@ float subDModel(vec3 p) {
  
     float d;
 
+    
     //float time = loopDuration;
 
     // p = mod(p + .5, 1.) - .5;
@@ -475,15 +476,27 @@ vec3 camTar;
 
 
 
+float sinstep(float start, float end, float x) {
+    float len = end -start;
+    x = (x - start) * (1./len);
+    x = clamp(x, 0., 1.);
+    return sin(x * PI - PI * .5) * .5 + .5;
+}
+
+float sinstep(float x) {
+    return sinstep(0., 1., x);
+}
+
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = time / loopDuration;
+    float apex = .8;
+    float blend = smoothstep(0., apex, x) - (smoothstep(apex, 1., x));
+    //blend = sinstep(blend);
+    //blend = sin(x * PI * 2. - PI * .5) * .5 + .5;
+    camDist = mix(5., 35., blend);
 
-    float apex = .7;
-    float blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
-    camDist = mix(5., 65., blend);
-
-    camDist = 10.;
+    //camDist = 10.;
 
     //x -= .5;
     float scaleBlend = pow(1./stepScale, x * (MODEL_STEPS + 3.)) / pow(1./stepScale, MODEL_STEPS + 3.);
@@ -495,7 +508,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float a = 1./stepScale;
     a = 50.;
     float m = 1. / (a - 1.);
-    scaleBlend = (pow(a, x) / a) * (1. + m) - m;
+    scaleBlend = (pow(a, time / loopDuration) / a) * (1. + m) - m;
 
     //scaleBlend = .5;
     modelScale = mix(
@@ -533,6 +546,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     //camTar += triV.b * blend * -20.;
     //pR(camTar.xz, x * PI * 2.);
 
+    
     camPos = vec3(0,0,camDist);
     
     pR(camPos.xz, blend * .22);
@@ -722,10 +736,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     mousee = iMouse.xy;
 
+    /*
     mousee = (vec2(
         0.4465875370919881,
         0.5849514563106796
     )) * iResolution.xy;
+    */
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
