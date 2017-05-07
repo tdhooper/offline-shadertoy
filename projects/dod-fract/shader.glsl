@@ -247,6 +247,18 @@ Model opU( Model m1, Model m2 ){
 }
 
 
+
+float sinstep(float start, float end, float x) {
+    float len = end -start;
+    x = (x - start) * (1./len);
+    x = clamp(x, 0., 1.);
+    return sin(x * PI - PI * .5) * .5 + .5;
+}
+
+float sinstep(float x) {
+    return sinstep(0., 1., x);
+}
+
 float sineInOut(float t) {
   return -0.5 * (cos(PI * t) - 1.0);
 }
@@ -299,23 +311,45 @@ float squareSine(float x, float e) {
     return period > 2. ? a : b;
 }
 
+float squarestep(float start, float end, float x, float e) {
+    float len = end -start;
+    x = (x - start) * (1./len);
+    x = clamp(x, 0., 1.);
+    return squareSine(x * PI - PI * .5, e) * .5 + .5;
+}
+
+float squarestep(float x, float e) {
+    return squarestep(0., 1., x, e);
+}
+
 float makeAnim(float localTime) {
     float blend = localTime / stepDuration * stepSpeed;
     //blend = blend * 1.4;
     blend = clamp(blend, 0., 1.);
-    
-    //blend = smoothstep(0., .9, blend);
-    //return blend;
-    blend = squareSine(blend * PI - PI * .5, 2.) * .5 + .5;
-    return blend;    
+    return blend;
+}
+
+float moveAnim(float x) {
+    float a = 1.;
+    float h = 1.;
+    return squarestep(-a, a, x, 2.5) * h * 2. - h;
+    return squarestep(x, 2.);
+}
+
+float scaleAnim(float x) {
+    //return x;
+    //return sinstep(x);
+    return moveAnim(x);
+    return squarestep(x, 2.);
 }
 
 Model makeModel(vec3 p, float localTime, float scale) {
     float d, part;
     
-    float blend = makeAnim(localTime);
+    float x = makeAnim(localTime);
+    float move = moveAnim(x) * stepMove;
 
-    float size = mix(ballSize, ballSize * stepScale, blend);
+    float size = mix(ballSize, ballSize * stepScale, scaleAnim(x));
 
     p /= scale;
     fold(p);
@@ -329,17 +363,15 @@ Model makeModel(vec3 p, float localTime, float scale) {
     //d = min(d, dot(p, triV.a) - amt * scale * .8);
 
 
-    float move = blend * stepMove;
-
-    float r = .5 * blend;
-    //r = .5;
+    float r = smoothstep(.05, .5, x) * .4;
+    //r = .5 * x;
 
     vec3 n = triV.c;
     
     part = length(p - n * move) - size;
     d = smin(d, part, r);
 
-    return Model(d * scale, 0.);
+    //return Model(d * scale, 0.);
 
     vec3 rPlane = normalize(cross(triV.b, triV.a));
     n = reflect(n, rPlane);
@@ -354,8 +386,8 @@ Model makeModel(vec3 p, float localTime, float scale) {
     //d = mix(original, d, blend2);
 
     d *= scale;
-    //return Model(d, 0.);
-    return Model(d, blend);
+    return Model(d, 0.);
+    return Model(d, x);
 
     //return d;
 }
@@ -367,7 +399,8 @@ float makeOffsetMax(float level) {
 
 float makeOffsetAmt(float level) {
     float localTime = time - (stepDuration * (level - 1.));
-    return makeAnim(localTime) * makeOffsetMax(level);
+    float x = makeAnim(localTime);
+    return moveAnim(x) * makeOffsetMax(level);
 }
 
 vec3 makeOffset(float level) {
@@ -375,11 +408,12 @@ vec3 makeOffset(float level) {
 }
 
 void makeSpace(inout vec3 p, float localTime, float scale) {
-    float blend = makeAnim(localTime);
+    float x = makeAnim(localTime);
+    float move = moveAnim(x);
     p /= scale;
-    if (length(p) > blend * stepMove * .525) {
+    if (length(p) > move * stepMove * .55) {
         fold(p);
-        p -= triV.c * blend * stepMove;
+        p -= triV.c * move * stepMove;
     }
     p *= scale;
 }
@@ -447,7 +481,7 @@ Model subDModel(vec3 p) {
         pow(stepScale, level + 0.),
         pow(stepScale, level + 1.),
         //0.
-        makeAnim(time - (stepDuration * (level - 1.)))
+        scaleAnim(makeAnim(time - (stepDuration * (level - 1.))))
     );
 
     return makeModel(p, time - (stepDuration * level), scale);
@@ -490,27 +524,15 @@ vec3 camTar;
 
 
 
-float sinstep(float start, float end, float x) {
-    float len = end -start;
-    x = (x - start) * (1./len);
-    x = clamp(x, 0., 1.);
-    return sin(x * PI - PI * .5) * .5 + .5;
-}
-
-float sinstep(float x) {
-    return sinstep(0., 1., x);
-}
-
-
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = time / loopDuration;
     float apex = .8;
     float blend = smoothstep(0., apex, x) - (smoothstep(apex, 1., x));
     //blend = sinstep(blend);
     //blend = sin(x * PI * 2. - PI * .5) * .5 + .5;
-    camDist = mix(5., 35., blend);
+    camDist = mix(2., 20., blend);
 
-    camDist = 5.;
+    //camDist = 5.;
 
     //x -= .5;
     float scaleBlend = pow(1./stepScale, x * (MODEL_STEPS + 3.)) / pow(1./stepScale, MODEL_STEPS + 3.);
