@@ -301,12 +301,16 @@ float squareSine(float x, float e) {
 
 float makeAnim(float localTime) {
     float blend = localTime / stepDuration * stepSpeed;
+    //blend = blend * 1.4;
     blend = clamp(blend, 0., 1.);
+    
+    //blend = smoothstep(0., .9, blend);
+    //return blend;
     blend = squareSine(blend * PI - PI * .5, 2.) * .5 + .5;
     return blend;    
 }
 
-float makeModel(vec3 p, float localTime, float scale) {
+Model makeModel(vec3 p, float localTime, float scale) {
     float d, part;
     
     float blend = makeAnim(localTime);
@@ -318,34 +322,42 @@ float makeModel(vec3 p, float localTime, float scale) {
 
     part = length(p) - size;
     d = part;
+    //d = 1e12;
 
-    p -= triV.c * blend * stepMove;
-
-    part = length(p) - size;
-    d = min(d, part);
+    //d = part;
 
     //d = min(d, dot(p, triV.a) - amt * scale * .8);
 
-    d *= scale;
 
-    return d;
-/*
-    p = pp;
+    float move = blend * stepMove;
+
+    float r = .5 * blend;
+    //r = .5;
+
+    vec3 n = triV.c;
+    
+    part = length(p - n * move) - size;
+    d = smin(d, part, r);
+
+    return Model(d * scale, 0.);
+
     vec3 rPlane = normalize(cross(triV.b, triV.a));
-    vec3 n = reflect(triV.c, rPlane);
-    part = length(p - n * amt) - size;
+    n = reflect(n, rPlane);
+    part = length(p - n * move) - size;
     d = smin(d, part, r);
 
     n = reflect(n, triP.ca);
-    part = length(p - n * amt) - size;
+    part = length(p - n * move) - size;
     d = smin(d, part, r);
 
     //d = min(original, d);
     //d = mix(original, d, blend2);
 
+    d *= scale;
+    //return Model(d, 0.);
+    return Model(d, blend);
 
-    return d;
-*/
+    //return d;
 }
 
 float makeOffsetMax(float level) {
@@ -403,7 +415,7 @@ vec3 camPath(float t) {
 }
 
 
-float subDModel(vec3 p) {
+Model subDModel(vec3 p) {
 
     //pReflect(p, -triV.c, camOffset);
 
@@ -421,6 +433,7 @@ float subDModel(vec3 p) {
     // d *= modelScale;
     // return d;
 
+    float offset = .1;
 
     for (float i = 0.; i < MODEL_STEPS + initialStep; i++) {
         if (time >= stepDuration * (i - initialStep)) {
@@ -437,13 +450,12 @@ float subDModel(vec3 p) {
         makeAnim(time - (stepDuration * (level - 1.)))
     );
 
-    d = makeModel(p, time - (stepDuration * level), scale);
+    return makeModel(p, time - (stepDuration * level), scale);
     //float part = makeModel(pp, time - (stepDuration * level), scale);
     //d = min(d, part);
 
     
-    return d;
-}
+    }
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
@@ -456,15 +468,17 @@ Model map( vec3 p ){
     offset = mix(vec3(0.), offset, 1.-pow(1.-x, 2.));
     //p += offset;
 
-    float d = subDModel(p);
+
+    //return makeModel(p, time, 1.);
+    
+
+    Model model = subDModel(p);
 
     //d = min(d, length(p + offset) - .1);
 
-     d *= modelScale;
+     model.dist *= modelScale;
 
-    Model model = Model(d, 1.);
-
-
+    
     //model = Model(makeModel(p, time), 1.);
     //model.dist = length(p - facePlane) - .1;
     return model;
@@ -496,7 +510,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     //blend = sin(x * PI * 2. - PI * .5) * .5 + .5;
     camDist = mix(5., 35., blend);
 
-    //camDist = 10.;
+    camDist = 5.;
 
     //x -= .5;
     float scaleBlend = pow(1./stepScale, x * (MODEL_STEPS + 3.)) / pow(1./stepScale, MODEL_STEPS + 3.);
@@ -516,7 +530,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
         pow(1. / stepScale, MODEL_STEPS),
         scaleBlend
     );
-    //modelScale = 1.;
+    //modelScale = 3.;
      
     camUp = normalize(vec3(0,-1,0));
 
@@ -660,6 +674,7 @@ void shadeSurface(inout Hit hit){
     float blend = sin(hit.model.id * TAU * 3.) * .5 + .5;
     blend = time / loopDuration;
     blend = 0.;
+    blend = hit.model.id * 5.;
 
     diffuse *= mix(colA, colB, blend);
     diffuse = sin(diffuse);
@@ -730,7 +745,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //time += .1;
     time = mod(time, loopDuration);
     //time = loopDuration;
-
+    //time= 0.;
     //time /= 2.;
     //time = mod(time, 1.);
 
