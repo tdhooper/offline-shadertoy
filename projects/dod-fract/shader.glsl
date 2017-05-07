@@ -332,7 +332,9 @@ float makeAnim(float localTime) {
 float moveAnim(float x) {
     float a = 1.;
     float h = 1.;
-    return squarestep(-a, a, x, 2.5) * h * 2. - h;
+    float blend = squarestep(-a, a, x, 2.) * h * 2. - h;
+    blend = squarestep(blend, 1.5);
+    return blend;
     return squarestep(x, 2.);
 }
 
@@ -489,7 +491,14 @@ Model subDModel(vec3 p) {
     //d = min(d, part);
 
     
-    }
+}
+
+float scaleBlend() {
+    float a = 50.;
+    float m = 1. / (a - 1.);
+    float blend = (pow(a, time / loopDuration) / a) * (1. + m) - m;
+    return blend;
+}
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
@@ -498,9 +507,12 @@ Model map( vec3 p ){
      p /= modelScale;
 
     float x = time / loopDuration;
-    vec3 offset = makeOffset(0.) + makeOffset(1.);
-    offset = mix(vec3(0.), offset, 1.-pow(1.-x, 2.));
-    //p += offset;
+    x = smoothstep(0., 1., x);
+    //x = scaleBlend();
+    float blend = 1.-pow(1.-x, 2.);
+    vec3 offset = makeOffset(0.);// + makeOffset(1.);
+    offset = mix(vec3(0.), offset, blend);
+    p += offset;
 
 
     //return makeModel(p, time, 1.);
@@ -526,31 +538,18 @@ vec3 camTar;
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = time / loopDuration;
-    float apex = .8;
+    float apex = .75;
     float blend = smoothstep(0., apex, x) - (smoothstep(apex, 1., x));
-    //blend = sinstep(blend);
+    blend = sinstep(blend);
     //blend = sin(x * PI * 2. - PI * .5) * .5 + .5;
-    camDist = mix(2., 20., blend);
+    camDist = mix(3., 20., blend);
 
     //camDist = 5.;
 
-    //x -= .5;
-    float scaleBlend = pow(1./stepScale, x * (MODEL_STEPS + 3.)) / pow(1./stepScale, MODEL_STEPS + 3.);
-    scaleBlend = makeOffsetAmt(0.) + makeOffsetAmt(1.) + makeOffsetAmt(2.) + makeOffsetAmt(3.);
-    scaleBlend /= 4.;
-    //scaleBlend = 1.;
-    scaleBlend = (pow(1./.275, x) / pow(1./.275, 1.) - .5) * 2.;
-
-    float a = 1./stepScale;
-    a = 50.;
-    float m = 1. / (a - 1.);
-    scaleBlend = (pow(a, time / loopDuration) / a) * (1. + m) - m;
-
-    //scaleBlend = .5;
     modelScale = mix(
         1.,
         pow(1. / stepScale, MODEL_STEPS),
-        scaleBlend
+        scaleBlend()
     );
     //modelScale = 3.;
      
@@ -582,10 +581,12 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     //camTar += triV.b * blend * -20.;
     //pR(camTar.xz, x * PI * 2.);
 
-    
+
     camPos = vec3(0,0,camDist);
     
-    pR(camPos.xz, blend * .22);
+    pR(camPos.xz, sin(x * PI * 2.) * .15);
+    
+    //pR(camPos.xz, x * PI * 2.);
 
     //pR(camPos.xz, x * PI * 1.);
 
