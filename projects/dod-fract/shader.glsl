@@ -324,29 +324,21 @@ float squarestep(float x, float e) {
 
 float makeAnim(float localTime) {
     float blend = localTime / stepDuration * stepSpeed;
-    //blend = blend * 1.4;
     blend = clamp(blend, 0., 1.);
     return blend;
 }
 
 float moveAnim(float x) {
-    //return 0.5;
-    //return clamp(x, 0., 1.);
-    //return x;
     float a = 1.;
     float h = 1.;
     float blend = x;
     blend = squarestep(-a, a, blend, 2.) * h * 2. - h;
     blend = squarestep(blend, 1.5);
     return blend;
-    return squarestep(x, 2.);
 }
 
 float scaleAnim(float x) {
-    //return x;
-    //return sinstep(x);
     return moveAnim(x);
-    return squarestep(x, 2.);
 }
 
 Model makeModel(vec3 p, float localTime, float scale) {
@@ -433,7 +425,24 @@ float hardstep(float a, float b, float t) {
 
 float modelScale;
 
-
+float makeModelScale() {
+    float scale = 1.;
+    for (float i = -1.; i < MODEL_STEPS; i++) {
+        scale *= mix(
+            1.,
+            stepScale,
+            scaleAnim(
+                makeAnim(
+                    time - (stepDuration * i)
+                )
+            )
+        );
+    }
+    float m = .8235;
+    float ee = .403;
+    ee = mix(1., stepScale, m);
+    return (1. / scale) * ee;
+}
 
 Model subDModel(vec3 p) {
 
@@ -524,26 +533,11 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     //blend = sin(x * PI * 2. - PI * .5) * .5 + .5;
     camDist = mix(3., 30., blend);
 
-    camDist = 10.;
+    camDist = 2.;
 
-    modelScale = mix(
-        1.,
-        //1.,//stepScale,
-        (1./stepScale),
-        //pow(1. / stepScale, MODEL_STEPS),
-        x
-        //scaleBlend(x)
-    );
-
-    float ss = mix(1., stepScale, scaleAnim(makeAnim(time)));
-    //ss *= ss;
-    ss *= mix(1., stepScale, scaleAnim(makeAnim(time - (stepDuration * -1.))));
-    ss *= mix(1., stepScale, scaleAnim(makeAnim(time - (stepDuration * +1.))));
-    //ss = 1./scaleAnim(makeAnim(time - (stepDuration * - 1.)));
-    modelScale = 1. / ss;
-
-    float sb = squarestep(.75, .85, x, 12.);
-    //modelScale = mix(1., modelScale, sb);
+    modelScale = makeModelScale();
+    float sb = squarestep(.6, .7, x, 12.);
+    modelScale = mix(1., modelScale, sb);
     //modelScale = 1.;
      
     camUp = normalize(vec3(0,-1,0));
