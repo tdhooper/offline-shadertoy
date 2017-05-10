@@ -306,8 +306,8 @@ float squareSine(float x, float e) {
     //return sin(x);
     x = mod(x, PI * 2.);
     float period = x / mod((PI / 2.), 4.);
-    float a = pow(period - 3., e) - 1.;
-    float b = -pow(period - 1., e) + 1.;
+    float a = pow(abs(period - 3.), e) - 1.;
+    float b = -pow(abs(period - 1.), e) + 1.;
     return period > 2. ? a : b;
 }
 
@@ -438,10 +438,8 @@ float makeModelScale() {
             )
         );
     }
-    float m = .8235;
-    float ee = .403;
-    ee = mix(1., stepScale, m);
-    return (1. / scale) * ee;
+    float initial = mix(1., stepScale, scaleAnim(makeAnim(stepDuration)));
+    return (1. / scale) * initial;
 }
 
 Model subDModel(vec3 p) {
