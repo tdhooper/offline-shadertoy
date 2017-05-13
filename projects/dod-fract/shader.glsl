@@ -300,7 +300,7 @@ float ballSize = 1.;
 float stepSpeed = .5;
 
 const float initialStep = 0.;
-const float MODEL_STEPS = 2.;
+const float MODEL_STEPS = 3.;
 
 float squareSine(float x, float e) {
     //return sin(x);
@@ -498,7 +498,7 @@ Model map( vec3 p ){
     //x = squarestep(0., .8, x, 2.);
     float blend = 1.-pow(1.-x, 2.);
     vec3 offset = makeOffset(0.);// + makeOffset(1.);
-    offset = mix(vec3(0.), offset, blend);
+    offset = mix(vec3(0), offset, blend);
     //p += offset;
 
 
@@ -522,19 +522,43 @@ float camDist;
 vec3 camTar;
 
 
+float newBlendA(float x) {
+    float blend;
+    //x = sinstep(x);
+    blend = sinstep(x / 2. + .5) * 2. - 1.;
+    blend = squarestep(blend, 3.);
+    return blend;
+}
+
+float newBlend(float x) {
+    float m = 0.84;
+    float o = newBlendA(m);
+    return newBlendA(mod(x + m, 1.)) - o + max(sign(x + m - 1.), 0.);
+}
+
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = time / loopDuration;
-    float apex = .8;
+    float apex = .6;
     float blend = smoothstep(0., apex, x) - (smoothstep(apex, 1., x));
     blend = sinstep(blend);
     //blend = sin(x * PI * 2. - PI * .5) * .5 + .5;
-    camDist = mix(3., 30., blend);
+    //camDist = mix(3., 25., blend);
 
-    camDist = 2.;
+    //camDist = 2.;
+    //camDist = 3.;
+
+    camDist = mix(1.5, 1.8, blend);
+    //camDist = 1.8;
+    //camDist = mix(2., 20., squarestep(x*2., 2.) - squarestep(max(0.,x*2.-1.), 2.) );
 
     modelScale = makeModelScale();
-    float sb = squarestep(.6, .7, x, 12.);
+    float sb;
+    //sb = smoothstep(.8, .95, x) - smoothstep(.95, 1., x);
+    //sb = squarestep(.8, 1., x, 1.1);
+    float o = .55;
+    sb = squarestep(o, 2. - o, x, 5.) * 2.;
+    //sb = squarestep(.0, 1., x, 5.);
     modelScale = mix(1., modelScale, sb);
     //modelScale = 1.;
      
@@ -569,10 +593,21 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 
     camPos = vec3(0,0,camDist);
     
-    //pR(camPos.xz, sin(x * PI * 2.) * -.25);
-    //pR(camPos.yz, cos(x * PI * 2.) * -.25);
+    float e = 2.;
+    float ax = .3;
+    float ay = squarestep(0., 1., 1.-ax, e);
+    float rotBlend = squarestep(0., 1., x + (1.-ax), e) - ay;
+    rotBlend += squarestep(0., 1., x - ax, e);
     
-    //pR(camPos.xz, x * PI * 2.);
+    rotBlend = newBlend(x);
+    rotBlend = mix(x, rotBlend, .95);
+    //rotBlend = x;
+    //rotBlend = 0.;
+    float r = .25;
+    //pR(camPos.xz, sin(x * PI * 2.) * r);
+    //pR(camPos.yz, cos(x * PI * 2.) * r);
+    
+    pR(camPos.xz, rotBlend * PI * 2.);
 
     //pR(camPos.xz, x * PI * 1.);
 
@@ -690,7 +725,7 @@ void shadeSurface(inout Hit hit){
     diffuse *= 1.3;
     
     float fog = clamp((hit.ray.len - 5.) * .5, 0., 1.);
-    fog = mix(0., 1., length(camTar - hit.pos) / pow(camDist, 1.25)) * 1.;
+    fog = mix(0., 1., length(camTar - hit.pos) / pow(camDist, 1.5)) * 1.;
     fog = clamp(fog, 0., 1.);
     
     //diffuse = hit.normal * .5 + .5;
