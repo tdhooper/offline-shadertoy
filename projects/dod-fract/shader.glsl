@@ -112,46 +112,6 @@ float smin(float a, float b, float r) {
     }
 }
 
-// Cone with correct distances to tip and base circle. Y is up, 0 is in the middle of the base.
-float fCone(vec3 p, float radius, float height) {
-    vec2 q = vec2(length(p.xz), p.y);
-    vec2 tip = q - vec2(0, height);
-    vec2 mantleDir = normalize(vec2(height, radius));
-    float mantle = dot(tip, mantleDir);
-    float d = max(mantle, -q.y);
-    float projected = dot(tip, vec2(mantleDir.y, -mantleDir.x));
-    
-    // distance to tip
-    if ((q.y > height) && (projected < 0.)) {
-        d = max(d, length(tip));
-    }
-    
-    // distance to base ring
-    if ((q.x > radius) && (projected > length(vec2(height, radius)))) {
-        d = max(d, length(q - vec2(radius, 0)));
-    }
-    return d;
-}
-
-float fCone(vec3 p, float radius, float height, vec3 direction, float offset) {
-    p -= direction * offset;
-    p = reflect(p, normalize(mix(vec3(0,1,0), -direction, .5)));
-    //p -= vec3(0,height,0);
-    return fCone(p, radius, height);
-}
-
-// Reflect space at a plane
-float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
-    float t = dot(p, planeNormal)+offset;
-    if (t < 0.) {
-        p = p - (2.*t)*planeNormal;
-    }
-    return sign(t);
-}
-
-
-
-
 // --------------------------------------------------------
 // knighty
 // https://www.shadertoy.com/view/MsKGzw
@@ -170,10 +130,6 @@ struct TriPlanes {
 };
     
     
-vec3 facePlane;
-vec3 uPlane;
-vec3 vPlane;
-
 vec3 nc,pab,pbc,pca;
 Tri triV;
 TriPlanes triP;
@@ -196,28 +152,8 @@ void init() {//setup folding planes and vertex
         normalize(cross(triV.b, triV.c)),
         normalize(cross(triV.c, triV.a))
     );
-    
-    facePlane = pca;
-    uPlane = cross(vec3(1,0,0), facePlane);
-    vPlane = vec3(1,0,0);    
 }
 
-
-// Barycentric to Cartesian
-vec3 bToC(float a, float b, float c) {
-    return a * triV.a + b * triV.b + c * triV.c;
-}
-vec3 bToC(int a, int b, int c) {
-    return bToC(float(a), float(b), float(c));
-}
-
-// Barycentric to Cartesian normalized
-vec3 bToCn(float a, float b, float c) {
-    return normalize(bToC(a, b, c));
-}
-vec3 bToCn(int a, int b, int c) {
-    return bToCn(float(a), float(b), float(c));
-}
 
 void fold(inout vec3 p) {
     for(int i=0;i<5 /*Type*/;i++){
@@ -225,7 +161,6 @@ void fold(inout vec3 p) {
         p -= 2. * min(0., dot(p,nc)) * nc;
     }
 }
-
 
 
 // --------------------------------------------------------
@@ -267,43 +202,7 @@ float sineOutIn(float t) {
   return asin(t * 2. - 1.) / PI + .5;
 }
 
-float easeWithRest(float t) {
-    float blend = cos(t * PI * 2.) * -.5 + .5;
-    float slope = .2;
-    float lin = (t - .5) * slope + .5;
-    return mix(sineInOut(t), lin, blend);
-}
-
-float bDelay(float delay, float duration, float loop) {
-    float t = mod(time, loop);
-    if (t < delay) {
-        return 0.;
-    }
-    if (t > duration + delay) {
-        return 1.;
-    }
-    t -= delay;
-    t /= duration;
-    return t;
-    //return sineOutIn(t);
-    //return easeWithRest(t);
-    //return sineInOut(t);
-}
-
-float stepScale = .275;
-float stepMove = 2.;
-float stepDuration = 2.;
-float loopDuration;
-float transitionPoint = .0;
-float camOffset = 2.;
-float ballSize = 1.;
-float stepSpeed = .5;
-
-const float initialStep = 0.;
-const float MODEL_STEPS = 3.;
-
 float squareSine(float x, float e) {
-    //return sin(x);
     x = mod(x, PI * 2.);
     float period = x / mod((PI / 2.), 4.);
     float a = pow(abs(period - 3.), e) - 1.;
@@ -321,6 +220,24 @@ float squarestep(float start, float end, float x, float e) {
 float squarestep(float x, float e) {
     return squarestep(0., 1., x, e);
 }
+
+float hardstep(float a, float b, float t) {
+    float s = 1. / (b - a);
+    return clamp((t - a) * s, 0., 1.);
+}
+
+
+
+float stepScale = .275;
+float stepMove = 2.;
+float stepDuration = 2.;
+float loopDuration;
+float ballSize = 1.;
+float stepSpeed = .5;
+
+const float initialStep = 0.;
+const float MODEL_STEPS = 3.;
+
 
 float makeAnim(float localTime) {
     float blend = localTime / stepDuration * stepSpeed;
@@ -348,30 +265,19 @@ Model makeModel(vec3 p, float localTime, float scale) {
     float move = moveAnim(x) * stepMove;
 
     float size = mix(ballSize, ballSize * stepScale, scaleAnim(x));
-    //size = ballSize;
+
     p /= scale;
     fold(p);
 
     part = length(p) - size;
     d = part;
-    //d = 1e12;
-
-    //d = part;
-
-    //d = min(d, dot(p, triV.a) - amt * scale * .8);
-    
-    //return Model(d * scale, 0.);
-
 
     float r = smoothstep(.05, .5, x) * .4;
-    //r = .5 * x;
-    //r = .0;
 
     vec3 n = triV.c;
     
     part = length(p - n * move) - size;
     d = smin(d, part, r);
-
     
     vec3 rPlane = normalize(cross(triV.b, triV.a));
     n = reflect(n, rPlane);
@@ -382,14 +288,9 @@ Model makeModel(vec3 p, float localTime, float scale) {
     part = length(p - n * move) - size;
     d = smin(d, part, r);
 
-    //d = min(original, d);
-    //d = mix(original, d, blend2);
-
     d *= scale;
-    return Model(d, 0.);
-    return Model(d, x);
 
-    //return d;
+    return Model(d, 0.);
 }
 
 float makeOffsetMax(float level) {
@@ -418,11 +319,6 @@ void makeSpace(inout vec3 p, float localTime, float scale) {
     p *= scale;
 }
 
-float hardstep(float a, float b, float t) {
-    float s = 1. / (b - a);
-    return clamp((t - a) * s, 0., 1.);
-}
-
 float modelScale;
 
 float makeModelScale() {
@@ -444,23 +340,8 @@ float makeModelScale() {
 
 Model subDModel(vec3 p) {
 
-    //pReflect(p, -triV.c, camOffset);
-
     float scale = 1.;
-    float level = -1.;
-
- 
-    float d;
-
-    
-    //float time = loopDuration;
-
-    // p = mod(p + .5, 1.) - .5;
-    // d = length(p - vec3(.0,0,0)) - .1;
-    // d *= modelScale;
-    // return d;
-
-    float offset = .1;
+    float level = -1.; 
 
     for (float i = 0.; i < MODEL_STEPS + initialStep; i++) {
         if (time >= stepDuration * (i - initialStep)) {
@@ -474,24 +355,16 @@ Model subDModel(vec3 p) {
     scale = mix(
         pow(stepScale, level + 0.),
         pow(stepScale, level + 1.),
-        //time / loopDuration * stepSpeed
-        scaleAnim(makeAnim(time - (stepDuration * (level - 1.))))
-        
+        scaleAnim(makeAnim(time - (stepDuration * (level - 1.))))        
     );
-    //scale = 1.;
     
     return makeModel(p, time - (stepDuration * level), scale);
-    //float part = makeModel(pp, time - (stepDuration * level), scale);
-    //d = min(d, part);
-
-    
 }
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
-    //p *= m;
 
-     p /= modelScale;
+    p /= modelScale;
 
     float x = time / loopDuration;
     x = smoothstep(0., 1., x);
@@ -501,19 +374,8 @@ Model map( vec3 p ){
     offset = mix(vec3(0), offset, blend);
     //p += offset;
 
-
-    //return makeModel(p, time, 1.);
-    
-
     Model model = subDModel(p);
-
-    //d = min(d, length(p + offset) - .1);
-
-     model.dist *= modelScale;
-
-    
-    //model = Model(makeModel(p, time), 1.);
-    //model.dist = length(p - facePlane) - .1;
+    model.dist *= modelScale;
     return model;
 }
 
@@ -524,7 +386,6 @@ vec3 camTar;
 
 float newBlendA(float x) {
     float blend;
-    //x = sinstep(x);
     blend = sinstep(x / 2. + .5) * 2. - 1.;
     blend = squarestep(blend, 3.);
     return blend;
@@ -539,86 +400,28 @@ float newBlend(float x) {
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = time / loopDuration;
+
     float apex = .6;
     float blend = smoothstep(0., apex, x) - (smoothstep(apex, 1., x));
     blend = sinstep(blend);
-    //blend = sin(x * PI * 2. - PI * .5) * .5 + .5;
-    //camDist = mix(3., 25., blend);
-
-    //camDist = 2.;
-    //camDist = 3.;
-
     camDist = mix(1.5, 1.8, blend);
-    //camDist = 1.8;
-    //camDist = mix(2., 20., squarestep(x*2., 2.) - squarestep(max(0.,x*2.-1.), 2.) );
 
     modelScale = makeModelScale();
-    float sb;
-    //sb = smoothstep(.8, .95, x) - smoothstep(.95, 1., x);
-    //sb = squarestep(.8, 1., x, 1.1);
     float o = .55;
-    sb = squarestep(o, 2. - o, x, 5.) * 2.;
-    //sb = squarestep(.0, 1., x, 5.);
+    float sb = squarestep(o, 2. - o, x, 5.) * 2.;
     modelScale = mix(1., modelScale, sb);
-    //modelScale = 1.;
-     
-    camUp = normalize(vec3(0,-1,0));
 
-    apex = .5;
     x = mod(x + .5, 1.);
-    blend = smoothstep(0., apex, x) - smoothstep(apex, 1., x);
-    blend = blend * 2. - 1.;
 
-    blend = 0.;
-
-    pR(camUp.zy, blend * .5);
-    
-    // apex = .333;
-    // float overshoot = 0.;
-    // blend = smoothstep(0., apex, x) * (1. + overshoot);
-    // blend -= smoothstep(apex, 1., x) * overshoot;
-
-    // blend = smoothstep(0., 1., x);
-    // camTar = mix(startTar, endTar, blend) * modelScale;
-
-    //camUp = vec3(1,0,0);
-
+    camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-
-    //blend = sin(x * PI * 2. - PI * .5) * .5 + .5;
-    //blend = .2;
-    //camTar += triV.b * blend * -20.;
-    //pR(camTar.xz, x * PI * 2.);
-
-
     camPos = vec3(0,0,camDist);
     
-    float e = 2.;
-    float ax = .3;
-    float ay = squarestep(0., 1., 1.-ax, e);
-    float rotBlend = squarestep(0., 1., x + (1.-ax), e) - ay;
-    rotBlend += squarestep(0., 1., x - ax, e);
-    
-    rotBlend = newBlend(x);
-    rotBlend = mix(x, rotBlend, .95);
-    //rotBlend = x;
-    //rotBlend = 0.;
-    float r = .25;
-    //pR(camPos.xz, sin(x * PI * 2.) * r);
-    //pR(camPos.yz, cos(x * PI * 2.) * r);
-    
+    float rotBlend = newBlend(x);
+    rotBlend = mix(x, rotBlend, .95);    
     pR(camPos.xz, rotBlend * PI * 2.);
 
-    //pR(camPos.xz, x * PI * 1.);
-
     camPos *= cameraRotation();
-    
-    //camTar = -camPos;
-    //pR(camTar.xz, x * PI * 2.);
-    //camTar += camPos;
-
-    //camPos += camTar;
-
 }
 
 
