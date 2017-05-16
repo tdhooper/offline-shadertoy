@@ -170,6 +170,7 @@ void fold(inout vec3 p) {
 struct Model {
     float dist;
     float id;
+    vec3 uv;
 };
     
 // checks to see which intersection is closer
@@ -258,13 +259,19 @@ float scaleAnim(float x) {
     return moveAnim(x);
 }
 
+float modelScale;
+
+
 Model makeModel(vec3 p, float localTime, float scale) {
     float d, part;
     
     float x = makeAnim(localTime);
     float move = moveAnim(x) * stepMove;
 
-    float size = mix(ballSize, ballSize * stepScale, scaleAnim(x));
+    float sizeScale = mix(1., stepScale, scaleAnim(x));
+    float size = ballSize * sizeScale;
+
+
 
     p /= scale;
     fold(p);
@@ -275,6 +282,15 @@ Model makeModel(vec3 p, float localTime, float scale) {
     float r = smoothstep(.05, .5, x) * .4;
 
     vec3 n = triV.c;
+    vec3 pp = p;
+
+    vec3 uv = abs(p) / sizeScale;
+    if (length(p) > move * stepMove * .3) {
+        pp -= n * move;
+        fold(pp);
+        uv = abs(pp) / sizeScale;
+    }
+
     
     part = length(p - n * move) - size;
     d = smin(d, part, r);
@@ -290,7 +306,8 @@ Model makeModel(vec3 p, float localTime, float scale) {
 
     d *= scale;
 
-    return Model(d, 0.);
+    
+    return Model(d, 0., uv * 8.);
 }
 
 float makeOffsetMax(float level) {
@@ -319,7 +336,6 @@ void makeSpace(inout vec3 p, float localTime, float scale) {
     p *= scale;
 }
 
-float modelScale;
 
 float makeModelScale() {
     float scale = 1.;
@@ -404,12 +420,15 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float apex = .6;
     float blend = smoothstep(0., apex, x) - (smoothstep(apex, 1., x));
     blend = sinstep(blend);
-    camDist = mix(1.5, 1.8, blend);
+    camDist = mix(1.5, 1.7, blend);
+
+    //camDist = 2.5;
 
     modelScale = makeModelScale();
     float o = .55;
     float sb = squarestep(o, 2. - o, x, 5.) * 2.;
     modelScale = mix(1., modelScale, sb);
+    //modelScale = 1.;
 
     x = mod(x + .5, 1.);
 
@@ -420,6 +439,8 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float rotBlend = newBlend(x);
     rotBlend = mix(x, rotBlend, .95);    
     pR(camPos.xz, rotBlend * PI * 2.);
+
+    //camPos = vec3(0,0,1);
 
     camPos *= cameraRotation();
 }
@@ -501,6 +522,8 @@ Hit raymarch(CastRay castRay){
 // Rendering
 // --------------------------------------------------------
 
+vec3 camPos;
+
 void shadeSurface(inout Hit hit){
 
     vec3 background = vec3(.1);
@@ -510,20 +533,16 @@ void shadeSurface(inout Hit hit){
         return;
     }
 
+    //hit.normal += sin(hit.pos * 80.) * .1;
+    //hit.normal = normalize(hit.normal);
+
     vec3 light = normalize(vec3(.5,1,0));
     vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
     diffuse = mix(diffuse, vec3(1), .1);
     
     vec3 colA = vec3(.1,.75,.75) * 1.5;
-    vec3 colB = vec3(.75,.1,.75);
-    colB = mix(colB, colA, .7);
     
-    float blend = sin(hit.model.id * TAU * 3.) * .5 + .5;
-    blend = time / loopDuration;
-    blend = 0.;
-    blend = hit.model.id * 5.;
-
-    diffuse *= mix(colA, colB, blend);
+    diffuse *= hit.model.uv;
     diffuse = sin(diffuse);
     diffuse *= 1.3;
     
@@ -531,13 +550,16 @@ void shadeSurface(inout Hit hit){
     fog = mix(0., 1., length(camTar - hit.pos) / pow(camDist, 1.5)) * 1.;
     fog = clamp(fog, 0., 1.);
     
-    //diffuse = hit.normal * .5 + .5;
-    //fog = 0.;
-
-    diffuse =  mix(diffuse, background, fog);
-    
+    /*
+    diffuse = vec3(1);
+    float glow = 1. - dot(normalize(camPos), hit.normal);
+    glow = squarestep(glow, 2.);
+    diffuse = mix(background, diffuse, glow);
+    diffuse = mix(diffuse, background, fog);
+    //*/  
     
     hit.color = diffuse;
+    //hit.color = hit.model.uv;
 }
 
 
@@ -610,7 +632,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 //    time = m.x * loopDuration;
 
-    vec3 camPos = vec3( 0., 0., 2.);
+    camPos = vec3( 0., 0., 2.);
     camTar = vec3( 0. , 0. , 0. );
     vec3 camUp = vec3(0., 1., 0.);
 
