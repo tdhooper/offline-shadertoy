@@ -36,6 +36,7 @@ vec2 mousee;
 float time;
 
 #define PI 3.14159265359
+#define HALF_PI 1.5707963267948966
 #define TAU 6.28318530718
 #define PHI 1.618033988749895
 
@@ -91,6 +92,8 @@ mat3 cameraRotation() {
 // HG_SDF
 // --------------------------------------------------------
 
+#define saturate(x) clamp(x, 0., 1.)
+
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
@@ -111,6 +114,25 @@ float smin(float a, float b, float r) {
     } else {
      return m;
     }
+}
+
+// Distance to line segment between <a> and <b>, used for fCapsule() version 2below
+float fLineSegment(vec3 p, vec3 a, vec3 b) {
+    vec3 ab = b - a;
+    float t = saturate(dot(p - a, ab) / dot(ab, ab));
+    return length((ab*t + a) - p);
+}
+
+// Capsule version 2: between two end points <a> and <b> with radius r 
+float fCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    return fLineSegment(p, a, b) - r;
+}
+
+float fCapsule(vec3 p, vec3 a, vec3 b, float r, float sep) {
+    vec3 m = mix(b, a, .5);
+    float s1 = fLineSegment(p, a, mix(m, a, sep));
+    float s2 = fLineSegment(p, b, mix(m, b, sep));
+    return min(s1 - r, s2 - r);
 }
 
 // --------------------------------------------------------
@@ -162,7 +184,6 @@ void fold(inout vec3 p) {
         p -= 2. * min(0., dot(p,nc)) * nc;
     }
 }
-
 
 vec3 icosahedronVertex(vec3 p) {
     vec3 sp, v1, v2, v3, result, plane;
@@ -222,7 +243,13 @@ Model opU( Model m1, Model m2 ){
     }
 }
 
-
+float squareSine(float x, float e) {
+    x = mod(x, PI * 2.);
+    float period = x / mod((PI / 2.), 4.);
+    float a = pow(abs(period - 3.), e) - 1.;
+    float b = -pow(abs(period - 1.), e) + 1.;
+    return period > 2. ? a : b;
+}
 
 float sinstep(float start, float end, float x) {
     float len = end -start;
@@ -243,13 +270,22 @@ float sineOutIn(float t) {
   return asin(t * 2. - 1.) / PI + .5;
 }
 
-float squareSine(float x, float e) {
-    x = mod(x, PI * 2.);
-    float period = x / mod((PI / 2.), 4.);
-    float a = pow(abs(period - 3.), e) - 1.;
-    float b = -pow(abs(period - 1.), e) + 1.;
-    return period > 2. ? a : b;
+float sineOut(float t) {
+  return sin(t * HALF_PI);
 }
+
+float squareOut(float t, float e) {
+  return squareSine(t * HALF_PI, e);
+}
+
+float sineIn(float t) {
+  return sin((t - 1.0) * HALF_PI) + 1.0;
+}
+
+float squareIn(float t, float e) {
+  return squareSine((t - 1.0) * HALF_PI, e) + 1.0;
+}
+
 
 float squarestep(float start, float end, float x, float e) {
     float len = end -start;
@@ -267,7 +303,12 @@ float hardstep(float a, float b, float t) {
     return clamp((t - a) * s, 0., 1.);
 }
 
-
+float wobble(float x) {
+    float freq = 7.;
+    float w = sin(x * PI * 2. * freq - PI * .5) * .5 + .5;
+    w *= sin(x * PI + PI * .5) * .5 + .5;
+    return 1.- w;
+}
 
 float stepScale = .275;
 float stepMove = 2.;
@@ -284,7 +325,7 @@ const float MODEL_STEPS = 3.;
 
 float makeAnim(float localTime) {
     float blend = localTime / stepDuration * stepSpeed;
-    blend = clamp(blend, 0., 1.);
+    //blend = clamp(blend, 0., 1.);
     return blend;
 }
 
@@ -298,7 +339,18 @@ float moveAnim(float x) {
 }
 
 float scaleAnim(float x) {
-    return moveAnim(x / stepSpeed);
+    x /= stepSpeed;
+    float a = 1.;
+    float h = 1.;
+    float blend = x;
+    blend = hardstep(0., .8, x);
+    blend = squarestep(-a, a, blend, 1.2) * h * 2. - h;
+    blend = squarestep(blend, 1.2);
+    //blend *= 1.2;
+    //blend = min(blend, 1.);
+    //blend -= smoothstep(.80, .85, x) * .2;
+    blend -= wobble(hardstep(.75, 1.8, x)) * .05;
+    return blend;
 }
 
 float modelScale;
@@ -330,38 +382,60 @@ Model makeModel(vec3 p, float localTime, float scale) {
 
     fold(p);
 
-    vec3 dv = dodecahedronVertex(p);
+    float rBlend = hardstep(.1, .4, x) - hardstep(.4, .45, x);
+    rBlend = smoothstep(0., 1., rBlend);
+    float r = mix(0., .4, rBlend);
+    //r = 0.;
 
-    part = length(p) - size;
-    d = part;
+    float cr = mix(.4, .1, smoothstep(.3, .5, x)) * sizeScale;
+    cr = 0.04;
+    //r = 0.2;
 
-    float r = smoothstep(.05, .5, x) * .4;
+    float sep = hardstep(.4, .85, x);
+    sep = squareOut(sep, 20.);
+    sep *= .8;
 
     vec3 n = triV.a;
     vec3 pp = p;
 
-    vec3 uv = abs(p) / sizeScale;
-    if (length(p) > move * stepMove * .3) {
-        pp -= n * move;
-        fold(pp);
-        uv = abs(pp) / sizeScale;
-    }
+    vec3 vA, vB, vC, vD;
+
+    vA = vec3(0);
+
+    part = length(p - vA) - size;
+    d = part;
     
-    part = length(p - n * move) - size;
+    vB = n * move;
+    d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
+
+    part = length(p - vB) - size;
     d = smin(d, part, r);
     
     vec3 rPlane = normalize(cross(triV.b, triV.c));
     n = reflect(n, rPlane);
-    part = length(p - n * move) - size;
+
+    vC = n * move;
+
+    d = smin(d, fCapsule(p, vA, vC, cr, sep), r);
+    d = smin(d, fCapsule(p, vB, vC, cr, sep), r);
+
+    part = length(p - vC) - size;
     d = smin(d, part, r);
 
     n = reflect(n, triP.ca);
-    part = length(p - n * move) - size;
+
+    vD = n * move;
+
+    d = smin(d, fCapsule(p, vA, vD, cr, sep), r);
+    d = smin(d, fCapsule(p, vB, vD, cr, sep), r);
+    d = smin(d, fCapsule(p, vC, vD, cr, sep), r);
+
+    part = length(p - vD) - size;
     d = smin(d, part, r);
 
     d *= scale;
 
-    return Model(d, 0., uv * 8., false);
+    return Model(d, 0., vec3(0.), false);
 }
 
 
@@ -405,6 +479,8 @@ Model subDModel(vec3 p) {
 
     float prevStepIndex, x, move, sizeScale, size;
 
+    //float css = 1.;
+
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
         stepTime = timeForStep(i, delay); 
 
@@ -419,6 +495,7 @@ Model subDModel(vec3 p) {
             x = makeAnim(stepTime);
             move = moveAnim(x) * stepMove;
             sizeScale = mix(1., stepScale, scaleAnim(x));
+            //css *= sizeScale;
             size = ballSize * sizeScale;
 
             boundsCandidate = length(p) - move - size - threshold;
@@ -511,15 +588,16 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float apex = .6;
     float blend = smoothstep(0., apex, x) - (smoothstep(apex, 1., x));
     blend = sinstep(blend);
+
     camDist = mix(1.5, 1.7, blend) / stepScale;
 
-    //camDist = 30.5;
+    //camDist = 5.5;
 
     modelScale = makeModelScale();
     float o = .55;
     float sb = squarestep(o, 2. - o, x, 5.) * 2.;
     modelScale = mix(1., modelScale, sb);
-    //modelScale = 1.;
+   // modelScale = 1.;
 
     x = mod(x + .5, 1.);
 
@@ -702,7 +780,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     init();
     
     loopDuration = (MODEL_STEPS + .0) * stepDuration;
+    //loopDuration /= stepSpeed;
     time = iGlobalTime;
+    //time /=2.;
     //time += .1;
     time = mod(time, loopDuration);
     //time = loopDuration;
