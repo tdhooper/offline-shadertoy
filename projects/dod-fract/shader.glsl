@@ -304,9 +304,12 @@ Model makeModel(vec3 p, float localTime, float scale) {
     part = length(p - n * move) - size;
     d = smin(d, part, r);
 
+    // if (d < .1) {
+    //     d += (sin((sin(uv.x) + sin(uv.y) + sin(uv.z)) * 8.) * .05) * sizeScale;
+    // }
+
     d *= scale;
 
-    
     return Model(d, 0., uv * 8.);
 }
 
@@ -526,14 +529,14 @@ vec3 camPos;
 
 void shadeSurface(inout Hit hit){
 
-    vec3 background = vec3(.1);
+    vec3 background = vec3(.1)* vec3(.5,0,1);
 
     if (hit.isBackground) {
         hit.color = background;
         return;
     }
 
-    //hit.normal += sin(hit.pos * 80.) * .1;
+    //hit.normal += sin(hit.model.uv * .4) * .4;
     //hit.normal = normalize(hit.normal);
 
     vec3 light = normalize(vec3(.5,1,0));
@@ -542,7 +545,7 @@ void shadeSurface(inout Hit hit){
     
     vec3 colA = vec3(.1,.75,.75) * 1.5;
     
-    diffuse *= hit.model.uv;
+    //diffuse *= hit.model.uv;
     diffuse = sin(diffuse);
     diffuse *= 1.3;
     
@@ -550,11 +553,12 @@ void shadeSurface(inout Hit hit){
     fog = mix(0., 1., length(camTar - hit.pos) / pow(camDist, 1.5)) * 1.;
     fog = clamp(fog, 0., 1.);
     
-    /*
-    diffuse = vec3(1);
+    //*
+    diffuse = vec3(.3) * vec3(.9, .3, .8);
+    vec3 highlight = vec3(.9) * vec3(.8,.5,1.2);
     float glow = 1. - dot(normalize(camPos), hit.normal);
     glow = squarestep(glow, 2.);
-    diffuse = mix(background, diffuse, glow);
+    diffuse = mix(diffuse, highlight, glow);
     diffuse = mix(diffuse, background, fog);
     //*/  
     
