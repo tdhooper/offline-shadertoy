@@ -37,6 +37,7 @@ float time;
 
 #define PI 3.14159265359
 #define TAU 6.28318530718
+#define PHI 1.618033988749895
 
 
 // --------------------------------------------------------
@@ -163,6 +164,27 @@ void fold(inout vec3 p) {
 }
 
 
+// Nearest dodecahedron vertex
+vec3 dodecahedronVertex(vec3 p) {
+    vec3 sp, v1, v2, v3, v4, result, plane;
+    sp = sign(p);
+    v1 = sp;
+    v2 = vec3(0, 1, PHI + 1.) * sp;
+    v3 = vec3(1, PHI + 1., 0) * sp;
+    v4 = vec3(PHI + 1., 0, 1) * sp;
+
+    plane = vec3(-1. - PHI, -1, PHI) * sp;
+    result = mix(v1, v2, max(sign(dot(p, plane)), 0.));
+    
+    plane = vec3(-1, PHI, -1. - PHI) * sp;
+    result = mix(result, v3, max(sign(dot(p, plane)), 0.));
+    
+    plane = vec3(PHI, -1. - PHI, -1) * sp;
+    result = mix(result, v4, max(sign(dot(p, plane)), 0.));
+    
+    return normalize(result);
+}
+
 // --------------------------------------------------------
 // Modelling
 // --------------------------------------------------------
@@ -237,7 +259,7 @@ float ballSize = 1.;
 float stepSpeed = .5;
 
 const float initialStep = 0.;
-const float MODEL_STEPS = 3.;
+const float MODEL_STEPS = 2.;
 
 
 float makeAnim(float localTime) {
@@ -275,6 +297,8 @@ Model makeModel(vec3 p, float localTime, float scale) {
 
     p /= scale;
     fold(p);
+
+    vec3 dv = dodecahedronVertex(p);
 
     part = length(p) - size;
     d = part;
@@ -328,15 +352,18 @@ vec3 makeOffset(float level) {
     return triV.c * makeOffsetAmt(level);
 }
 
-void makeSpace(inout vec3 p, float localTime, float scale) {
+float makeSpace(inout vec3 p, float localTime, float scale) {
     float x = makeAnim(localTime);
     float move = moveAnim(x);
+    float boundry = 0.;
     p /= scale;
     if (length(p) > move * stepMove * .55) {
        fold(p);
        p -= triV.c * move * stepMove;
+       boundry = 1.;
     }
     p *= scale;
+    return boundry;
 }
 
 
@@ -357,27 +384,49 @@ float makeModelScale() {
     return (1. / scale) * initial;
 }
 
+float hash( const in vec3 p ) {
+    return fract(sin(dot(p,vec3(127.1,311.7,758.5453123)))*43758.5453123);
+}
+
+
 Model subDModel(vec3 p) {
 
     float scale = 1.;
     float level = -1.; 
+    float localTime = time;
+    
+    vec3 dv = dodecahedronVertex(p);
+    float timeOffset = hash(dv) * 1.5;
+
+    localTime += timeOffset;
+
+    float boundry;
 
     for (float i = 0.; i < MODEL_STEPS + initialStep; i++) {
-        if (time >= stepDuration * (i - initialStep)) {
+        if (i > 0. && boundry < 1.) {
+            localTime = time;
+        }
+        if (localTime >= stepDuration * (i - initialStep)) {
             level = i - initialStep;
             scale = pow(stepScale, level);
-            makeSpace(p, time - (stepDuration * (level - 1.)), scale);
+            float lBoundry = makeSpace(p, localTime - (stepDuration * (level - 1.)), scale);
+            if (i == 0.) {
+                boundry = lBoundry;
+            }
         }
     }
 
-
+    if (boundry < 1.) {
+        localTime = time;
+    }
+    
     scale = mix(
         pow(stepScale, level + 0.),
         pow(stepScale, level + 1.),
-        scaleAnim(makeAnim(time - (stepDuration * (level - 1.))))        
+        scaleAnim(makeAnim(localTime - (stepDuration * (level - 1.))))        
     );
     
-    return makeModel(p, time - (stepDuration * level), scale);
+    return makeModel(p, localTime - (stepDuration * level), scale);
 }
 
 Model map( vec3 p ){
@@ -394,6 +443,9 @@ Model map( vec3 p ){
     //p += offset;
 
     Model model = subDModel(p);
+
+    //model = makeModel(p, time, 1.);
+
     model.dist *= modelScale;
     return model;
 }
@@ -425,13 +477,13 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     blend = sinstep(blend);
     camDist = mix(1.5, 1.7, blend);
 
-    //camDist = 2.5;
+    camDist = 4.;
 
     modelScale = makeModelScale();
     float o = .55;
     float sb = squarestep(o, 2. - o, x, 5.) * 2.;
     modelScale = mix(1., modelScale, sb);
-    //modelScale = 1.;
+    modelScale = 1.;
 
     x = mod(x + .5, 1.);
 
@@ -443,7 +495,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     rotBlend = mix(x, rotBlend, .95);    
     pR(camPos.xz, rotBlend * PI * 2.);
 
-    //camPos = vec3(0,0,1);
+    camPos = vec3(0,0,camDist);
 
     camPos *= cameraRotation();
 }
