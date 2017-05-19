@@ -259,7 +259,7 @@ float ballSize = 1.;
 float stepSpeed = .5;
 
 const float initialStep = 0.;
-const float MODEL_STEPS = 2.;
+const float MODEL_STEPS = 3.;
 
 
 float makeAnim(float localTime) {
@@ -395,36 +395,35 @@ Model subDModel(vec3 p) {
     float level = -1.; 
     float localTime = time;
     
-    vec3 dv = dodecahedronVertex(p);
-    float timeOffset = hash(dv) * 1.5;
+    vec3 dv;
+    float delay = 0.;
 
-    localTime += timeOffset;
-
+    
     float boundry;
 
     for (float i = 0.; i < MODEL_STEPS + initialStep; i++) {
-        if (i > 0. && boundry < 1.) {
-            localTime = time;
-        }
+        dv = dodecahedronVertex(p);
         if (localTime >= stepDuration * (i - initialStep)) {
             level = i - initialStep;
             scale = pow(stepScale, level);
-            float lBoundry = makeSpace(p, localTime - (stepDuration * (level - 1.)), scale);
-            if (i == 0.) {
-                boundry = lBoundry;
+            boundry = makeSpace(p, localTime - (stepDuration * (level - 1.)), scale);
+
+            if (boundry > 0.) {
+                delay += hash(dv) * 1.;
             }
         }
+        localTime = time - delay;
     }
 
-    if (boundry < 1.) {
-        localTime = time;
-    }
-    
+    // localTime -= delay;
+        
     scale = mix(
         pow(stepScale, level + 0.),
         pow(stepScale, level + 1.),
-        scaleAnim(makeAnim(localTime - (stepDuration * (level - 1.))))        
+        scaleAnim(makeAnim(time - (stepDuration * (level - 1.))))        
     );
+
+   //localTime -= delay;
     
     return makeModel(p, localTime - (stepDuration * level), scale);
 }
