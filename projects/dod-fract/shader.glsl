@@ -258,7 +258,7 @@ float loopDuration;
 float ballSize = 1.;
 float stepSpeed = .5;
 
-const float initialStep = 0.;
+const float initialStep = 1.;
 const float MODEL_STEPS = 3.;
 
 
@@ -278,7 +278,7 @@ float moveAnim(float x) {
 }
 
 float scaleAnim(float x) {
-    return moveAnim(x);
+    return moveAnim(x / stepSpeed);
 }
 
 float modelScale;
@@ -302,6 +302,9 @@ Model makeModel(vec3 p, float localTime, float scale) {
 
     part = length(p) - size;
     d = part;
+
+    //d *= scale;
+    //return Model(d, 0., vec3(0));
 
     float r = smoothstep(.05, .5, x) * .4;
 
@@ -356,6 +359,7 @@ float makeSpace(inout vec3 p, float localTime, float scale) {
     float x = makeAnim(localTime);
     float move = moveAnim(x);
     float boundry = 0.;
+    
     p /= scale;
     if (length(p) > move * stepMove * .55) {
        fold(p);
@@ -369,7 +373,7 @@ float makeSpace(inout vec3 p, float localTime, float scale) {
 
 float makeModelScale() {
     float scale = 1.;
-    for (float i = -1.; i < MODEL_STEPS; i++) {
+    for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
         scale *= mix(
             1.,
             stepScale,
@@ -380,8 +384,7 @@ float makeModelScale() {
             )
         );
     }
-    float initial = mix(1., stepScale, scaleAnim(makeAnim(stepDuration)));
-    return (1. / scale) * initial;
+    return (1. / scale);
 }
 
 float hash( const in vec3 p ) {
@@ -389,43 +392,53 @@ float hash( const in vec3 p ) {
 }
 
 
+float timeForStep(float stepIndex) {
+    return time - stepDuration * stepIndex;
+}
+
 Model subDModel(vec3 p) {
 
+    float stepIndex = -initialStep;
     float scale = 1.;
     float level = -1.; 
     float localTime = time;
     
     vec3 dv;
     float delay = 0.;
-
+    float stepTime;
     
     float boundry;
 
-    for (float i = 0.; i < MODEL_STEPS + initialStep; i++) {
+    for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
         dv = dodecahedronVertex(p);
-        if (localTime >= stepDuration * (i - initialStep)) {
-            level = i - initialStep;
-            scale = pow(stepScale, level);
-            boundry = makeSpace(p, localTime - (stepDuration * (level - 1.)), scale);
+        //localTime = time - delay;
+        stepTime = timeForStep(i); 
+        if (stepTime > 0.) {
+            stepIndex = i;
+            stepTime = timeForStep(stepIndex - 1.);
+            scale = pow(mix(1., stepScale, scaleAnim(.5)), stepIndex - 1.);
+            //scale = 1.;
+            boundry = makeSpace(p, stepTime, scale);
 
-            if (boundry > 0.) {
-                delay += hash(dv) * 1.;
-            }
+            //if (boundry > 0.) {
+            //    delay += hash(dv) * 1.;
+            //}
         }
-        localTime = time - delay;
     }
-
-    // localTime -= delay;
-        
+    /*
     scale = mix(
         pow(stepScale, level + 0.),
         pow(stepScale, level + 1.),
-        scaleAnim(makeAnim(time - (stepDuration * (level - 1.))))        
+        scaleAnim(makeAnim(localTime - (stepDuration * (level - 1.))))        
     );
-
+    */
    //localTime -= delay;
+    //stepIndex -= 0.;
+    //stepIndex = 0.;
+    stepTime = timeForStep(stepIndex);
+    scale = pow(mix(1., stepScale, scaleAnim(.5)), stepIndex);
     
-    return makeModel(p, localTime - (stepDuration * level), scale);
+    return makeModel(p, stepTime, scale);
 }
 
 Model map( vec3 p ){
@@ -474,15 +487,15 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float apex = .6;
     float blend = smoothstep(0., apex, x) - (smoothstep(apex, 1., x));
     blend = sinstep(blend);
-    camDist = mix(1.5, 1.7, blend);
+    camDist = mix(1.5, 1.7, blend) / stepScale;
 
-    camDist = 4.;
+    //camDist = 18.5;
 
     modelScale = makeModelScale();
     float o = .55;
     float sb = squarestep(o, 2. - o, x, 5.) * 2.;
     modelScale = mix(1., modelScale, sb);
-    modelScale = 1.;
+    //modelScale = 1.;
 
     x = mod(x + .5, 1.);
 
@@ -494,7 +507,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     rotBlend = mix(x, rotBlend, .95);    
     pR(camPos.xz, rotBlend * PI * 2.);
 
-    camPos = vec3(0,0,camDist);
+    //camPos = vec3(0,0,camDist);
 
     camPos *= cameraRotation();
 }
