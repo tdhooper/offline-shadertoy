@@ -415,7 +415,7 @@ Model subDModel(vec3 p) {
         if (stepTime > 0.) {
             stepIndex = i;
             stepTime = timeForStep(stepIndex - 1., delay);
-            scale = pow(mix(1., stepScale, scaleAnim(.5)), stepIndex - 1.);
+            scale = pow(mix(1., stepScale, scaleAnim(stepSpeed)), stepIndex - 1.);
             //scale = 1.;
             boundry = makeSpace(p, stepTime, scale);
 
@@ -435,7 +435,7 @@ Model subDModel(vec3 p) {
     //stepIndex -= 0.;
     //stepIndex = 0.;
     stepTime = timeForStep(stepIndex, delay);
-    scale = pow(mix(1., stepScale, scaleAnim(.5)), stepIndex);
+    scale = pow(mix(1., stepScale, scaleAnim(stepSpeed)), stepIndex);
     
     return makeModel(p, stepTime, scale);
 }
