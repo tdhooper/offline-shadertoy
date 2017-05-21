@@ -261,6 +261,8 @@ float stepSpeed = .5;
 const float initialStep = 1.;
 const float MODEL_STEPS = 3.;
 
+#define SHOW_BOUNDS;
+#define USE_BOUNDS;
 
 float makeAnim(float localTime) {
     float blend = localTime / stepDuration * stepSpeed;
@@ -284,6 +286,7 @@ float scaleAnim(float x) {
 float modelScale;
 
 
+
 Model makeModel(vec3 p, float localTime, float scale) {
     float d, part;
     
@@ -293,9 +296,22 @@ Model makeModel(vec3 p, float localTime, float scale) {
     float sizeScale = mix(1., stepScale, scaleAnim(x));
     float size = ballSize * sizeScale;
 
-
-
     p /= scale;
+
+    float threshold = .3;
+
+    float bounds = length(p) - move - size - threshold;
+    float sep = dot(p, vec3(0,0,1));
+
+    #ifndef SHOW_BOUNDS
+    #ifdef USE_BOUNDS
+    if (bounds > threshold) {
+        bounds *= scale;
+        return Model(bounds, 0., vec3(0.));
+    }
+    #endif
+    #endif
+
     fold(p);
 
     vec3 dv = dodecahedronVertex(p);
@@ -335,6 +351,12 @@ Model makeModel(vec3 p, float localTime, float scale) {
     //     d += (sin((sin(uv.x) + sin(uv.y) + sin(uv.z)) * 8.) * .05) * sizeScale;
     // }
 
+    #ifdef SHOW_BOUNDS
+    d = max(d, sep);
+    bounds = max(bounds, -sep);
+    d = min(d, bounds);
+    #endif
+
     d *= scale;
 
     return Model(d, 0., uv * 8.);
@@ -358,16 +380,16 @@ vec3 makeOffset(float level) {
 float makeSpace(inout vec3 p, float localTime, float scale) {
     float x = makeAnim(localTime);
     float move = moveAnim(x);
-    float boundry = 0.;
     
     p /= scale;
-    if (length(p) > move * stepMove * .55) {
+    float bounds = length(p) - move * stepMove * .5;
+    bounds *= scale;
+    if (bounds > 0.) {
        fold(p);
        p -= triV.c * move * stepMove;
-       boundry = 1.;
     }
     p *= scale;
-    return boundry;
+    return bounds;
 }
 
 
@@ -407,7 +429,10 @@ Model subDModel(vec3 p) {
     float delay = 0.;
     float stepTime;
     
-    float boundry;
+    float bounds;
+
+    float sep = dot(p, vec3(1,0,0));
+
 
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
         dv = dodecahedronVertex(p);
@@ -417,10 +442,10 @@ Model subDModel(vec3 p) {
             stepTime = timeForStep(stepIndex - 1., delay);
             scale = pow(mix(1., stepScale, scaleAnim(stepSpeed)), stepIndex - 1.);
             //scale = 1.;
-            boundry = makeSpace(p, stepTime, scale);
+            bounds = makeSpace(p, stepTime, scale);
 
-            if (boundry > 0.) {
-                delay += hash(dv) * 2.;
+            if (bounds > 0.) {
+                //delay += hash(dv) * 2.;
             }
         }
     }
@@ -437,7 +462,24 @@ Model subDModel(vec3 p) {
     stepTime = timeForStep(stepIndex, delay);
     scale = pow(mix(1., stepScale, scaleAnim(stepSpeed)), stepIndex);
     
-    return makeModel(p, stepTime, scale);
+    Model model = makeModel(p, stepTime, scale);
+    
+    float threshold = .3 * scale;
+    bounds -= threshold;
+
+    #ifdef SHOW_BOUNDS
+    bounds = max(bounds, sep);
+    model.dist = max(model.dist, -sep);
+    model.dist = min(model.dist, bounds);
+    #else
+    #ifdef USE_BOUNDS
+    if (bounds > threshold) {
+        model.dist = min(model.dist, bounds);
+    }
+    #endif
+    #endif
+
+    return model;
 }
 
 Model map( vec3 p ){
@@ -488,7 +530,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     blend = sinstep(blend);
     camDist = mix(1.5, 1.7, blend) / stepScale;
 
-    //camDist = 4.5;
+    //camDist = 6.5;
 
     modelScale = makeModelScale();
     float o = .55;
@@ -506,7 +548,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     rotBlend = mix(x, rotBlend, .95);    
     pR(camPos.xz, rotBlend * PI * 2.);
 
-    //camPos = vec3(0,0,camDist);
+   // camPos = vec3(0,0,camDist);
 
     camPos *= cameraRotation();
 }
