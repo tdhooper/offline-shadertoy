@@ -462,41 +462,51 @@ Model subDModel(vec3 p) {
 
     float sep = dot(p, vec3(1,0,0));
 
+    float threshold = .3;
+
 
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
-        dv = icosahedronVertex(p);
         stepTime = timeForStep(i, delay); 
-        if (stepTime > 0.) {
+
+        if (stepTime > 0. && ! hasBounds) {
             stepIndex = i;
             stepTime = timeForStep(stepIndex - 1., delay);
             scale = pow(mix(1., stepScale, scaleAnim(stepSpeed)), stepIndex - 1.);
-            //scale = 1.;
-            float boundsP = makeBounds(p, stepTime, scale) - .1;
+
+            float x = makeAnim(stepTime);
+            float move = moveAnim(x)* stepMove;
+
+            float sizeScale = mix(1., stepScale, scaleAnim(x));
+            float size = ballSize * sizeScale;
+
+            float boundsP = length(p / scale) - move - size - threshold;
+            boundsP *= scale;
+            boundsP -= .1;    
+            
             if (boundsP > -.0) {
                 bounds = min(bounds, boundsP);
                 hasBounds = true;
             }
-            //hasBounds = true;
-            //bounds = boundsP;
-            innerBounds = makeSpace(p, stepTime, scale);
+
+            vec3 pp = p;
+
+            p /= scale;
+            innerBounds = length(p) - move * .55;
+            innerBounds *= scale;
+            if (innerBounds > 0.) {
+               fold(p);
+               p -= triV.a * move;
+            }
+            p *= scale;
             
             if (innerBounds > 0.) {
+                dv = icosahedronVertex(pp);
                 delay += hash(dv) * 1.;
             }
         }
     }
-    /*
-    scale = mix(
-        pow(stepScale, level + 0.),
-        pow(stepScale, level + 1.),
-        scaleAnim(makeAnim(localTime - (stepDuration * (level - 1.))))        
-    );
-    */
-   //localTime -= delay;
-    //stepIndex -= 0.;
-    //stepIndex = 0.;
 
-    float threshold = .3 * scale;
+    threshold *= scale;
 
     #ifdef SHOW_BOUNDS
         if (hasBounds) {
