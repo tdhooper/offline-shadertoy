@@ -392,8 +392,8 @@ float hash( const in vec3 p ) {
 }
 
 
-float timeForStep(float stepIndex) {
-    return time - stepDuration * stepIndex;
+float timeForStep(float stepIndex, float delay) {
+    return time - stepDuration * stepIndex - delay;
 }
 
 Model subDModel(vec3 p) {
@@ -411,18 +411,17 @@ Model subDModel(vec3 p) {
 
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
         dv = dodecahedronVertex(p);
-        //localTime = time - delay;
-        stepTime = timeForStep(i); 
+        stepTime = timeForStep(i, delay); 
         if (stepTime > 0.) {
             stepIndex = i;
-            stepTime = timeForStep(stepIndex - 1.);
+            stepTime = timeForStep(stepIndex - 1., delay);
             scale = pow(mix(1., stepScale, scaleAnim(.5)), stepIndex - 1.);
             //scale = 1.;
             boundry = makeSpace(p, stepTime, scale);
 
-            //if (boundry > 0.) {
-            //    delay += hash(dv) * 1.;
-            //}
+            if (boundry > 0.) {
+                delay += hash(dv) * 2.;
+            }
         }
     }
     /*
@@ -435,7 +434,7 @@ Model subDModel(vec3 p) {
    //localTime -= delay;
     //stepIndex -= 0.;
     //stepIndex = 0.;
-    stepTime = timeForStep(stepIndex);
+    stepTime = timeForStep(stepIndex, delay);
     scale = pow(mix(1., stepScale, scaleAnim(.5)), stepIndex);
     
     return makeModel(p, stepTime, scale);
@@ -489,7 +488,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     blend = sinstep(blend);
     camDist = mix(1.5, 1.7, blend) / stepScale;
 
-    //camDist = 18.5;
+    //camDist = 4.5;
 
     modelScale = makeModelScale();
     float o = .55;
@@ -519,7 +518,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 500.; // max trace distance
+const float MAX_TRACE_DISTANCE = 20.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
