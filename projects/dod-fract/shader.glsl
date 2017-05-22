@@ -303,23 +303,6 @@ float scaleAnim(float x) {
 
 float modelScale;
 
-float makeBounds(vec3 p, float localTime, float scale) {
-    float x = makeAnim(localTime);
-    float move = moveAnim(x) * stepMove;
-
-    float sizeScale = mix(1., stepScale, scaleAnim(x));
-    float size = ballSize * sizeScale;
-
-    p /= scale;
-
-    float threshold = .3;
-
-    float bounds = length(p) - move - size - threshold;
-    
-    bounds *= scale;
-    return bounds;    
-}
-
 
 Model makeModel(vec3 p, float localTime, float scale) {
     float d, part;
@@ -330,9 +313,9 @@ Model makeModel(vec3 p, float localTime, float scale) {
     float sizeScale = mix(1., stepScale, scaleAnim(x));
     float size = ballSize * sizeScale;
 
-    float bounds = makeBounds(p, localTime, scale);
+    float bounds = (length(p / scale) - move - size - .3) * scale;
 
-    float threshold = .3;
+    float threshold = .01;
 
     #ifdef SHOW_BOUNDS
         return Model(bounds, 0., vec3(0.), true);
@@ -352,9 +335,6 @@ Model makeModel(vec3 p, float localTime, float scale) {
     part = length(p) - size;
     d = part;
 
-    //d *= scale;
-    //return Model(d, 0., vec3(0));
-
     float r = smoothstep(.05, .5, x) * .4;
 
     vec3 n = triV.a;
@@ -366,7 +346,6 @@ Model makeModel(vec3 p, float localTime, float scale) {
         fold(pp);
         uv = abs(pp) / sizeScale;
     }
-
     
     part = length(p - n * move) - size;
     d = smin(d, part, r);
@@ -380,60 +359,20 @@ Model makeModel(vec3 p, float localTime, float scale) {
     part = length(p - n * move) - size;
     d = smin(d, part, r);
 
-    // if (d < .1) {
-    //     d += (sin((sin(uv.x) + sin(uv.y) + sin(uv.z)) * 8.) * .05) * sizeScale;
-    // }
-
     d *= scale;
 
     return Model(d, 0., uv * 8., false);
 }
 
-float makeOffsetMax(float level) {
-    float scale = pow(stepScale, level);
-    return stepMove * scale;
-}
-
-float makeOffsetAmt(float level) {
-    float localTime = time - (stepDuration * (level - 1.));
-    float x = makeAnim(localTime);
-    return moveAnim(x) * makeOffsetMax(level);
-}
-
-vec3 makeOffset(float level) {
-    return triV.a * makeOffsetAmt(level);
-}
-
-float makeSpace(inout vec3 p, float localTime, float scale) {
-    float x = makeAnim(localTime);
-    float move = moveAnim(x);
-    
-    p /= scale;
-    float bounds = length(p) - move * stepMove * .5;
-    bounds *= scale;
-    if (bounds > 0.) {
-       fold(p);
-       p -= triV.a * move * stepMove;
-    }
-    p *= scale;
-    return bounds;
-}
-
 
 float makeModelScale() {
     float scale = 1.;
+    float x;
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
-        scale *= mix(
-            1.,
-            stepScale,
-            scaleAnim(
-                makeAnim(
-                    time - (stepDuration * i)
-                )
-            )
-        );
+        x = makeAnim(time - (stepDuration * i));
+        scale *= mix(1., stepScale, scaleAnim(x));
     }
-    return (1. / scale);
+    return 1. / scale;
 }
 
 float hash( const in vec3 p ) {
@@ -449,50 +388,51 @@ Model subDModel(vec3 p) {
 
     float stepIndex = -initialStep;
     float scale = 1.;
-    float level = -1.; 
     float localTime = time;
     
-    vec3 dv;
+    vec3 iv;
     float delay = 0.;
     float stepTime;
     
     float innerBounds = 1e12;
     float bounds = 1e12;
     bool hasBounds = false;
-
-    float sep = dot(p, vec3(1,0,0));
+    float boundsCandidate;
 
     float threshold = .3;
 
+    float midSizeScale = mix(1., stepScale, scaleAnim(stepSpeed));
+
+    float prevStepIndex, x, move, sizeScale, size;
 
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
         stepTime = timeForStep(i, delay); 
 
         if (stepTime > 0. && ! hasBounds) {
             stepIndex = i;
-            stepTime = timeForStep(stepIndex - 1., delay);
-            scale = pow(mix(1., stepScale, scaleAnim(stepSpeed)), stepIndex - 1.);
+            prevStepIndex = stepIndex - 1.;
 
-            float x = makeAnim(stepTime);
-            float move = moveAnim(x)* stepMove;
+            scale = pow(midSizeScale, prevStepIndex);
+            p /= scale;
 
-            float sizeScale = mix(1., stepScale, scaleAnim(x));
-            float size = ballSize * sizeScale;
+            stepTime = timeForStep(prevStepIndex, delay);
+            x = makeAnim(stepTime);
+            move = moveAnim(x) * stepMove;
+            sizeScale = mix(1., stepScale, scaleAnim(x));
+            size = ballSize * sizeScale;
 
-            float boundsP = length(p / scale) - move - size - threshold;
-            boundsP *= scale;
-            boundsP -= .1;    
+            boundsCandidate = length(p) - move - size - threshold;
+            boundsCandidate *= scale;
+            boundsCandidate -= .1;    
             
-            if (boundsP > -.0) {
-                bounds = min(bounds, boundsP);
+            if (boundsCandidate > -.0) {
+                bounds = min(bounds, boundsCandidate);
                 hasBounds = true;
-            }
+            }            
 
             vec3 pp = p;
 
-            p /= scale;
-            innerBounds = length(p) - move * .55;
-            innerBounds *= scale;
+            innerBounds = (length(p) - move * .55) * scale;
             if (innerBounds > 0.) {
                fold(p);
                p -= triV.a * move;
@@ -500,8 +440,8 @@ Model subDModel(vec3 p) {
             p *= scale;
             
             if (innerBounds > 0.) {
-                dv = icosahedronVertex(pp);
-                delay += hash(dv) * 1.;
+                iv = icosahedronVertex(pp);
+                delay += hash(iv) * 1.;
             }
         }
     }
@@ -540,21 +480,8 @@ Model subDModel(vec3 p) {
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
-
     p /= modelScale;
-
-    float x = time / loopDuration;
-    x = smoothstep(0., 1., x);
-    //x = squarestep(0., .8, x, 2.);
-    float blend = 1.-pow(1.-x, 2.);
-    vec3 offset = makeOffset(0.);// + makeOffset(1.);
-    offset = mix(vec3(0), offset, blend);
-    //p += offset;
-
     Model model = subDModel(p);
-
-    //model = makeModel(p, time, 1.);
-
     model.dist *= modelScale;
     return model;
 }
@@ -616,7 +543,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 50.; // max trace distance
+const float MAX_TRACE_DISTANCE = 20.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots

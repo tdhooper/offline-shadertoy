@@ -94,7 +94,8 @@ function restoreState() {
         return;
     }
     if (state.timer) {
-        timer = Timer.fromObject(state.timer);    
+        timer = Timer.fromObject(state.timer);   
+        window.timer = timer; 
     }
     mouse = state.mouse || mouse;
 }
@@ -139,10 +140,16 @@ function toggle() {
     }
 }
 
+function stepTo(time) {
+    timer.set(time);
+    render();
+}
+
 window.play = play;
 window.pause = pause;
 window.stop = stop;
 window.toggle = toggle;
+window.stepTo = stepTo;
 
 var canvas = regl._gl.canvas;
 mouseChange(canvas, function(buttons, x, y, mods) {
