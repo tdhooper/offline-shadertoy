@@ -613,7 +613,8 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float blend = smoothstep(0., apex, x) - (smoothstep(apex, 1., x));
     blend = sinstep(blend);
 
-    camDist = mix(1.5, 1.7, blend) / stepScale;
+    //camDist = mix(1.5, 1.7, blend) / stepScale;
+    camDist = 2. / stepScale;
 
     //camDist = 6.5;
 
@@ -645,7 +646,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 20.; // max trace distance
+const float MAX_TRACE_DISTANCE = 30.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
@@ -806,7 +807,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     loopDuration = (MODEL_STEPS + .0) * stepDuration;
     //loopDuration /= stepSpeed;
     time = iGlobalTime;
-    //time /=2.;
+   // time /=2.;
     //time += .1;
     time = mod(time, loopDuration);
     //time = loopDuration;
