@@ -304,10 +304,10 @@ float hardstep(float a, float b, float t) {
 }
 
 float wobble(float x) {
-    float freq = 7.;
+    float freq = 5.;
     float w = sin(x * PI * 2. * freq - PI * .5) * .5 + .5;
     w *= sin(x * PI + PI * .5) * .5 + .5;
-    return 1.- w;
+    return w;
 }
 
 float stepScale = .275;
@@ -346,9 +346,13 @@ float scaleAnim(float x) {
     blend = hardstep(0., .8, x);
     blend = squarestep(-a, a, blend, 1.2) * h * 2. - h;
     blend = squarestep(blend, 1.2);
-    //blend *= 1.2;
-    //blend = min(blend, 1.);
-    //blend -= smoothstep(.80, .85, x) * .2;
+    return blend;
+}
+
+
+float wobbleScaleAnim(float x) {
+    float blend = scaleAnim(x);
+    x /= stepSpeed;
     blend -= wobble(hardstep(.75, 1.8, x)) * .05;
     return blend;
 }
@@ -362,7 +366,7 @@ Model makeModel(vec3 p, float localTime, float scale) {
     float x = makeAnim(localTime);
     float move = moveAnim(x) * stepMove;
 
-    float sizeScale = mix(1., stepScale, scaleAnim(x));
+    float sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
     float size = ballSize * sizeScale;
 
     float bounds = (length(p / scale) - move - size - .3) * scale;
@@ -455,6 +459,7 @@ float hash( const in vec3 p ) {
 
 
 float timeForStep(float stepIndex, float delay) {
+    //delay = 0.;
     return time - stepDuration * stepIndex - delay;
 }
 
@@ -479,14 +484,24 @@ Model subDModel(vec3 p) {
 
     float prevStepIndex, x, move, sizeScale, size;
 
-    //float css = 1.;
+    float css = 1.;
+
+    //css /= midSizeScale;
 
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
+
         stepTime = timeForStep(i, delay); 
 
         if (stepTime > 0. && ! hasBounds) {
             stepIndex = i;
             prevStepIndex = stepIndex - 1.;
+
+            if (stepIndex == 0.) {
+                css = 1.;
+            } else {
+                css *= midSizeScale;
+            }
+
 
             scale = pow(midSizeScale, prevStepIndex);
             p /= scale;
@@ -494,18 +509,24 @@ Model subDModel(vec3 p) {
             stepTime = timeForStep(prevStepIndex, delay);
             x = makeAnim(stepTime);
             move = moveAnim(x) * stepMove;
-            sizeScale = mix(1., stepScale, scaleAnim(x));
-            //css *= sizeScale;
-            size = ballSize * sizeScale;
 
-            boundsCandidate = length(p) - move - size - threshold;
-            boundsCandidate *= scale;
-            boundsCandidate -= .1;    
+            css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(makeAnim(stepTime)));
+            //css = pow(midSizeScale, prevStepIndex) * midSizeScale;
             
-            if (boundsCandidate > -.0) {
-                bounds = min(bounds, boundsCandidate);
-                hasBounds = true;
-            }            
+
+            #ifdef USE_BOUNDS
+                sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
+                size = ballSize * sizeScale;
+
+                boundsCandidate = length(p) - move - size - threshold;
+                boundsCandidate *= scale;
+                boundsCandidate -= .1;    
+                
+                if (boundsCandidate > -.0) {
+                    bounds = min(bounds, boundsCandidate);
+                    hasBounds = true;
+                }
+            #endif            
 
             vec3 pp = p;
 
@@ -538,8 +559,11 @@ Model subDModel(vec3 p) {
 
     stepTime = timeForStep(stepIndex, delay);
     scale = pow(mix(1., stepScale, scaleAnim(stepSpeed)), stepIndex);
+    // scale *= mix(1., stepScale, scaleAnim(stepTime));
+    //scale = 1.;
+    //stepTime = 0.;
     
-    Model model = makeModel(p, stepTime, scale);
+    Model model = makeModel(p, stepTime, css);
     
     innerBounds -= threshold;
 
@@ -591,13 +615,13 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 
     camDist = mix(1.5, 1.7, blend) / stepScale;
 
-    //camDist = 5.5;
+    //camDist = 6.5;
 
     modelScale = makeModelScale();
     float o = .55;
     float sb = squarestep(o, 2. - o, x, 5.) * 2.;
     modelScale = mix(1., modelScale, sb);
-   // modelScale = 1.;
+    //modelScale = 1.;
 
     x = mod(x + .5, 1.);
 
