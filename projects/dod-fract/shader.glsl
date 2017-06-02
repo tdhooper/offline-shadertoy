@@ -317,8 +317,15 @@ float loopDuration;
 float ballSize = 1.5;
 float stepSpeed = .5;
 
-const float initialStep = 1.;
-const float MODEL_STEPS = 3.;
+#define SHOW_ANIMATION
+
+#ifdef SHOW_ANIMATION
+    const float initialStep = 0.;
+    const float MODEL_STEPS = 1.;
+#else
+    const float initialStep = 1.;
+    const float MODEL_STEPS = 3.;
+#endif
 
 //#define SHOW_BOUNDS;
 #define USE_BOUNDS;
@@ -616,13 +623,10 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     //camDist = mix(1.5, 1.7, blend) / stepScale;
     camDist = 2. / stepScale;
 
-    //camDist = 6.5;
-
     modelScale = makeModelScale();
     float o = .55;
     float sb = squarestep(o, 2. - o, x, 5.) * 2.;
     modelScale = mix(1., modelScale, sb);
-    //modelScale = 1.;
 
     x = mod(x + .5, 1.);
 
@@ -634,7 +638,11 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     rotBlend = mix(x, rotBlend, .95);    
     pR(camPos.xz, rotBlend * PI * 2.);
 
-    //camPos = vec3(0,0,camDist);
+    #ifdef SHOW_ANIMATION
+        camDist = 4.5;
+        modelScale = 1.;
+        camPos = vec3(0,0,camDist);
+    #endif
 
     camPos *= cameraRotation();
 }
@@ -805,7 +813,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     init();
     
     loopDuration = (MODEL_STEPS + .0) * stepDuration;
-    //loopDuration /= stepSpeed;
+    
+    #ifdef SHOW_ANIMATION
+        loopDuration /= stepSpeed;
+    #endif
+    
     time = iGlobalTime;
    // time /=2.;
     //time += .1;
