@@ -409,39 +409,34 @@ Model makeModel(vec3 p, float localTime, float scale) {
     vec3 n = triV.a;
     vec3 pp = p;
 
-    vec3 vA, vB, vC, vD;
+    vec3 vA, vB;
 
     vA = vec3(0);
 
     part = length(p - vA) - size;
     d = part;
-    
-    vB = n * move;
-    d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
 
+    vB = n * move;
+
+    d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
     part = length(p - vB) - size;
     d = smin(d, part, r);
     
-    vec3 rPlane = normalize(cross(triV.b, triV.c));
-    n = reflect(n, rPlane);
-
-    vC = n * move;
-
-    d = smin(d, fCapsule(p, vA, vC, cr, sep), r);
-    d = smin(d, fCapsule(p, vB, vC, cr, sep), r);
-
-    part = length(p - vC) - size;
+    vec3 rPlane = triP.bc;
+    p = reflect(p, rPlane);
+    
+    d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
+    d = smin(d, fCapsule(p, vB, reflect(vB, rPlane), cr, sep), r);
+    part = length(p - vB) - size;
     d = smin(d, part, r);
 
-    n = reflect(n, triP.ca);
+    vec3 rPlane2 = reflect(triP.ca, rPlane);
+    p = reflect(p, rPlane2);
 
-    vD = n * move;
-
-    d = smin(d, fCapsule(p, vA, vD, cr, sep), r);
-    d = smin(d, fCapsule(p, vB, vD, cr, sep), r);
-    d = smin(d, fCapsule(p, vC, vD, cr, sep), r);
-
-    part = length(p - vD) - size;
+    d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
+    d = smin(d, fCapsule(p, vB, reflect(vB, rPlane2), cr, sep), r);
+    d = smin(d, fCapsule(p, vB, reflect(reflect(vB, rPlane), rPlane2), cr, sep), r);
+    part = length(p - vB) - size;
     d = smin(d, part, r);
 
     d *= scale;
@@ -817,7 +812,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #ifdef SHOW_ANIMATION
         loopDuration /= stepSpeed;
     #endif
-    
+
     time = iGlobalTime;
    // time /=2.;
     //time += .1;
