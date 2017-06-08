@@ -317,7 +317,8 @@ float loopDuration;
 float ballSize = 1.5;
 float stepSpeed = .5;
 
-#define SHOW_ANIMATION
+//#define SHOW_ANIMATION
+#define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -332,6 +333,12 @@ float stepSpeed = .5;
 
 float makeAnim(float localTime) {
     float blend = localTime / stepDuration * stepSpeed;
+    //blend = clamp(blend, 0., 1.);
+    return blend;
+}
+
+float makeAnimX(float x) {
+    float blend = x * stepSpeed;
     //blend = clamp(blend, 0., 1.);
     return blend;
 }
@@ -372,7 +379,6 @@ Model makeModel(vec3 p, float localTime, float scale) {
     
     float x = makeAnim(localTime);
     float move = moveAnim(x) * stepMove;
-
     float sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
     float size = ballSize * sizeScale;
 
@@ -393,42 +399,45 @@ Model makeModel(vec3 p, float localTime, float scale) {
 
     fold(p);
 
+    // Setup smoothing
+
     float rBlend = hardstep(.1, .4, x) - hardstep(.4, .45, x);
     rBlend = smoothstep(0., 1., rBlend);
     float r = mix(0., .4, rBlend);
-    //r = 0.;
 
-    float cr = mix(.4, .1, smoothstep(.3, .5, x)) * sizeScale;
-    cr = 0.04;
-    //r = 0.2;
+    // Center ball
 
-    float sep = hardstep(.4, .85, x);
-    sep = squareOut(sep, 20.);
-    sep *= .8;
-
-    vec3 n = triV.a;
-    vec3 pp = p;
-
-    vec3 vA, vB;
-
-    vA = vec3(0);
+    vec3 vA = vec3(0);
 
     part = length(p - vA) - size;
     d = part;
 
-    vB = n * move;
+    // Setup ball
+
+    vec3 vB = triV.a * move;
+
+    // Setup bridge
+
+    float cr = 0.04;
+    float sep = hardstep(.4, .85, x);
+    sep = squareOut(sep, 20.);
+    sep *= .8;
+
+    // Ball and bridge
 
     d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
-    part = length(p - vB) - size;
-    d = smin(d, part, r);
+    d = smin(d, length(p - vB) - size, r);
     
+    // First reflection
+
     vec3 rPlane = triP.bc;
     p = reflect(p, rPlane);
     
     d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
     d = smin(d, fCapsule(p, vB, reflect(vB, rPlane), cr, sep), r);
-    part = length(p - vB) - size;
-    d = smin(d, part, r);
+    d = smin(d, length(p - vB) - size, r);
+
+    // Second reflection
 
     vec3 rPlane2 = reflect(triP.ca, rPlane);
     p = reflect(p, rPlane2);
@@ -436,20 +445,18 @@ Model makeModel(vec3 p, float localTime, float scale) {
     d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
     d = smin(d, fCapsule(p, vB, reflect(vB, rPlane2), cr, sep), r);
     d = smin(d, fCapsule(p, vB, reflect(reflect(vB, rPlane), rPlane2), cr, sep), r);
-    part = length(p - vB) - size;
-    d = smin(d, part, r);
+    d = smin(d, length(p - vB) - size, r);
 
     d *= scale;
 
     return Model(d, 0., vec3(0.), false);
 }
 
-
-float makeModelScale() {
+float makeModelScale(float x) {
     float scale = 1.;
-    float x;
+    float xLocal;
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
-        x = makeAnim(time - (stepDuration * i));
+        xLocal = makeAnimX(x - i);
         scale *= mix(1., stepScale, scaleAnim(x));
     }
     return 1. / scale;
@@ -607,6 +614,20 @@ float newBlend(float x) {
     return newBlendA(mod(x + m, 1.)) - o + max(sign(x + m - 1.), 0.);
 }
 
+float animCamRotate(float x) {
+    x = mod(x + .5, 1.);
+    float rotBlend = newBlend(x);
+    rotBlend = mix(x, rotBlend, .95);
+    return rotBlend;
+}
+
+float animModelScale(float x) {
+    float scale = makeModelScale(x);
+    float o = .55;
+    float sb = squarestep(o, 2. - o, x, 5.) * 2.;
+    scale = mix(1., scale, sb);    
+    return scale;
+}
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = time / loopDuration;
@@ -618,20 +639,13 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     //camDist = mix(1.5, 1.7, blend) / stepScale;
     camDist = 2. / stepScale;
 
-    modelScale = makeModelScale();
-    float o = .55;
-    float sb = squarestep(o, 2. - o, x, 5.) * 2.;
-    modelScale = mix(1., modelScale, sb);
-
-    x = mod(x + .5, 1.);
+    modelScale = animModelScale(x);
 
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
     camPos = vec3(0,0,camDist);
-    
-    float rotBlend = newBlend(x);
-    rotBlend = mix(x, rotBlend, .95);    
-    pR(camPos.xz, rotBlend * PI * 2.);
+        
+    pR(camPos.xz, animCamRotate(x) * PI * 2.);
 
     #ifdef SHOW_ANIMATION
         camDist = 4.5;
@@ -803,9 +817,38 @@ vec3 linearToScreen(vec3 linearRGB) {
     return gamma(linearRGB, 1.0 / GAMMA);
 }
 
+
+float plot(vec2 p, float y){
+    float thick = .01;
+    return (
+        smoothstep( y - thick, y, p.y) - 
+        smoothstep( y, y + thick, p.y)
+    );
+}
+
+void renderPaths(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 p = fragCoord.xy / iResolution.xy;
+    float x = p.x;
+    //x = mod(x - .5, 1.);
+    vec3 color = vec3(0);
+    
+    color += plot(p, animCamRotate(x)) * vec3(0,1,0);
+    color += plot(p, animModelScale(x) / animModelScale(1.)) * vec3(1,0,0);
+    
+    fragColor = vec4(color, 1);
+}
+
+
+
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     init();
+
+    #ifdef SHOW_PATHS
+        renderPaths(fragColor, fragCoord);
+        return;
+    #endif
     
     loopDuration = (MODEL_STEPS + .0) * stepDuration;
     
@@ -814,13 +857,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
 
     time = iGlobalTime;
-   // time /=2.;
+    // time /=2.;
     //time += .1;
     time = mod(time, loopDuration);
     //time = loopDuration;
     //time= 0.;
     //time /= 2.;
     //time = mod(time, 1.);
+
 
     mousee = iMouse.xy;
 
