@@ -34,6 +34,7 @@ vec2 mousee;
 //#define DEBUG
 
 float time;
+float t;
 
 #define PI 3.14159265359
 #define HALF_PI 1.5707963267948966
@@ -317,8 +318,8 @@ float loopDuration;
 float ballSize = 1.5;
 float stepSpeed = .5;
 
-//#define SHOW_ANIMATION
-#define SHOW_PATHS
+// #define SHOW_ANIMATION
+// #define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -331,16 +332,33 @@ float stepSpeed = .5;
 //#define SHOW_BOUNDS;
 #define USE_BOUNDS;
 
-float makeAnim(float localTime) {
-    float blend = localTime / stepDuration * stepSpeed;
-    //blend = clamp(blend, 0., 1.);
-    return blend;
-}
 
 float makeAnimX(float x) {
     float blend = x * stepSpeed;
     //blend = clamp(blend, 0., 1.);
     return blend;
+}
+
+float makeAnimStep(float x, float stepIndex) {
+    x -= 1. / MODEL_STEPS * stepIndex;
+    x = mod(x, 1.);
+    x *= MODEL_STEPS * stepSpeed;
+    return x;
+}
+
+float makeAnimStep(float x, float stepIndex, float delay) {
+    return makeAnimStep(x, stepIndex) - delay;
+}
+
+float makeAnimStepNomod(float x, float stepIndex) {
+    x -= 1. / MODEL_STEPS * stepIndex;
+    //x = mod(x, 1.);
+    x *= MODEL_STEPS * stepSpeed;
+    return x;
+}
+
+float makeAnimStepNomod(float x, float stepIndex, float delay) {
+    return makeAnimStepNomod(x, stepIndex) - delay;
 }
 
 float moveAnim(float x) {
@@ -351,6 +369,7 @@ float moveAnim(float x) {
     blend = squarestep(blend, 1.5);
     return blend;
 }
+
 
 float scaleAnim(float x) {
     x /= stepSpeed;
@@ -374,10 +393,10 @@ float wobbleScaleAnim(float x) {
 float modelScale;
 
 
-Model makeModel(vec3 p, float localTime, float scale) {
+Model makeModel(vec3 p, float x, float scale) {
     float d, part;
     
-    float x = makeAnim(localTime);
+    
     float move = moveAnim(x) * stepMove;
     float sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
     float size = ballSize * sizeScale;
@@ -467,21 +486,14 @@ float hash( const in vec3 p ) {
 }
 
 
-float timeForStep(float stepIndex, float delay) {
-    //delay = 0.;
-    return time - stepDuration * stepIndex - delay;
-}
-
 Model subDModel(vec3 p) {
 
     float stepIndex = -initialStep;
     float scale = 1.;
-    float localTime = time;
     
     vec3 iv;
     float delay = 0.;
-    float stepTime;
-    
+
     float innerBounds = 1e12;
     float bounds = 1e12;
     bool hasBounds = false;
@@ -497,11 +509,13 @@ Model subDModel(vec3 p) {
 
     //css /= midSizeScale;
 
+    float stepX;
+
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
 
-        stepTime = timeForStep(i, delay); 
+        stepX = makeAnimStepNomod(t, i, delay);
 
-        if (stepTime > 0. && ! hasBounds) {
+        if (stepX > 0. && ! hasBounds) {
             stepIndex = i;
             prevStepIndex = stepIndex - 1.;
 
@@ -515,12 +529,10 @@ Model subDModel(vec3 p) {
             scale = pow(midSizeScale, prevStepIndex);
             p /= scale;
 
-            stepTime = timeForStep(prevStepIndex, delay);
-            x = makeAnim(stepTime);
+            x = makeAnimStepNomod(t, prevStepIndex, delay);
             move = moveAnim(x) * stepMove;
 
-            css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(makeAnim(stepTime)));
-            //css = pow(midSizeScale, prevStepIndex) * midSizeScale;
+            css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
             
 
             #ifdef USE_BOUNDS
@@ -548,7 +560,7 @@ Model subDModel(vec3 p) {
             
             if (innerBounds > 0.) {
                 iv = icosahedronVertex(pp);
-                delay += hash(iv) * 1.;
+                delay += hash(iv) * .2;
             }
         }
     }
@@ -566,13 +578,8 @@ Model subDModel(vec3 p) {
         }
     #endif
 
-    stepTime = timeForStep(stepIndex, delay);
-    scale = pow(mix(1., stepScale, scaleAnim(stepSpeed)), stepIndex);
-    // scale *= mix(1., stepScale, scaleAnim(stepTime));
-    //scale = 1.;
-    //stepTime = 0.;
-    
-    Model model = makeModel(p, stepTime, css);
+    float mx = makeAnimStepNomod(t, stepIndex, delay);
+    Model model = makeModel(p, mx, css);
     
     innerBounds -= threshold;
 
@@ -630,13 +637,8 @@ float animModelScale(float x) {
 }
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
-    float x = time / loopDuration;
+    float x = t;
 
-    float apex = .6;
-    float blend = smoothstep(0., apex, x) - (smoothstep(apex, 1., x));
-    blend = sinstep(blend);
-
-    //camDist = mix(1.5, 1.7, blend) / stepScale;
     camDist = 2. / stepScale;
 
     modelScale = animModelScale(x);
@@ -832,9 +834,23 @@ void renderPaths(out vec4 fragColor, in vec2 fragCoord) {
     //x = mod(x - .5, 1.);
     vec3 color = vec3(0);
     
-    color += plot(p, animCamRotate(x)) * vec3(0,1,0);
-    color += plot(p, animModelScale(x) / animModelScale(1.)) * vec3(1,0,0);
+    color += plot(p, animCamRotate(x)) * vec3(0,0,1);
+    color += plot(p, animModelScale(x) / animModelScale(1.)) * vec3(0,1,0);
     
+    float stepX;
+
+    stepX = makeAnimStep(x, 0.);
+    color += plot(p, wobbleScaleAnim(stepX)) * vec3(1,0,0);
+
+    stepX = makeAnimStep(x, 1.);
+    color += plot(p, wobbleScaleAnim(stepX)) * vec3(1,.25,.25);
+
+    stepX = makeAnimStep(x, 2.);
+    color += plot(p, wobbleScaleAnim(stepX)) * vec3(1,.5,.5);
+
+    //color += plot(p, wobbleScaleAnim(stepX)) * vec3(0,1,0);
+    
+
     fragColor = vec4(color, 1);
 }
 
@@ -860,6 +876,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // time /=2.;
     //time += .1;
     time = mod(time, loopDuration);
+    t = time/loopDuration;
     //time = loopDuration;
     //time= 0.;
     //time /= 2.;
