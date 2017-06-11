@@ -319,7 +319,7 @@ float ballSize = 1.5;
 float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
-// #define SHOW_PATHS
+#define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -629,11 +629,8 @@ float animCamRotate(float x) {
 }
 
 float animModelScale(float x) {
-    float scale = makeModelScale(x);
     float o = .55;
-    float sb = squarestep(o, 2. - o, x, 5.) * 2.;
-    scale = mix(1., scale, sb);    
-    return scale;
+    return squarestep(o, 2. - o, x, 5.) * 2.;
 }
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
@@ -641,7 +638,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 
     camDist = 2. / stepScale;
 
-    modelScale = animModelScale(x);
+    modelScale = mix(1., makeModelScale(x), animModelScale(x));
 
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
@@ -820,38 +817,54 @@ vec3 linearToScreen(vec3 linearRGB) {
 }
 
 
-float plot(vec2 p, float y){
-    float thick = .01;
+float plot(float height, vec2 p, float y){
+    float thick = .005;
+    y *= height;
     return (
         smoothstep( y - thick, y, p.y) - 
         smoothstep( y, y + thick, p.y)
     );
 }
 
-void renderPaths(out vec4 fragColor, in vec2 fragCoord) {
+vec3 hlCol(vec3 color, float highlight) {
+    return mix(color, vec3(1), highlight);
+}
+
+float plotFade(float x) {
+    return smoothstep(1., .5, x);
+}
+
+void renderPaths(inout vec3 color, vec2 fragCoord) {
     vec2 p = fragCoord.xy / iResolution.xy;
+    p.y -= .02;
+    float height = 1./4.;
+
+    if (p.y > height + .02) {
+        return;
+    }
+
     float x = p.x;
-    //x = mod(x - .5, 1.);
-    vec3 color = vec3(0);
+    // x = mod(x - .5, 1.);
+    color = vec3(0);
+
+
+    float hp = t - x;
+    float hl = smoothstep(.1, .0, hp) - smoothstep(.0, -.01, hp);
     
-    color += plot(p, animCamRotate(x)) * vec3(0,0,1);
-    color += plot(p, animModelScale(x) / animModelScale(1.)) * vec3(0,1,0);
+    color += plot(height, p, animCamRotate(x)) * hlCol(vec3(0,0,1), hl);
+    color += plot(height, p, animModelScale(x) / animModelScale(1.)) * hlCol(vec3(0,1,0), hl);
     
     float stepX;
 
     stepX = makeAnimStep(x, 0.);
-    color += plot(p, wobbleScaleAnim(stepX)) * vec3(1,0,0);
+    color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
 
     stepX = makeAnimStep(x, 1.);
-    color += plot(p, wobbleScaleAnim(stepX)) * vec3(1,.25,.25);
+    color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,.25,.25), hl) * plotFade(stepX);
 
     stepX = makeAnimStep(x, 2.);
-    color += plot(p, wobbleScaleAnim(stepX)) * vec3(1,.5,.5);
+    color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,.5,.5), hl) * plotFade(stepX);
 
-    //color += plot(p, wobbleScaleAnim(stepX)) * vec3(0,1,0);
-    
-
-    fragColor = vec4(color, 1);
 }
 
 
@@ -860,11 +873,6 @@ void renderPaths(out vec4 fragColor, in vec2 fragCoord) {
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     init();
-
-    #ifdef SHOW_PATHS
-        renderPaths(fragColor, fragCoord);
-        return;
-    #endif
     
     loopDuration = (MODEL_STEPS + .0) * stepDuration;
     
@@ -917,6 +925,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #ifndef DEBUG
        color = linearToScreen(color);
     #endif
+
+    #ifdef SHOW_PATHS
+        renderPaths(color, fragCoord);
+    #endif
+
    // color = linearToScreen(color);
    
     fragColor = vec4(color,1.0);
