@@ -299,6 +299,13 @@ float squarestep(float x, float e) {
     return squarestep(0., 1., x, e);
 }
 
+float squarestepIn(float start, float end, float x, float e) {
+    float len = end -start;
+    x = (x - start) * (1./len);
+    x = clamp(x, 0., 1.);
+    return squareIn(x, e);
+}
+
 float hardstep(float a, float b, float t) {
     float s = 1. / (b - a);
     return clamp((t - a) * s, 0., 1.);
@@ -319,7 +326,7 @@ float ballSize = 1.5;
 float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
-#define SHOW_PATHS
+// #define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -399,7 +406,9 @@ Model makeModel(vec3 p, float x, float scale) {
     
     float move = moveAnim(x) * stepMove;
     float sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
+    float sizeScaleCore = mix(1., stepScale, scaleAnim(x));
     float size = ballSize * sizeScale;
+    float sizeCore = ballSize * sizeScaleCore;
 
     float bounds = (length(p / scale) - move - size - .3) * scale;
 
@@ -428,7 +437,7 @@ Model makeModel(vec3 p, float x, float scale) {
 
     vec3 vA = vec3(0);
 
-    part = length(p - vA) - size;
+    part = length(p - vA) - sizeCore;
     d = part;
 
     // Setup ball
@@ -532,14 +541,31 @@ Model subDModel(vec3 p) {
             x = makeAnimStepNomod(t, prevStepIndex, delay);
             move = moveAnim(x) * stepMove;
 
-            css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
+            css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, scaleAnim(x));
             
+
+            vec3 pp = p;
+
+            innerBounds = (length(p) - move * .55) * scale;
+            if (innerBounds > 0.) {
+                fold(p);
+                p -= triV.a * move;
+                css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
+            }
+            p *= scale;
+            
+            if (innerBounds > 0.) {
+                iv = icosahedronVertex(pp);
+                delay += hash(iv) * .2;
+            }
+
+
 
             #ifdef USE_BOUNDS
                 sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
                 size = ballSize * sizeScale;
 
-                boundsCandidate = length(p) - move - size - threshold;
+                boundsCandidate = length(pp) - move - size - threshold;
                 boundsCandidate *= scale;
                 boundsCandidate -= .1;    
                 
@@ -548,20 +574,6 @@ Model subDModel(vec3 p) {
                     hasBounds = true;
                 }
             #endif            
-
-            vec3 pp = p;
-
-            innerBounds = (length(p) - move * .55) * scale;
-            if (innerBounds > 0.) {
-               fold(p);
-               p -= triV.a * move;
-            }
-            p *= scale;
-            
-            if (innerBounds > 0.) {
-                iv = icosahedronVertex(pp);
-                delay += hash(iv) * .2;
-            }
         }
     }
 
@@ -622,15 +634,14 @@ float newBlend(float x) {
 }
 
 float animCamRotate(float x) {
-    x = mod(x + .5, 1.);
+    x = mod(x + .475, 1.);
     float rotBlend = newBlend(x);
     rotBlend = mix(x, rotBlend, .95);
     return rotBlend;
 }
 
 float animModelScale(float x) {
-    float o = .55;
-    return squarestep(o, 2. - o, x, 5.) * 2.;
+    return squarestepIn(.65, 1., x, 5.);
 }
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
@@ -838,33 +849,43 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
     vec2 p = fragCoord.xy / iResolution.xy;
     p.y -= .02;
     float height = 1./4.;
+    float focus = .5;
 
     if (p.y > height + .02) {
         return;
     }
 
     float x = p.x;
+
     // x = mod(x - .5, 1.);
     color = vec3(0);
 
+    x *= focus;
+    x += t;
+    x -= .5 * focus;
 
     float hp = t - x;
-    float hl = smoothstep(.1, .0, hp) - smoothstep(.0, -.01, hp);
+    float hl = smoothstep(.1, .0, hp) - smoothstep(.0, -.005, hp);
+
     
     color += plot(height, p, animCamRotate(x)) * hlCol(vec3(0,0,1), hl);
-    color += plot(height, p, animModelScale(x) / animModelScale(1.)) * hlCol(vec3(0,1,0), hl);
+    color += plot(height, p, animCamRotate(x)) * hlCol(vec3(0,0,1), hl);
+    color += plot(height, p, animModelScale(x)) * hlCol(vec3(0,1,0), hl);
     
     float stepX;
 
     stepX = makeAnimStep(x, 0.);
     color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
-
+    color += plot(height, p, moveAnim(stepX)) * hlCol(vec3(1,0,1), hl) * plotFade(stepX);
+    
     stepX = makeAnimStep(x, 1.);
-    color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,.25,.25), hl) * plotFade(stepX);
-
+    color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
+    color += plot(height, p, moveAnim(stepX)) * hlCol(vec3(1,0,1), hl) * plotFade(stepX);
+    
     stepX = makeAnimStep(x, 2.);
-    color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,.5,.5), hl) * plotFade(stepX);
-
+    color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
+    color += plot(height, p, moveAnim(stepX)) * hlCol(vec3(1,0,1), hl) * plotFade(stepX);
+    
 }
 
 
