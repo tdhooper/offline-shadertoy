@@ -306,6 +306,14 @@ float squarestepIn(float start, float end, float x, float e) {
     return squareIn(x, e);
 }
 
+
+float squarestepOut(float start, float end, float x, float e) {
+    float len = end -start;
+    x = (x - start) * (1./len);
+    x = clamp(x, 0., 1.);
+    return squareOut(x, e);
+}
+
 float hardstep(float a, float b, float t) {
     float s = 1. / (b - a);
     return clamp((t - a) * s, 0., 1.);
@@ -326,7 +334,7 @@ float ballSize = 1.5;
 float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
-// #define SHOW_PATHS
+#define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -395,6 +403,36 @@ float wobbleScaleAnim(float x) {
     x /= stepSpeed;
     blend -= wobble(hardstep(.75, 1.8, x)) * .05;
     return blend;
+}
+
+float newBlendA(float x) {
+    float blend;
+    blend = sinstep(x / 2. + .5) * 2. - 1.;
+    blend = squarestep(blend, 3.);
+    return blend;
+}
+
+float newBlend(float x) {
+    float m = 0.84;
+    float o = newBlendA(m);
+    return newBlendA(mod(x + m, 1.)) - o + max(sign(x + m - 1.), 0.);
+}
+
+float animCamRotate(float x) {
+    x = mod(x + .0666, 1.);
+    float r = squarestepOut(.0, 3., x, 20.);
+    r += squarestepIn(.3, 1., x, 15.) * .2;
+    return r;
+    return 0.;
+    return squarestep(0., 1., mod(x + .7, 1.), 10.);
+    x = mod(x + .475, 1.);
+    float rotBlend = newBlend(x);
+    rotBlend = mix(x, rotBlend, .95);
+    return rotBlend;
+}
+
+float animModelScale(float x) {
+    return squarestepIn(.5, .9666, x, 15.);
 }
 
 float modelScale;
@@ -620,29 +658,7 @@ float camDist;
 vec3 camTar;
 
 
-float newBlendA(float x) {
-    float blend;
-    blend = sinstep(x / 2. + .5) * 2. - 1.;
-    blend = squarestep(blend, 3.);
-    return blend;
-}
 
-float newBlend(float x) {
-    float m = 0.84;
-    float o = newBlendA(m);
-    return newBlendA(mod(x + m, 1.)) - o + max(sign(x + m - 1.), 0.);
-}
-
-float animCamRotate(float x) {
-    x = mod(x + .475, 1.);
-    float rotBlend = newBlend(x);
-    rotBlend = mix(x, rotBlend, .95);
-    return rotBlend;
-}
-
-float animModelScale(float x) {
-    return squarestepIn(.65, 1., x, 5.);
-}
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = t;
@@ -849,7 +865,7 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
     vec2 p = fragCoord.xy / iResolution.xy;
     p.y -= .02;
     float height = 1./4.;
-    float focus = .5;
+    float focus = .25;
 
     if (p.y > height + .02) {
         return;
