@@ -334,7 +334,7 @@ float ballSize = 1.5;
 float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
-#define SHOW_PATHS
+// #define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -419,8 +419,16 @@ float newBlend(float x) {
 }
 
 float animCamRotate(float x) {
-    x = mod(x + .0666, 1.);
-    float r = squarestepOut(.0, 3., x, 20.);
+    float r;
+    // return 0.;
+    // return x;
+    x = mod(x +.7, 1.);
+    r = squarestep(0., 1., x, 3.);
+    r = mix(r, x, .3);
+    return r;
+
+    x = mod(x +.25, 1.);
+    r = squarestepOut(.0, 3., x, 20.);
     r += squarestepIn(.3, 1., x, 15.) * .2;
     return r;
     return 0.;
@@ -432,6 +440,11 @@ float animCamRotate(float x) {
 }
 
 float animModelScale(float x) {
+    // return 1.;
+    // x = mod(x + .5, 1.);
+    // return x;
+    return squarestepIn(.4, .9666, x, 2.);
+    return squarestep(.6, 1., x, 2.);
     return squarestepIn(.5, .9666, x, 15.);
 }
 
@@ -663,7 +676,8 @@ vec3 camTar;
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = t;
 
-    camDist = 2. / stepScale;
+    camDist = 3. / stepScale;
+    camDist = 8.;
 
     modelScale = mix(1., makeModelScale(x), animModelScale(x));
 
@@ -789,10 +803,10 @@ void shadeSurface(inout Hit hit){
     
     //*
     diffuse = vec3(.3) * vec3(.9, .3, .8);
-    vec3 highlight = vec3(.9) * vec3(.8,.5,1.2);
+    vec3 highlight = vec3(1.2) * vec3(.8,.5,1.2);
     float glow = 1. - dot(normalize(camPos), hit.normal);
     glow = squarestep(glow, 2.);
-    diffuse = mix(diffuse, highlight, glow);
+    diffuse = mix(diffuse, highlight, glow) * 1.6;
     diffuse = mix(diffuse, background, fog);
     //*/  
     
@@ -876,16 +890,15 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
     // x = mod(x - .5, 1.);
     color = vec3(0);
 
-    x *= focus;
-    x += t;
-    x -= .5 * focus;
+    // x *= focus;
+    // x += t;
+    // x -= .5 * focus;
 
     float hp = t - x;
     float hl = smoothstep(.1, .0, hp) - smoothstep(.0, -.005, hp);
 
     
-    color += plot(height, p, animCamRotate(x)) * hlCol(vec3(0,0,1), hl);
-    color += plot(height, p, animCamRotate(x)) * hlCol(vec3(0,0,1), hl);
+    color += plot(height, p, animCamRotate(x)) * hlCol(vec3(0,1,1), hl);
     color += plot(height, p, animModelScale(x)) * hlCol(vec3(0,1,0), hl);
     
     float stepX;
@@ -918,6 +931,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
 
     time = iGlobalTime;
+    time *= 1.5;
     // time /=2.;
     //time += .1;
     time = mod(time, loopDuration);
