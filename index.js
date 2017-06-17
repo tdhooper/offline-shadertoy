@@ -8,10 +8,23 @@ var FileSaver = require('file-saver');
 var pad = require('pad-number');
 
 var pixelRatio = window.devicePixelRatio;
-pixelRatio = .25;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
+
+var controls = document.createElement('div');
+controls.classList.add('controls');
+document.body.appendChild(controls);
+
+var scrubber = document.createElement('input');
+scrubber.classList.add('scrubber');
+scrubber.setAttribute('type', 'range');
+scrubber.min = 0;
+scrubber.max = 1000 * 3; // milliseconds
+scrubber.step = .0001;
+controls.appendChild(scrubber);
+
 
 function setDimensions() {
     canvas.width = canvas.offsetWidth * pixelRatio;
@@ -77,7 +90,6 @@ const drawTriangle = regl({
     count: 3
 });
 
-
 var timer = new Timer();
 var mouse = [0,0,0,0];
 
@@ -102,6 +114,7 @@ function restoreState() {
 
 function render(offset, resolution) {
     var time = timer.elapsed();
+    scrubber.value = time;
     saveState();
     drawTriangle({
         time: time / 1000,
@@ -161,6 +174,20 @@ mouseChange(canvas, function(buttons, x, y, mods) {
         }
     }
 });
+
+function scrub(evt) {
+    pause();
+    stepTo(parseFloat(this.value));
+};
+
+scrubber.addEventListener('change', scrub);
+scrubber.addEventListener('mousedown', function() {
+    this.addEventListener('mousemove', scrub);
+});
+scrubber.addEventListener('mouseup', function() {
+    this.removeEventListener('mousemove', scrub);
+});
+
 
 restoreState();
 
