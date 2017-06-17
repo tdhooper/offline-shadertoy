@@ -575,7 +575,7 @@ Model subDModel(vec3 p) {
 
         stepX = makeAnimStepNomod(t, i, delay);
 
-        if (stepX > 0. && ! hasBounds) {
+        if (stepX >= 0. && ! hasBounds) {
             stepIndex = i;
             prevStepIndex = stepIndex - 1.;
 
