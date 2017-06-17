@@ -520,10 +520,10 @@ Model makeModel(vec3 p, float x, float scale) {
 
 float makeModelScale(float x) {
     float scale = 1.;
-    float xLocal;
-    for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
-        xLocal = makeAnimX(x - i);
-        scale *= mix(1., stepScale, scaleAnim(x));
+    float stepX;
+    for (float i = 0.; i < MODEL_STEPS; i++) {
+        stepX = makeAnimStepNomod(t, i);
+        scale *= mix(1., stepScale, scaleAnim(stepX));
     }
     return 1. / scale;
 }
