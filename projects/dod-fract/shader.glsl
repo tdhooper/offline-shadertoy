@@ -319,12 +319,13 @@ float hardstep(float a, float b, float t) {
     return clamp((t - a) * s, 0., 1.);
 }
 
-float wobble(float x) {
-    float freq = 5.;
-    float w = sin(x * PI * 2. * freq - PI * .5) * .5 + .5;
-    w *= sin(x * PI + PI * .5) * .5 + .5;
-    return w;
+float kink(float x, vec2 p, float e1, float e2) {
+    float a = (1. - pow(1. - x / p.x, e1)) * p.y;
+    float b = pow((x - p.x) / (1. - p.x), e2) * (1. - p.y) + p.y;
+    return mix(a, b, step(p.x, x));
 }
+
+
 
 float stepScale = .275;
 float stepMove = 2.;
@@ -338,7 +339,7 @@ float stepSpeed = .5;
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
-    const float MODEL_STEPS = 1.;
+    const float MODEL_STEPS = 2.;
 #else
     const float initialStep = 1.;
     const float MODEL_STEPS = 3.;
@@ -348,32 +349,35 @@ float stepSpeed = .5;
 #define USE_BOUNDS;
 
 
-float makeAnimX(float x) {
-    float blend = x * stepSpeed;
-    //blend = clamp(blend, 0., 1.);
-    return blend;
+float tweakAnim(float x) {
+    return mix(x, kink(x, vec2(.8), 2., .5), .5);
 }
 
-float makeAnimStep(float x, float stepIndex) {
+float makeAnimStep(float t, float stepIndex) {
+    float x = t;
     x -= 1. / MODEL_STEPS * stepIndex;
     x = mod(x, 1.);
-    x *= MODEL_STEPS * stepSpeed;
+    x *= MODEL_STEPS;
+    x = tweakAnim(x);
+    x *= stepSpeed;
     return x;
 }
 
-float makeAnimStep(float x, float stepIndex, float delay) {
-    return makeAnimStep(x, stepIndex) - delay;
+float makeAnimStep(float t, float stepIndex, float delay) {
+    return makeAnimStep(t - delay, stepIndex);
 }
 
-float makeAnimStepNomod(float x, float stepIndex) {
+float makeAnimStepNomod(float t, float stepIndex) {
+    float x = t;
     x -= 1. / MODEL_STEPS * stepIndex;
-    //x = mod(x, 1.);
-    x *= MODEL_STEPS * stepSpeed;
+    x *= MODEL_STEPS;
+    x = tweakAnim(x);
+    x *= stepSpeed;
     return x;
 }
 
-float makeAnimStepNomod(float x, float stepIndex, float delay) {
-    return makeAnimStepNomod(x, stepIndex) - delay;
+float makeAnimStepNomod(float t, float stepIndex, float delay) {
+    return makeAnimStepNomod(t - delay, stepIndex);
 }
 
 float moveAnim(float x) {
@@ -391,17 +395,27 @@ float scaleAnim(float x) {
     float a = 1.;
     float h = 1.;
     float blend = x;
-    blend = hardstep(0., .8, x);
+    blend = hardstep(0., .85, x);
     blend = squarestep(-a, a, blend, 1.2) * h * 2. - h;
     blend = squarestep(blend, 1.2);
     return blend;
 }
 
+float wobble(float x) {
+    // float freq = 5.;
+    float freq = mix(3.5, 2., x);
+    freq = 3.5;
+    // freq = 10.;
+    float w = sin(x * PI * 2. * freq - PI * .5) * .5 + .5;
+    // w *= 1. - x;
+    w *= sin(x * PI + PI * .5) * .5 + .5;
+    return w;
+}
 
 float wobbleScaleAnim(float x) {
     float blend = scaleAnim(x);
     x /= stepSpeed;
-    blend -= wobble(hardstep(.75, 1.8, x)) * .05;
+    blend -= wobble(hardstep(.81, 2.2, x)) * .1;
     return blend;
 }
 
@@ -480,9 +494,11 @@ Model makeModel(vec3 p, float x, float scale) {
 
     // Setup smoothing
 
-    float rBlend = hardstep(.1, .4, x) - hardstep(.4, .45, x);
+    float rBlend = hardstep(.1, .4, x);
+    //rBlend -= hardstep(.4, .5, x);
     rBlend = smoothstep(0., 1., rBlend);
     float r = mix(0., .4, rBlend);
+    // r = 0.;
 
     // Center ball
 
@@ -498,9 +514,9 @@ Model makeModel(vec3 p, float x, float scale) {
     // Setup bridge
 
     float cr = 0.04;
-    float sep = hardstep(.4, .85, x);
-    sep = squareOut(sep, 20.);
-    sep *= .8;
+    float rSep = hardstep(.4, .5, x);
+    // sep = squareStep(sep, 20.);
+    float sep = mix(0., 1., rSep);
 
     // Ball and bridge
 
@@ -932,6 +948,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     time = iGlobalTime;
     time *= 1.5;
+    // time *= 2.;
     // time /=2.;
     //time += .1;
     time = mod(time, loopDuration);
