@@ -299,6 +299,12 @@ float squarestep(float x, float e) {
     return squarestep(0., 1., x, e);
 }
 
+float squaresteploop(float x, float e) {
+    float o = floor(x / 1.);
+    x -= o;
+    return squarestep(0., 1., x, e) + o;
+}
+
 float squarestepIn(float start, float end, float x, float e) {
     float len = end -start;
     x = (x - start) * (1./len);
@@ -335,7 +341,7 @@ float ballSize = 1.5;
 float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
-//#define SHOW_PATHS
+// #define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -462,6 +468,14 @@ float animModelScale(float x) {
     return squarestepIn(.5, .9666, x, 15.);
 }
 
+
+float animTime(float x) {
+    float o = -.8;
+    float e = 2.;
+    float n = squaresteploop(x + o, e) - squaresteploop(o, e);
+    return mix(x, n, .5);
+}
+
 float modelScale;
 
 
@@ -504,7 +518,7 @@ Model makeModel(vec3 p, float x, float scale) {
 
     vec3 vA = vec3(0);
 
-    part = length(p - vA) - sizeCore;
+    part = length(p - vA) - size;
     d = part;
 
     // Setup ball
@@ -608,7 +622,7 @@ Model subDModel(vec3 p) {
             x = makeAnimStepNomod(t, prevStepIndex, delay);
             move = moveAnim(x) * stepMove;
 
-            css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, scaleAnim(x));
+            // css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, scaleAnim(x));
             
 
             vec3 pp = p;
@@ -617,8 +631,8 @@ Model subDModel(vec3 p) {
             if (innerBounds > 0.) {
                 fold(p);
                 p -= triV.a * move;
-                css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
             }
+            css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
             p *= scale;
             
             if (innerBounds > 0.) {
@@ -939,9 +953,11 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
  
     color = vec3(0);
 
-    color += plot(height, p, makeAnimStepNomod(x, 0., 0.)) * vec3(1);
-    color += plot(height, p, makeAnimStepNomod(x, 1., 0.)) * vec3(1);
-    color += plot(height, p, makeAnimStepNomod(x, 2., 0.)) * vec3(1);
+    // color += plot(height, p, makeAnimStepNomod(x, 0., 0.)) * vec3(1);
+    // color += plot(height, p, makeAnimStepNomod(x, 1., 0.)) * vec3(1);
+    // color += plot(height, p, makeAnimStepNomod(x, 2., 0.)) * vec3(1);
+
+    color += plot(height, p, animTime(x)) * vec3(1);
 
     vec2 d = abs(p * 2. - 1.) - 1.;
     float e = min(max(d.x,d.y), 0.) + length(max(d, 0.));
@@ -974,6 +990,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //time= 0.;
     //time /= 2.;
     //time = mod(time, 1.);
+
+    t = animTime(t);
 
 
     mousee = iMouse.xy;
