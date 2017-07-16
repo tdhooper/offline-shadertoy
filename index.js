@@ -8,7 +8,7 @@ var FileSaver = require('file-saver');
 var pad = require('pad-number');
 
 var pixelRatio = window.devicePixelRatio;
-pixelRatio = 1.;
+pixelRatio = .25;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);

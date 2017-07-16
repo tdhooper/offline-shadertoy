@@ -468,12 +468,43 @@ float animModelScale(float x) {
     return squarestepIn(.5, .9666, x, 15.);
 }
 
+float circlestep(float r, float x) {
+    float y = sqrt(r * r - (x - r) * (x - r)) + (1.-r);
+    if (step(r, x)> 0.) {
+        return 1.;
+    }
+    //y = mix(y, 1., step(r, x));
+    return y;
+}
+
+float circleEaseIn(float radius, float slope, float x) {
+    float iSlope = 1. - slope;
+    float scale = radius / length(vec2(iSlope, 1.));
+    float u = (iSlope * -scale + radius) * iSlope + slope;
+    float line = (x - slope) / iSlope;
+    float uu = u - scale;
+    float circle = -sqrt(radius * radius - (x - uu) * (x - uu)) + radius;
+    float ramp = mix(0., circle, step(uu, x));
+    return mix(max(ramp, 0.), line, step(u, x));
+}
 
 float animTime(float x) {
-    float o = -.8;
+    float o = .4;
+    
+    float radius = .5;
+    float slope = .2;
+
+    x -= o * (1. - slope);
+    float yy = circleEaseIn(radius, slope, 1. - x * 2.) * -.5 + .5;
+    yy += circleEaseIn(radius, slope, x * 2. - 1.) * .5;
+    yy += o;
+
+    return yy;
+
+    o = -.8;
     float e = 2.;
     float n = squaresteploop(x + o, e) - squaresteploop(o, e);
-    return mix(x, n, .5);
+    return mix(x, n, 1.);
 }
 
 float modelScale;
