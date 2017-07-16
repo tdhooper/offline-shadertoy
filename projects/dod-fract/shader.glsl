@@ -353,6 +353,7 @@ float stepSpeed = .5;
 
 //#define SHOW_BOUNDS;
 #define USE_BOUNDS;
+#define BOUNCE_INNER;
 
 
 float tweakAnim(float x) {
@@ -489,20 +490,30 @@ float circleEaseIn(float radius, float slope, float x) {
 }
 
 float animTime(float x) {
-    float o = .4;
-    
-    float radius = .5;
+    float o = .38;
+
+    float radius = .0;
     float slope = .2;
+
+    // return mix(kink(x, vec2(.93), 2.5, 1./1.), x, .5);
+
+    // return circleEaseIn(radius, slope, x);
+
+    float xo = x;
 
     x -= o * (1. - slope);
     float yy = circleEaseIn(radius, slope, 1. - x * 2.) * -.5 + .5;
+    radius = .25;
     yy += circleEaseIn(radius, slope, x * 2. - 1.) * .5;
     yy += o;
 
-    return yy;
+    yy= mix(yy, xo, .2);
 
+    return yy;
+    x = xo;
     o = -.8;
-    float e = 2.;
+    float e = 10.;
+    return mix(1.-pow(1.-x, e), x, .2);
     float n = squaresteploop(x + o, e) - squaresteploop(o, e);
     return mix(x, n, 1.);
 }
@@ -549,7 +560,11 @@ Model makeModel(vec3 p, float x, float scale) {
 
     vec3 vA = vec3(0);
 
-    part = length(p - vA) - size;
+    #ifdef BOUNCE_INNER
+        part = length(p - vA) - size;
+    #else
+        part = length(p - vA) - sizeCore;
+    #endif
     d = part;
 
     // Setup ball
@@ -653,8 +668,11 @@ Model subDModel(vec3 p) {
             x = makeAnimStepNomod(t, prevStepIndex, delay);
             move = moveAnim(x) * stepMove;
 
-            // css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, scaleAnim(x));
-            
+            #ifdef BOUNCE_INNER
+                css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
+            #else
+                css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, scaleAnim(x));
+            #endif
 
             vec3 pp = p;
 
@@ -662,8 +680,10 @@ Model subDModel(vec3 p) {
             if (innerBounds > 0.) {
                 fold(p);
                 p -= triV.a * move;
+                #ifndef BOUNCE_INNER
+                    css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
+                #endif
             }
-            css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
             p *= scale;
             
             if (innerBounds > 0.) {
