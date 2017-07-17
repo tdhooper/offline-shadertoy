@@ -225,6 +225,49 @@ vec3 dodecahedronVertex(vec3 p) {
 }
 
 // --------------------------------------------------------
+// Spectrum colour palette
+// IQ https://www.shadertoy.com/view/ll2GD3
+// --------------------------------------------------------
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+vec3 pal1(float n) {
+    return pal(
+        n,
+        vec3(0.640,0.469,0.506),
+        vec3(0.470,0.423,0.257),
+        vec3(0.340,0.136,0.505),
+        vec3(0.114,0.345,0.743)
+    );
+}
+
+vec3 pal2(float n) {
+    return pal(
+        n,
+        vec3(0.840,0.467,0.661),
+        vec3(0.485,0.269,0.199),
+        vec3(0.436,0.530,0.456),
+        vec3(0.114,0.345,0.743)
+    );
+}
+
+vec3 pal4(float n) {
+    return pal(
+        n,
+        vec3(0.001,0.780,0.063),
+        vec3(0.765,0.630,0.736),
+        vec3(0.420,0.416,0.141),
+        vec3(0.560,0.131,0.007)
+    );
+}
+
+// --------------------------------------------------------
 // Modelling
 // --------------------------------------------------------
 
@@ -490,6 +533,7 @@ float circleEaseIn(float radius, float slope, float x) {
 }
 
 float animTime(float x) {
+    return x;
     float o = .38;
 
     float radius = .0;
@@ -860,6 +904,8 @@ void shadeSurface(inout Hit hit){
 
     vec3 background = vec3(.1)* vec3(.5,0,1);
 
+    background = pal1(1.) * .8;
+
     if (hit.isBackground) {
         hit.color = background;
         return;
@@ -889,10 +935,15 @@ void shadeSurface(inout Hit hit){
     #endif
     vec3 highlight = vec3(1.2) * vec3(.8,.5,1.2);
     float glow = 1. - dot(normalize(camPos), hit.normal);
+    glow += .5 * (1.-dot(hit.normal, normalize(hit.pos)));
+    glow *= .5;
     glow = squarestep(glow, 2.);
-    diffuse = mix(diffuse, highlight, glow) * 1.6;
+    diffuse = pal1(clamp(fog*2. - glow * .1 + .2, 0., 1.));
+    diffuse = mix(diffuse, diffuse * 3., glow);
     diffuse = mix(diffuse, background, fog);
+    // diffuse = vec3(glow);
     //*/
+    // diffuse = vec3(length(diffuse * .5));
     
     hit.color = diffuse;
     //hit.color = hit.model.uv;
@@ -1023,7 +1074,7 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     init();
-    
+
     loopDuration = (MODEL_STEPS + .0) * stepDuration;
     
     #ifdef SHOW_ANIMATION
@@ -1041,7 +1092,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //time= 0.;
     //time /= 2.;
     //time = mod(time, 1.);
-
+    // t = 1. - t;
     t = animTime(t);
 
 
@@ -1056,6 +1107,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
+    
 
 //    time = m.x * loopDuration;
 
