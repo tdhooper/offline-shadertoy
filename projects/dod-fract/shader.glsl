@@ -465,7 +465,7 @@ float wobble(float x) {
 float wobbleScaleAnim(float x) {
     float blend = scaleAnim(x);
     x /= stepSpeed;
-    blend -= wobble(hardstep(.81, 2.2, x)) * .1;
+    blend -= wobble(hardstep(.6, 2.2, x)) * .1;
     return blend;
 }
 
@@ -1013,15 +1013,15 @@ float plotFade(float x) {
 void renderPaths(inout vec3 color, vec2 fragCoord) {
     vec2 p = fragCoord.xy / iResolution.xy;
     p.y -= .02;
-    float height = 1./1.;
+    float height = 1./4.;
     float focus = .25;
 
     if (p.y > height + .02) {
         return;
     }
 
-    p *= 2.;
-    p -= .5;
+    // p *= 2.;
+    // p -= .5;
 
     float x = p.x;
 
@@ -1053,18 +1053,18 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
     color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
     color += plot(height, p, moveAnim(stepX)) * hlCol(vec3(1,0,1), hl) * plotFade(stepX);
  
-    color = vec3(0);
+    // color = vec3(0);
 
     // color += plot(height, p, makeAnimStepNomod(x, 0., 0.)) * vec3(1);
     // color += plot(height, p, makeAnimStepNomod(x, 1., 0.)) * vec3(1);
     // color += plot(height, p, makeAnimStepNomod(x, 2., 0.)) * vec3(1);
 
-    color += plot(height, p, animTime(x)) * vec3(1);
+    // color += plot(height, p, animTime(x)) * vec3(1);
 
-    vec2 d = abs(p * 2. - 1.) - 1.;
-    float e = min(max(d.x,d.y), 0.) + length(max(d, 0.));
+    // vec2 d = abs(p * 2. - 1.) - 1.;
+    // float e = min(max(d.x,d.y), 0.) + length(max(d, 0.));
 
-    color += smoothstep(.01, .0, abs(e)) * vec3(0,1,0);
+    // color += smoothstep(.01, .0, abs(e)) * vec3(0,1,0);
 
 }
 
@@ -1078,7 +1078,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     loopDuration = (MODEL_STEPS + .0) * stepDuration;
     
     #ifdef SHOW_ANIMATION
-        loopDuration /= stepSpeed;
+        // loopDuration /= stepSpeed;
     #endif
 
     time = iGlobalTime;
