@@ -34,7 +34,6 @@ vec2 mousee;
 //#define DEBUG
 
 float time;
-float t;
 
 #define PI 3.14159265359
 #define HALF_PI 1.5707963267948966
@@ -655,7 +654,7 @@ float makeModelScale(float x) {
     float scale = 1.;
     float stepX;
     for (float i = 0.; i < MODEL_STEPS; i++) {
-        stepX = makeAnimStepNomod(t, i);
+        stepX = makeAnimStepNomod(time, i);
         scale *= mix(1., stepScale, scaleAnim(stepX));
     }
     return 1. / scale;
@@ -693,7 +692,7 @@ Model subDModel(vec3 p) {
 
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
 
-        stepX = makeAnimStepNomod(t, i, delay);
+        stepX = makeAnimStepNomod(time, i, delay);
 
         if (stepX >= 0. && ! hasBounds) {
             stepIndex = i;
@@ -709,7 +708,7 @@ Model subDModel(vec3 p) {
             scale = pow(midSizeScale, prevStepIndex);
             p /= scale;
 
-            x = makeAnimStepNomod(t, prevStepIndex, delay);
+            x = makeAnimStepNomod(time, prevStepIndex, delay);
             move = moveAnim(x) * stepMove;
 
             #ifdef BOUNCE_INNER
@@ -766,7 +765,7 @@ Model subDModel(vec3 p) {
         }
     #endif
 
-    float mx = makeAnimStepNomod(t, stepIndex, delay);
+    float mx = makeAnimStepNomod(time, stepIndex, delay);
     Model model = makeModel(p, mx, css);
     
     innerBounds -= threshold;
@@ -799,7 +798,7 @@ vec3 camTar;
 
 
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
-    float x = t;
+    float x = time;
 
     camDist = 3. / stepScale;
     camDist = 8.;
@@ -1032,7 +1031,7 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
     // x += t;
     // x -= .5 * focus;
 
-    float hp = t - x;
+    float hp = time - x;
     float hl = smoothstep(.1, .0, hp) - smoothstep(.0, -.005, hp);
 
     
@@ -1087,13 +1086,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // time /=2.;
     //time += .1;
     time = mod(time, loopDuration);
-    t = time/loopDuration;
+    time = time/loopDuration;
     //time = loopDuration;
     //time= 0.;
     //time /= 2.;
     //time = mod(time, 1.);
     // t = 1. - t;
-    t = animTime(t);
+    time = animTime(time);
 
 
     mousee = iMouse.xy;
