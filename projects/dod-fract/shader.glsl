@@ -383,7 +383,7 @@ float ballSize = 1.5;
 float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
-// #define SHOW_PATHS
+#define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -532,11 +532,14 @@ float circleEaseIn(float radius, float slope, float x) {
 }
 
 float animTime(float x) {
-    return x;
-    float o = .38;
+
+    return hardstep(0., .4, x) * .7 + hardstep(.6, 1., x) * .3;
+
+    // return x;
+    float o = .5;
 
     float radius = .0;
-    float slope = .2;
+    float slope = .6;
 
     // return mix(kink(x, vec2(.93), 2.5, 1./1.), x, .5);
 
@@ -546,7 +549,7 @@ float animTime(float x) {
 
     x -= o * (1. - slope);
     float yy = circleEaseIn(radius, slope, 1. - x * 2.) * -.5 + .5;
-    radius = .25;
+    radius = .0;
     yy += circleEaseIn(radius, slope, x * 2. - 1.) * .5;
     yy += o;
 
@@ -687,6 +690,8 @@ Model subDModel(vec3 p) {
     float css = 1.;
 
     //css /= midSizeScale;
+
+    float time = animTime(time);
 
     float stepX;
 
@@ -1038,19 +1043,19 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
     color += plot(height, p, animCamRotate(x)) * hlCol(vec3(0,1,1), hl);
     color += plot(height, p, animModelScale(x)) * hlCol(vec3(0,1,0), hl);
     
-    float stepX;
+    // float stepX;
 
-    stepX = makeAnimStep(x, 0.);
-    color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
-    color += plot(height, p, moveAnim(stepX)) * hlCol(vec3(1,0,1), hl) * plotFade(stepX);
+    // stepX = makeAnimStep(x, 0.);
+    // color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
+    // color += plot(height, p, moveAnim(stepX)) * hlCol(vec3(1,0,1), hl) * plotFade(stepX);
     
-    stepX = makeAnimStep(x, 1.);
-    color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
-    color += plot(height, p, moveAnim(stepX)) * hlCol(vec3(1,0,1), hl) * plotFade(stepX);
+    // stepX = makeAnimStep(x, 1.);
+    // color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
+    // color += plot(height, p, moveAnim(stepX)) * hlCol(vec3(1,0,1), hl) * plotFade(stepX);
     
-    stepX = makeAnimStep(x, 2.);
-    color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
-    color += plot(height, p, moveAnim(stepX)) * hlCol(vec3(1,0,1), hl) * plotFade(stepX);
+    // stepX = makeAnimStep(x, 2.);
+    // color += plot(height, p, wobbleScaleAnim(stepX)) * hlCol(vec3(1,0,0), hl) * plotFade(stepX);
+    // color += plot(height, p, moveAnim(stepX)) * hlCol(vec3(1,0,1), hl) * plotFade(stepX);
  
     // color = vec3(0);
 
@@ -1058,7 +1063,7 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
     // color += plot(height, p, makeAnimStepNomod(x, 1., 0.)) * vec3(1);
     // color += plot(height, p, makeAnimStepNomod(x, 2., 0.)) * vec3(1);
 
-    // color += plot(height, p, animTime(x)) * vec3(1);
+    color += plot(height, p, animTime(x)) * hlCol(vec3(1,0,0), hl);
 
     // vec2 d = abs(p * 2. - 1.) - 1.;
     // float e = min(max(d.x,d.y), 0.) + length(max(d, 0.));
@@ -1074,7 +1079,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     init();
 
-    loopDuration = (MODEL_STEPS + .0) * stepDuration;
+    loopDuration = (MODEL_STEPS + 0.) * stepDuration;
     
     #ifdef SHOW_ANIMATION
         // loopDuration /= stepSpeed;
@@ -1092,7 +1097,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //time /= 2.;
     //time = mod(time, 1.);
     // t = 1. - t;
-    time = animTime(time);
+    // time = animTime(time);
 
 
     mousee = iMouse.xy;
