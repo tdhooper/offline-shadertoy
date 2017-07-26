@@ -286,6 +286,22 @@ Model opU( Model m1, Model m2 ){
     }
 }
 
+
+float gain(float x, float P) {
+    if (x > 0.5)
+        return 1.0 - 0.5*pow(2.0-2.0*x, P);
+    else
+        return 0.5*pow(2.0*x, P);
+}
+
+float gainIn(float x, float P) {
+    return gain(x * .5, P) * 2.;
+}
+
+float gainOut(float x, float P) {
+    return gain(.5 - x * .5, P) * 2.;
+}
+
 float squareSine(float x, float e) {
     x = mod(x, PI * 2.);
     float period = x / mod((PI / 2.), 4.);
@@ -318,6 +334,7 @@ float sineOut(float t) {
 }
 
 float squareOut(float t, float e) {
+  t = clamp(t, 0., 1.);
   return squareSine(t * HALF_PI, e);
 }
 
@@ -347,13 +364,25 @@ float squaresteploop(float x, float e) {
     return squarestep(0., 1., x, e) + o;
 }
 
+float squareOutLoop(float x, float e) {
+    float o = floor(x / 1.);
+    x -= o;
+    return squareOut(x, e) + o;
+}
+
 float squarestepIn(float start, float end, float x, float e) {
     float len = end -start;
     x = (x - start) * (1./len);
-    x = clamp(x, 0., 1.);
+    // x = clamp(x, 0., 1.);
     return squareIn(x, e);
 }
 
+// Like step, but specify the start offset and length,
+// then it will loop around so that output at 0. == output at 1.
+float squarestepOutOffset(float offset, float len, float x, float e) {
+    float a = squareOut((1. - offset) / len, e);
+    return squareOut(mod(x - offset, 1.) / len, e) - a + step(offset, x);
+}
 
 float squarestepOut(float start, float end, float x, float e) {
     float len = end -start;
@@ -429,6 +458,15 @@ float makeAnimStepNomod(float t, float stepIndex, float delay) {
     return makeAnimStepNomod(t - delay, stepIndex);
 }
 
+float makeAnimStepNomodNotweak(float t, float stepIndex) {
+    // return makeAnimStepNomod(t, stepIndex);
+    float x = t;
+    x -= 1. / MODEL_STEPS * stepIndex;
+    x *= MODEL_STEPS;
+    x *= stepSpeed;
+    return x;
+}
+
 float moveAnim(float x) {
     float a = 1.;
     float h = 1.;
@@ -481,34 +519,39 @@ float newBlend(float x) {
     return newBlendA(mod(x + m, 1.)) - o + max(sign(x + m - 1.), 0.);
 }
 
+const float ANIM_CAM_START = .75;
+
+float animCamRotateA(float x) {
+    float y = mix(0., 1. - gainOut(x, 3.), gainIn(x + .9, 20.) * .5);
+    y = mix(x, y, .7);
+    return y;
+}
+
 float animCamRotate(float x) {
+    float o = ANIM_CAM_START - .1;
+    return animCamRotateA(mod(x - o, 1.)) + (1. - animCamRotateA(1. - o)) - step(x, o);    
+
+    return squarestepOutOffset(ANIM_CAM_START, 1., x, 5.);
     float r;
-    // return 0.;
-    // return x;
     x = mod(x +.7, 1.);
     r = squarestep(0., 1., x, 3.);
     r = mix(r, x, .3);
     return r;
+}
 
-    x = mod(x +.25, 1.);
-    r = squarestepOut(.0, 3., x, 20.);
-    r += squarestepIn(.3, 1., x, 15.) * .2;
-    return r;
-    return 0.;
-    return squarestep(0., 1., mod(x + .7, 1.), 10.);
-    x = mod(x + .475, 1.);
-    float rotBlend = newBlend(x);
-    rotBlend = mix(x, rotBlend, .95);
-    return rotBlend;
+float animModelScaleA(float x) {
+    float y = mix(0., gain(x, 5.5), gain(x, 35.));
+    // float r = gain(hardstep(.0, 1., x), 20.);
+    // y = mix(x, r, .5);
+    return y;
 }
 
 float animModelScale(float x) {
-    // return 1.;
-    // x = mod(x + .5, 1.);
-    // return x;
+    float o = ANIM_CAM_START - .5;
+    return animModelScaleA(mod(x - o, 1.)) + (1. - animModelScaleA(1. - o)) - step(x, o);    
+
+    return squarestepOutOffset(ANIM_CAM_START, 1.-ANIM_CAM_START, x, 2.);
     return squarestepIn(.4, .9666, x, 2.);
-    return squarestep(.6, 1., x, 2.);
-    return squarestepIn(.5, .9666, x, 15.);
 }
 
 float circlestep(float r, float x) {
@@ -532,6 +575,7 @@ float circleEaseIn(float radius, float slope, float x) {
 }
 
 float animTime(float x) {
+    return x;
 
     return hardstep(0., .4, x) * .7 + hardstep(.6, 1., x) * .3;
 
@@ -657,7 +701,7 @@ float makeModelScale(float x) {
     float scale = 1.;
     float stepX;
     for (float i = 0.; i < MODEL_STEPS; i++) {
-        stepX = makeAnimStepNomod(time, i);
+        stepX = makeAnimStepNomodNotweak(time, i);
         scale *= mix(1., stepScale, scaleAnim(stepX));
     }
     return 1. / scale;
@@ -809,12 +853,14 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     camDist = 8.;
 
     modelScale = mix(1., makeModelScale(x), animModelScale(x));
+    // modelScale = mix(1., makeModelScale(x), x);
 
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
     camPos = vec3(0,0,camDist);
         
     pR(camPos.xz, animCamRotate(x) * PI * 2.);
+    // pR(camPos.xz, x * PI * 2.);
 
     #ifdef SHOW_ANIMATION
         camDist = 4.5;
