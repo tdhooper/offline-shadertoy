@@ -528,7 +528,9 @@ float animCamRotateA(float x) {
 }
 
 float animCamRotate(float x) {
-    float o = ANIM_CAM_START - .1;
+    // return x;
+    float o = ANIM_CAM_START - .2;
+    o = .7;
     return animCamRotateA(mod(x - o, 1.)) + (1. - animCamRotateA(1. - o)) - step(x, o);    
 
     return squarestepOutOffset(ANIM_CAM_START, 1., x, 5.);
@@ -540,18 +542,32 @@ float animCamRotate(float x) {
 }
 
 float animModelScaleA(float x) {
-    float y = mix(0., gain(x, 5.5), gain(x, 35.));
+    // x -= ANIM_CAM_START;
+    // x = clamp(x, 0., 1.);
+    // x *= 8.;
+    // x = clamp(x, 0., 1.);
+    // float r = 1.;
+    // return 1.-sqrt(pow(r, 2.) - pow(x, 2.));
+    // return gainIn(x, 38.);
+    // return mix(gain(x, 20.), 1., gain(x, 200.));
+    float y = mix(0., gain(x, 5.5), gain(x, 100.));
+    // x -= .38;
+    x = hardstep(.55, 1., x);
+    y = gainIn(x, 5.5);
+    // y = clamp(y * 1.5 - .2, 0., 1.);
+    y = squarestep(y, 1.5);
+
     // float r = gain(hardstep(.0, 1., x), 20.);
     // y = mix(x, r, .5);
     return y;
 }
 
 float animModelScale(float x) {
-    float o = ANIM_CAM_START - .5;
-    return animModelScaleA(mod(x - o, 1.)) + (1. - animModelScaleA(1. - o)) - step(x, o);    
+    return animModelScaleA(x);
+    // return animModelScaleA(mod(x - o, 1.)) + (1. - animModelScaleA(1. - o)) - step(x, o);    
 
-    return squarestepOutOffset(ANIM_CAM_START, 1.-ANIM_CAM_START, x, 2.);
-    return squarestepIn(.4, .9666, x, 2.);
+    // return squarestepOutOffset(ANIM_CAM_START, 1.-ANIM_CAM_START, x, 2.);
+    // return squarestepIn(.4, .9666, x, 2.);
 }
 
 float circlestep(float r, float x) {
