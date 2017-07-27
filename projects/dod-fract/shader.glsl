@@ -412,7 +412,7 @@ float ballSize = 1.5;
 float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
-#define SHOW_PATHS
+// #define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -592,8 +592,8 @@ float circleEaseIn(float radius, float slope, float x) {
 
 float animTime(float x) {
     return x;
-
-    return hardstep(0., .4, x) * .7 + hardstep(.6, 1., x) * .3;
+    vec2 p = vec2(.6, .8);
+    return hardstep(0., p.x, x) * p.y + hardstep(p.x, 1., x) * (1. - p.y);
 
     // return x;
     float o = .5;
@@ -751,7 +751,7 @@ Model subDModel(vec3 p) {
 
     //css /= midSizeScale;
 
-    float time = animTime(time);
+    // float time = animTime(time);
 
     float stepX;
 
@@ -796,7 +796,7 @@ Model subDModel(vec3 p) {
             
             if (innerBounds > 0.) {
                 iv = icosahedronVertex(pp);
-                delay += hash(iv) * .2;
+                delay += hash(iv) * .8;
             }
 
 
@@ -1159,7 +1159,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //time /= 2.;
     //time = mod(time, 1.);
     // t = 1. - t;
-    // time = animTime(time);
+    time = animTime(time);
 
 
     mousee = iMouse.xy;
