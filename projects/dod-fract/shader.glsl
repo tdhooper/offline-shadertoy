@@ -538,7 +538,7 @@ float animCamRotateA(float x) {
 }
 
 float animCamRotate(float x) {
-    return 0.15;
+    // return 0.15;
     return x;
     float o = ANIM_CAM_START - .2;
     o = .5;
@@ -613,8 +613,16 @@ float circleEaseIn(float radius, float slope, float x) {
     return mix(max(ramp, 0.), line, step(u, x));
 }
 
+float animTimeA(float x) {
+    return gainOut(x, 3.);
+}
+
 float animTime(float x) {
+    // float q = .94;
+    // return animTimeA(mod(x - q, 1.)) + (1. - animTimeA(1. - q)) - step(x, q);
+
     // return x;
+    return gainOut(hardstep(0., .8, x), 4.) * .7 + hardstep(.85, 1., x) * .3;
     return hardstep(0., .3, x) * .7 + hardstep(.85, 1., x) * .3;
     return gainIn(hardstep(0., .5, x), 2.5);
 
@@ -911,9 +919,9 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float p = .5;
 
     float s1, s2, s3;
-    s1 = scaleForStep(-1.);
-    s2 = scaleForStep(-1.15);
-    s3 = scaleForStep(2.);
+    s1 = scaleForStep(-.5);
+    s2 = scaleForStep(-.55);
+    s3 = scaleForStep(2.5);
 
     float part1 = mix(s1, s2,
         gainOut(sinstep(hardstep(0., p + .1, x)), 2.5)
@@ -1207,7 +1215,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
 
     time = iGlobalTime;
-    time *= 1.8;
+    time *= 1.5;
     // time *= 2.;
     // time /=2.;
     //time += .1;
