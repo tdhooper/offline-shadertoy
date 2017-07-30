@@ -424,7 +424,7 @@ float stepSpeed = .5;
 
 //#define SHOW_BOUNDS;
 #define USE_BOUNDS;
-#define BOUNCE_INNER;
+// #define BOUNCE_INNER;
 
 
 float tweakAnim(float x) {
@@ -511,7 +511,7 @@ float wobble2(float x, float freq) {
 float wobbleScaleAnim(float x) {
     float blend = scaleAnim(x);
     x /= stepSpeed;
-    // blend -= wobble(hardstep(.6, 2.2, x)) * .1;
+    blend -= wobble(hardstep(.6, 2.2, x)) * .1;
     return blend;
 }
 
