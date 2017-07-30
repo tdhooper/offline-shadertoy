@@ -613,16 +613,31 @@ float circleEaseIn(float radius, float slope, float x) {
     return mix(max(ramp, 0.), line, step(u, x));
 }
 
+float circleEaseOut(float radius, float slope, float x) {
+    return 1. - circleEaseIn(radius, slope, 1. - x);
+}
+
+
 float animTimeA(float x) {
-    return gainOut(x, 3.);
+    return circleEaseOut(.25, .3, x);
+    // return gain(x, 3.5);
+    // return gainOut(gainIn(x, 2.), 5.);
+    // return gainIn(gainOut(x, 4.), 2.);
+    return gainOut(x, 3.5);
 }
 
 float animTime(float x) {
-    // float q = .94;
-    // return animTimeA(mod(x - q, 1.)) + (1. - animTimeA(1. - q)) - step(x, q);
+
+    float xoo = .0;
+    float q = .8;
+    float h = - .0;
+    // xoo = q = h = 0.;
+    // xoo = h = 0.;
+    x += xoo;
+    return animTimeA(mod(x - q, 1.)) + (1. - animTimeA(1. - q)) - step(x, q) + h;
 
     // return x;
-    return gainOut(hardstep(0., .8, x), 4.) * .7 + hardstep(.85, 1., x) * .3;
+    // return gainOut(hardstep(0., .8, x), 4.) * .7 + hardstep(.85, 1., x) * .3;
     return hardstep(0., .3, x) * .7 + hardstep(.85, 1., x) * .3;
     return gainIn(hardstep(0., .5, x), 2.5);
 
@@ -1193,6 +1208,10 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
     // color += plot(height, p, makeAnimStepNomod(x, 2., 0.)) * vec3(1);
 
     color += plot(height, p, animTime(x)) * hlCol(vec3(1,0,0), hl);
+
+
+    color += vec3(1,1,0) * smoothstep(.015, .005, length(p - vec2(.95, .84) * vec2(1.,height)));
+    color += vec3(0,1,1) * smoothstep(.015, .005, length(p - vec2(.85, .7) * vec2(1.,height)));
 
     // vec2 d = abs(p * 2. - 1.) - 1.;
     // float e = min(max(d.x,d.y), 0.) + length(max(d, 0.));
