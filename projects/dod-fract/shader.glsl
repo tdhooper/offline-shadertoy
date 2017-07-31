@@ -412,7 +412,7 @@ float ballSize = 1.5;
 float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
-// #define SHOW_PATHS
+#define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -923,6 +923,7 @@ float camDist;
 vec3 camTar;
 
 float camZoomOut(float x) {
+    // return x;
     float p = .5;
     float y;
     y = hardstep(0., p + .1, x);
@@ -931,6 +932,7 @@ float camZoomOut(float x) {
 }
 
 float camZoomIn(float x) {
+    // return 1.;
     float p = .5;
     float y;
     y = hardstep(p - .3, 1., x);
@@ -943,7 +945,6 @@ float camZoomIn(float x) {
 }
 
 float camZoomInOutA(float x) {
-
     float s1, s2, s3;
     s1 = .0;
     s2 = -.12;
@@ -951,13 +952,14 @@ float camZoomInOutA(float x) {
 
     float part1 = mix(s1, s2, camZoomOut(x));
     float part2 = mix(0., s3 - s2, camZoomIn(x));
-    // modelScale = part1 + part2;
 
+    // return part1;
     float step = part1 + part2;
     return step;
 }
 
 float camZoomInOut(float x) {
+    // x *= 1.01;
     float o = ANIM_CAM_START;
     float y = camZoomInOutA(mod(x - o, 1.)) + (1. - camZoomInOutA(1. - o)) - step(x, o);
     y -= .15;
@@ -1214,7 +1216,7 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
     color = vec3(0);
 
     // x *= focus;
-    // x += t;
+    // x += time;
     // x -= .5 * focus;
 
     float hp = time - x;
@@ -1272,6 +1274,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
 
     time = iGlobalTime;
+    // time = 3.84;
     time *= 1.5;
     // time *= 2.;
     // time /=2.;
@@ -1288,12 +1291,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     mousee = iMouse.xy;
 
-    /*
+
     mousee = (vec2(
-        0.4465875370919881,
-        0.5849514563106796
+        0.5,
+        0.66
     )) * iResolution.xy;
-    */
+    
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
