@@ -412,7 +412,7 @@ float ballSize = 1.5;
 float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
-#define SHOW_PATHS
+// #define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -528,12 +528,12 @@ float newBlend(float x) {
     return newBlendA(mod(x + m, 1.)) - o + max(sign(x + m - 1.), 0.);
 }
 
-const float ANIM_CAM_START = .75;
+const float ANIM_CAM_START = .96;
 
 float animCamRotateA(float x) {
-    return x;
+    // return x;
     // return mix(gain(x, 2.), x, .5);
-    return mix(gainOut(x, 6.), x, .5);
+    return mix(gainOut(x, 6.), x, .92);
     return x;
     float y = mix(0., 1. - gainOut(x, 3.), gainIn(x + .9, 10.) * .5);
     y = mix(x, y, .4);
@@ -544,8 +544,7 @@ float animCamRotate(float x) {
     // return 0.15;
     // return x;
     // return animCamRotateA(x); 
-    float o = ANIM_CAM_START - .2;
-    o = .85;
+    float o = ANIM_CAM_START;
     return animCamRotateA(mod(x - o, 1.)) + (1. - animCamRotateA(1. - o)) - step(x, o);    
 
     return squarestepOutOffset(ANIM_CAM_START, 1., x, 5.);
@@ -943,6 +942,28 @@ float camZoomIn(float x) {
     return gainIn(y, 2.5);
 }
 
+float camZoomInOutA(float x) {
+
+    float s1, s2, s3;
+    s1 = .0;
+    s2 = -.12;
+    s3 = 1.;
+
+    float part1 = mix(s1, s2, camZoomOut(x));
+    float part2 = mix(0., s3 - s2, camZoomIn(x));
+    // modelScale = part1 + part2;
+
+    float step = part1 + part2;
+    return step;
+}
+
+float camZoomInOut(float x) {
+    float o = ANIM_CAM_START;
+    float y = camZoomInOutA(mod(x - o, 1.)) + (1. - camZoomInOutA(1. - o)) - step(x, o);
+    y -= .15;
+    return y;
+}
+
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     float x = time;
 
@@ -960,15 +981,8 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     // 0.  >  -.05  >  2.
     // offset:
     // -.2  >  -.05  >  2.  >  1.8
-
-    float s1, s2, s3;
-    s1 = scaleForStep(-.5);
-    s2 = scaleForStep(-.55);
-    s3 = scaleForStep(2.5);
-
-    float part1 = mix(s1, s2, camZoomOut(x));
-    float part2 = mix(0., s3 - s2, camZoomIn(x));
-    modelScale = part1 + part2;
+    float camZoom = camZoomInOut(x);
+    modelScale = scaleForStep(camZoom * 3.);
 
     //     x = hardstep(.35, .65, x);
     // x = sinstep(x);
@@ -1208,8 +1222,8 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
 
     
     color += plot(height, p, animCamRotate(x)) * hlCol(vec3(0,1,1), hl);
-    color += plot(height, p, camZoomOut(x)) * hlCol(vec3(0,1,0), hl);
-    color += plot(height, p, camZoomIn(x)) * hlCol(vec3(0,1,0), hl);
+    color += plot(height, p, camZoomInOut(x)) * hlCol(vec3(0,1,0), hl);
+    // color += plot(height, p, camZoomIn(x)) * hlCol(vec3(0,1,0), hl);
     
     // float stepX;
 
