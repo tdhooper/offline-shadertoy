@@ -922,40 +922,21 @@ Model map( vec3 p ){
 float camDist;
 vec3 camTar;
 
-float camZoomOut(float x) {
-    // return x;
-    float p = .5;
-    float y;
-    y = hardstep(0., p + .1, x);
-    return gainOut(y, 5.);
-    return gainOut(sinstep(y), 2.5);
-}
-
-float camZoomIn(float x) {
-    // return 1.;
-    float p = .5;
-    float y;
-    y = hardstep(p - .3, 1., x);
-    return gainIn(sinstep(y), 2.5);
-    y = circleEaseIn(.2, .4, y);
-    y = gainOut(y, 2.);
-    // y = sinstep(x);
-    return y;
-    return gainIn(y, 2.5);
-}
 
 float camZoomInOutA(float x) {
-    float s1, s2, s3;
-    s1 = .0;
-    s2 = -.12;
-    s3 = 1.;
+    float back = -.12;
+    float p = .5;
+    
+    float zIn, zOut;
 
-    float part1 = mix(s1, s2, camZoomOut(x));
-    float part2 = mix(0., s3 - s2, camZoomIn(x));
+    zOut = hardstep(0., p + .1, x);
+    zOut = gainOut(zOut, 5.);
+    
+    zIn = hardstep(p - .3, 1., x);
+    zIn = sinstep(zIn);
+    zIn = gainIn(zIn, 2.5);
 
-    // return part1;
-    float step = part1 + part2;
-    return step;
+    return zOut * back + zIn * (1.- back);
 }
 
 float camZoomInOut(float x) {
