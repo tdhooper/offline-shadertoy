@@ -354,7 +354,7 @@ float ballSize = 1.5;
 float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
-#define SHOW_PATHS
+// #define SHOW_PATHS
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
@@ -440,7 +440,7 @@ float wobbleScaleAnim(float x) {
 const float ANIM_CAM_START = .96;
 
 float animCamRotateA(float x) {
-    return mix(gainOut(x, 6.), x, .92);
+    return mix(gainOut(x, 3.), x, .9);
 }
 
 float animCamRotate(float x) {
@@ -698,7 +698,7 @@ vec3 camTar;
 
 
 float camZoomInOutA(float x) {
-    float back = -.12;
+    float back = -.1;
     float p = .5;
     
     float zIn, zOut;
@@ -707,7 +707,7 @@ float camZoomInOutA(float x) {
     zOut = gainOut(zOut, 5.);
     
     zIn = hardstep(p - .3, 1., x);
-    zIn = sinstep(zIn);
+    zIn = gain(zIn, 1.5);
     zIn = gainIn(zIn, 2.5);
 
     return zOut * back + zIn * (1.- back);
@@ -716,7 +716,7 @@ float camZoomInOutA(float x) {
 float camZoomInOut(float x) {
     float o = ANIM_CAM_START;
     float y = camZoomInOutA(mod(x - o, 1.)) + (1. - camZoomInOutA(1. - o)) + floor(x - o);
-    y -= .15;
+    y -= .2;
     return y;
 }
 
