@@ -545,7 +545,7 @@ float animCamRotate(float x) {
     // return x;
     // return animCamRotateA(x); 
     float o = ANIM_CAM_START;
-    return animCamRotateA(mod(x - o, 1.)) + (1. - animCamRotateA(1. - o)) - step(x, o);    
+    return animCamRotateA(mod(x - o, 1.)) + (1. - animCamRotateA(1. - o)) + floor(x - o);    
 
     return squarestepOutOffset(ANIM_CAM_START, 1., x, 5.);
     float r;
@@ -637,8 +637,8 @@ float animTime(float x) {
     // xoo = q = h = 0.;
     // xoo = h = 0.;
     x += xoo;
-    return animTimeA(mod(x - q, 1.)) + (1. - animTimeA(1. - q)) - step(x, q) + h;
-
+    return animTimeA(mod(x - q, 1.)) + (1. - animTimeA(1. - q)) + floor(x - q) + h;
+    
     // return x;
     // return gainOut(hardstep(0., .8, x), 4.) * .7 + hardstep(.85, 1., x) * .3;
     return hardstep(0., .3, x) * .7 + hardstep(.85, 1., x) * .3;
@@ -961,7 +961,7 @@ float camZoomInOutA(float x) {
 float camZoomInOut(float x) {
     // x *= 1.01;
     float o = ANIM_CAM_START;
-    float y = camZoomInOutA(mod(x - o, 1.)) + (1. - camZoomInOutA(1. - o)) - step(x, o);
+    float y = camZoomInOutA(mod(x - o, 1.)) + (1. - camZoomInOutA(1. - o)) + floor(x - o);
     y -= .15;
     return y;
 }
