@@ -276,6 +276,11 @@ struct Model {
     vec3 uv;
     bool isBound;
 };
+
+Model makeBounds(float dist) {
+    return Model(dist, 0., vec3(0), true);
+}
+
     
 // checks to see which intersection is closer
 Model opU( Model m1, Model m2 ){
@@ -490,11 +495,11 @@ Model makeModel(vec3 p, float x, float scale) {
     float threshold = .01;
 
     #ifdef SHOW_BOUNDS
-        return Model(bounds, 0., vec3(0.), true);
+        return makeBounds(bounds);
     #endif
     #ifdef USE_BOUNDS
         if (bounds > threshold) {
-            return Model(bounds, 0., vec3(0.), true);
+            return makeBounds(bounds);
         }
     #endif
     
@@ -658,12 +663,12 @@ Model subDModel(vec3 p) {
 
     #ifdef SHOW_BOUNDS
         if (hasBounds) {
-            return Model(bounds, 0., vec3(0.), true);
+            return makeBounds(bounds);
         }
     #endif
     #ifdef USE_BOUNDS
         if (bounds > threshold && hasBounds) {
-            return Model(bounds, 0., vec3(0.), true);
+            return makeBounds(bounds);
         }
     #endif
 
@@ -673,7 +678,7 @@ Model subDModel(vec3 p) {
     innerBounds -= threshold;
 
     #ifdef SHOW_BOUNDS
-        return Model(min(model.dist, innerBounds), 0., vec3(0.), true);
+        return makeBounds(min(model.dist, innerBounds));
     #endif
     #ifdef USE_BOUNDS
         if (innerBounds > threshold) {
@@ -792,6 +797,7 @@ vec3 calcNormal( in vec3 pos ){
 Hit raymarch(CastRay castRay){
 
     float currentDist = INTERSECTION_PRECISION * 2.0;
+    int iterations;
     Model model;
 
     Ray ray = Ray(castRay.origin, castRay.direction, 0.);
@@ -803,12 +809,13 @@ Hit raymarch(CastRay castRay){
         model = map(ray.origin + ray.direction * ray.len);
         currentDist = model.dist;
         ray.len += currentDist * FUDGE_FACTOR;
+        iterations = i;
     }
 
     bool isBackground = false;
     vec3 pos = vec3(0);
     vec3 normal = vec3(0);
-    vec3 color = vec3(0);
+    vec3 color = vec3(iterations);
 
     if (ray.len > MAX_TRACE_DISTANCE) {
         isBackground = true;
@@ -867,10 +874,16 @@ void shadeSurface(inout Hit hit){
     glow = squarestep(glow, 2.);
     diffuse = pal1(clamp(fog*2. - glow * .1 + .2, 0., 1.));
     diffuse = mix(diffuse, diffuse * 3., glow);
+    
+    // diffuse = hit.color;
+
+
     diffuse = mix(diffuse, background, fog);
     // diffuse = vec3(glow);
     //*/
     // diffuse = vec3(length(diffuse * .5));
+
+
     
     hit.color = diffuse;
     //hit.color = hit.model.uv;
