@@ -480,7 +480,7 @@ float animTime(float x) {
 float modelScale;
 
 
-Model makeModel(vec3 p, float x, float scale) {
+Model makeModel(vec3 p, float x, float scale, float level) {
     float d, part;
     
     
@@ -526,6 +526,11 @@ Model makeModel(vec3 p, float x, float scale) {
     #endif
     d = part;
 
+    level += min(
+        step(.35, x),
+        1.- smoothstep(0., move - size * 2., part)
+    );
+
     // Setup ball
 
     vec3 vB = triV.a * move;
@@ -563,7 +568,7 @@ Model makeModel(vec3 p, float x, float scale) {
 
     d *= scale;
 
-    return Model(d, x, vec3(0.), false);
+    return Model(d, level, vec3(0.), false);
 }
 
 
@@ -593,15 +598,20 @@ Model subDModel(vec3 p) {
 
     float css = 1.;
 
-    float time = animTime(time);
+    #ifndef SHOW_ANIMATION
+        float time = animTime(time);
+    #endif
 
     float stepX;
+
+    float level= 0.;
 
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
 
         stepX = makeAnimStepNomod(time, i, delay);
 
         if (stepX >= 0. && ! hasBounds) {
+            // level -= 1.;
             stepIndex = i;
             prevStepIndex = stepIndex - 1.;
 
@@ -633,15 +643,15 @@ Model subDModel(vec3 p) {
                 #ifndef BOUNCE_INNER
                     css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
                 #endif
+            } else {
+                level += 1.;
             }
             p *= scale;
             
             if (innerBounds > 0.) {
                 iv = icosahedronVertex(pp);
-                delay += hash(iv) * .8;
+                delay += hash(iv + spectrum(level / 3.)) * .6;
             }
-
-
 
             #ifdef USE_BOUNDS
                 sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
@@ -673,7 +683,7 @@ Model subDModel(vec3 p) {
     #endif
 
     float mx = makeAnimStepNomod(time, stepIndex, delay);
-    Model model = makeModel(p, mx, css);
+    Model model = makeModel(p, mx, css, level);
     
     innerBounds -= threshold;
 
@@ -698,6 +708,7 @@ Model map( vec3 p ){
 }
 
 
+vec3 camPos;
 float camDist;
 vec3 camTar;
 
@@ -832,13 +843,11 @@ Hit raymarch(CastRay castRay){
 // Rendering
 // --------------------------------------------------------
 
-vec3 camPos;
-
 void shadeSurface(inout Hit hit){
 
     vec3 background = vec3(.1)* vec3(.5,0,1);
 
-    background = pal1(1.) * .8;
+    background = pal1(1.) * .6;
 
     if (hit.isBackground) {
         hit.color = background;
@@ -860,8 +869,12 @@ void shadeSurface(inout Hit hit){
     
     float fog = clamp((hit.ray.len - 5.) * .5, 0., 1.);
     fog = mix(0., 1., length(camTar - hit.pos) / pow(camDist, 1.5)) * 1.;
+
+    fog = abs(length(camTar - hit.pos)) / (camDist * 1.75);
+
     fog = clamp(fog, 0., 1.);
-    
+
+
     //*
     diffuse = vec3(.3) * vec3(.9, .3, .8);
     #ifdef SHOW_ANIMATION
@@ -876,9 +889,13 @@ void shadeSurface(inout Hit hit){
     diffuse = mix(diffuse, diffuse * 3., glow);
     
     // diffuse = hit.color;
+    float level = hit.model.id;
+    diffuse = spectrum(level / 3. + .1);
 
+    diffuse = mix(diffuse * .75, diffuse * 1.5, glow);
 
     diffuse = mix(diffuse, background, fog);
+
     // diffuse = vec3(glow);
     //*/
     // diffuse = vec3(length(diffuse * .5));
