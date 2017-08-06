@@ -360,18 +360,21 @@ float stepSpeed = .5;
 
 // #define SHOW_ANIMATION
 // #define SHOW_PATHS
+// #define SHOW_BOUNDS;
+// #define SHOW_ITERATIONS
+
+#define USE_BOUNDS;
+#define USE_OUTER_BOUNDS;
+// #define BOUNCE_INNER;
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
-    const float MODEL_STEPS = 2.;
+    const float MODEL_STEPS = 3.;
 #else
     const float initialStep = 2.;
     const float MODEL_STEPS = 3.;
 #endif
 
-//#define SHOW_BOUNDS;
-#define USE_BOUNDS;
-// #define BOUNCE_INNER;
 
 
 float tweakAnim(float x) {
@@ -479,27 +482,50 @@ float animTime(float x) {
 
 float modelScale;
 
+float boundsForStep(vec3 p, float move, float size, float scale) {
+    float overfit = .3;
+    p /= scale;
+    float d = (length(p) - move - size - overfit);
+    d *= scale;
+    return d;
+}
 
-Model makeModel(vec3 p, float x, float scale, float level) {
-    float d, part;
-    
-    
+struct ModelSpec {
+    float move;
+    float size;
+    float sizeCore;
+    float bounds;
+};
+
+ModelSpec specForStep(vec3 p, float x, float scale) {
     float move = moveAnim(x) * stepMove;
     float sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
     float sizeScaleCore = mix(1., stepScale, scaleAnim(x));
     float size = ballSize * sizeScale;
     float sizeCore = ballSize * sizeScaleCore;
+    float bounds = boundsForStep(p, move, size, scale);
+    return ModelSpec(move, size, sizeCore, bounds);
+}
 
-    float bounds = (length(p / scale) - move - size - .3) * scale;
+float modelIterations;
+bool debugSwitch = false;
+float boundsThreshold;
 
-    float threshold = .01;
+Model makeModel(vec3 p, float x, float scale, float level) {
+    float d, part;
+
+    ModelSpec spec = specForStep(p, x, scale);
+    
+    float move = spec.move;
+    float size = spec.size;
+    float sizeCore = spec.sizeCore;
 
     #ifdef SHOW_BOUNDS
-        return makeBounds(bounds);
+        return makeBounds(spec.bounds);
     #endif
     #ifdef USE_BOUNDS
-        if (bounds > threshold) {
-            return makeBounds(bounds);
+        if (spec.bounds > boundsThreshold) {
+            return makeBounds(spec.bounds);
         }
     #endif
     
@@ -568,6 +594,8 @@ Model makeModel(vec3 p, float x, float scale, float level) {
 
     d *= scale;
 
+    modelIterations += 1.;
+
     return Model(d, level, vec3(0.), false);
 }
 
@@ -611,6 +639,8 @@ Model subDModel(vec3 p) {
         stepX = makeAnimStepNomod(time, i, delay);
 
         if (stepX >= 0. && ! hasBounds) {
+            // modelIterations += 1.;
+
             // level -= 1.;
             stepIndex = i;
             prevStepIndex = stepIndex - 1.;
@@ -621,12 +651,15 @@ Model subDModel(vec3 p) {
                 css *= midSizeScale;
             }
 
-
             scale = pow(midSizeScale, prevStepIndex);
-            p /= scale;
+
 
             x = makeAnimStepNomod(time, prevStepIndex, delay);
-            move = moveAnim(x) * stepMove;
+            ModelSpec spec = specForStep(p, x, scale);
+            move = spec.move;
+
+            p /= scale;
+
 
             #ifdef BOUNCE_INNER
                 css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
@@ -653,14 +686,10 @@ Model subDModel(vec3 p) {
                 delay += hash(iv + spectrum(level / 3.)) * .6;
             }
 
-            #ifdef USE_BOUNDS
-                sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
-                size = ballSize * sizeScale;
-
-                boundsCandidate = length(pp) - move - size - threshold;
-                boundsCandidate *= scale;
-                boundsCandidate -= .1;    
+            #ifdef USE_OUTER_BOUNDS
                 
+                boundsCandidate = spec.bounds;
+
                 if (boundsCandidate > -.0) {
                     bounds = min(bounds, boundsCandidate);
                     hasBounds = true;
@@ -669,15 +698,15 @@ Model subDModel(vec3 p) {
         }
     }
 
-    threshold *= scale;
+    // threshold *= scale;
 
     #ifdef SHOW_BOUNDS
         if (hasBounds) {
             return makeBounds(bounds);
         }
     #endif
-    #ifdef USE_BOUNDS
-        if (bounds > threshold && hasBounds) {
+    #ifdef USE_OUTER_BOUNDS
+        if (bounds > boundsThreshold && hasBounds) {
             return makeBounds(bounds);
         }
     #endif
@@ -685,13 +714,13 @@ Model subDModel(vec3 p) {
     float mx = makeAnimStepNomod(time, stepIndex, delay);
     Model model = makeModel(p, mx, css, level);
     
-    innerBounds -= threshold;
+    // innerBounds -= threshold;
 
     #ifdef SHOW_BOUNDS
         return makeBounds(min(model.dist, innerBounds));
     #endif
-    #ifdef USE_BOUNDS
-        if (innerBounds > threshold) {
+    #ifdef USE_OUTER_BOUNDS
+        if (innerBounds > boundsThreshold) {
             model.dist = min(model.dist, innerBounds);
         }
     #endif
@@ -702,6 +731,7 @@ Model subDModel(vec3 p) {
 Model map( vec3 p ){
     mat3 m = modelRotation();
     p /= modelScale;
+    boundsThreshold = 1. / modelScale;
     Model model = subDModel(p);
     model.dist *= modelScale;
     return model;
@@ -756,8 +786,16 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     pR(camPos.xz, animCamRotate(x) * PI * 2.);
 
     #ifdef SHOW_ANIMATION
-        camDist = 4.5;
+        camDist = 6.5;
         modelScale = 1.;
+        
+        camDist /= 2.;
+
+        // if (debugSwitch) {
+        //     modelScale = scaleForStep(-2.5);
+        //     camDist *= modelScale;
+        // }
+
         camPos = vec3(0,0,camDist);
     #endif
 
@@ -808,7 +846,9 @@ vec3 calcNormal( in vec3 pos ){
 Hit raymarch(CastRay castRay){
 
     float currentDist = INTERSECTION_PRECISION * 2.0;
-    int iterations;
+    bool isBound = false;
+    int iterations = 0;
+    modelIterations = 0.;
     Model model;
 
     Ray ray = Ray(castRay.origin, castRay.direction, 0.);
@@ -817,10 +857,11 @@ Hit raymarch(CastRay castRay){
         if (currentDist < INTERSECTION_PRECISION || ray.len > MAX_TRACE_DISTANCE) {
             break;
         }
+        iterations += 1;
         model = map(ray.origin + ray.direction * ray.len);
+        // isBound = model.isBound;
         currentDist = model.dist;
         ray.len += currentDist * FUDGE_FACTOR;
-        iterations = i;
     }
 
     bool isBackground = false;
@@ -849,10 +890,12 @@ void shadeSurface(inout Hit hit){
 
     background = pal1(1.) * .6;
 
-    if (hit.isBackground) {
-        hit.color = background;
-        return;
-    }
+    #ifndef SHOW_ITERATIONS
+        if (hit.isBackground) {
+            hit.color = background;
+            return;
+        }
+    #endif
 
     //hit.normal += sin(hit.model.uv * .4) * .4;
     //hit.normal = normalize(hit.normal);
@@ -899,10 +942,14 @@ void shadeSurface(inout Hit hit){
     // diffuse = vec3(glow);
     //*/
     // diffuse = vec3(length(diffuse * .5));
-
-
-    
-    hit.color = diffuse;
+    #ifdef SHOW_ITERATIONS
+        hit.color = spectrum(hit.color.x / 100.);
+        // hit.color = spectrum(modelIterations / 100.);
+    #else
+        hit.color = diffuse;
+    #endif
+    // hit.color = hit.normal * .5 + .5;
+    // hit.color = spectrum(hit.ray.len / 10.);
     //hit.color = hit.model.uv;
 }
 
@@ -1059,6 +1106,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // time = animTime(time);
 
 
+
     mousee = iMouse.xy;
 
 
@@ -1071,6 +1119,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
     
+    debugSwitch = p.x > 0.;
+    
+
 
 //    time = m.x * loopDuration;
 
