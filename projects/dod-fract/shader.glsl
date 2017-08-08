@@ -368,7 +368,7 @@ float stepSpeed = .5;
 // #define BOUNCE_INNER;
 
 #ifdef SHOW_ANIMATION
-    const float initialStep = 0.;
+    const float initialStep = 1.;
     const float MODEL_STEPS = 3.;
 #else
     const float initialStep = 2.;
@@ -683,6 +683,7 @@ Model subDModel(vec3 p) {
             
             if (innerBounds > 0.) {
                 iv = icosahedronVertex(pp);
+                // delay += .6;
                 delay += hash(iv + spectrum(level / 3.)) * .6;
             }
 
@@ -715,12 +716,14 @@ Model subDModel(vec3 p) {
     Model model = makeModel(p, mx, css, level);
     
     // innerBounds -= threshold;
+    innerBounds -= .1;
 
     #ifdef SHOW_BOUNDS
         return makeBounds(min(model.dist, innerBounds));
     #endif
     #ifdef USE_OUTER_BOUNDS
         if (innerBounds > boundsThreshold) {
+            // return makeBounds(innerBounds);
             model.dist = min(model.dist, innerBounds);
         }
     #endif
@@ -789,7 +792,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
         camDist = 6.5;
         modelScale = 1.;
         
-        camDist /= 2.;
+        camDist /= 1.2;
 
         // if (debugSwitch) {
         //     modelScale = scaleForStep(-2.5);
@@ -943,7 +946,7 @@ void shadeSurface(inout Hit hit){
     //*/
     // diffuse = vec3(length(diffuse * .5));
     #ifdef SHOW_ITERATIONS
-        hit.color = spectrum(hit.color.x / 100.);
+        hit.color = spectrum(hit.color.x / 50.);
         // hit.color = spectrum(modelIterations / 100.);
     #else
         hit.color = diffuse;
