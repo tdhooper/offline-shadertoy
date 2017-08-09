@@ -363,13 +363,13 @@ float stepSpeed = .5;
 // #define SHOW_BOUNDS;
 // #define SHOW_ITERATIONS
 
-#define USE_BOUNDS;
-#define USE_OUTER_BOUNDS;
+// #define USE_BOUNDS;
+// #define USE_OUTER_BOUNDS;
 // #define BOUNCE_INNER;
 
 #ifdef SHOW_ANIMATION
-    const float initialStep = 0.;
-    const float MODEL_STEPS = 4.;
+    const float initialStep = 1.;
+    const float MODEL_STEPS = 2.;
 #else
     const float initialStep = 2.;
     const float MODEL_STEPS = 3.;
@@ -627,8 +627,10 @@ Model subDModel(vec3 p) {
 
     float innerBounds = 1e12;
     float bounds = 1e12;
+    float innerB = 1e12;
     bool hasBounds = false;
     float boundsCandidate;
+    float innerBoundsCandidate;
 
     float threshold = .3;
 
@@ -696,7 +698,7 @@ Model subDModel(vec3 p) {
             if (innerBounds > 0.) {
                 iv = icosahedronVertex(pp);
                 // delay += .6;
-                delay += hash(iv + spectrum(mod(level, 3.) / 3.)) * .6;
+                delay += hash(iv * 1.5 - spectrum(mod(level, 3.) / 6.)) * .6;
                 // delay += hash(vec3(mod(level, 3.) / 3. + 1.)) * .6;
             }
 
@@ -709,6 +711,12 @@ Model subDModel(vec3 p) {
                     hasBounds = true;
                 }
             #endif
+
+            innerBoundsCandidate = innerBounds + .3 * scale;
+            if (innerBoundsCandidate > -.0) {
+                innerB = min(innerB, innerBoundsCandidate);
+            }
+
         }
     }
 
@@ -729,17 +737,17 @@ Model subDModel(vec3 p) {
     Model model = makeModel(p, mx, css, level);
     
     // innerBounds -= threshold;
-    innerBounds -= .1;
+    // innerBounds += .3;
 
-    #ifdef SHOW_BOUNDS
-        return makeBounds(min(model.dist, innerBounds));
-    #endif
-    #ifdef USE_OUTER_BOUNDS
-        if (innerBounds > boundsThreshold) {
+    // #ifdef SHOW_BOUNDS
+        // return makeBounds(min(model.dist, innerBounds));
+    // #endif
+    // #ifdef USE_OUTER_BOUNDS
+        if (innerB > boundsThreshold) {
             // return makeBounds(innerBounds);
-            model.dist = min(model.dist, innerBounds);
+            model.dist = min(model.dist, innerB);
         }
-    #endif
+    // #endif
 
     return model;
 }
@@ -747,7 +755,7 @@ Model subDModel(vec3 p) {
 Model map( vec3 p ){
     mat3 m = modelRotation();
     p /= modelScale;
-    boundsThreshold = 1. / modelScale;
+    boundsThreshold = .1 / modelScale;
     Model model = subDModel(p);
     model.dist *= modelScale;
     return model;
@@ -803,9 +811,9 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 
     #ifdef SHOW_ANIMATION
         camDist = 6.5;
-        modelScale = 6.;
+        modelScale = 1.;
         
-        camDist /= 2.;
+        // camDist /= 2.;
 
         // if (debugSwitch) {
         //     modelScale = scaleForStep(-2.5);
@@ -1126,11 +1134,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     mousee = iMouse.xy;
 
+    #ifndef SHOW_ANIMATION
+        mousee = (vec2(
+            0.5,
+            0.66
+        )) * iResolution.xy;
+    #endif
 
-    mousee = (vec2(
-        0.5,
-        0.66
-    )) * iResolution.xy;
     
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
