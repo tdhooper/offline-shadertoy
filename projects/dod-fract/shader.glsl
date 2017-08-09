@@ -368,8 +368,8 @@ float stepSpeed = .5;
 // #define BOUNCE_INNER;
 
 #ifdef SHOW_ANIMATION
-    const float initialStep = 1.;
-    const float MODEL_STEPS = 3.;
+    const float initialStep = 0.;
+    const float MODEL_STEPS = 4.;
 #else
     const float initialStep = 2.;
     const float MODEL_STEPS = 3.;
@@ -552,10 +552,22 @@ Model makeModel(vec3 p, float x, float scale, float level) {
     #endif
     d = part;
 
-    level += min(
-        step(.35, x),
-        1.- smoothstep(0., move - size * 2., part)
-    );
+    // level += min(
+    //     step(.35, x),
+    //     1.- smoothstep(0., move - size * 2., part)
+    // );
+
+    // level += min(
+    //     step(.35, x),
+    //     1.- smoothstep(0., move - size * 2., part)
+    // );
+
+    float la = 0.;
+    float lb = 1.-hardstep(.1, 20., part);
+    float lc = step(part, (move - size * 1.5) * .5);
+    
+    // level += mix(mix(la, lb, step(.3, x)), lc, step(.4, x));
+    level += mix(0., lc, step(.3, x));
 
     // Setup ball
 
@@ -684,7 +696,8 @@ Model subDModel(vec3 p) {
             if (innerBounds > 0.) {
                 iv = icosahedronVertex(pp);
                 // delay += .6;
-                delay += hash(iv + spectrum(level / 3.)) * .6;
+                delay += hash(iv + spectrum(mod(level, 3.) / 3.)) * .6;
+                // delay += hash(vec3(mod(level, 3.) / 3. + 1.)) * .6;
             }
 
             #ifdef USE_OUTER_BOUNDS
@@ -790,9 +803,9 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
 
     #ifdef SHOW_ANIMATION
         camDist = 6.5;
-        modelScale = 1.;
+        modelScale = 6.;
         
-        camDist /= 1.2;
+        camDist /= 2.;
 
         // if (debugSwitch) {
         //     modelScale = scaleForStep(-2.5);
@@ -937,6 +950,7 @@ void shadeSurface(inout Hit hit){
     // diffuse = hit.color;
     float level = hit.model.id;
     diffuse = spectrum(level / 3. + .1);
+    // diffuse = vec3(mod(level, 3.) / 3.);
 
     diffuse = mix(diffuse * .75, diffuse * 1.5, glow);
 
