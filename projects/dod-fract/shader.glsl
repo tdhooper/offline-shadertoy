@@ -223,73 +223,10 @@ vec3 dodecahedronVertex(vec3 p) {
     return normalize(result);
 }
 
-// --------------------------------------------------------
-// Spectrum colour palette
-// IQ https://www.shadertoy.com/view/ll2GD3
-// --------------------------------------------------------
-
-vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
-    return a + b*cos( 6.28318*(c*t+d) );
-}
-
-vec3 spectrum(float n) {
-    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
-}
-
-vec3 pal1(float n) {
-    return pal(
-        n,
-        vec3(0.640,0.469,0.506),
-        vec3(0.470,0.423,0.257),
-        vec3(0.340,0.136,0.505),
-        vec3(0.114,0.345,0.743)
-    );
-}
-
-vec3 pal2(float n) {
-    return pal(
-        n,
-        vec3(0.840,0.467,0.661),
-        vec3(0.485,0.269,0.199),
-        vec3(0.436,0.530,0.456),
-        vec3(0.114,0.345,0.743)
-    );
-}
-
-vec3 pal4(float n) {
-    return pal(
-        n,
-        vec3(0.001,0.780,0.063),
-        vec3(0.765,0.630,0.736),
-        vec3(0.420,0.416,0.141),
-        vec3(0.560,0.131,0.007)
-    );
-}
 
 // --------------------------------------------------------
-// Modelling
+// Curves
 // --------------------------------------------------------
-
-struct Model {
-    float dist;
-    float id;
-    vec3 uv;
-    bool isBound;
-};
-
-Model makeBounds(float dist) {
-    return Model(dist, 0., vec3(0), true);
-}
-
-    
-// checks to see which intersection is closer
-Model opU( Model m1, Model m2 ){
-    if (m1.dist < m2.dist) {
-        return m1;
-    } else {
-        return m2;
-    }
-}
 
 
 float gain(float x, float P) {
@@ -350,6 +287,87 @@ float kink(float x, vec2 p, float e1, float e2) {
 }
 
 
+// --------------------------------------------------------
+// Spectrum colour palette
+// IQ https://www.shadertoy.com/view/ll2GD3
+// --------------------------------------------------------
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+vec3 pal1(float n) {
+    return pal(
+        n,
+        vec3(0.640,0.469,0.506),
+        vec3(0.470,0.423,0.257),
+        vec3(0.340,0.136,0.505),
+        vec3(0.114,0.345,0.743)
+    );
+}
+
+vec3 pal2(float n) {
+    return pal(
+        n,
+        vec3(0.840,0.467,0.661),
+        vec3(0.485,0.269,0.199),
+        vec3(0.436,0.530,0.456),
+        vec3(0.114,0.345,0.743)
+    );
+}
+
+vec3 pal4(float n) {
+    return pal(
+        n,
+        vec3(0.001,0.780,0.063),
+        vec3(0.765,0.630,0.736),
+        vec3(0.420,0.416,0.141),
+        vec3(0.560,0.131,0.007)
+    );
+}
+
+vec3 pal5(float n) {
+    n = mod(n, 1.);
+    float p = 2./3.;
+    float s = .1;
+    float e = 1.8/3.;
+    p = .5;
+    vec3 a = spectrum(hardstep(0., p, n) * (e - s) + s);
+    vec3 b = spectrum((1. - hardstep(p, 1., n)) * (e - s) + s);
+    return mix(a, b, step(p, n));
+}
+
+// --------------------------------------------------------
+// Modelling
+// --------------------------------------------------------
+
+struct Model {
+    float dist;
+    float id;
+    vec3 uv;
+    bool isBound;
+};
+
+Model makeBounds(float dist) {
+    return Model(dist, 0., vec3(0), true);
+}
+
+    
+// checks to see which intersection is closer
+Model opU( Model m1, Model m2 ){
+    if (m1.dist < m2.dist) {
+        return m1;
+    } else {
+        return m2;
+    }
+}
+
+
+
 
 float stepScale = .275;
 float stepMove = 2.;
@@ -358,7 +376,7 @@ float loopDuration;
 float ballSize = 1.5;
 float stepSpeed = .5;
 
-// #define SHOW_ANIMATION
+#define SHOW_ANIMATION
 // #define SHOW_PATHS
 // #define SHOW_BOUNDS;
 // #define SHOW_ITERATIONS
@@ -369,7 +387,7 @@ float stepSpeed = .5;
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
-    const float MODEL_STEPS = 2.;
+    const float MODEL_STEPS = 4.;
 #else
     const float initialStep = 2.;
     const float MODEL_STEPS = 3.;
@@ -678,9 +696,13 @@ Model subDModel(vec3 p) {
             x = makeAnimStepNomod(time, prevStepIndex, delay);
             ModelSpec spec = specForStep(p, x, scale);
             move = spec.move;
+            size = spec.size;
 
+            
             p /= scale;
-
+            
+            level += levelStep(p, move, size, x);
+            
 
             #ifdef BOUNCE_INNER
                 css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
@@ -698,7 +720,8 @@ Model subDModel(vec3 p) {
                     css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
                 #endif
             } else {
-                level += levelStep(p, move, size, x);
+                // level += size;
+                
                 // level += 1.;
             }
             p *= scale;
@@ -706,7 +729,8 @@ Model subDModel(vec3 p) {
             if (innerBounds > 0.) {
                 iv = icosahedronVertex(pp);
                 // delay += .6;
-                delay += hash(iv * 1.5 - spectrum(mod(level, 3.) / 6.)) * .6;
+                delay += hash(iv * 1.5) * .6;
+                // delay += hash(iv * 1.5 - spectrum(mod(level, 3.) / 6.)) * .6;
                 // delay += hash(vec3(mod(level, 3.) / 3. + 1.)) * .6;
             }
 
@@ -965,12 +989,13 @@ void shadeSurface(inout Hit hit){
     
     // diffuse = hit.color;
     float level = hit.model.id;
-    diffuse = spectrum(level / 3. + .1);
-    // diffuse = vec3(mod(level, 3.) / 3.);
+    diffuse = spectrum(level / 3. + .1 - 1./3.);
+    diffuse = pal5(mod(level / 3., 1.));
+        // diffuse = vec3(mod(level, 3.) / 3.);
 
-    diffuse = mix(diffuse * .75, diffuse * 1.5, glow);
-
+    diffuse = mix(diffuse * 1., diffuse * 1.5, glow);
     diffuse = mix(diffuse, background, fog);
+
 
     // diffuse = vec3(glow);
     //*/
@@ -1177,6 +1202,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     Hit hit = raymarch(CastRay(camPos, rd));
     color = render(hit);
+
+    if (p.y < -.7) {
+        color = pal5(floor(p.x * 3.) / 3. - .1);
+    }
 
     #ifndef DEBUG
        color = linearToScreen(color);
