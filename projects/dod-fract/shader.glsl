@@ -368,7 +368,7 @@ float stepSpeed = .5;
 // #define BOUNCE_INNER;
 
 #ifdef SHOW_ANIMATION
-    const float initialStep = 1.;
+    const float initialStep = 0.;
     const float MODEL_STEPS = 2.;
 #else
     const float initialStep = 2.;
@@ -511,6 +511,18 @@ float modelIterations;
 bool debugSwitch = false;
 float boundsThreshold;
 
+float levelStep(vec3 p, float move, float size, float x) {
+    float la = 0.;
+    float aa = move + size;
+    float lb = hardstep(aa, size, length(p));
+    // float lc = step(part, (move - size * 1.5) * .5);
+    
+    // level += mix(mix(la, lb, step(.3, x)), lc, step(.4, x));
+    // level += mix(0., lc, step(.3, x));
+    return mix(la, lb, smoothstep(0., .1, x));
+    // level += lc;
+}
+
 Model makeModel(vec3 p, float x, float scale, float level) {
     float d, part;
 
@@ -562,12 +574,7 @@ Model makeModel(vec3 p, float x, float scale, float level) {
     //     1.- smoothstep(0., move - size * 2., part)
     // );
 
-    float la = 0.;
-    float lb = 1.-hardstep(.1, 20., part);
-    float lc = step(part, (move - size * 1.5) * .5);
-    
-    // level += mix(mix(la, lb, step(.3, x)), lc, step(.4, x));
-    level += mix(0., lc, step(.3, x));
+    level += levelStep(p, move, size, x);
 
     // Setup ball
 
@@ -691,7 +698,8 @@ Model subDModel(vec3 p) {
                     css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
                 #endif
             } else {
-                level += 1.;
+                level += levelStep(p, move, size, x);
+                // level += 1.;
             }
             p *= scale;
             
@@ -813,7 +821,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
         camDist = 6.5;
         modelScale = 1.;
         
-        // camDist /= 2.;
+        camDist /= 2.;
 
         // if (debugSwitch) {
         //     modelScale = scaleForStep(-2.5);
