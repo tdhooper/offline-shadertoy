@@ -331,6 +331,8 @@ vec3 pal4(float n) {
 }
 
 vec3 pal5(float n) {
+    return spectrum(n);
+    // n -= .1;
     n = mod(n, 1.);
     float p = 2./3.;
     float s = .1;
@@ -347,13 +349,13 @@ vec3 pal5(float n) {
 
 struct Model {
     float dist;
-    float id;
+    vec2 level;
     vec3 uv;
     bool isBound;
 };
 
 Model makeBounds(float dist) {
-    return Model(dist, 0., vec3(0), true);
+    return Model(dist, vec2(0), vec3(0), true);
 }
 
     
@@ -376,7 +378,7 @@ float loopDuration;
 float ballSize = 1.5;
 float stepSpeed = .5;
 
-#define SHOW_ANIMATION
+// #define SHOW_ANIMATION
 // #define SHOW_PATHS
 // #define SHOW_BOUNDS;
 // #define SHOW_ITERATIONS
@@ -529,19 +531,16 @@ float modelIterations;
 bool debugSwitch = false;
 float boundsThreshold;
 
-float levelStep(vec3 p, float move, float size, float x) {
-    float la = 0.;
-    float aa = move + size;
-    float lb = hardstep(aa, size, length(p));
-    // float lc = step(part, (move - size * 1.5) * .5);
-    
-    // level += mix(mix(la, lb, step(.3, x)), lc, step(.4, x));
-    // level += mix(0., lc, step(.3, x));
-    return mix(la, lb, smoothstep(0., .1, x));
-    // level += lc;
+vec2 levelStep(vec3 p, float move, float size, float x) {
+    float transition = smoothstep(0., .1, x);
+    float level = hardstep(max(move - size, size + .01), size, length(p));
+    level = mix(0., level, transition);
+    float blend = hardstep(move + size, size, length(p));
+    blend = mix(0., blend, transition);
+    return vec2(level, blend);
 }
 
-Model makeModel(vec3 p, float x, float scale, float level) {
+Model makeModel(vec3 p, float x, float scale, vec2 level) {
     float d, part;
 
     ModelSpec spec = specForStep(p, x, scale);
@@ -581,16 +580,6 @@ Model makeModel(vec3 p, float x, float scale, float level) {
         part = length(p - vA) - sizeCore;
     #endif
     d = part;
-
-    // level += min(
-    //     step(.35, x),
-    //     1.- smoothstep(0., move - size * 2., part)
-    // );
-
-    // level += min(
-    //     step(.35, x),
-    //     1.- smoothstep(0., move - size * 2., part)
-    // );
 
     level += levelStep(p, move, size, x);
 
@@ -671,7 +660,8 @@ Model subDModel(vec3 p) {
 
     float stepX;
 
-    float level= 0.;
+    vec2 level = vec2(0);
+    float delayLevel = 0.;
 
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
 
@@ -680,7 +670,6 @@ Model subDModel(vec3 p) {
         if (stepX >= 0. && ! hasBounds) {
             // modelIterations += 1.;
 
-            // level -= 1.;
             stepIndex = i;
             prevStepIndex = stepIndex - 1.;
 
@@ -702,7 +691,6 @@ Model subDModel(vec3 p) {
             p /= scale;
             
             level += levelStep(p, move, size, x);
-            
 
             #ifdef BOUNCE_INNER
                 css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
@@ -719,19 +707,18 @@ Model subDModel(vec3 p) {
                 #ifndef BOUNCE_INNER
                     css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
                 #endif
-            } else {
-                // level += size;
-                
-                // level += 1.;
             }
             p *= scale;
             
             if (innerBounds > 0.) {
                 iv = icosahedronVertex(pp);
                 // delay += .6;
-                delay += hash(iv * 1.5) * .6;
-                // delay += hash(iv * 1.5 - spectrum(mod(level, 3.) / 6.)) * .6;
+                // delay += hash(iv * 1.5) * .6;
+                // delay += level * .5;
+                delay += hash(iv * 1.5 - spectrum(mod(delayLevel, 3.) / 6.)) * .6;
                 // delay += hash(vec3(mod(level, 3.) / 3. + 1.)) * .6;
+            } else {
+                delayLevel += 1.;
             }
 
             #ifdef USE_OUTER_BOUNDS
@@ -833,7 +820,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
     camDist = 8.;
 
     float camZoom = camZoomInOut(x);
-    modelScale = scaleForStep(camZoom * 3.);
+    modelScale = scaleForStep(camZoom * MODEL_STEPS);
 
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
@@ -945,6 +932,7 @@ void shadeSurface(inout Hit hit){
     vec3 background = vec3(.1)* vec3(.5,0,1);
 
     background = pal1(1.) * .6;
+    background = vec3(1);
 
     #ifndef SHOW_ITERATIONS
         if (hit.isBackground) {
@@ -976,9 +964,6 @@ void shadeSurface(inout Hit hit){
 
     //*
     diffuse = vec3(.3) * vec3(.9, .3, .8);
-    #ifdef SHOW_ANIMATION
-        diffuse = vec3(hit.model.id);
-    #endif
     vec3 highlight = vec3(1.2) * vec3(.8,.5,1.2);
     float glow = 1. - dot(normalize(camPos), hit.normal);
     glow += .5 * (1.-dot(hit.normal, normalize(hit.pos)));
@@ -988,9 +973,10 @@ void shadeSurface(inout Hit hit){
     diffuse = mix(diffuse, diffuse * 3., glow);
     
     // diffuse = hit.color;
-    float level = hit.model.id;
-    diffuse = spectrum(level / 3. + .1 - 1./3.);
-    diffuse = pal5(mod(level / 3., 1.));
+    vec2 level = hit.model.level;
+    // level = floor(level);
+    diffuse = pal5(level.y / MODEL_STEPS + .1 - 1./3.);
+    // diffuse = pal5(mod(level / 4., 1.));
         // diffuse = vec3(mod(level, 3.) / 3.);
 
     diffuse = mix(diffuse * 1., diffuse * 1.5, glow);
@@ -1136,13 +1122,16 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
 }
 
 
+float round(float a) {
+    return floor(a + .5);
+}
 
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     init();
 
-    loopDuration = (MODEL_STEPS + 0.) * stepDuration;
+    loopDuration = 3. * stepDuration;
     
     #ifdef SHOW_ANIMATION
         // loopDuration /= stepSpeed;
@@ -1203,8 +1192,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     Hit hit = raymarch(CastRay(camPos, rd));
     color = render(hit);
 
-    if (p.y < -.7) {
-        color = pal5(floor(p.x * 3.) / 3. - .1);
+    if (p.y < -.6) {
+        color = pal5(round(p.x * MODEL_STEPS) / MODEL_STEPS);
+    }
+
+    if (p.y < -.8) {
+        color = pal5(p.x);
     }
 
     #ifndef DEBUG
