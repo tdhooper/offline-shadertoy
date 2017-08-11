@@ -286,7 +286,6 @@ float kink(float x, vec2 p, float e1, float e2) {
     return mix(a, b, step(p.x, x));
 }
 
-
 // --------------------------------------------------------
 // Spectrum colour palette
 // IQ https://www.shadertoy.com/view/ll2GD3
@@ -383,7 +382,7 @@ float stepSpeed = .5;
 // #define SHOW_BOUNDS;
 // #define SHOW_ITERATIONS
 
-// #define USE_BOUNDS;
+#define USE_BOUNDS;
 // #define USE_OUTER_BOUNDS;
 // #define BOUNCE_INNER;
 
@@ -932,8 +931,8 @@ void shadeSurface(inout Hit hit){
     vec3 background = vec3(.1)* vec3(.5,0,1);
 
     background = pal1(1.) * .6;
-    background = vec3(1);
-
+    background = vec3(1.);
+    
     #ifndef SHOW_ITERATIONS
         if (hit.isBackground) {
             hit.color = background;
@@ -957,7 +956,7 @@ void shadeSurface(inout Hit hit){
     float fog = clamp((hit.ray.len - 5.) * .5, 0., 1.);
     fog = mix(0., 1., length(camTar - hit.pos) / pow(camDist, 1.5)) * 1.;
 
-    fog = abs(length(camTar - hit.pos)) / (camDist * 1.75);
+    fog = abs(length(camTar - hit.pos)) / (camDist * 2.5);
 
     fog = clamp(fog, 0., 1.);
 
@@ -980,6 +979,10 @@ void shadeSurface(inout Hit hit){
         // diffuse = vec3(mod(level, 3.) / 3.);
 
     diffuse = mix(diffuse * 1., diffuse * 1.5, glow);
+
+    fog = smoothstep(camDist *.1, camDist, length(camTar - hit.pos)) * .5;
+    fog = mix(fog, 1., smoothstep(0., camDist * 2.5, length(camTar - hit.pos)));
+    
     diffuse = mix(diffuse, background, fog);
 
 
@@ -1192,13 +1195,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     Hit hit = raymarch(CastRay(camPos, rd));
     color = render(hit);
 
-    if (p.y < -.6) {
-        color = pal5(round(p.x * MODEL_STEPS) / MODEL_STEPS);
-    }
+    // if (p.y < -.6) {
+    //     color = pal5(round(p.x * MODEL_STEPS) / MODEL_STEPS);
+    // }
 
-    if (p.y < -.8) {
-        color = pal5(p.x);
-    }
+    // if (p.y < -.8) {
+    //     color = pal5(p.x);
+    // }
 
     #ifndef DEBUG
        color = linearToScreen(color);
