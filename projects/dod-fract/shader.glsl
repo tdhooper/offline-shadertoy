@@ -985,7 +985,7 @@ void shadeSurface(inout Hit hit){
     
     diffuse = mix(diffuse, background, fog);
 
-
+    // diffuse = clamp(diffuse, 0., 1.);
     // diffuse = vec3(glow);
     //*/
     // diffuse = vec3(length(diffuse * .5));
@@ -1129,6 +1129,10 @@ float round(float a) {
     return floor(a + .5);
 }
 
+const float SAMPLES = 50.;
+
+
+
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
@@ -1184,16 +1188,34 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // camera movement
     doCamera(camPos, camTar, camUp, m);
 
-    // camera matrix
-    mat3 camMat = calcLookAtMatrix( camPos, camTar, camUp );  // 0.0 is the camera roll
-
-    // create view ray
-    vec3 rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
-
+    mat3 camMat;
+    vec3 rd;
     vec3 color = vec3(0.);
+    Hit hit;
 
-    Hit hit = raymarch(CastRay(camPos, rd));
-    color = render(hit);
+    vec3 sCamPos;
+    float j, k;
+
+    float radius = .2;
+
+    for(float i = 0.; i < SAMPLES; i++) {
+        j = i / SAMPLES;
+        j = hash(vec3(p, j));
+        k = hash(vec3(j, p) * 2.);
+        sCamPos = camPos;
+        k = pow(k, .5);
+        sCamPos += vec3(
+            sin(j * PI * 2.) * radius * k,
+            cos(j * PI * 2.) * radius * k,
+            0.
+        );
+        camMat = calcLookAtMatrix( sCamPos, camTar, camUp );  // 0.0 is the camera roll
+        rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
+        hit = raymarch(CastRay(sCamPos, rd));
+        color += render(hit);
+    }
+
+    color /= SAMPLES;
 
     // if (p.y < -.6) {
     //     color = pal5(round(p.x * MODEL_STEPS) / MODEL_STEPS);
