@@ -932,6 +932,8 @@ void shadeSurface(inout Hit hit){
 
     background = pal1(1.) * .6;
     background = vec3(1.);
+    background = vec3(.95, .95, 1.);
+    
     
     #ifndef SHOW_ITERATIONS
         if (hit.isBackground) {
@@ -957,8 +959,8 @@ void shadeSurface(inout Hit hit){
     fog = mix(0., 1., length(camTar - hit.pos) / pow(camDist, 1.5)) * 1.;
 
     fog = abs(length(camTar - hit.pos)) / (camDist * 2.5);
-
     fog = clamp(fog, 0., 1.);
+
 
 
     //*
@@ -982,8 +984,13 @@ void shadeSurface(inout Hit hit){
 
     fog = smoothstep(camDist *.1, camDist, length(camTar - hit.pos)) * .5;
     fog = mix(fog, 1., smoothstep(0., camDist * 2.5, length(camTar - hit.pos)));
+
+
+    // fog = (dot(normalize(camTar - camPos), hit.pos) + camDist) / camDist * .25;
     
     diffuse = mix(diffuse, background, fog);
+
+    // diffuse = vec3(pow(fog, 2.));
 
     // diffuse = clamp(diffuse, 0., 1.);
     // diffuse = vec3(glow);
@@ -1129,7 +1136,7 @@ float round(float a) {
     return floor(a + .5);
 }
 
-const float SAMPLES = 50.;
+const float SAMPLES = 2.;
 
 
 
@@ -1194,23 +1201,32 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     Hit hit;
 
     vec3 sCamPos;
-    float j, k;
+    float j, k, l;
 
     float radius = .2;
 
+    vec2 pp = p;
+
     for(float i = 0.; i < SAMPLES; i++) {
         j = i / SAMPLES;
-        j = hash(vec3(p, j));
-        k = hash(vec3(j, p) * 2.);
+        k = hash(vec3(p, j));
+        l = hash(vec3(j, p) * 2.);
         sCamPos = camPos;
-        k = pow(k, .5);
-        sCamPos += vec3(
-            sin(j * PI * 2.) * radius * k,
-            cos(j * PI * 2.) * radius * k,
-            0.
+        l = pow(l, .5);
+        // l = .05;
+        // k = j;
+        vec2 offset = vec2(
+            sin(k * PI * 2.) * radius * l,
+            cos(k * PI * 2.) * radius * l
         );
+        vec3 camN = normalize(camTar - camPos);
+        vec3 camX = cross(camUp, camN);
+        vec3 camY = cross(camX, camN);
+        sCamPos += offset.x * camX;
+        sCamPos += offset.y * camY;
         camMat = calcLookAtMatrix( sCamPos, camTar, camUp );  // 0.0 is the camera roll
-        rd = normalize( camMat * vec3(p.xy,2.0) ); // 2.0 is the lens length
+        // pp += offset * .05;
+        rd = normalize( camMat * vec3(pp, 2.) ); // 2.0 is the lens length
         hit = raymarch(CastRay(sCamPos, rd));
         color += render(hit);
     }
