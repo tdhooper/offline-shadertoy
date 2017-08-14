@@ -8,7 +8,7 @@ var FileSaver = require('file-saver');
 var pad = require('pad-number');
 
 var pixelRatio = window.devicePixelRatio;
-pixelRatio = 1.;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -38,7 +38,7 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/dod-fract/shader.glsl');
+var frag = glslify('./projects/dod-fract-optimise/shader.glsl');
 
 var texture = regl.texture();
 
