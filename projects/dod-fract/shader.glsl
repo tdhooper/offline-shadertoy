@@ -367,6 +367,7 @@ Model opU( Model m1, Model m2 ){
     }
 }
 
+bool debugSwitch = false;
 
 
 
@@ -375,7 +376,7 @@ float stepMove = 2.;
 float stepDuration = 2.;
 float loopDuration;
 float ballSize = 1.5;
-float stepSpeed = .5;
+float transitionPoint = .5;
 
 // #define SHOW_ANIMATION
 // #define SHOW_PATHS
@@ -388,7 +389,7 @@ float stepSpeed = .5;
 
 #ifdef SHOW_ANIMATION
     const float initialStep = 0.;
-    const float MODEL_STEPS = 4.;
+    const float MODEL_STEPS = 2.;
 #else
     const float initialStep = 2.;
     const float MODEL_STEPS = 3.;
@@ -405,7 +406,6 @@ float makeAnimStep(float t, float stepIndex) {
     x -= 1. / MODEL_STEPS * stepIndex;
     x = mod(x, 1.);
     x *= MODEL_STEPS;
-    x *= stepSpeed;
     x = tweakAnim(x);
     return x;
 }
@@ -416,9 +416,9 @@ float makeAnimStep(float t, float stepIndex, float delay) {
 
 float makeAnimStepNomod(float t, float stepIndex) {
     float x = t;
-    x -= 1. / MODEL_STEPS * stepIndex;
     x *= MODEL_STEPS;
-    x *= stepSpeed;
+    x -= stepIndex;
+    x *= transitionPoint;
     x = tweakAnim(x);
     return x;
 }
@@ -437,7 +437,7 @@ float moveAnim(float x) {
 }
 
 float scaleAnim(float x) {
-    x /= stepSpeed;
+    x /= transitionPoint;
     float a = 1.;
     float h = 1.;
     float blend = x;
@@ -459,7 +459,7 @@ float wobble(float x) {
 
 float wobbleScaleAnim(float x) {
     float blend = scaleAnim(x);
-    x /= stepSpeed;
+    x /= transitionPoint;
     blend -= wobble(hardstep(.6, 2.2, x)) * .1;
     return blend;
 }
@@ -527,7 +527,6 @@ ModelSpec specForStep(vec3 p, float x, float scale) {
 }
 
 float modelIterations;
-bool debugSwitch = false;
 float boundsThreshold;
 
 vec2 levelStep(vec3 p, float move, float size, float x) {
@@ -563,7 +562,7 @@ Model makeModel(vec3 p, float x, float scale, vec2 level) {
 
     // Setup smoothing
 
-    float rBlend = hardstep(.1, .4, x);
+    float rBlend = hardstep(.1, transitionPoint * .8, x);
     //rBlend -= hardstep(.4, .5, x);
     rBlend = smoothstep(0., 1., rBlend);
     float r = mix(0., .4, rBlend);
@@ -589,7 +588,7 @@ Model makeModel(vec3 p, float x, float scale, vec2 level) {
     // Setup bridge
 
     float cr = 0.04;
-    float rSep = hardstep(.4, .5, x);
+    float rSep = hardstep(transitionPoint * .8, transitionPoint, x);
     // sep = squareStep(sep, 20.);
     float sep = mix(0., 1., rSep);
 
@@ -647,7 +646,7 @@ Model subDModel(vec3 p) {
 
     float threshold = .3;
 
-    float midSizeScale = mix(1., stepScale, scaleAnim(stepSpeed));
+    float midSizeScale = mix(1., stepScale, scaleAnim(transitionPoint));
 
     float prevStepIndex, x, move, sizeScale, size;
 
@@ -711,11 +710,7 @@ Model subDModel(vec3 p) {
             
             if (innerBounds > 0.) {
                 iv = icosahedronVertex(pp);
-                // delay += .6;
-                // delay += hash(iv * 1.5) * .6;
-                // delay += level * .5;
                 delay += hash(iv * 1.5 - spectrum(mod(delayLevel, 3.) / 6.)) * .6;
-                // delay += hash(vec3(mod(level, 3.) / 3. + 1.)) * .6;
             } else {
                 delayLevel += 1.;
             }
@@ -831,7 +826,7 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp, in vec2 mouse) {
         camDist = 6.5;
         modelScale = 1.;
         
-        camDist /= 2.;
+        // camDist /= 2.;
 
         // if (debugSwitch) {
         //     modelScale = scaleForStep(-2.5);
@@ -1136,7 +1131,7 @@ float round(float a) {
     return floor(a + .5);
 }
 
-const float SAMPLES = 2.;
+const float SAMPLES = 1.;
 
 
 
@@ -1144,29 +1139,6 @@ const float SAMPLES = 2.;
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     init();
-
-    loopDuration = 3. * stepDuration;
-    
-    #ifdef SHOW_ANIMATION
-        // loopDuration /= stepSpeed;
-    #endif
-
-    time = iGlobalTime;
-    // time = 3.84;
-    time *= 1.5;
-    // time *= 2.;
-    // time /=2.;
-    //time += .1;
-    time = mod(time, loopDuration);
-    time = time/loopDuration;
-    //time = loopDuration;
-    //time= 0.;
-    //time /= 2.;
-    //time = mod(time, 1.);
-    // t = 1. - t;
-    // time = animTime(time);
-
-
 
     mousee = iMouse.xy;
 
@@ -1184,6 +1156,30 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     debugSwitch = p.x > 0.;
     
+
+    loopDuration = 3. * stepDuration;
+    
+
+    time = iGlobalTime;
+    // time = 3.84;
+    time *= 1.5;
+
+    // if ( ! debugSwitch) {
+    //     transitionPoint = .7;
+    // }
+    // time *= 2.;
+    // time /=2.;
+    //time += .1;
+    time = mod(time, loopDuration);
+    time = time/loopDuration;
+    //time = loopDuration;
+    //time= 0.;
+    //time /= 2.;
+    //time = mod(time, 1.);
+    // t = 1. - t;
+    // time = animTime(time);
+
+
 
 
 //    time = m.x * loopDuration;
@@ -1203,7 +1199,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 sCamPos;
     float j, k, l;
 
-    float radius = .2;
+    float radius = .0;
 
     vec2 pp = p;
 
