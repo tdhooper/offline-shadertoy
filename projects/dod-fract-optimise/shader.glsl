@@ -388,15 +388,15 @@ Model opU( Model m1, Model m2 ){
 
 struct ModelSpec {
     float move;
-    float size;
-    float sizeCore;
+    float sizeScale;
+    float sizeScaleCore;
     float bounds;
 };
 
-float boundsForStep(vec3 p, float move, float size, float scale) {
+float boundsForStep(vec3 p, float move, float sizeScale, float scale) {
     float overfit = .3;
     p /= scale;
-    float d = (length(p) - move - size - overfit);
+    float d = (length(p) - move - ballSize * sizeScale - overfit);
     d *= scale;
     return d;
 }
@@ -405,10 +405,8 @@ ModelSpec specForStep(vec3 p, float x, float scale) {
     float move = moveAnim(x) * stepMove;
     float sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
     float sizeScaleCore = mix(1., stepScale, scaleAnim(x));
-    float size = ballSize * sizeScale;
-    float sizeCore = ballSize * sizeScaleCore;
-    float bounds = boundsForStep(p, move, size, scale);
-    return ModelSpec(move, size, sizeCore, bounds);
+    float bounds = boundsForStep(p, move, sizeScale, scale);
+    return ModelSpec(move, sizeScale, sizeScaleCore, bounds);
 }
 
 vec2 levelStep(vec3 p, float move, float size, float x) {
@@ -428,8 +426,8 @@ Model makeModel(vec3 p, float x, float scale, vec2 level) {
     ModelSpec spec = specForStep(p, x, scale);
     
     float move = spec.move;
-    float size = spec.size;
-    float sizeCore = spec.sizeCore;
+    float size = spec.sizeScale * ballSize;
+    float sizeCore = spec.sizeScaleCore * ballSize;
 
     if (spec.bounds > boundsThreshold) {
         return makeBounds(spec.bounds);
@@ -498,21 +496,19 @@ Model subDModel(vec3 p) {
 
     float stepIndex = -initialStep;
     float scale = 1.;
+    float sizeScale = 1.;
     
-    vec3 iv;
+    vec3 pp, iv;
     float delay = 0.;
 
-    float innerBounds = 1e12;
-    float bounds = 1e12;
+    float innerBounds;
     float innerB = 1e12;
-    float boundsCandidate;
     float innerBoundsCandidate;
 
-    float threshold = .3;
 
     float midSizeScale = mix(1., stepScale, scaleAnim(transitionPoint));
 
-    float prevStepIndex, x, move, sizeScale, size;
+    float prevStepIndex, x, move, size;
 
     float css = 1.;
 
@@ -534,61 +530,37 @@ Model subDModel(vec3 p) {
             stepIndex = i;
             prevStepIndex = stepIndex - 1.;
 
-            if (stepIndex == 0.) {
-                css = 1.;
-            } else {
-                css *= midSizeScale;
-            }
-
             scale = pow(midSizeScale, prevStepIndex);
-
 
             x = makeAnimStep(time, prevStepIndex, delay);
             ModelSpec spec = specForStep(p, x, scale);
             move = spec.move;
-            size = spec.size;
+            size = spec.sizeScale * ballSize;
 
-            
-            p /= scale;
-            
-            level += levelStep(p, move, size, x);
+            level += levelStep(p / scale, move, size, x);
 
-            #ifdef BOUNCE_INNER
-                css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
-            #else
-                css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, scaleAnim(x));
-            #endif
-
-            vec3 pp = p;
-
-            innerBounds = (length(p) - move * .55) * scale;
+            innerBounds = (length(p / scale) - move * .55) * scale;
             if (innerBounds > 0.) {
+                iv = icosahedronVertex(p);
                 fold(p);
-                p -= triV.a * move;
-                #ifndef BOUNCE_INNER
-                    css = pow(midSizeScale, prevStepIndex) * mix(1., stepScale, wobbleScaleAnim(x));
-                #endif
-            }
-            p *= scale;
-            
-            if (innerBounds > 0.) {
-                iv = icosahedronVertex(pp);
+                p -= triV.a * move * scale;
+                sizeScale = spec.sizeScale;
                 delay += hash(iv * 1.5 - spectrum(mod(delayLevel, 3.) / 6.)) * .6;
             } else {
+                sizeScale = spec.sizeScaleCore;
                 delayLevel += 1.;
             }
-
-
+            
+            // This boundry object stops overstep through the inner ball
             innerBoundsCandidate = innerBounds + .3 * scale;
             if (innerBoundsCandidate > -.0) {
                 innerB = min(innerB, innerBoundsCandidate);
             }
-
         }
     }
 
     float mx = makeAnimStep(time, stepIndex, delay);
-    Model model = makeModel(p, mx, css, level);
+    Model model = makeModel(p, mx, scale * sizeScale, level);
     
     if (innerB > boundsThreshold) {
         model.dist = min(model.dist, innerB);
