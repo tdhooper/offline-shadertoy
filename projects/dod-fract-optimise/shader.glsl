@@ -142,6 +142,13 @@ void fold(inout vec3 p) {
     }
 }
 
+
+// --------------------------------------------------------
+// Closest icosahedron vertex
+// Branchless version of the one in
+// https://www.shadertoy.com/view/Mtc3RX
+// --------------------------------------------------------
+
 vec3 icosahedronVertex(vec3 p) {
     vec3 sp, v1, v2, v3, result, plane;
     float split;
@@ -168,6 +175,7 @@ float hardstep(float a, float b, float t) {
     return clamp((t - a) * s, 0., 1.);
 }
 
+// https://www.shadertoy.com/view/ldBfR1
 float gain(float x, float P) {
     if (x > 0.5)
         return 1.0 - 0.5*pow(2.0-2.0*x, P);
@@ -246,22 +254,18 @@ float hash( const in vec3 p ) {
 // Config
 // --------------------------------------------------------
 
-bool debugSwitch = false;
-
 float stepScale = .275;
 float stepMove = 2.;
 float stepDuration = 2.;
-float loopDuration;
 float ballSize = 1.5;
-float transitionPoint = .5;
 
-// #define SHOW_ANIMATION
-// #define SHOW_BOUNDS;
-// #define SHOW_ITERATIONS
+// How far into the subdivision animation do we start animating
+// the next subdivision
+float transitionPoint = .5; 
 
-// #define USE_OUTER_BOUNDS;
+// #define DEBUG_ANIMATION
 
-#ifdef SHOW_ANIMATION
+#ifdef DEBUG_ANIMATION
     const float initialStep = 0.;
     const float MODEL_STEPS = 2.;
 #else
@@ -278,7 +282,8 @@ float tweakAnim(float x) {
     return mix(x, kink(x, vec2(.4), 2., .8), .5);
 }
 
-float makeAnimStep(float t, float stepIndex) {
+// Get the timeline for a single subdivision iteration step
+float animStep(float t, float stepIndex) {
     float x = t;
     x *= MODEL_STEPS;
     x -= stepIndex;
@@ -287,8 +292,8 @@ float makeAnimStep(float t, float stepIndex) {
     return x;
 }
 
-float makeAnimStep(float t, float stepIndex, float delay) {
-    return makeAnimStep(t - delay, stepIndex);
+float animStep(float t, float stepIndex, float delay) {
+    return animStep(t - delay, stepIndex);
 }
 
 float moveAnim(float x) {
@@ -368,12 +373,11 @@ float animTime(float x) {
 
 struct Model {
     float dist;
-    vec2 level;
-    bool isBound;
+    float level;
 };
 
 Model makeBounds(float dist) {
-    return Model(dist, vec2(0), true);
+    return Model(dist, 0.);
 }
 
 // checks to see which intersection is closer
@@ -386,11 +390,14 @@ Model opU( Model m1, Model m2 ){
 }
 
 
+// Description of a single ball subdivision animation
+// at a given iteration step
 struct ModelSpec {
-    float move;
-    float sizeScale;
-    float sizeScaleCore;
-    float bounds;
+    float move; // How much the outer ball moves by
+    float sizeScale; // How much to shrink the outer ball
+    float sizeScaleCore; // How much to shrink the inner ball
+    float bounds; // Bounding distance for the model
+    float level; // Iteration/subdivision level for this animation
 };
 
 float boundsForStep(vec3 p, float move, float sizeScale, float scale) {
@@ -401,34 +408,31 @@ float boundsForStep(vec3 p, float move, float sizeScale, float scale) {
     return d;
 }
 
+float levelStep(vec3 p, float move, float size, float x) {
+    float transition = smoothstep(0., .1, x);
+    float blend = hardstep(move + size, size, length(p));
+    blend = mix(0., blend, transition);
+    return blend;
+}
+
 ModelSpec specForStep(vec3 p, float x, float scale) {
     float move = moveAnim(x) * stepMove;
     float sizeScale = mix(1., stepScale, wobbleScaleAnim(x));
     float sizeScaleCore = mix(1., stepScale, scaleAnim(x));
     float bounds = boundsForStep(p, move, sizeScale, scale);
-    return ModelSpec(move, sizeScale, sizeScaleCore, bounds);
+    float level = levelStep(p / scale, move, sizeScale * ballSize, x);
+    return ModelSpec(move, sizeScale, sizeScaleCore, bounds, level);
 }
 
-vec2 levelStep(vec3 p, float move, float size, float x) {
-    float transition = smoothstep(0., .1, x);
-    float level = hardstep(max(move - size, size + .01), size, length(p));
-    level = mix(0., level, transition);
-    float blend = hardstep(move + size, size, length(p));
-    blend = mix(0., blend, transition);
-    return vec2(level, blend);
-}
 
 float boundsThreshold;
 
-Model makeModel(vec3 p, float x, float scale, vec2 level) {
-    float d, part;
-
+// Animation of the ball subdividing with smooth blending
+// and connective struts that snap
+Model blendedModel(vec3 p, float x, float scale, float level) {
     ModelSpec spec = specForStep(p, x, scale);
+    level += spec.level;
     
-    float move = spec.move;
-    float size = spec.sizeScale * ballSize;
-    float sizeCore = spec.sizeScaleCore * ballSize;
-
     if (spec.bounds > boundsThreshold) {
         return makeBounds(spec.bounds);
     }
@@ -436,134 +440,127 @@ Model makeModel(vec3 p, float x, float scale, vec2 level) {
     p /= scale;
     fold(p);
 
+    float move = spec.move;
+    float size = spec.sizeScale * ballSize;
+    float sizeCore = spec.sizeScaleCore * ballSize;
+
     // Setup smoothing
 
-    float rBlend = hardstep(.1, transitionPoint * .8, x);
-    rBlend = smoothstep(0., 1., rBlend);
-    float r = mix(0., .4, rBlend);
+    float radiusBlend = hardstep(.1, transitionPoint * .8, x);
+    radiusBlend = smoothstep(0., 1., radiusBlend);
+    float radius = mix(0., .4, radiusBlend);
 
-    // Center ball
+    // Core ball
 
-    vec3 vA = vec3(0);
+    vec3 posCore = vec3(0);
+    float d = length(p - posCore) - sizeCore;
 
-    part = length(p - vA) - sizeCore;
-    d = part;
+    // Setup outer ball
 
-    level += levelStep(p, move, size, x);
+    vec3 posOuter = triV.a * move;
 
-    // Setup ball
+    // Setup connective strut
 
-    vec3 vB = triV.a * move;
-
-    // Setup bridge
-
-    float cr = 0.04;
-    float rSep = hardstep(transitionPoint * .8, transitionPoint, x);
-    float sep = mix(0., 1., rSep);
+    float capRadius = 0.04;
+    float gapBlend = hardstep(transitionPoint * .8, transitionPoint, x);
+    float gap = mix(0., 1., gapBlend);
 
     // Ball and bridge
 
-    d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
-    d = smin(d, length(p - vB) - size, r);
+    d = smin(d, fCapsule(p, posCore, posOuter, capRadius, gap), radius);
+    d = smin(d, length(p - posOuter) - size, radius);
     
     // First reflection
 
     vec3 rPlane = triP.bc;
     p = reflect(p, rPlane);
     
-    d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
-    d = smin(d, fCapsule(p, vB, reflect(vB, rPlane), cr, sep), r);
-    d = smin(d, length(p - vB) - size, r);
+    d = smin(d, fCapsule(p, posCore, posOuter, capRadius, gap), radius);
+    d = smin(d, fCapsule(p, posOuter, reflect(posOuter, rPlane), capRadius, gap), radius);
+    d = smin(d, length(p - posOuter) - size, radius);
 
     // Second reflection
 
     vec3 rPlane2 = reflect(triP.ca, rPlane);
     p = reflect(p, rPlane2);
 
-    d = smin(d, fCapsule(p, vA, vB, cr, sep), r);
-    d = smin(d, fCapsule(p, vB, reflect(vB, rPlane2), cr, sep), r);
-    d = smin(d, fCapsule(p, vB, reflect(reflect(vB, rPlane), rPlane2), cr, sep), r);
-    d = smin(d, length(p - vB) - size, r);
+    d = smin(d, fCapsule(p, posCore, posOuter, capRadius, gap), radius);
+    d = smin(d, fCapsule(p, posOuter, reflect(posOuter, rPlane2), capRadius, gap), radius);
+    d = smin(d, fCapsule(p, posOuter, reflect(reflect(posOuter, rPlane), rPlane2), capRadius, gap), radius);
+    d = smin(d, length(p - posOuter) - size, radius);
 
     d *= scale;
 
-    return Model(d, level, false);
+    return Model(d, level);
 }
 
 
-
-Model subDModel(vec3 p) {
+// Iterates through each subdivision of the ball, restricting the
+// smooth blending method above to just the currently-animated level
+Model iteratedModel(vec3 p) {
 
     float stepIndex = -initialStep;
+    float prevStepIndex;
+    float x;
     float scale = 1.;
     float sizeScale = 1.;
+
+    // Scale at the transition point
+    float midSizeScale = mix(1., stepScale, scaleAnim(transitionPoint));
     
-    vec3 pp, iv;
+    float level = 0.; // Iteration level used for colouring
+    float delayLevel = 0.;
+    vec3 iv;
     float delay = 0.;
 
-    float innerBounds;
-    float innerB = 1e12;
-    float innerBoundsCandidate;
+    float coreBoundry;
+    float coreOverstepBounds = 1e12;
+    float coreOverstepBoundsCandidate;
 
-
-    float midSizeScale = mix(1., stepScale, scaleAnim(transitionPoint));
-
-    float prevStepIndex, x, move, size;
-
-    float css = 1.;
-
-    #ifndef SHOW_ANIMATION
+    #ifndef DEBUG_ANIMATION
         float time = animTime(time);
     #endif
 
-    float stepX;
-
-    vec2 level = vec2(0);
-    float delayLevel = 0.;
-
     for (float i = 1. - initialStep; i < MODEL_STEPS; i++) {
 
-        stepX = makeAnimStep(time, i, delay);
+        x = animStep(time, i, delay);
 
-        if (stepX >= 0.) {
+        if (x >= 0.) {
  
             stepIndex = i;
             prevStepIndex = stepIndex - 1.;
 
             scale = pow(midSizeScale, prevStepIndex);
 
-            x = makeAnimStep(time, prevStepIndex, delay);
+            x = animStep(time, prevStepIndex, delay);
             ModelSpec spec = specForStep(p, x, scale);
-            move = spec.move;
-            size = spec.sizeScale * ballSize;
+            level += spec.level;
 
-            level += levelStep(p / scale, move, size, x);
-
-            innerBounds = (length(p / scale) - move * .55) * scale;
-            if (innerBounds > 0.) {
+            coreBoundry = (length(p / scale) - spec.move * .55) * scale;
+            if (coreBoundry > 0.) {
                 iv = icosahedronVertex(p);
                 fold(p);
-                p -= triV.a * move * scale;
+                p -= triV.a * spec.move * scale;
                 sizeScale = spec.sizeScale;
+                // Adjust the start time of each ball for some variety
                 delay += hash(iv * 1.5 - spectrum(mod(delayLevel, 3.) / 6.)) * .6;
             } else {
                 sizeScale = spec.sizeScaleCore;
                 delayLevel += 1.;
             }
             
-            // This boundry object stops overstep through the inner ball
-            innerBoundsCandidate = innerBounds + .3 * scale;
-            if (innerBoundsCandidate > -.0) {
-                innerB = min(innerB, innerBoundsCandidate);
+            coreOverstepBoundsCandidate = coreBoundry + .3 * scale;
+            if (coreOverstepBoundsCandidate > -.0) {
+                coreOverstepBounds = min(coreOverstepBounds, coreOverstepBoundsCandidate);
             }
         }
     }
 
-    float mx = makeAnimStep(time, stepIndex, delay);
-    Model model = makeModel(p, mx, scale * sizeScale, level);
+    x = animStep(time, stepIndex, delay);
+    Model model = blendedModel(p, x, scale * sizeScale, level);
     
-    if (innerB > boundsThreshold) {
-        model.dist = min(model.dist, innerB);
+    if (coreOverstepBounds > boundsThreshold) {
+        model.dist = min(model.dist, coreOverstepBounds);
     }
 
     return model;
@@ -574,18 +571,17 @@ float modelScale;
 Model map( vec3 p ){
     p /= modelScale;
     boundsThreshold = .1 / modelScale;
-    Model model = subDModel(p);
+    Model model = iteratedModel(p);
     model.dist *= modelScale;
     return model;
 }
-
 
 vec3 camPos;
 float camDist;
 vec3 camTar;
 
-
-
+// Return the modelScale for the given subdivision iteration step,
+// such that all steps look the same size
 float scaleForStep(float step) {
     return pow(1./stepScale, step);
 }
@@ -593,7 +589,6 @@ float scaleForStep(float step) {
 void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp) {
     float x = time;
 
-    camDist = 3. / stepScale;
     camDist = 8.;
 
     float camZoom = camZoomInOut(x);
@@ -605,20 +600,11 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp) {
         
     pR(camPos.xz, animCamRotate(x) * PI * 2.);
 
-    #ifdef SHOW_ANIMATION
-        camDist = 6.5;
+    #ifdef DEBUG_ANIMATION
+        camDist = 5.;
         modelScale = 1.;
-        
-        // camDist /= 2.;
-
-        // if (debugSwitch) {
-        //     modelScale = scaleForStep(-2.5);
-        //     camDist *= modelScale;
-        // }
-
         camPos = vec3(0,0,camDist);
     #endif
-
 
     camPos *= cameraRotation();
 }
@@ -667,8 +653,6 @@ vec3 calcNormal( in vec3 pos ){
 Hit raymarch(CastRay castRay){
 
     float currentDist = INTERSECTION_PRECISION * 2.0;
-    bool isBound = false;
-    int iterations = 0;
     Model model;
 
     Ray ray = Ray(castRay.origin, castRay.direction, 0.);
@@ -677,9 +661,7 @@ Hit raymarch(CastRay castRay){
         if (currentDist < INTERSECTION_PRECISION || ray.len > MAX_TRACE_DISTANCE) {
             break;
         }
-        iterations += 1;
         model = map(ray.origin + ray.direction * ray.len);
-        // isBound = model.isBound;
         currentDist = model.dist;
         ray.len += currentDist * FUDGE_FACTOR;
     }
@@ -687,7 +669,7 @@ Hit raymarch(CastRay castRay){
     bool isBackground = false;
     vec3 pos = vec3(0);
     vec3 normal = vec3(0);
-    vec3 color = vec3(iterations);
+    vec3 color = vec3(0);
 
     if (ray.len > MAX_TRACE_DISTANCE) {
         isBackground = true;
@@ -701,97 +683,37 @@ Hit raymarch(CastRay castRay){
 
 
 // --------------------------------------------------------
-// Rendering
+// Shading
 // --------------------------------------------------------
 
 void shadeSurface(inout Hit hit){
 
-    vec3 background = vec3(.1)* vec3(.5,0,1);
+    vec3 background = vec3(.95, .95, 1.);
 
-    background = vec3(1.);
-    background = vec3(.95, .95, 1.);
-    
-    
-    #ifndef SHOW_ITERATIONS
-        if (hit.isBackground) {
-            hit.color = background;
-            return;
-        }
-    #endif
+    if (hit.isBackground) {
+        hit.color = background;
+        return;
+    }
 
-    //hit.normal += sin(hit.model.uv * .4) * .4;
-    //hit.normal = normalize(hit.normal);
-
-    vec3 light = normalize(vec3(.5,1,0));
-    vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
-    diffuse = mix(diffuse, vec3(1), .1);
-    
-    vec3 colA = vec3(.1,.75,.75) * 1.5;
-    
-    //diffuse *= hit.model.uv;
-    diffuse = sin(diffuse);
-    diffuse *= 1.3;
-    
-    float fog = clamp((hit.ray.len - 5.) * .5, 0., 1.);
-    fog = mix(0., 1., length(camTar - hit.pos) / pow(camDist, 1.5)) * 1.;
-
-    fog = abs(length(camTar - hit.pos)) / (camDist * 2.5);
-    fog = clamp(fog, 0., 1.);
-
-
-
-    //*
-    diffuse = vec3(.3) * vec3(.9, .3, .8);
-    vec3 highlight = vec3(1.2) * vec3(.8,.5,1.2);
     float glow = 1. - dot(normalize(camPos), hit.normal);
-    glow += .5 * (1.-dot(hit.normal, normalize(hit.pos)));
+    glow += .5 * (1. - dot(hit.normal, normalize(hit.pos)));
     glow *= .5;
     glow = gainStep(glow, 2.);
-    diffuse = mix(diffuse, diffuse * 3., glow);
     
-    // diffuse = hit.color;
-    vec2 level = hit.model.level;
-    // level = floor(level);
-    diffuse = spectrum(level.y / MODEL_STEPS + .1 - 1./3.);
-    // diffuse = pal5(mod(level / 4., 1.));
-        // diffuse = vec3(mod(level, 3.) / 3.);
-
+    float level = hit.model.level;
+    vec3 diffuse = spectrum(level / MODEL_STEPS + .1 - 1./3.);
     diffuse = mix(diffuse * 1., diffuse * 1.5, glow);
 
-    fog = smoothstep(camDist *.1, camDist, length(camTar - hit.pos)) * .5;
+    float fog = smoothstep(camDist *.1, camDist, length(camTar - hit.pos)) * .5;
     fog = mix(fog, 1., smoothstep(0., camDist * 2.5, length(camTar - hit.pos)));
 
-
-    // fog = (dot(normalize(camTar - camPos), hit.pos) + camDist) / camDist * .25;
-    
     diffuse = mix(diffuse, background, fog);
-
-    // diffuse = vec3(pow(fog, 2.));
-
-    // diffuse = clamp(diffuse, 0., 1.);
-    // diffuse = vec3(glow);
-    //*/
-    // diffuse = vec3(length(diffuse * .5));
-    #ifdef SHOW_ITERATIONS
-        hit.color = spectrum(hit.color.x / 50.);
-        // hit.color = spectrum(modelIterations / 100.);
-    #else
-        hit.color = diffuse;
-    #endif
-    // hit.color = hit.normal * .5 + .5;
-    // hit.color = spectrum(hit.ray.len / 10.);
-    //hit.color = hit.model.uv;
+    hit.color = diffuse;
 }
 
 
 vec3 render(Hit hit){
-
-#ifdef DEBUG
-    return hit.normal * .5 + .5;
-#endif
-
     shadeSurface(hit);
-
     return hit.color;
 }
 
@@ -808,7 +730,6 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in vec3 up )
     vec3 vv = normalize( cross(uu,ww));
     return mat3( uu, vv, ww );
 }
-
 
 
 // --------------------------------------------------------
@@ -828,109 +749,29 @@ vec3 linearToScreen(vec3 linearRGB) {
 
 
 
-float round(float a) {
-    return floor(a + .5);
-}
-
-const float SAMPLES = 1.;
-
-
-
-
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     init();
 
-    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
-    
-    debugSwitch = p.x > 0.;
-    
+    vec2 p = (-iResolution.xy + 2. * fragCoord.xy) / iResolution.y;
 
-    loopDuration = 3. * stepDuration;
-    
+    float loopDuration = 3. * stepDuration;
 
     time = iGlobalTime;
-    // time = 3.84;
     time *= 1.5;
-
-    // if ( ! debugSwitch) {
-    //     transitionPoint = .7;
-    // }
-    // time *= 2.;
-    // time /=2.;
-    //time += .1;
-    time = mod(time, loopDuration);
     time = time/loopDuration;
-    //time = loopDuration;
-    //time= 0.;
-    //time /= 2.;
-    //time = mod(time, 1.);
-    // t = 1. - t;
-    // time = animTime(time);
-
-
-
-
-//    time = m.x * loopDuration;
+    time = mod(time, 1.);
 
     camPos = vec3( 0., 0., 2.);
     camTar = vec3( 0. , 0. , 0. );
     vec3 camUp = vec3(0., 1., 0.);
-
-    // camera movement
     doCamera(camPos, camTar, camUp);
 
-    mat3 camMat;
-    vec3 rd;
-    vec3 color = vec3(0.);
-    Hit hit;
+    mat3 camMat = calcLookAtMatrix( camPos, camTar, camUp );  // 0.0 is the camera roll
+    vec3 rd = normalize( camMat * vec3(p, 2.) ); // 2.0 is the lens length
+    Hit hit = raymarch(CastRay(camPos, rd));
+    vec3 color = render(hit);
 
-    vec3 sCamPos;
-    float j, k, l;
-
-    float radius = .0;
-
-    vec2 pp = p;
-
-    for(float i = 0.; i < SAMPLES; i++) {
-        j = i / SAMPLES;
-        k = hash(vec3(p, j));
-        l = hash(vec3(j, p) * 2.);
-        sCamPos = camPos;
-        l = pow(l, .5);
-        // l = .05;
-        // k = j;
-        vec2 offset = vec2(
-            sin(k * PI * 2.) * radius * l,
-            cos(k * PI * 2.) * radius * l
-        );
-        vec3 camN = normalize(camTar - camPos);
-        vec3 camX = cross(camUp, camN);
-        vec3 camY = cross(camX, camN);
-        sCamPos += offset.x * camX;
-        sCamPos += offset.y * camY;
-        camMat = calcLookAtMatrix( sCamPos, camTar, camUp );  // 0.0 is the camera roll
-        // pp += offset * .05;
-        rd = normalize( camMat * vec3(pp, 2.) ); // 2.0 is the lens length
-        hit = raymarch(CastRay(sCamPos, rd));
-        color += render(hit);
-    }
-
-    color /= SAMPLES;
-
-    // if (p.y < -.6) {
-    //     color = pal5(round(p.x * MODEL_STEPS) / MODEL_STEPS);
-    // }
-
-    // if (p.y < -.8) {
-    //     color = pal5(p.x);
-    // }
-
-    #ifndef DEBUG
-       color = linearToScreen(color);
-    #endif
-
-   // color = linearToScreen(color);
-   
+    color = linearToScreen(color);
     fragColor = vec4(color,1.0);
 }
