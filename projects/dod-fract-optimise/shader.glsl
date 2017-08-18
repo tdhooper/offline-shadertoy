@@ -569,10 +569,12 @@ Model iteratedModel(vec3 p) {
 float modelScale;
 
 Model map( vec3 p ){
+    return Model(length(p) - 2., 1.);
     p /= modelScale;
     boundsThreshold = .1 / modelScale;
     Model model = iteratedModel(p);
     model.dist *= modelScale;
+
     return model;
 }
 
@@ -619,7 +621,9 @@ void doCamera(out vec3 camPos, out vec3 camTar, out vec3 camUp) {
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
-const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
+
+#define ENABLE_OVER_RELAXATION;
+const float OVER_RELAX_FACTOR = 5.5;
 
 struct CastRay {
     vec3 origin;
@@ -639,6 +643,7 @@ struct Hit {
     bool isBackground;
     vec3 normal;
     vec3 color;
+    int iterations;
 };
 
 vec3 calcNormal( in vec3 pos ){
@@ -654,6 +659,11 @@ Hit raymarch(CastRay castRay){
 
     float currentDist = INTERSECTION_PRECISION * 2.0;
     Model model;
+    float lastDist = 0.;
+    float lenCandidate;
+    float overstep;
+    bool overRelax = true;
+    int iterations = 0;
 
     Ray ray = Ray(castRay.origin, castRay.direction, 0.);
 
@@ -662,8 +672,20 @@ Hit raymarch(CastRay castRay){
             break;
         }
         model = map(ray.origin + ray.direction * ray.len);
+        iterations += 1;
         currentDist = model.dist;
-        ray.len += currentDist * FUDGE_FACTOR;
+        #ifdef ENABLE_OVER_RELAXATION
+            lenCandidate = ray.len + currentDist * OVER_RELAX_FACTOR;
+            overstep = (ray.len + lastDist) - (lenCandidate - currentDist);
+            if ( ! overRelax || overstep < 0.) {
+                lenCandidate = ray.len + currentDist;
+                overRelax = false;
+            }
+        #else
+            lenCandidate = ray.len + currentDist;
+        #endif
+        lastDist = currentDist;
+        ray.len = lenCandidate;
     }
 
     bool isBackground = false;
@@ -678,7 +700,7 @@ Hit raymarch(CastRay castRay){
         normal = calcNormal(pos);
     }
 
-    return Hit(ray, model, pos, isBackground, normal, color);
+    return Hit(ray, model, pos, isBackground, normal, color, iterations);
 }
 
 
@@ -689,6 +711,9 @@ Hit raymarch(CastRay castRay){
 void shadeSurface(inout Hit hit){
 
     vec3 background = vec3(.95, .95, 1.);
+
+    hit.color = spectrum(float(hit.iterations) / 100.);
+    return;
 
     if (hit.isBackground) {
         hit.color = background;
