@@ -25,8 +25,6 @@ precision mediump float;
 float time;
 
 #define PI 3.14159265359
-#define HALF_PI 1.5707963267948966
-#define TAU 6.28318530718
 #define PHI 1.618033988749895
 
 
