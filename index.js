@@ -38,7 +38,7 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/dod-fract-optimise/shader.glsl');
+var frag = glslify('./projects/refract/shader.glsl');
 
 var texture = regl.texture();
 
