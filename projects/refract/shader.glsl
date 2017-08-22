@@ -29,7 +29,7 @@ vec2 mousee;
 // 0: Defaults
 // 1: Model
 // 2: Camera
-#define MOUSE_CONTROL 2
+#define MOUSE_CONTROL 0
 
 //#define DEBUG
 
@@ -92,6 +92,29 @@ mat3 cameraRotation() {
 // HG_SDF
 // https://www.shadertoy.com/view/Xs3GRB
 // --------------------------------------------------------
+
+#define GDFVector0 vec3(1, 0, 0)
+#define GDFVector1 vec3(0, 1, 0)
+#define GDFVector2 vec3(0, 0, 1)
+
+#define GDFVector3 normalize(vec3(1, 1, 1 ))
+#define GDFVector4 normalize(vec3(-1, 1, 1))
+#define GDFVector5 normalize(vec3(1, -1, 1))
+#define GDFVector6 normalize(vec3(1, 1, -1))
+
+#define GDFVector7 normalize(vec3(0, 1, PHI+1.))
+#define GDFVector8 normalize(vec3(0, -1, PHI+1.))
+#define GDFVector9 normalize(vec3(PHI+1., 0, 1))
+#define GDFVector10 normalize(vec3(-PHI-1., 0, 1))
+#define GDFVector11 normalize(vec3(1, PHI+1., 0))
+#define GDFVector12 normalize(vec3(-1, PHI+1., 0))
+
+#define GDFVector13 normalize(vec3(0, PHI, 1))
+#define GDFVector14 normalize(vec3(0, -PHI, 1))
+#define GDFVector15 normalize(vec3(1, 0, PHI))
+#define GDFVector16 normalize(vec3(-1, 0, PHI))
+#define GDFVector17 normalize(vec3(PHI, 1, 0))
+#define GDFVector18 normalize(vec3(-PHI, 1, 0))
 
 float vmax(vec3 v) {
     return max(max(v.x, v.y), v.z);
@@ -192,8 +215,9 @@ Material waterMaterial = Material(
     vec3(0.),
     true,
     1.,
-    1. / 1.333,
+    // 1. / 1.333,
     // 1. / 1.1,
+    1. / 1.01,
     0.
 );
 Material mirrorMaterial = Material(
@@ -234,6 +258,81 @@ Model opU( Model m1, Model m2 ){
 }
 
 
+
+float wave1(vec3 p, vec3 v) {    
+    float angle = acos(dot(normalize(p), v));
+    float waveA = 0.;
+    waveA += cos(angle * 6. * 2.)*4.;
+    return waveA;
+}
+
+
+float wave(vec3 p, vec3 v) {    
+    return wave1(p, v);
+}
+
+Model modelCe(vec3 p) {
+    float scale= .8;
+    p.z /= scale;
+    float d = length(p) - .5;
+    p.z -= .3;
+    float part = length(p) - .5;
+    d = max(d, -part);
+    d *= scale;
+    return Model(d, waterMaterial);
+}
+
+Model modelCx(vec3 p) {
+    pReflect(p, vec3(0,0,1), 0.);
+    float d = length(p) - .5;
+    
+    float part = 1e12;
+    float s = 1.;
+    float a = 1.45;
+    part = min(part, length(p - GDFVector13 * a) - s);
+    part = min(part, length(p - GDFVector14 * a) - s);
+    part = min(part, length(p - GDFVector15 * a) - s);
+    part = min(part, length(p - GDFVector16 * a) - s);
+    part = min(part, length(p - GDFVector17 * a) - s);
+    part = min(part, length(p - GDFVector18 * a) - s);
+    d = max(d, -part);
+    return Model(d, waterMaterial);
+}
+
+Model modelC(vec3 p) {
+    Model model = newModel();
+
+    // model.dist = fBox(p, vec3(.5));
+    // return model;
+
+    vec3 a = vec3(1,0,0);
+    float w = 0.;
+
+    w += wave(p, GDFVector13);
+    w += wave(p, GDFVector14);
+    w += wave(p, GDFVector15);
+    w += wave(p, GDFVector16);
+    w += wave(p, GDFVector17);
+    w += wave(p, GDFVector18);
+
+    // w += wave(p, GDFVector3);
+    // w += wave(p, GDFVector4);
+    // w += wave(p, GDFVector5);
+    // w += wave(p, GDFVector6);
+    // // w += wave(p, GDFVector17);
+    // // w += wave(p, GDFVector18);    
+    
+    float r = w * .005 + .6;
+    model.dist = length(p) - r;
+
+    model.dist = mix(model.dist, length(p) - .6, .0);
+
+    // model.dist = fBox(p, vec3(.5));
+
+    return model;
+}
+
+
 Model mainModel(vec3 p) {
     float d = 1e12;
     float part;
@@ -241,33 +340,13 @@ Model mainModel(vec3 p) {
     Model model = newModel();
     if ( ! enableTransparency) return model;
 
-    pR(p.zx, -.5);
-    pR(p.yz, -time);
-    // pR(p.yx, sin(time*2.)* .5);
-    
-    // pR(p.xz, time);
-    
-    d = fBox(p, vec3(.2)) - .05;
-    
-    p.z += .07;
+    // pR(p.zx, -.5);
+    // pR(p.yz, -time);
 
-    float squish = 1.;
-    p.z /= squish;
-    part = length(p) - .3;
-    d = part;
+    model = modelC(p);
+    
+    if (insideTransparency) model.dist *= -1.;
 
-    p.z += .1;
-    part = length(p) - .3;
-    d = smax(d, -part, .02);
-    
-    // part = dot(p, vec3(1,0,0));
-    // d = max(d, -part);
-    
-
-    d *= squish;
-    
-    if (insideTransparency) d *= -1.;
-    model.dist = d;
     model.material = waterMaterial;
     return model;
 }
@@ -291,8 +370,10 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-1.);
+    camPos = vec3(0,0,-2.);
     camPos *= cameraRotation();
+    pR(camPos.yz, time * PI * 2.);
+    pR(camUp.yz, time * PI * 2.);
 }
 
 
@@ -372,6 +453,16 @@ Hit raymarch(CastRay castRay){
 // Refraction from https://www.shadertoy.com/view/lsXGzH
 // --------------------------------------------------------
 
+float makeLines(float x, float lines, float thick) {
+    x += .5;
+    float start = thick * .5;
+    float end = 1. - start;
+    float aa = .001;
+    float str = mod(x, 1. / lines) * lines;
+    str = smoothstep(start, start - aa, str) + smoothstep(end, end + aa, str);
+    return str;
+}
+
 void shadeSurface(inout Hit hit){
     
     vec3 color = vec3(.04,.045,.05);
@@ -379,26 +470,41 @@ void shadeSurface(inout Hit hit){
     if (hit.isBackground) {
         hit.color = color;
         hit.color = hit.ray.direction * .5 + .5;
-        // vec2 p = cartToPolar(hit.ray.direction).yz;
-        vec3 pp = hit.ray.direction;
+        //hit.color = vec3(sign(hit.ray.direction.x) * .5 + .5);
+        //hit.color = vec3(dot(vec3(0,0,1), hit.ray.direction) * .5 + .5);
+        //hit.color = vec3(sin(dot(vec3(0,1,0), hit.ray.direction) * 2.) * .5 + .5);
         
-        pReflect(pp, normalize(-vec3(0,.5,.5)), 0.);
-        pReflect(pp, normalize(-vec3(0,-.5,.5)), 0.);
-        pReflect(pp, normalize(-vec3(.5,0,.5)), 0.);
-        pReflect(pp, normalize(-vec3(-.5,0,.5)), 0.);
+        vec3 d = hit.ray.direction;
+        vec3 y = vec3(0,1,0);
+        vec3 z = vec3(1,0,0);
+        vec3 dd = normalize(cross(d, z));
+        float angle = acos(dot(dd, y));
         
-        vec2 p = pp.xy;
+        angle *= sign(dot(cross(dd, y), z)) / PI;
+        // angle += time;
+        
+        // angle /= PI;
 
-        float size = .01;
-        float space = .1;
+        float str = makeLines(angle, 3., .1);
 
-        p = mod(p, space);
-        p -= vec2(space / 2.);
-        float d = length(p);
-        hit.color = vec3(smoothstep(size + .005, size, d));
+        hit.color = vec3(1);
+        hit.color *= str;
 
-        hit.color *= hit.ray.direction *.5 + .5;
-        hit.color *= 2.;
+        float hor = dot(hit.ray.direction, z);
+        // hit.color *= makeLines(hor, 5., .1);
+        
+        // hit.color = mix(hit.color, hit.color * spectrum(angle - .333), .5) * 1.5;
+        hit.color *= mix(spectrum(angle+.1), vec3(1), .5) * 3.5;
+        // hit.color *= 2.;
+
+        // if (angle < .33) {
+        //     hit.color *= vec3(1,0,0);
+        // } else if (angle < .66) {
+        //     hit.color *= vec3(0,1,0);
+        // } else {
+        //     hit.color *= vec3(0,0,1);
+        // }
+
         return;
     }
 
@@ -420,10 +526,10 @@ CastRay transparencyCastRay(Hit hit, float refractiveIndex) {
 
 bool isInsideTransparentModel(vec3 pos) {
     Model model = map(pos);
-    return model.dist < 0. && model.material.transparency < 1.;
+    return model.dist < 0. && model.material.transparency > 0.;
 }
 
-const float REFRACT_SAMPLES = 40.; // max trace distance
+const float REFRACT_SAMPLES = 100.; // max trace distance
 
 
 Hit renderTransparency(Hit hit) {
@@ -455,16 +561,17 @@ Hit renderTransparency(Hit hit) {
         
         castRay = transparencyCastRay(hitInside, 1. / refractiveIndex);
         insideTransparency = false;
-        enableTransparency = ! isInsideTransparentModel(castRay.origin);
+        enableTransparency = false;
         hitOutside = raymarch(castRay);
         enableTransparency = true;
         
         // Shade the final model
         
         shadeSurface(hitOutside);
-
-        hitOutside.color *= spectrum(wl) * 4.;
+// 
+        hitOutside.color *= spectrum(wl) * 2.;
         color += hitOutside.color;
+
     }
 
     color /= REFRACT_SAMPLES;
@@ -547,6 +654,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 m = mousee.xy / iResolution.xy;
 
     time = iGlobalTime;
+    time /= 20.;
+    time = mod(time, .5);
 
     doCamera();
 
