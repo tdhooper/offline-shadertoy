@@ -353,6 +353,8 @@ Model mainModel(vec3 p) {
 
 Model map( vec3 p ){
     p *= modelRotation();
+    pR(p.yz, time * PI * 2. - .8);
+    // pR(camUp.yz, time * PI * 2.);
     Model model;
     model = mainModel(p);
     return model;
@@ -372,8 +374,6 @@ void doCamera() {
     camTar = vec3(0.);
     camPos = vec3(0,0,-2.);
     camPos *= cameraRotation();
-    pR(camPos.yz, time * PI * 2.);
-    pR(camUp.yz, time * PI * 2.);
 }
 
 
@@ -481,11 +481,11 @@ void shadeSurface(inout Hit hit){
         float angle = acos(dot(dd, y));
         
         angle *= sign(dot(cross(dd, y), z)) / PI;
-        // angle += time;
+        angle += time * .5 - .125;
         
         // angle /= PI;
 
-        float str = makeLines(angle, 3., .1);
+        float str = makeLines(angle, 4., .175);
 
         hit.color = vec3(1);
         hit.color *= str;
@@ -494,7 +494,10 @@ void shadeSurface(inout Hit hit){
         // hit.color *= makeLines(hor, 5., .1);
         
         // hit.color = mix(hit.color, hit.color * spectrum(angle - .333), .5) * 1.5;
-        hit.color *= mix(spectrum(angle+.1), vec3(1), .5) * 3.5;
+        // hit.color *= mix(spectrum(angle+.1), vec3(1), .5) * 3.5;
+        hit.color *= mix(spectrum(.3), vec3(1), .5) * 3.5;
+        
+        // hit.color *= vec3(1,.8,.9) * 3.5;
         // hit.color *= 2.;
 
         // if (angle < .33) {
@@ -593,8 +596,11 @@ vec3 render(Hit hit){
     shadeSurface(hit);
     
     if (hit.isBackground) {
+        return vec3(0);
         return hit.color;
     }
+
+    // return hit.normal * .5 + .5;
     
     if (hit.model.material.transparency > 0.) {
         Hit hit2 = renderTransparency(hit);
@@ -654,7 +660,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 m = mousee.xy / iResolution.xy;
 
     time = iGlobalTime;
-    time /= 20.;
+    time /= 8.;
     time = mod(time, .5);
 
     doCamera();

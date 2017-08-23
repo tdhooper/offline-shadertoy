@@ -8,7 +8,7 @@ var FileSaver = require('file-saver');
 var pad = require('pad-number');
 
 var pixelRatio = window.devicePixelRatio;
-pixelRatio = .25;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -21,7 +21,7 @@ var scrubber = document.createElement('input');
 scrubber.classList.add('scrubber');
 scrubber.setAttribute('type', 'range');
 scrubber.min = 0;
-scrubber.max = 1000 * 8; // milliseconds
+scrubber.max = 1000 * 4; // milliseconds
 scrubber.step = 10;
 controls.appendChild(scrubber);
 
