@@ -29,7 +29,7 @@ vec2 mousee;
 // 0: Defaults
 // 1: Model
 // 2: Camera
-#define MOUSE_CONTROL 0
+#define MOUSE_CONTROL 2
 
 //#define DEBUG
 
@@ -215,9 +215,9 @@ Material waterMaterial = Material(
     vec3(0.),
     true,
     1.,
-    // 1. / 1.333,
+    1. / 1.333,
     // 1. / 1.1,
-    1. / 1.01,
+    // 1. / 1.01,
     0.
 );
 Material mirrorMaterial = Material(
@@ -302,8 +302,16 @@ Model modelCx(vec3 p) {
 Model modelC(vec3 p) {
     Model model = newModel();
 
-    // model.dist = fBox(p, vec3(.5));
-    // return model;
+    model.dist = fBox(p, vec3(.3)) - .1;
+    
+    p.y /= .7;
+    model.dist = (length(p) - .5);
+    p.y -= .6;
+    model.dist = smax(model.dist, -(length(p) - .5), .2);
+
+    model.dist *= .7;
+    
+    return model;
 
     vec3 a = vec3(1,0,0);
     float w = 0.;
@@ -470,49 +478,11 @@ void shadeSurface(inout Hit hit){
     if (hit.isBackground) {
         hit.color = color;
         hit.color = hit.ray.direction * .5 + .5;
-        //hit.color = vec3(sign(hit.ray.direction.x) * .5 + .5);
-        //hit.color = vec3(dot(vec3(0,0,1), hit.ray.direction) * .5 + .5);
-        //hit.color = vec3(sin(dot(vec3(0,1,0), hit.ray.direction) * 2.) * .5 + .5);
-        
-        vec3 d = hit.ray.direction;
-        vec3 y = vec3(0,1,0);
-        vec3 z = vec3(1,0,0);
-        vec3 dd = normalize(cross(d, z));
-        float angle = acos(dot(dd, y));
-        
-        angle *= sign(dot(cross(dd, y), z)) / PI;
-        angle += time * .5 - .125;
-        
-        // angle /= PI;
-
-        float str = makeLines(angle, 4., .175);
-
-        hit.color = vec3(1);
-        hit.color *= str;
-
-        float hor = dot(hit.ray.direction, z);
-        // hit.color *= makeLines(hor, 5., .1);
-        
-        // hit.color = mix(hit.color, hit.color * spectrum(angle - .333), .5) * 1.5;
-        // hit.color *= mix(spectrum(angle+.1), vec3(1), .5) * 3.5;
-        hit.color *= mix(spectrum(.3), vec3(1), .5) * 3.5;
-        
-        // hit.color *= vec3(1,.8,.9) * 3.5;
-        // hit.color *= 2.;
-
-        // if (angle < .33) {
-        //     hit.color *= vec3(1,0,0);
-        // } else if (angle < .66) {
-        //     hit.color *= vec3(0,1,0);
-        // } else {
-        //     hit.color *= vec3(0,0,1);
-        // }
-
-        return;
     }
 
     hit.color = hit.model.material.albedo;
 }
+
 
 CastRay transparencyCastRay(Hit hit, float refractiveIndex) {
     float separation = 0.05;    
@@ -532,8 +502,7 @@ bool isInsideTransparentModel(vec3 pos) {
     return model.dist < 0. && model.material.transparency > 0.;
 }
 
-const float REFRACT_SAMPLES = 100.; // max trace distance
-
+const float REFRACT_SAMPLES = 10.; // max trace distance
 
 Hit renderTransparency(Hit hit) {
 
@@ -590,6 +559,7 @@ Hit renderTransparency(Hit hit) {
 void mixTransparency(inout Hit hit, Hit hit2) {
     hit.color = mix(hit.color, hit2.color, hit.model.material.transparency);
 }
+
 
 vec3 render(Hit hit){
     
@@ -651,6 +621,17 @@ vec3 linearToScreen(vec3 linearRGB) {
 
 
 
+CastRay newCastRay(Hit hit, vec3 rayDirection) {
+    float separation = 0.01;
+    vec3 rayOrigin;
+    float startDistance;
+    startDistance = separation / abs(dot(rayDirection, hit.normal));
+    rayOrigin = hit.pos + startDistance * rayDirection;
+    return CastRay(rayOrigin, rayDirection);
+}
+
+const float REFRACT_BOUNCES = 5.;
+
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
@@ -668,9 +649,65 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     float focalLength = 2.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
-    Hit hit = raymarch(CastRay(camPos, rd));
+    float refractiveIndex;
 
-    vec3 color = render(hit);
+    CastRay castRay = CastRay(camPos, rd);
+
+    Hit hit;
+    vec3 rayDirection;
+
+    hit = raymarch(castRay);
+
+
+    for (float i = 0.; i < REFRACT_BOUNCES; i++) {
+        if (hit.isBackground || hit.model.material.transparency == 0.) {
+            break;
+        }
+        refractiveIndex = hit.model.material.refractiveIndex;
+        if (insideTransparency) {
+            refractiveIndex = 1. / refractiveIndex;
+        }
+        rayDirection = refract(hit.ray.direction, hit.normal, refractiveIndex);
+        if (rayDirection == vec3(0)) {
+            rayDirection = reflect(hit.ray.direction, hit.normal);
+        } else {
+            insideTransparency = ! insideTransparency;
+        }
+        if (i == REFRACT_BOUNCES - 1.) {
+            enableTransparency = false;
+            insideTransparency = false;
+        }
+        castRay = newCastRay(hit, rayDirection);
+        hit = raymarch(castRay);
+    }
+
+    vec3 color = vec3(1,0,0);
+    // color = hit.normal * .5 + .5;
+    if (hit.isBackground) {
+        color = hit.ray.direction;
+        color = mod(color, 1./5.) * 5.;
+    } else {
+        // color = hit.normal * .5 + .5;
+    }
     color = linearToScreen(color);
     fragColor = vec4(color,1.0);
 }
+
+
+/*
+
+* Create intial ray
+* START LOOP
+* Get hit
+* Transparent?
+** Y IS inside transparent flag?
+*** Y Create exit refract ray
+*** N Create enter refract ray
+** IS TIF?
+*** N Set inside transparent flag
+** IS last loop
+*** Y Unset inside transparent flag, disable models
+** LOOP
+
+
+*/
