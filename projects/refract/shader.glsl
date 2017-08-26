@@ -173,7 +173,10 @@ float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
     return sign(t);
 }
 
-
+// Torus in the XZ-plane
+float fTorus(vec3 p, float smallRadius, float largeRadius) {
+    return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
+}
 
 // --------------------------------------------------------
 // Spectrum colour palette
@@ -238,12 +241,14 @@ bool enableTransparency = true;
 
 struct Model {
     float dist;
+    vec2 uv;
     Material material;
 };
 
 Model newModel() {
     return Model(
         1e12,
+        vec2(0),
         ceramicMaterial
     );
 }
@@ -279,7 +284,7 @@ Model modelCe(vec3 p) {
     float part = length(p) - .5;
     d = max(d, -part);
     d *= scale;
-    return Model(d, waterMaterial);
+    return Model(d, vec2(0), waterMaterial);
 }
 
 Model modelCx(vec3 p) {
@@ -296,13 +301,19 @@ Model modelCx(vec3 p) {
     part = min(part, length(p - GDFVector17 * a) - s);
     part = min(part, length(p - GDFVector18 * a) - s);
     d = max(d, -part);
-    return Model(d, waterMaterial);
+    return Model(d, vec2(0), waterMaterial);
 }
 
 Model modelC(vec3 p) {
     Model model = newModel();
 
-    model.dist = fBox(p, vec3(.3)) - .1;
+    model.dist = fBox(p, vec3(.3)) - .0;
+
+    // model.dist = fTorus(p, .2, .5);
+    // return model;
+
+    model.dist = length(p) - .5;
+    return model;
     
     p.y /= .7;
     model.dist = (length(p) - .5);
@@ -340,8 +351,22 @@ Model modelC(vec3 p) {
     return model;
 }
 
+Model backModel(vec3 p) {
+    return Model(
+        dot(p, vec3(0,0,-1)) + 5.,
+        vec2(p.x, p.y),
+        ceramicMaterial
+    );
+}
+
 
 Model mainModel(vec3 p) {
+    // pR(p.xy, .5);
+    pR(p.yz, PI / 2.);
+    pR(p.yz, time * PI * 2. - .8);
+    // pR(camUp.yz, time * PI * 2.);
+
+
     float d = 1e12;
     float part;
 
@@ -361,10 +386,9 @@ Model mainModel(vec3 p) {
 
 Model map( vec3 p ){
     p *= modelRotation();
-    pR(p.yz, time * PI * 2. - .8);
-    // pR(camUp.yz, time * PI * 2.);
     Model model;
     model = mainModel(p);
+    model = opU(model, backModel(p));
     return model;
 }
 
@@ -391,7 +415,7 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 30.; // max trace distance
+const float MAX_TRACE_DISTANCE = 100.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
@@ -630,19 +654,76 @@ CastRay newCastRay(Hit hit, vec3 rayDirection) {
     return CastRay(rayOrigin, rayDirection);
 }
 
-const float REFRACT_BOUNCES = 5.;
+const float REFRACT_BOUNCES = 2.;
+const float REFRACT_SAMPLES_S = 100.;
 
+vec3 shade(Hit hit) {
+    vec3 color = vec3(1,0,0);
+
+    if (hit.isBackground) {
+        color = hit.ray.direction;
+        color = mod(color, 1./5.) * 5.;
+        color = vec3(0.);
+    } else {
+        vec2 uv = hit.model.uv;
+        float rep = 1.;
+        float size = .2;
+        uv = mod(uv - rep * .5, 1. / rep) * rep;
+        uv -= .5;
+        float d = smoothstep(size, size * .8, length(uv));
+        color = vec3(d);
+    }
+
+    return color;
+}
+
+
+Hit marchTransparent(Hit hit, float wl) {
+    enableTransparency = true;
+    insideTransparency = false;
+    
+    for (float i = 0.; i < REFRACT_BOUNCES; i++) {
+        if (hit.isBackground || hit.model.material.transparency == 0.) {
+            return hit;
+        } else {
+            float refractiveIndex = hit.model.material.refractiveIndex;
+            float v = 1.05;
+            float riMin = refractiveIndex / v;
+            float riMax = refractiveIndex * v;
+            refractiveIndex = mix(riMin, riMax, wl);
+
+            if (insideTransparency) {
+                refractiveIndex = 1. / refractiveIndex;
+            }
+            vec3 rayDirection = refract(hit.ray.direction, hit.normal, refractiveIndex);
+            if (rayDirection == vec3(0)) {
+                rayDirection = reflect(hit.ray.direction, hit.normal);
+            } else {
+                insideTransparency = ! insideTransparency;
+            }
+            if (i == REFRACT_BOUNCES - 1.) {
+                enableTransparency = false;
+                insideTransparency = false;
+            }
+            CastRay castRay = newCastRay(hit, rayDirection);
+            hit = raymarch(castRay);
+        }
+    }
+    return hit;
+}
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     mousee = iMouse.xy;
 
+    // mousee = vec2(.257,.45) * iResolution;
+
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
 
     time = iGlobalTime;
-    time /= 8.;
-    time = mod(time, .5);
+    time /= 4.;
+    time = mod(time, 1.);
 
     doCamera();
 
@@ -657,38 +738,26 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 rayDirection;
 
     hit = raymarch(castRay);
+    float wl, riMax, riMin;
+    // wl = time;
+    wl = 0.;
 
+    vec3 color = vec3(0);
+    vec3 sampleColour;
 
-    for (float i = 0.; i < REFRACT_BOUNCES; i++) {
-        if (hit.isBackground || hit.model.material.transparency == 0.) {
-            break;
-        }
-        refractiveIndex = hit.model.material.refractiveIndex;
-        if (insideTransparency) {
-            refractiveIndex = 1. / refractiveIndex;
-        }
-        rayDirection = refract(hit.ray.direction, hit.normal, refractiveIndex);
-        if (rayDirection == vec3(0)) {
-            rayDirection = reflect(hit.ray.direction, hit.normal);
-        } else {
-            insideTransparency = ! insideTransparency;
-        }
-        if (i == REFRACT_BOUNCES - 1.) {
-            enableTransparency = false;
-            insideTransparency = false;
-        }
-        castRay = newCastRay(hit, rayDirection);
-        hit = raymarch(castRay);
-    }
-
-    vec3 color = vec3(1,0,0);
-    // color = hit.normal * .5 + .5;
-    if (hit.isBackground) {
-        color = hit.ray.direction;
-        color = mod(color, 1./5.) * 5.;
+    if (hit.isBackground || hit.model.material.transparency == 0.) {
+        color = shade(hit);
     } else {
-        // color = hit.normal * .5 + .5;
+        for(float r = 0.; r < REFRACT_SAMPLES_S; r++){
+            wl = r / REFRACT_SAMPLES_S;
+            // wl = time;
+
+            Hit hit2 = marchTransparent(hit, wl);
+            color += (shade(hit2) * spectrum(wl)) / REFRACT_SAMPLES_S * 5.;
+            // color += sampleColour / REFRACT_SAMPLES_S;
+        }
     }
+
     color = linearToScreen(color);
     fragColor = vec4(color,1.0);
 }
