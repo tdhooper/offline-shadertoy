@@ -29,7 +29,7 @@ vec2 mousee;
 // 0: Defaults
 // 1: Model
 // 2: Camera
-#define MOUSE_CONTROL 2
+#define MOUSE_CONTROL 0
 
 //#define DEBUG
 
@@ -72,7 +72,7 @@ mat3 mouseRotation(bool enable, vec2 xy) {
     //xy *= 2.;
 
     rx = (xy.y + .5) * PI;
-    ry = (-xy.x) * 2. * PI;
+    ry = (xy.x) * 3. * PI;
 
     return sphericalMatrix(rx, ry);
 }
@@ -115,6 +115,9 @@ mat3 cameraRotation() {
 #define GDFVector16 normalize(vec3(-1, 0, PHI))
 #define GDFVector17 normalize(vec3(PHI, 1, 0))
 #define GDFVector18 normalize(vec3(-PHI, 1, 0))
+
+
+#define saturate(x) clamp(x, 0., 1.)
 
 float vmax(vec3 v) {
     return max(max(v.x, v.y), v.z);
@@ -176,6 +179,19 @@ float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
 // Torus in the XZ-plane
 float fTorus(vec3 p, float smallRadius, float largeRadius) {
     return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
+}
+
+
+// Distance to line segment between <a> and <b>, used for fCapsule() version 2below
+float fLineSegment(vec3 p, vec3 a, vec3 b) {
+    vec3 ab = b - a;
+    float t = saturate(dot(p - a, ab) / dot(ab, ab));
+    return length((ab*t + a) - p);
+}
+
+// Capsule version 2: between two end points <a> and <b> with radius r 
+float fCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    return fLineSegment(p, a, b) - r;
 }
 
 // --------------------------------------------------------
@@ -307,22 +323,72 @@ Model modelCx(vec3 p) {
 Model modelC(vec3 p) {
     Model model = newModel();
 
-    model.dist = fBox(p, vec3(.3)) - .0;
+    float part;
+    float d = 1e12;
 
-    // model.dist = fTorus(p, .2, .5);
+    // p.z += .07;
+    // float squish = 1.;
+    // p.z /= squish;
+    // part = length(p) - .3;
+    // d = part;
+    // p.z += .1;
+    // part = length(p) - .3;
+    // d = smax(d, -part, .02);
+    // d *= squish;
+    // model.dist = d;
     // return model;
 
-    model.dist = length(p) - .5;
-    return model;
-    
-    p.y /= .7;
-    model.dist = (length(p) - .5);
-    p.y -= .6;
-    model.dist = smax(model.dist, -(length(p) - .5), .2);
 
-    model.dist *= .7;
+    // model.dist = fBox(p, vec3(.15)) - .05;
+
+    // pR(p.xy, PI * .5);
+    // model.dist = fTorus(p, .1, .2);
+
+    // return model;
+
+    // model.dist = length(p) - .5;
+    // return model;
     
+    // p.y /= .7;
+    // model.dist = (length(p) - .5);
+    // p.y -= .6;
+    // model.dist = smax(model.dist, -(length(p) - .5), .2);
+
+    // model.dist *= .7;
+    
+    // model.dist = fCapsule(p, vec3(0,0,-.15), vec3(0,0,.15), .15);
+
+    // p.x += .15;
+    // d = length(p) - .15;
+
+    // p.x -= .3;
+    // part = length(p) - .15;
+
+    // model.dist = smin(d, part, .1);
+
+    float sep = .02;
+    float sz = .23;
+    vec3 pp = p;
+
+    p.x -= sz + sep;
+    d = length(p) - sz;
+
+    p = pp;
+    p.x += sz + sep;
+    part = length(p) - sz;
+    d = min(d, part);
+
+
+    p = pp;
+    part = length(p) - 1.;
+    d = max(part, -d);
+
+    model.dist = d;
+
+
     return model;
+
+    p *= 2.;
 
     vec3 a = vec3(1,0,0);
     float w = 0.;
@@ -348,12 +414,22 @@ Model modelC(vec3 p) {
 
     // model.dist = fBox(p, vec3(.5));
 
+    model.dist /= 2.;
+
     return model;
 }
 
 Model backModel(vec3 p) {
+    p.z -= 1.;
+    float sphere = length(p) - 2.;
+    float plane = dot(p, vec3(0,0,1));
+    float d = max(plane, -sphere);
+
+    p.z += 3.;
+    d = fBox(p, vec3(.9));
+    
     return Model(
-        dot(p, vec3(0,0,-1)) + 5.,
+        d,
         vec2(p.x, p.y),
         ceramicMaterial
     );
@@ -362,8 +438,8 @@ Model backModel(vec3 p) {
 
 Model mainModel(vec3 p) {
     // pR(p.xy, .5);
-    pR(p.yz, PI / 2.);
-    pR(p.yz, time * PI * 2. - .8);
+    // pR(p.yz, PI / 2.);
+    // pR(p.yz, time * PI * 2. - .8);
     // pR(camUp.yz, time * PI * 2.);
 
 
@@ -374,7 +450,7 @@ Model mainModel(vec3 p) {
     if ( ! enableTransparency) return model;
 
     // pR(p.zx, -.5);
-    // pR(p.yz, -time);
+    pR(p.xz, -time * PI);
 
     model = modelC(p);
     
@@ -385,10 +461,11 @@ Model mainModel(vec3 p) {
 }
 
 Model map( vec3 p ){
+    Model model = backModel(p);
     p *= modelRotation();
-    Model model;
-    model = mainModel(p);
-    model = opU(model, backModel(p));
+    // Model model;
+    model = opU(model, mainModel(p));
+    // model = opU(model, backModel(p));
     return model;
 }
 
@@ -404,7 +481,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-2.);
+    camPos = vec3(0,0,-1.);
     camPos *= cameraRotation();
 }
 
@@ -654,24 +731,34 @@ CastRay newCastRay(Hit hit, vec3 rayDirection) {
     return CastRay(rayOrigin, rayDirection);
 }
 
-const float REFRACT_BOUNCES = 2.;
-const float REFRACT_SAMPLES_S = 100.;
+const float REFRACT_BOUNCES = 5.;
+const float REFRACT_SAMPLES_S = 10.;
+const float DISPERSION = 1. - .1;
+const float MULT = 2.;
+#define ALLOW_ESCAPE
 
 vec3 shade(Hit hit) {
-    vec3 color = vec3(1,0,0);
+    vec3 color = vec3(0,1,0);
 
     if (hit.isBackground) {
         color = hit.ray.direction;
         color = mod(color, 1./5.) * 5.;
         color = vec3(0.);
-    } else {
+    } else if (hit.model.material.transparency == 0.) {
         vec2 uv = hit.model.uv;
-        float rep = 1.;
-        float size = .2;
+        float rep = 5.;
+        float size = .15;
         uv = mod(uv - rep * .5, 1. / rep) * rep;
         uv -= .5;
         float d = smoothstep(size, size * .8, length(uv));
         color = vec3(d);
+
+        color = vec3(0);
+        color += makeLines(uv.x, 1., .1) * mix(spectrum(.1), vec3(1), 1.);
+        color += makeLines(uv.y, 1., .1) * mix(spectrum(.4), vec3(1), 1.);
+
+        // color = clamp(vec3(hit.model.uv, 0.).xzy * .5 + .5, 0., 1.);
+        // color = hit.normal* .5 + .5;
     }
 
     return color;
@@ -687,9 +774,9 @@ Hit marchTransparent(Hit hit, float wl) {
             return hit;
         } else {
             float refractiveIndex = hit.model.material.refractiveIndex;
-            float v = 1.05;
-            float riMin = refractiveIndex / v;
-            float riMax = refractiveIndex * v;
+            // float v = 1.05;
+            float riMin = refractiveIndex * DISPERSION;
+            float riMax = refractiveIndex;
             refractiveIndex = mix(riMin, riMax, wl);
 
             if (insideTransparency) {
@@ -701,10 +788,12 @@ Hit marchTransparent(Hit hit, float wl) {
             } else {
                 insideTransparency = ! insideTransparency;
             }
-            if (i == REFRACT_BOUNCES - 1.) {
-                enableTransparency = false;
-                insideTransparency = false;
-            }
+            #ifdef ALLOW_ESCAPE
+                if (i == REFRACT_BOUNCES - 1.) {
+                    enableTransparency = false;
+                    insideTransparency = false;
+                }
+            #endif
             CastRay castRay = newCastRay(hit, rayDirection);
             hit = raymarch(castRay);
         }
@@ -722,7 +811,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 m = mousee.xy / iResolution.xy;
 
     time = iGlobalTime;
-    time /= 4.;
+    time /= 2.;
     time = mod(time, 1.);
 
     doCamera();
@@ -753,7 +842,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             // wl = time;
 
             Hit hit2 = marchTransparent(hit, wl);
-            color += (shade(hit2) * spectrum(wl)) / REFRACT_SAMPLES_S * 5.;
+            color += (shade(hit2) * spectrum(wl)) / REFRACT_SAMPLES_S * MULT;
             // color += sampleColour / REFRACT_SAMPLES_S;
         }
     }
