@@ -194,6 +194,13 @@ float fCapsule(vec3 p, vec3 a, vec3 b, float r) {
     return fLineSegment(p, a, b) - r;
 }
 
+// Cylinder standing upright on the xz plane
+float fCylinder(vec3 p, float r, float height) {
+    float d = length(p.xz) - r;
+    d = max(d, abs(p.y) - height);
+    return d;
+}
+
 // --------------------------------------------------------
 // Spectrum colour palette
 // IQ https://www.shadertoy.com/view/ll2GD3
@@ -326,17 +333,44 @@ Model modelC(vec3 p) {
     float part;
     float d = 1e12;
 
-    // p.z += .07;
-    // float squish = 1.;
-    // p.z /= squish;
-    // part = length(p) - .3;
-    // d = part;
-    // p.z += .1;
-    // part = length(p) - .3;
-    // d = smax(d, -part, .02);
-    // d *= squish;
-    // model.dist = d;
-    // return model;
+
+    pR(p.xy, PI * .5);
+    pR(p.xz, PI * .43);
+    // pR(p.xy, PI * .5);
+    
+    float sep = .1;
+    float sz = .5;
+    float rr = .1;
+    vec3 pp = p;
+
+    p = pp;
+    d = length(p) - .3;
+
+    p.x -= sz + sep;
+    part = length(p) - sz;
+    d = smax(d, -part, rr);
+
+    // p = pp;
+    // p.x += sz + sep;
+    // part = length(p) - sz;
+    // d = smax(d, -part, rr);
+
+    model.dist = d;
+
+    return model;
+
+
+    p.z += .07;
+    float squish = 1.;
+    p.z /= squish;
+    part = length(p) - .3;
+    d = part;
+    p.z += .1;
+    part = length(p) - .3;
+    d = smax(d, -part, .02);
+    d *= squish;
+    model.dist = d;
+    return model;
 
 
     // model.dist = fBox(p, vec3(.15)) - .05;
@@ -366,27 +400,39 @@ Model modelC(vec3 p) {
 
     // model.dist = smin(d, part, .1);
 
-    float sep = .02;
-    float sz = .23;
-    vec3 pp = p;
-
-    p.x -= sz + sep;
-    d = length(p) - sz;
-
-    p = pp;
-    p.x += sz + sep;
-    part = length(p) - sz;
-    d = min(d, part);
 
 
-    p = pp;
-    part = length(p) - 1.;
-    d = max(part, -d);
+    // float sep = .1;
+    // float sz = .2;
+    // float rr = .2;
+    // vec3 pp = p;
 
-    model.dist = d;
+    // p = pp;
+    // d = length(p) - .3;
+
+    // p.x -= sz + sep;
+    // part = length(p) - sz;
+    // d = smax(d, -part, rr);
+
+    // p = pp;
+    // p.x += sz + sep;
+    // part = length(p) - sz;
+    // d = smax(d, -part, rr);
+
+    // model.dist = d;
+
+    // return model;
 
 
-    return model;
+    // vec2 wh = vec2(.15, .15);
+    // pR(p.xy, PI * .5);
+    // model.dist = min(
+    //     fCylinder(p, wh.x, wh.y),
+    //     fTorus(p, wh.y, wh.x)
+    // );
+
+    // return model;
+
 
     p *= 2.;
 
@@ -426,8 +472,9 @@ Model backModel(vec3 p) {
     float d = max(plane, -sphere);
 
     p.z += 3.;
-    d = fBox(p, vec3(.9));
-    
+    // d = fBox(p, vec3(1.9,1.9,.9));
+    d = dot(p, vec3(0,0,1)) - .7;
+
     return Model(
         d,
         vec2(p.x, p.y),
@@ -450,7 +497,7 @@ Model mainModel(vec3 p) {
     if ( ! enableTransparency) return model;
 
     // pR(p.zx, -.5);
-    pR(p.xz, -time * PI);
+    // pR(p.xz, -time * PI);
 
     model = modelC(p);
     
@@ -492,9 +539,9 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 100.; // max trace distance
+const float MAX_TRACE_DISTANCE = 5.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
-const int NUM_OF_TRACE_STEPS = 100;
+const int NUM_OF_TRACE_STEPS = 50;
 const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
@@ -732,9 +779,9 @@ CastRay newCastRay(Hit hit, vec3 rayDirection) {
 }
 
 const float REFRACT_BOUNCES = 5.;
-const float REFRACT_SAMPLES_S = 10.;
-const float DISPERSION = 1. - .1;
-const float MULT = 2.;
+const float REFRACT_SAMPLES_S = 400.;
+const float DISPERSION = 1. - .5;
+const float MULT = 20.;
 #define ALLOW_ESCAPE
 
 vec3 shade(Hit hit) {
@@ -746,19 +793,26 @@ vec3 shade(Hit hit) {
         color = vec3(0.);
     } else if (hit.model.material.transparency == 0.) {
         vec2 uv = hit.model.uv;
-        float rep = 5.;
-        float size = .15;
+        // pR(uv, time * PI * 2.);
+        pR(uv, PI*.25);
+        // float rep = mix(6., 7., sin(time) * .5 + .5);
+        float rep = 7.;
+        uv += time * (1. / rep) * vec2(1., 1.);
+        // uv.x += .25;
+        
+        float size = .1;
         uv = mod(uv - rep * .5, 1. / rep) * rep;
         uv -= .5;
         float d = smoothstep(size, size * .8, length(uv));
         color = vec3(d);
 
-        color = vec3(0);
-        color += makeLines(uv.x, 1., .1) * mix(spectrum(.1), vec3(1), 1.);
-        color += makeLines(uv.y, 1., .1) * mix(spectrum(.4), vec3(1), 1.);
+        // color = vec3(0);
+        // color += makeLines(uv.x, 1., .1) * mix(spectrum(.1), vec3(1), 1.);
+        // color += makeLines(uv.y, 1., .1) * mix(spectrum(.4), vec3(1), 1.);
 
         // color = clamp(vec3(hit.model.uv, 0.).xzy * .5 + .5, 0., 1.);
         // color = hit.normal* .5 + .5;
+        // color = vec3(1);
     }
 
     return color;
@@ -810,9 +864,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
 
+    pR(p, PI * -.25);
+
     time = iGlobalTime;
     time /= 2.;
-    time = mod(time, 1.);
+    // time = mod(time, 1.);
 
     doCamera();
 
@@ -835,7 +891,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 sampleColour;
 
     if (hit.isBackground || hit.model.material.transparency == 0.) {
-        color = shade(hit);
+        // color = shade(hit);
     } else {
         for(float r = 0.; r < REFRACT_SAMPLES_S; r++){
             wl = r / REFRACT_SAMPLES_S;
