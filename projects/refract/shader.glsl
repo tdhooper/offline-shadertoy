@@ -117,6 +117,13 @@ mat3 cameraRotation() {
 #define GDFVector18 normalize(vec3(-PHI, 1, 0))
 
 
+#define GDFVector19 normalize(vec3(1, 1, 1))
+#define GDFVector20 normalize(vec3(1, -1, -1))
+#define GDFVector21 normalize(vec3(-1, 1, -1))
+#define GDFVector22 normalize(vec3(-1, -1, 1))
+
+
+
 #define saturate(x) clamp(x, 0., 1.)
 
 float vmax(vec3 v) {
@@ -201,6 +208,175 @@ float fCylinder(vec3 p, float r, float height) {
     return d;
 }
 
+
+// Cone with correct distances to tip and base circle. Y is up, 0 is in the middle of the base.
+float fCone(vec3 p, float radius, float height) {
+    vec2 q = vec2(length(p.xz), p.y);
+    vec2 tip = q - vec2(0, height);
+    vec2 mantleDir = normalize(vec2(height, radius));
+    float mantle = dot(tip, mantleDir);
+    float d = max(mantle, -q.y);
+    float projected = dot(tip, vec2(mantleDir.y, -mantleDir.x));
+    
+    // distance to tip
+    if ((q.y > height) && (projected < 0.)) {
+        d = max(d, length(tip));
+    }
+    
+    // distance to base ring
+    if ((q.x > radius) && (projected > length(vec2(height, radius)))) {
+        d = max(d, length(q - vec2(radius, 0)));
+    }
+    return d;
+}
+
+float fCone(vec3 p, float radius, float height, vec3 direction, float offset) {
+    p -= direction * offset;
+    p = reflect(p, normalize(mix(vec3(0,1,0), -direction, .5)));
+    //p -= vec3(0,height,0);
+    return fCone(p, radius, height);
+}
+
+float fCone(vec3 p, float radius, float height, vec3 direction) {
+    return fCone(p, radius, height, direction, 0.);
+}
+
+float fConeI(vec3 p, float radius, float height, vec3 direction) {
+    return fCone(p, radius, height, -direction, -height);
+}
+
+float fConeI(vec3 p, float radius, float height, vec3 direction, float offset) {
+    return fCone(p, radius, height, -direction, -height - offset);
+}
+
+float fCone(vec3 p, float radius, vec3 start, vec3 end) {
+    float height = length(start - end);
+    vec3 direction = normalize(end - start);
+    return fCone(p - start, radius, height, direction);
+}
+
+// --------------------------------------------------------
+// https://github.com/stackgl/glsl-inverse
+// --------------------------------------------------------
+
+mat3 inverse(mat3 m) {
+  float a00 = m[0][0], a01 = m[0][1], a02 = m[0][2];
+  float a10 = m[1][0], a11 = m[1][1], a12 = m[1][2];
+  float a20 = m[2][0], a21 = m[2][1], a22 = m[2][2];
+
+  float b01 = a22 * a11 - a12 * a21;
+  float b11 = -a22 * a10 + a12 * a20;
+  float b21 = a21 * a10 - a11 * a20;
+
+  float det = a00 * b01 + a01 * b11 + a02 * b21;
+
+  return mat3(b01, (-a22 * a01 + a02 * a21), (a12 * a01 - a02 * a11),
+              b11, (a22 * a00 - a02 * a20), (-a12 * a00 + a02 * a10),
+              b21, (-a21 * a00 + a01 * a20), (a11 * a00 - a01 * a10)) / det;
+}
+
+
+
+// --------------------------------------------------------
+// http://math.stackexchange.com/a/897677
+// --------------------------------------------------------
+
+mat3 orientMatrix(vec3 A, vec3 B) {
+    mat3 Fi = mat3(
+        A,
+        (B - dot(A, B) * A) / length(B - dot(A, B) * A),
+        cross(B, A)
+    );
+    mat3 G = mat3(
+        dot(A, B),              -length(cross(A, B)),   0,
+        length(cross(A, B)),    dot(A, B),              0,
+        0,                      0,                      1
+    );
+    return Fi * G * inverse(Fi);
+}
+
+
+// --------------------------------------------------------
+// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
+// --------------------------------------------------------
+
+mat3 rotationMatrix(vec3 axis, float angle)
+{
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    return mat3(
+        oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
+        oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
+        oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c
+    );
+}
+
+
+
+// --------------------------------------------------------
+// knighty
+// https://www.shadertoy.com/view/MsKGzw
+// --------------------------------------------------------
+
+struct Tri {
+    vec3 a;
+    vec3 b;
+    vec3 c;
+};
+    
+struct TriPlanes {
+    vec3 ab;
+    vec3 bc;
+    vec3 ca;
+};
+
+struct TriMetrics {
+    vec3 a;
+    vec3 b;
+    vec3 c;
+    vec3 ao; // a opposite (bc midpoint)
+    vec3 bo; // b opposite (ca midpoint)
+    vec3 co; // c opposite (ab midpoint)
+    vec3 ad; // a direction
+    vec3 bd; // b direction
+    vec3 cd; // c direction
+};
+
+vec3 nc,pab,pbc,pca;
+Tri tri;
+TriPlanes triP;
+
+void initPolyhedron(int Type) {//setup folding planes and vertex
+    float cospin=cos(PI/float(Type)), scospin=sqrt(0.75-cospin*cospin);
+    nc=vec3(-0.5,-cospin,scospin);//3rd folding plane. The two others are xz and yz planes
+    pab=vec3(0.,0.,1.);
+    pbc=vec3(scospin,0.,0.5);//No normalization in order to have 'barycentric' coordinates work evenly
+    pca=vec3(0.,scospin,cospin);
+    pbc=normalize(pbc); pca=normalize(pca);//for slightly better DE. In reality it's not necesary to apply normalization :) 
+    tri = Tri(pbc, pab, pca);    
+    triP = TriPlanes( 
+        normalize(cross(tri.a, tri.b)),
+        normalize(cross(tri.b, tri.c)),
+        normalize(cross(tri.c, tri.a))
+    );
+}
+
+
+// Repeat space to form subdivisions of an icosahedron
+void pIcosahedron(inout vec3 p) {
+    p = abs(p);
+    pReflect(p, nc, 0.);
+    p.xy = abs(p.xy);
+    pReflect(p, nc, 0.);
+    p.xy = abs(p.xy);
+    pReflect(p, nc, 0.);
+}
+
+
+
 // --------------------------------------------------------
 // Spectrum colour palette
 // IQ https://www.shadertoy.com/view/ll2GD3
@@ -213,6 +389,37 @@ vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
 vec3 spectrum(float n) {
     return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
 }
+
+
+
+
+
+vec3 slerp(vec3 start, vec3 end, float percent) {
+    //end = normalize(end);
+    //start = normalize(start);
+     float dot = dot(start, end);     
+     dot = clamp(dot, -1.0, 1.0);
+     float theta = acos(dot)*percent;
+     vec3 RelativeVec = normalize(end - start*dot);
+     return ((start*cos(theta)) + (RelativeVec*sin(theta)));
+}
+
+// Barycentric to Cartesian
+vec3 bToC(float a, float b, float c) {
+    return a * tri.a + b * tri.b + c * tri.c;
+}
+vec3 bToC(int a, int b, int c) {
+    return bToC(float(a), float(b), float(c));
+}
+
+// Barycentric to Cartesian normalized
+vec3 bToCn(float a, float b, float c) {
+    return normalize(bToC(a, b, c));
+}
+vec3 bToCn(int a, int b, int c) {
+    return bToCn(float(a), float(b), float(c));
+}
+
 
 
 
@@ -286,11 +493,77 @@ Model opU( Model m1, Model m2 ){
 }
 
 
+float bump(vec3 p, vec3 n) {
+    return length(p - n) - .2;
+    return fCone(p, .6, n * 0., n * 1.13) - .01;
+}
+
+float pollen(vec3 p) {
+    
+    p *= orientMatrix(bToCn(0,0,1), vec3(1,0,0));
+    
+    p *= rotationMatrix(bToCn(0,0,1), -time * PI / 1.5);
+    
+    
+    float d;
+    vec3 n, n1;
+    d = 1000.;
+        
+    pIcosahedron(p);
+    
+    float outer, inner, hole, spike, spike2, spikes, bias1, bias2;
+    
+    outer = length(p) - 1.;
+    inner = -(length(p) - .97);
+
+    float round = .2;
+    /*
+    n = bToCn(.4,.6,.0);
+    spike = bump(p, n);
+    //outer = smin(outer, spike, round);
+    
+    n1 = reflect(n, triP.ca);
+    spike = bump(p, n1);
+   // outer = smin(outer, spike, round);
+    
+    n1 = reflect(n, triP.bc);
+    spike = bump(p, n1);
+    //outer = smin(outer, spike, round);
+    */
+    n = bToCn(0,0,1);
+    spike = bump(p, n);
+    outer = smin(outer, spike, round);
+    
+    n1 = reflect(n, triP.ab);
+    spike = bump(p, n1);
+    outer = smin(outer, spike, round);
+
+    n = bToCn(1,0,0);
+    spike = bump(p, n);
+    outer = smin(outer, spike, round);
+
+    /*
+    n = bToCn(0,0,1);
+    hole = fCone(p, .41, n * 1.3, n * 0.);
+    outer = smax(outer, -hole, .05);
+    
+    n = bToCn(1,0,0);
+    hole = fCone(p, .31, n * 1.3, n * 0.);
+    outer = smax(outer, -hole, .05);
+*/
+    d = smax(outer, inner, .05);
+    d = outer;
+    
+    // model.dist = d;
+    return d;
+}
+
+
 
 float wave1(vec3 p, vec3 v) {    
     float angle = acos(dot(normalize(p), v));
     float waveA = 0.;
-    waveA += cos(angle * 6. * 2.)*4.;
+    waveA += cos(angle * 6. * 1.)*1.5;
     return waveA;
 }
 
@@ -327,50 +600,78 @@ Model modelCx(vec3 p) {
     return Model(d, vec2(0), waterMaterial);
 }
 
+void trimod(inout float d, vec3 p, vec3 gv) {
+    float part = (dot(p, gv) + .25);
+    float sz = .2;
+    float sep = .15;
+    // part = length(p - gv * (sz + sep)) - sz;
+    // d = smax(d, -part, .1);
+    d = max(d, -part);
+}
+
+
+float hardstep(float a, float b, float t) {
+    float s = 1. / (b - a);
+    return clamp((t - a) * s, 0., 1.);
+}
+
+// https://www.shadertoy.com/view/ldBfR1
+float gain(float x, float P) {
+    if (x > 0.5)
+        return 1.0 - 0.5*pow(2.0-2.0*x, P);
+    else
+        return 0.5*pow(2.0*x, P);
+}
+
 Model modelC(vec3 p) {
     Model model = newModel();
 
     float part;
     float d = 1e12;
 
+    // return modelCx(p);
 
-    pR(p.xy, PI * .5);
-    pR(p.xz, PI * .43);
-    // pR(p.xy, PI * .5);
+    // // p /= .3;
+    // // model.dist = pollen(p) * .3;
+    // // return model;
+
+    // p += sin(p * 50.) * .01;
+    // // p.y += sin(p.y * 20.) * .1;
+    // d = length(p) - .3;
+    // model.dist = d;
+
+    // return model;
+
+    // // pR(p.xy, PI * .5);
+    // // pR(p.xz, PI * .43);
+    // // pR(p.xy, PI * .5);
     
-    float sep = .1;
-    float sz = .5;
-    float rr = .1;
-    vec3 pp = p;
+    // float ts = .15;
+    // float tr = .15;
 
-    p = pp;
-    d = length(p) - .3;
+    // d = length(p)- .3;
+    // trimod(d, p, GDFVector19);
+    // trimod(d, p, GDFVector20);
+    // trimod(d, p, GDFVector21);
+    // trimod(d, p, GDFVector22);
 
-    p.x -= sz + sep;
-    part = length(p) - sz;
-    d = smax(d, -part, rr);
+    // // d = mix(d, length(p) - .3, .5);
 
-    // p = pp;
-    // p.x += sz + sep;
-    // part = length(p) - sz;
-    // d = smax(d, -part, rr);
-
-    model.dist = d;
-
-    return model;
+    // model.dist = d;
+    // return model;
 
 
-    p.z += .07;
-    float squish = 1.;
-    p.z /= squish;
-    part = length(p) - .3;
-    d = part;
-    p.z += .1;
-    part = length(p) - .3;
-    d = smax(d, -part, .02);
-    d *= squish;
-    model.dist = d;
-    return model;
+    // p.z += .07;
+    // float squish = 1.;
+    // p.z /= squish;
+    // part = length(p) - .3;
+    // d = part;
+    // p.z += .1;
+    // part = length(p) - .3;
+    // d = smax(d, -part, .02);
+    // d *= squish;
+    // model.dist = d;
+    // return model;
 
 
     // model.dist = fBox(p, vec3(.15)) - .05;
@@ -400,28 +701,48 @@ Model modelC(vec3 p) {
 
     // model.dist = smin(d, part, .1);
 
+    // pR(p.xy, .5);
+    // pR(p.xz, time);
+    // pR(p.yz, .5);
 
+    pR(p.xz, PI * .5);
 
-    // float sep = .1;
-    // float sz = .2;
-    // float rr = .2;
-    // vec3 pp = p;
+    pR(p.xy, PI * .25);
+    // pR(p.zy, time * PI * 2.);
+    // pR(p.zy, sin(time * PI * 2.) * PI * 2.);
+    // pR(p.xy, sin(time * PI * 2.));
 
-    // p = pp;
-    // d = length(p) - .3;
+    // pR(p.xy, mix(gain(time, 2.), time, .25) * PI + PI * .33);
 
-    // p.x -= sz + sep;
-    // part = length(p) - sz;
-    // d = smax(d, -part, rr);
+    // pR(p.xy, hardstep(0., .5, time) - hardstep(.5, 1., time));
+    // p *= rotationMatrix(normalize(vec3(1,.7,0)), time * PI * 2.);
 
-    // p = pp;
-    // p.x += sz + sep;
-    // part = length(p) - sz;
-    // d = smax(d, -part, rr);
+    float sqq = 1.;
 
-    // model.dist = d;
+    p.z /= sqq;
 
-    // return model;
+    float sep = .1;
+    float sz = .2;
+    float rr = .2;
+    vec3 pp = p;
+
+    p = pp;
+    d = length(p) - .3;
+
+    p.x -= sz + sep;
+    part = length(p) - sz;
+    d = smax(d, -part, rr);
+
+    p = pp;
+    p.x += sz + sep;
+    part = length(p) - sz;
+    d = smax(d, -part, rr);
+
+    d *= sqq;
+
+    model.dist = d;
+
+    return model;
 
 
     // vec2 wh = vec2(.15, .15);
@@ -439,12 +760,12 @@ Model modelC(vec3 p) {
     vec3 a = vec3(1,0,0);
     float w = 0.;
 
-    w += wave(p, GDFVector13);
-    w += wave(p, GDFVector14);
-    w += wave(p, GDFVector15);
-    w += wave(p, GDFVector16);
-    w += wave(p, GDFVector17);
-    w += wave(p, GDFVector18);
+    w += wave(p, GDFVector19);
+    w += wave(p, GDFVector20);
+    w += wave(p, GDFVector21);
+    w += wave(p, GDFVector22);
+    // w += wave(p, GDFVector17);
+    // w += wave(p, GDFVector18);
 
     // w += wave(p, GDFVector3);
     // w += wave(p, GDFVector4);
@@ -778,10 +1099,10 @@ CastRay newCastRay(Hit hit, vec3 rayDirection) {
     return CastRay(rayOrigin, rayDirection);
 }
 
-const float REFRACT_BOUNCES = 5.;
-const float REFRACT_SAMPLES_S = 400.;
-const float DISPERSION = 1. - .5;
-const float MULT = 20.;
+const float REFRACT_BOUNCES = 4.;
+const float REFRACT_SAMPLES_S = 40.;
+// float DISPERSION = mix(0., 1., mod(iGlobalTime / 4., 1.));
+const float MULT = 5.;
 #define ALLOW_ESCAPE
 
 vec3 shade(Hit hit) {
@@ -792,13 +1113,18 @@ vec3 shade(Hit hit) {
         color = mod(color, 1./5.) * 5.;
         color = vec3(0.);
     } else if (hit.model.material.transparency == 0.) {
+        float rep = 6.;
         vec2 uv = hit.model.uv;
-        // pR(uv, time * PI * 2.);
+
+        float e = uv.y;
+
+        // uv += 1./rep * 2.;
+        // pR(uv, time * PI * .5);
+        // // float rep = mix(6., 7., sin(time) * .5 + .5);
+
         pR(uv, PI*.25);
-        // float rep = mix(6., 7., sin(time) * .5 + .5);
-        float rep = 7.;
-        uv += time * (1. / rep) * vec2(1., 1.);
-        // uv.x += .25;
+        uv += time * 1./rep * vec2(1., 1.);
+        // // uv.x += .25;
         
         float size = .1;
         uv = mod(uv - rep * .5, 1. / rep) * rep;
@@ -807,8 +1133,10 @@ vec3 shade(Hit hit) {
         color = vec3(d);
 
         // color = vec3(0);
-        // color += makeLines(uv.x, 1., .1) * mix(spectrum(.1), vec3(1), 1.);
-        // color += makeLines(uv.y, 1., .1) * mix(spectrum(.4), vec3(1), 1.);
+        color += makeLines(uv.x, 2., .025) * mix(spectrum(.1), vec3(1), 1.);
+        color += makeLines(uv.y, 2., .025) * mix(spectrum(.4), vec3(1), 1.);
+
+        // color *= mix(spectrum(e * .25 + .2), vec3(1), .5);
 
         // color = clamp(vec3(hit.model.uv, 0.).xzy * .5 + .5, 0., 1.);
         // color = hit.normal* .5 + .5;
@@ -818,10 +1146,16 @@ vec3 shade(Hit hit) {
     return color;
 }
 
+float vvv = 0.;
+
 
 Hit marchTransparent(Hit hit, float wl) {
     enableTransparency = true;
     insideTransparency = false;
+
+    float DISPERSION = mix(.1, .3, smoothstep(.1, .4, time) - smoothstep(.6, .9, time));
+     
+    DISPERSION = .15;
     
     for (float i = 0.; i < REFRACT_BOUNCES; i++) {
         if (hit.isBackground || hit.model.material.transparency == 0.) {
@@ -829,8 +1163,8 @@ Hit marchTransparent(Hit hit, float wl) {
         } else {
             float refractiveIndex = hit.model.material.refractiveIndex;
             // float v = 1.05;
-            float riMin = refractiveIndex * DISPERSION;
-            float riMax = refractiveIndex;
+            float riMin = refractiveIndex;
+            float riMax = refractiveIndex * (1. + DISPERSION);
             refractiveIndex = mix(riMin, riMax, wl);
 
             if (insideTransparency) {
@@ -857,18 +1191,23 @@ Hit marchTransparent(Hit hit, float wl) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+    initPolyhedron(5);
     mousee = iMouse.xy;
 
     // mousee = vec2(.257,.45) * iResolution;
 
-    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
+    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.x;
     vec2 m = mousee.xy / iResolution.xy;
 
-    pR(p, PI * -.25);
+    vvv = m.x;
+
+    // pR(p, PI * -.25);
+    p *= .4;
+    p.y += .05;
 
     time = iGlobalTime;
-    time /= 2.;
-    // time = mod(time, 1.);
+    time /= 4.;
+    time = mod(time, 1.);
 
     doCamera();
 
@@ -888,7 +1227,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     wl = 0.;
 
     vec3 color = vec3(0);
-    vec3 sampleColour;
+    // vec3 sampleColour;
 
     if (hit.isBackground || hit.model.material.transparency == 0.) {
         // color = shade(hit);
