@@ -29,7 +29,7 @@ vec2 mousee;
 // 0: Defaults
 // 1: Model
 // 2: Camera
-#define MOUSE_CONTROL 0
+#define MOUSE_CONTROL 1
 
 //#define DEBUG
 
@@ -930,14 +930,26 @@ Hit raymarch(CastRay castRay){
 // Refraction from https://www.shadertoy.com/view/lsXGzH
 // --------------------------------------------------------
 
-float makeLines(float x, float lines, float thick) {
-    x += .5;
-    float start = thick * .5;
-    float end = 1. - start;
-    float aa = .001;
-    float str = mod(x, 1. / lines) * lines;
-    str = smoothstep(start, start - aa, str) + smoothstep(end, end + aa, str);
+
+float makeDots(vec2 uv, float repeat, float size) {
+    uv = mod(uv, 1. / repeat) * repeat;
+    uv -= .5;
+    return smoothstep(size, size * .8, length(uv));
+}
+
+float makeLine(float x, float thick) {
+    // x += .5;
+    float start = .5 - thick * .5;
+    float end = .5 + thick * .5;
+    float aa = .01;
+    float str = x;
+    str = smoothstep(start, start + aa, str) - smoothstep(end -aa, end, str);
     return str;
+}
+
+float makeLines(float x, float repeat, float thick) {
+    x = mod(x, 1. / repeat) * repeat;
+    return makeLine(x, thick);
 }
 
 void shadeSurface(inout Hit hit){
@@ -1122,19 +1134,18 @@ vec3 shade(Hit hit) {
         // pR(uv, time * PI * .5);
         // // float rep = mix(6., 7., sin(time) * .5 + .5);
 
-        pR(uv, PI*.25);
-        uv += time * 1./rep * vec2(1., 1.);
+        // pR(uv, PI*.25);
+        // uv += time * 1./rep * vec2(1., 1.);
         // // uv.x += .25;
         
-        float size = .1;
-        uv = mod(uv - rep * .5, 1. / rep) * rep;
-        uv -= .5;
-        float d = smoothstep(size, size * .8, length(uv));
-        color = vec3(d);
-
+        color = vec3(0);
+        float repeat = 5.;
+        color += makeDots(uv + .5 / repeat, repeat, .1);
+        color += makeLines(uv.x, repeat, .025);
+        color += makeLines(uv.y, repeat, .025);
         // color = vec3(0);
-        color += makeLines(uv.x, 2., .025) * mix(spectrum(.1), vec3(1), 1.);
-        color += makeLines(uv.y, 2., .025) * mix(spectrum(.4), vec3(1), 1.);
+        // color += makeLines(uv.x, 1., .025) * mix(spectrum(.1), vec3(1), 1.);
+        // color += makeLines(uv.y, 1., .025) * mix(spectrum(.4), vec3(1), 1.);
 
         // color *= mix(spectrum(e * .25 + .2), vec3(1), .5);
 
@@ -1202,8 +1213,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vvv = m.x;
 
     // pR(p, PI * -.25);
-    p *= .4;
-    p.y += .05;
+    // p *= .4;
+    // p.y += .05;
 
     time = iGlobalTime;
     time /= 4.;
@@ -1230,7 +1241,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // vec3 sampleColour;
 
     if (hit.isBackground || hit.model.material.transparency == 0.) {
-        // color = shade(hit);
+        color = shade(hit);
     } else {
         for(float r = 0.; r < REFRACT_SAMPLES_S; r++){
             wl = r / REFRACT_SAMPLES_S;
