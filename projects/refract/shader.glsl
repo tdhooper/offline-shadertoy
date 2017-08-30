@@ -40,6 +40,8 @@ float time;
 #define TAU 6.28318530718
 #define PHI 1.618033988749895
 
+// #define SHOW_SHAPE
+
 
 // --------------------------------------------------------
 // Rotation controls
@@ -707,7 +709,7 @@ Model modelC(vec3 p) {
 
     pR(p.xz, PI * .5);
 
-    pR(p.xy, PI * .25);
+    // pR(p.xy, PI * .25);
     // pR(p.zy, time * PI * 2.);
     // pR(p.zy, sin(time * PI * 2.) * PI * 2.);
     // pR(p.xy, sin(time * PI * 2.));
@@ -1112,7 +1114,7 @@ CastRay newCastRay(Hit hit, vec3 rayDirection) {
 }
 
 const float REFRACT_BOUNCES = 4.;
-const float REFRACT_SAMPLES_S = 40.;
+const float REFRACT_SAMPLES_S = 20.;
 // float DISPERSION = mix(0., 1., mod(iGlobalTime / 4., 1.));
 const float MULT = 5.;
 #define ALLOW_ESCAPE
@@ -1167,7 +1169,7 @@ Hit marchTransparent(Hit hit, float wl) {
     float DISPERSION = mix(.1, .3, smoothstep(.1, .4, time) - smoothstep(.6, .9, time));
      
     DISPERSION = .15;
-    
+
     for (float i = 0.; i < REFRACT_BOUNCES; i++) {
         if (hit.isBackground || hit.model.material.transparency == 0.) {
             return hit;
@@ -1200,6 +1202,45 @@ Hit marchTransparent(Hit hit, float wl) {
     return hit;
 }
 
+vec3 getColor(vec2 p) {
+    mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
+    float focalLength = 2.;
+    vec3 rd = normalize(camMat * vec3(p, focalLength));
+    float refractiveIndex;
+
+    CastRay castRay = CastRay(camPos, rd);
+
+    Hit hit;
+    vec3 rayDirection;
+
+    hit = raymarch(castRay);
+    float wl, riMax, riMin;
+    // wl = time;
+    wl = 0.;
+
+    vec3 color = vec3(0);
+    // vec3 sampleColour;
+
+    #ifdef SHOW_SHAPE
+        return hit.normal * .5 + .5;
+    #endif
+
+    if (hit.isBackground || hit.model.material.transparency == 0.) {
+        color = shade(hit);
+    } else {
+        for(float r = 0.; r < REFRACT_SAMPLES_S; r++){
+            wl = r / REFRACT_SAMPLES_S;
+            // wl = time;
+
+            Hit hit2 = marchTransparent(hit, wl);
+            color += (shade(hit2) * spectrum(wl)) / REFRACT_SAMPLES_S * MULT;
+            // color += sampleColour / REFRACT_SAMPLES_S;
+        }
+    }
+
+    return color;
+}
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     initPolyhedron(5);
@@ -1222,36 +1263,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     doCamera();
 
-    mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
-    float focalLength = 2.;
-    vec3 rd = normalize(camMat * vec3(p, focalLength));
-    float refractiveIndex;
-
-    CastRay castRay = CastRay(camPos, rd);
-
-    Hit hit;
-    vec3 rayDirection;
-
-    hit = raymarch(castRay);
-    float wl, riMax, riMin;
-    // wl = time;
-    wl = 0.;
-
-    vec3 color = vec3(0);
-    // vec3 sampleColour;
-
-    if (hit.isBackground || hit.model.material.transparency == 0.) {
-        color = shade(hit);
-    } else {
-        for(float r = 0.; r < REFRACT_SAMPLES_S; r++){
-            wl = r / REFRACT_SAMPLES_S;
-            // wl = time;
-
-            Hit hit2 = marchTransparent(hit, wl);
-            color += (shade(hit2) * spectrum(wl)) / REFRACT_SAMPLES_S * MULT;
-            // color += sampleColour / REFRACT_SAMPLES_S;
-        }
-    }
+    vec3 color = getColor(p);
 
     color = linearToScreen(color);
     fragColor = vec4(color,1.0);
