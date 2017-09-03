@@ -31,7 +31,7 @@ vec2 mousee;
 // 2: Camera
 #define MOUSE_CONTROL 1
 
-//#define DEBUG
+#define DEBUG
 
 float time;
 
@@ -148,6 +148,14 @@ vec3 cartToPolar(vec3 p) {
     return vec3(r, z, a);
 }
 
+// Cylindrical coordinates
+vec3 cartToSpherical(vec3 p) {
+    float r = length(p); // distance from center
+    float z = acos(p.z / r); // Inclination
+    float a = atan(p.y, p.x); // angle around center
+    return vec3(r, z, a);
+}
+
 float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
     float t = dot(p, planeNormal)+offset;
     if (t < 0.) {
@@ -155,6 +163,22 @@ float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
     }
     return sign(t);
 }
+
+// Repeat around the origin by a fixed angle.
+// For easier use, num of repetitions is use to specify the angle.
+float pModPolar(inout vec2 p, float repetitions) {
+    float angle = 2.*PI/repetitions;
+    float a = atan(p.y, p.x) + angle/2.;
+    float r = length(p);
+    float c = floor(a/angle);
+    a = mod(a,angle) - angle/2.;
+    p = vec2(cos(a), sin(a))*r;
+    // For an odd number of repetitions, fix cell index of the cell in -x direction
+    // (cell index would be e.g. -5 and 5 in the two halves of the cell):
+    if (abs(c) >= (repetitions/2.)) c = abs(c);
+    return c;
+}
+
 
 // Torus in the XZ-plane
 float fTorus(vec3 p, float smallRadius, float largeRadius) {
@@ -407,18 +431,50 @@ Model modelC(vec3 p) {
     float part;
     float d = 1e12;
 
-
+    float rep = 10.;
 
     pR(p.xz, PI * .5);
 
-    float sqq = 1.;
+    pModPolar(p.yz, rep);
+    vec3 pp = p;
+    
+    float bumpSize = .05;
+    float bumpSmooth = .1;
+    float bumpOffset = .25;
 
-    p.z /= sqq;
+
+    p.y -= bumpOffset;
+    float bA = length(p) - bumpSize;
+
+    p = pp;
+    pR(p.yz, PI / rep * 2.);
+    p.y -= bumpOffset;
+    float bB = length(p) - bumpSize;
+
+    p = pp;
+    pR(p.yz, PI / rep * -2.);
+    p.y -= bumpOffset;
+    float bC = length(p) - bumpSize;
+
+    float bumps = min(min(bA, bB), bC);
+
+    model.dist  = bumps;
+
+    // return model;
+
+    p = pp;
+
+// 
+
+    // 
+    // float sqq = 1.;
+
+    // p.z /= sqq;
 
     float sep = .1;
     float sz = .2;
     float rr = .2;
-    vec3 pp = p;
+    pp = p;
 
     p = pp;
     d = length(p) - .3;
@@ -432,7 +488,11 @@ Model modelC(vec3 p) {
     part = length(p) - sz;
     d = smax(d, -part, rr);
 
-    d *= sqq;
+    // d *= sqq;
+
+    d = smin(d, bA, bumpSmooth);
+    d = smin(d, bB, bumpSmooth);
+    d = smin(d, bC, bumpSmooth);
 
     model.dist = d;
 
