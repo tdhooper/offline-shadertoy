@@ -112,7 +112,6 @@ float smax(float a, float b, float r) {
 }
 
 
-
 // --------------------------------------------------------
 // Spectrum colour palette
 // IQ https://www.shadertoy.com/view/ll2GD3
@@ -142,9 +141,7 @@ float makeLine(float x, float thick) {
     float start = .5 - thick * .5;
     float end = .5 + thick * .5;
     float aa = .01;
-    float str = x;
-    str = smoothstep(start, start + aa, str) - smoothstep(end -aa, end, str);
-    return str;
+    return smoothstep(start, start + aa, x) - smoothstep(end -aa, end, x);
 }
 
 float makeLines(float x, float repeat, float thick) {
@@ -354,11 +351,7 @@ Hit raymarch(CastRay castRay){
 
 
 
-// --------------------------------------------------------
-// Camera
 // https://www.shadertoy.com/view/Xl2XWt
-// --------------------------------------------------------
-
 mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in vec3 up )
 {
     vec3 ww = normalize( ta - ro );
@@ -366,25 +359,6 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in vec3 up )
     vec3 vv = normalize( cross(uu,ww));
     return mat3( uu, vv, ww );
 }
-
-
-
-// --------------------------------------------------------
-// Gamma
-// https://www.shadertoy.com/view/Xds3zN
-// --------------------------------------------------------
-
-const float GAMMA = 1.;
-
-vec3 gamma(vec3 color, float g) {
-    return pow(color, vec3(g));
-}
-
-vec3 linearToScreen(vec3 linearRGB) {
-    return gamma(linearRGB, 1.0 / GAMMA);
-}
-
-
 
 CastRay newCastRay(Hit hit, vec3 rayDirection) {
     float separation = 0.01;
@@ -520,7 +494,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec3 color = getColor(p);
 
-    color = linearToScreen(color);
     fragColor = vec4(color,1.0);
 }
 
