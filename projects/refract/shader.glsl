@@ -380,16 +380,7 @@ Material waterMaterial = Material(
     true,
     1.,
     1. / 1.333,
-    // 1. / 1.1,
-    // 1. / 1.01,
     0.
-);
-Material mirrorMaterial = Material(
-    vec3(.7, .3, .0),
-    false,
-    0.,
-    0.,
-    1.
 );
 
 
@@ -449,14 +440,8 @@ Model modelC(vec3 p) {
 }
 
 Model backModel(vec3 p) {
-    p.z -= 1.;
-    float sphere = length(p) - 2.;
-    float plane = dot(p, vec3(0,0,1));
-    float d = max(plane, -sphere);
-
-    p.z += 3.;
-    // d = fBox(p, vec3(1.9,1.9,.9));
-    d = dot(p, vec3(0,0,1)) - .7;
+    p.z += 2.;
+    float d = dot(p, vec3(0,0,1)) - .7;
 
     return Model(
         d,
