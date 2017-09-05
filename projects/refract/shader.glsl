@@ -21,16 +21,6 @@ precision mediump float;
 /* SHADERTOY FROM HERE */
 
 
-vec2 mousee;
-
-#define MODEL_ROTATION vec2(.5, .5)
-#define CAMERA_ROTATION vec2(.5, .5)
-
-// 0: Defaults
-// 1: Model
-// 2: Camera
-#define MOUSE_CONTROL 1
-
 // #define DEBUG
 
 float time;
@@ -39,6 +29,25 @@ float time;
 #define HALF_PI 1.5707963267948966
 #define TAU 6.28318530718
 #define PHI 1.618033988749895
+
+
+// --------------------------------------------------------
+// HG_SDF
+// https://www.shadertoy.com/view/Xs3GRB
+// --------------------------------------------------------
+
+void pR(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+float smax(float a, float b, float r) {
+    float m = max(a, b);
+    if ((-a < r) && (-b < r)) {
+        return max(m, -(r - sqrt((r+a)*(r+a) + (r+b)*(r+b))));
+    } else {
+        return m;
+    }
+}
 
 
 // --------------------------------------------------------
@@ -57,56 +66,27 @@ mat3 sphericalMatrix(float theta, float phi) {
     );
 }
 
-mat3 mouseRotation(bool enable, vec2 xy) {
-    if (enable) {
-        vec2 mouse = mousee.xy / iResolution.xy;
+mat3 mouseRotation(vec2 xy) {
+    vec2 mouse = iMouse.xy / iResolution.xy;
 
-        if (mouse.x != 0. && mouse.y != 0.) {
-            xy.x = mouse.x;
-            xy.y = mouse.y;
-        }
+    if (mouse.x != 0. && mouse.y != 0.) {
+        xy = mouse;
     }
+
     float rx, ry;
 
-    xy.x -= .5;
-    //xy *= 2.;
-
     rx = (xy.y + .5) * PI;
-    ry = (xy.x) * 2. * PI;
+    ry = (xy.x - .5) * 2. * PI;
 
     return sphericalMatrix(rx, ry);
 }
 
+
 mat3 modelRotation() {
-    mat3 m = mouseRotation(MOUSE_CONTROL==1, MODEL_ROTATION);
+    vec2 defaultRotation = vec2(sin(time * PI * 4.) * .1 + .5);
+    pR(defaultRotation, sin(time * PI * 2.) * .1);
+    mat3 m = mouseRotation(defaultRotation);
     return m;
-}
-
-mat3 cameraRotation() {
-    mat3 m = mouseRotation(MOUSE_CONTROL==2, CAMERA_ROTATION);
-    return m;
-}
-
-
-// --------------------------------------------------------
-// HG_SDF
-// https://www.shadertoy.com/view/Xs3GRB
-// --------------------------------------------------------
-
-// Rotate around a coordinate axis (i.e. in a plane perpendicular to that axis) by angle <a>.
-// Read like this: R(p.xz, a) rotates "x towards z".
-// This is fast if <a> is a compile-time constant and slower (but still practical) if not.
-void pR(inout vec2 p, float a) {
-    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
-}
-
-float smax(float a, float b, float r) {
-    float m = max(a, b);
-    if ((-a < r) && (-b < r)) {
-        return max(m, -(r - sqrt((r+a)*(r+a) + (r+b)*(r+b))));
-    } else {
-        return m;
-    }
 }
 
 
@@ -139,7 +119,7 @@ Material transparentMaterial = Material(
     0,
     true,
     1. / 1.333,
-    iGlobalTime / 10.
+    .15
 );
 
 Material backMaterial = Material(
@@ -227,23 +207,6 @@ Model map( vec3 p ){
     p *= modelRotation();
     model = opU(model, transparentModel(p));
     return model;
-}
-
-
-// --------------------------------------------------------
-// Camera
-// --------------------------------------------------------
-
-vec3 camPos;
-vec3 camTar;
-vec3 camUp;
-
-
-void doCamera() {
-    camUp = vec3(0,-1,0);
-    camTar = vec3(0.);
-    camPos = vec3(0,0,-1.);
-    camPos *= cameraRotation();
 }
 
 
@@ -442,9 +405,15 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in vec3 up )
 }
 
 vec3 getColor(vec2 p) {
+
+    vec3 camUp = vec3(0,-1,0);
+    vec3 camTar = vec3(0.);
+    vec3 camPos = vec3(0,0,1.);
+
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     float focalLength = 2.;
     vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
+
     CastRay castRay = CastRay(camPos, rayDirection);
     Hit hit = raymarch(castRay);
 
@@ -461,18 +430,12 @@ vec3 getColor(vec2 p) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    mousee = iMouse.xy;
-
-    // mousee = vec2(.257,.45) * iResolution;
-
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.x;
-    vec2 m = mousee.xy / iResolution.xy;
+    vec2 m = iMouse.xy / iResolution.xy;
 
     time = iGlobalTime;
     time /= 4.;
     time = mod(time, 1.);
-
-    doCamera();
 
     vec3 color = getColor(p);
 
