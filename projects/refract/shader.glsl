@@ -354,34 +354,30 @@ float makeLines(float x, float repeat, float thick) {
 
 
 
-
 // --------------------------------------------------------
 // Materials
 // --------------------------------------------------------
 
 struct Material {
-    vec3 albedo;
-    bool specular;
-    float transparency;
+    int id;
+    bool transparent;
     float refractiveIndex;
-    float reflection;
+    float dispersion;
 };
 
-
-Material ceramicMaterial = Material(
-    vec3(.5),
-    false,
-    0.,
-    0.,
-    0.
-);  
-Material waterMaterial = Material(
-    vec3(0.),
+Material transparentMaterial = Material(
+    0,
     true,
-    1.,
     1. / 1.333,
     0.
 );
+
+Material backMaterial = Material(
+    1,
+    false,
+    0.,
+    0.
+);  
 
 
 // --------------------------------------------------------
@@ -401,7 +397,7 @@ Model newModel() {
     return Model(
         1e12,
         vec2(0),
-        ceramicMaterial
+        backMaterial
     );
 }
 
@@ -413,7 +409,6 @@ Model opU( Model m1, Model m2 ){
         return m2;
     }
 }
-
 
 
 Model modelC(vec3 p) {
@@ -446,7 +441,7 @@ Model backModel(vec3 p) {
     return Model(
         d,
         vec2(p.x, p.y),
-        ceramicMaterial
+        backMaterial
     );
 }
 
@@ -465,7 +460,7 @@ Model mainModel(vec3 p) {
     
     if (insideTransparency) model.dist *= -1.;
 
-    model.material = waterMaterial;
+    model.material = transparentMaterial;
     return model;
 }
 
@@ -502,7 +497,6 @@ void doCamera() {
 const float MAX_TRACE_DISTANCE = 5.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 50;
-const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
@@ -546,7 +540,7 @@ Hit raymarch(CastRay castRay){
         }
         model = map(ray.origin + ray.direction * ray.len);
         currentDist = model.dist;
-        ray.len += currentDist * FUDGE_FACTOR;
+        ray.len += currentDist;
     }
 
     bool isBackground = false;
@@ -620,13 +614,13 @@ const float MULT = 5.;
 #define ALLOW_ESCAPE
 
 vec3 shade(Hit hit) {
-    vec3 color = vec3(0,1,0);
+    vec3 background = vec3(0);
+    vec3 color;
 
     if (hit.isBackground) {
-        color = hit.ray.direction;
-        color = mod(color, 1./5.) * 5.;
-        color = vec3(0.);
-    } else if (hit.model.material.transparency == 0.) {
+        color = background;
+
+    } else if (hit.model.material.id == 1) {
         float rep = 6.;
         vec2 uv = hit.model.uv;
 
@@ -651,7 +645,7 @@ Hit marchTransparent(Hit hit, float wl) {
     DISPERSION = .15;
 
     for (float i = 0.; i < REFRACT_BOUNCES; i++) {
-        if (hit.isBackground || hit.model.material.transparency == 0.) {
+        if (hit.isBackground || ! hit.model.material.transparent) {
             return hit;
         } else {
             float refractiveIndex = hit.model.material.refractiveIndex;
@@ -705,7 +699,7 @@ vec3 getColor(vec2 p) {
         return hit.normal * .5 + .5;
     #endif
 
-    if (hit.isBackground || hit.model.material.transparency == 0.) {
+    if (hit.isBackground || ! hit.model.material.transparent) {
         color = shade(hit);
     } else {
         for(float r = 0.; r < REFRACT_SAMPLES_S; r++){
