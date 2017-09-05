@@ -428,32 +428,23 @@ Model opU( Model m1, Model m2 ){
 Model modelC(vec3 p) {
     Model model = newModel();
 
-    float part;
-    float d = 1e12;
+    float part, d;
+    float indentOffset = .1;
+    float indentSize = .2;
+    float indentSmooth = .2;
 
-    float rep = 10.;
-
-    pR(p.xz, PI * .5);
-
-    float sep = .1;
-    float sz = .2;
-    float rr = .2;
-    vec3 pp = p;
-
-    p = pp;
+    // Sphere
     d = length(p) - .3;
 
-    p.x -= sz + sep;
-    part = length(p) - sz;
-    d = smax(d, -part, rr);
+    // Mirror
+    p.z *= sign(p.z);
 
-    p = pp;
-    p.x += sz + sep;
-    part = length(p) - sz;
-    d = smax(d, -part, rr);
+    // Indent
+    p.z -= indentSize + indentOffset;
+    part = length(p) - indentSize;
+    d = smax(d, -part, indentSmooth);
 
     model.dist = d;
-
     return model;
 }
 
