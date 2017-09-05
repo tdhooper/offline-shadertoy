@@ -77,16 +77,16 @@ mat3 sphericalMatrix(float theta, float phi) {
 }
 
 mat3 mouseRotation(vec2 xy) {
-    vec2 mouse = iMouse.xy / iResolution.xy;
-
-    if (mouse.x != 0. && mouse.y != 0.) {
-        xy = mouse;
+    vec2 p = (-iResolution.xy + 2. * iMouse.xy) / iResolution.x;
+    
+    if (iMouse.x != 0. && iMouse.y != 0.) {
+        xy = p;
     }
 
     float rx, ry;
 
-    rx = (xy.y + .5) * PI;
-    ry = (xy.x - .5) * 2. * PI;
+    rx = (xy.y * .5) * PI;
+    ry = (-xy.x * .5) * PI;
 
     return sphericalMatrix(rx, ry);
 }
@@ -95,6 +95,15 @@ mat3 mouseRotation(vec2 xy) {
 mat3 modelRotation() {
     vec2 defaultRotation = vec2(sin(time * PI * 4.) * .1 + .5);
     pR(defaultRotation, sin(time * PI * 2.) * .1);
+    
+    float a = time;
+    float r = mix(.1, .4, sin(time * PI * 1.) * .5 + .5);
+
+    defaultRotation = vec2(
+        sin(a * PI * 2.) * r,
+        cos(a * PI * 2.) * r
+    );
+
     mat3 m = mouseRotation(defaultRotation);
     return m;
 }
