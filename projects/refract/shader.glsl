@@ -410,8 +410,15 @@ Model opU( Model m1, Model m2 ){
     }
 }
 
+Model backModel(vec3 p) {
+    Model model = newModel();
+    p.z += 2.;
+    model.dist = dot(p, vec3(0,0,1)) - .7;
+    model.uv = vec2(p.x, p.y);
+    return model;
+}
 
-Model modelC(vec3 p) {
+Model mainModel(vec3 p) {
     Model model = newModel();
 
     float part, d;
@@ -434,29 +441,10 @@ Model modelC(vec3 p) {
     return model;
 }
 
-Model backModel(vec3 p) {
-    p.z += 2.;
-    float d = dot(p, vec3(0,0,1)) - .7;
+Model transparentModel(vec3 p) {
+    if ( ! enableTransparency) return newModel();
 
-    return Model(
-        d,
-        vec2(p.x, p.y),
-        backMaterial
-    );
-}
-
-
-Model mainModel(vec3 p) {
-
-
-    float d = 1e12;
-    float part;
-
-    Model model = newModel();
-    if ( ! enableTransparency) return model;
-
-
-    model = modelC(p);
+    Model model = mainModel(p);
     
     if (insideTransparency) model.dist *= -1.;
 
@@ -467,7 +455,7 @@ Model mainModel(vec3 p) {
 Model map( vec3 p ){
     Model model = backModel(p);
     p *= modelRotation();
-    model = opU(model, mainModel(p));
+    model = opU(model, transparentModel(p));
     return model;
 }
 
