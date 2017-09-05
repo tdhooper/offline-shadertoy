@@ -31,7 +31,7 @@ vec2 mousee;
 // 2: Camera
 #define MOUSE_CONTROL 1
 
-#define DEBUG
+// #define DEBUG
 
 float time;
 
@@ -39,8 +39,6 @@ float time;
 #define HALF_PI 1.5707963267948966
 #define TAU 6.28318530718
 #define PHI 1.618033988749895
-
-// #define SHOW_SHAPE
 
 
 // --------------------------------------------------------
@@ -126,31 +124,6 @@ vec3 spectrum(float n) {
 }
 
 
-
-
-
-
-
-float makeDots(vec2 uv, float repeat, float size) {
-    uv = mod(uv, 1. / repeat) * repeat;
-    uv -= .5;
-    return smoothstep(size, size * .8, length(uv));
-}
-
-float makeLine(float x, float thick) {
-    float start = .5 - thick * .5;
-    float end = .5 + thick * .5;
-    float aa = .01;
-    return smoothstep(start, start + aa, x) - smoothstep(end -aa, end, x);
-}
-
-float makeLines(float x, float repeat, float thick) {
-    x = mod(x, 1. / repeat) * repeat;
-    return makeLine(x, thick);
-}
-
-
-
 // --------------------------------------------------------
 // Materials
 // --------------------------------------------------------
@@ -166,7 +139,7 @@ Material transparentMaterial = Material(
     0,
     true,
     1. / 1.333,
-    0.
+    iGlobalTime / 10.
 );
 
 Material backMaterial = Material(
@@ -256,6 +229,7 @@ Model map( vec3 p ){
     return model;
 }
 
+
 // --------------------------------------------------------
 // Camera
 // --------------------------------------------------------
@@ -271,7 +245,6 @@ void doCamera() {
     camPos = vec3(0,0,-1.);
     camPos *= cameraRotation();
 }
-
 
 
 // --------------------------------------------------------
@@ -344,12 +317,96 @@ Hit raymarch(CastRay castRay){
 
 
 // --------------------------------------------------------
-// Rendering
-// Refraction from https://www.shadertoy.com/view/lsXGzH
+// Shading
 // --------------------------------------------------------
 
+float makeDots(vec2 uv, float repeat, float size) {
+    uv = mod(uv, 1. / repeat) * repeat;
+    uv -= .5;
+    return smoothstep(size, size * .8, length(uv));
+}
+
+float makeLine(float x, float thick) {
+    float start = .5 - thick * .5;
+    float end = .5 + thick * .5;
+    float aa = .01;
+    return smoothstep(start, start + aa, x) - smoothstep(end -aa, end, x);
+}
+
+float makeLines(float x, float repeat, float thick) {
+    x = mod(x, 1. / repeat) * repeat;
+    return makeLine(x, thick);
+}
+
+vec3 shadeSurface(Hit hit) {
+    vec3 color = vec3(0);
+
+    if (hit.model.material.id == 1) {
+        vec2 uv = hit.model.uv;
+        float repeat = 5.;
+        color += makeDots(uv + .5 / repeat, repeat, .1);
+        color += makeLines(uv.x, repeat, .025);
+        color += makeLines(uv.y, repeat, .025);
+    }
+
+    return color;
+}
 
 
+// --------------------------------------------------------
+// Main
+// Some refraction logic from https://www.shadertoy.com/view/lsXGzH
+// --------------------------------------------------------
+
+const float REFRACTION_BOUNCES = 4.;
+const float DISPERSION_SAMPLES = 20.;
+const float WAVELENGTH_BLEND_MULTIPLIER = 5.;
+
+Hit marchTransparent(Hit hit, float wavelength) {
+    enableTransparency = true;
+    insideTransparency = false;
+
+    for (float i = 0.; i < REFRACTION_BOUNCES; i++) {
+        if (hit.isBackground || ! hit.model.material.transparent) {
+            return hit;
+        } else {
+
+            // Adjust refractive index for wavelength and dispersion amount
+            float refractiveIndex = hit.model.material.refractiveIndex;
+            float riMin = refractiveIndex;
+            float riMax = refractiveIndex * (1. + hit.model.material.dispersion);
+            refractiveIndex = mix(riMin, riMax, wavelength);
+
+            // Invert when moving from the transparent object to air
+            if (insideTransparency) {
+                refractiveIndex = 1. / refractiveIndex;
+            }
+
+            vec3 rayDirection = refract(hit.ray.direction, hit.normal, refractiveIndex);
+            if (rayDirection == vec3(0)) {
+                // Total internal reflection
+                rayDirection = reflect(hit.ray.direction, hit.normal);
+            } else {
+                insideTransparency = ! insideTransparency;
+            }
+
+            // Don't let the ray get trapped inside a transparent object
+            if (i == REFRACTION_BOUNCES - 1.) {
+                enableTransparency = false;
+                insideTransparency = false;
+            }
+
+            // Move away from the surface before marching
+            float separation = 0.01;
+            float startDistance = separation / abs(dot(rayDirection, hit.normal));
+
+            vec3 rayOrigin = hit.pos + startDistance * rayDirection;
+            CastRay castRay = CastRay(rayOrigin, rayDirection);
+            hit = raymarch(castRay);
+        }
+    }
+    return hit;
+}
 
 // https://www.shadertoy.com/view/Xl2XWt
 mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in vec3 up )
@@ -360,120 +417,39 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in vec3 up )
     return mat3( uu, vv, ww );
 }
 
-CastRay newCastRay(Hit hit, vec3 rayDirection) {
-    float separation = 0.01;
-    vec3 rayOrigin;
-    float startDistance;
-    startDistance = separation / abs(dot(rayDirection, hit.normal));
-    rayOrigin = hit.pos + startDistance * rayDirection;
-    return CastRay(rayOrigin, rayDirection);
-}
-
-const float REFRACT_BOUNCES = 4.;
-const float REFRACT_SAMPLES_S = 20.;
-float DISPERSION = mix(0., 1., mod(iGlobalTime / 4., 1.));
-const float MULT = 5.;
-#define ALLOW_ESCAPE
-
-vec3 shade(Hit hit) {
-    vec3 background = vec3(0);
-    vec3 color;
-
-    if (hit.isBackground) {
-        color = background;
-
-    } else if (hit.model.material.id == 1) {
-        float rep = 6.;
-        vec2 uv = hit.model.uv;
-
-        float e = uv.y;
-
-        color = vec3(0);
-        float repeat = 5.;
-        color += makeDots(uv + .5 / repeat, repeat, .1);
-        color += makeLines(uv.x, repeat, .025);
-        color += makeLines(uv.y, repeat, .025);
-    }
-
-    return color;
-}
-
-Hit marchTransparent(Hit hit, float wl) {
-    enableTransparency = true;
-    insideTransparency = false;
-
-    float DISPERSION = mix(.1, .3, smoothstep(.1, .4, time) - smoothstep(.6, .9, time));
-     
-    DISPERSION = .15;
-
-    for (float i = 0.; i < REFRACT_BOUNCES; i++) {
-        if (hit.isBackground || ! hit.model.material.transparent) {
-            return hit;
-        } else {
-            float refractiveIndex = hit.model.material.refractiveIndex;
-            // float v = 1.05;
-            float riMin = refractiveIndex;
-            float riMax = refractiveIndex * (1. + DISPERSION);
-            refractiveIndex = mix(riMin, riMax, wl);
-
-            if (insideTransparency) {
-                refractiveIndex = 1. / refractiveIndex;
-            }
-            vec3 rayDirection = refract(hit.ray.direction, hit.normal, refractiveIndex);
-            if (rayDirection == vec3(0)) {
-                rayDirection = reflect(hit.ray.direction, hit.normal);
-            } else {
-                insideTransparency = ! insideTransparency;
-            }
-            #ifdef ALLOW_ESCAPE
-                if (i == REFRACT_BOUNCES - 1.) {
-                    enableTransparency = false;
-                    insideTransparency = false;
-                }
-            #endif
-            CastRay castRay = newCastRay(hit, rayDirection);
-            hit = raymarch(castRay);
-        }
-    }
-    return hit;
-}
-
 vec3 getColor(vec2 p) {
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     float focalLength = 2.;
-    vec3 rd = normalize(camMat * vec3(p, focalLength));
-    float refractiveIndex;
+    vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
+    CastRay castRay = CastRay(camPos, rayDirection);
+    Hit hit = raymarch(castRay);
 
-    CastRay castRay = CastRay(camPos, rd);
-
-    Hit hit;
-    vec3 rayDirection;
-
-    hit = raymarch(castRay);
-    float wl, riMax, riMin;
-    // wl = time;
-    wl = 0.;
-
-    vec3 color = vec3(0);
-    // vec3 sampleColour;
-
-    #ifdef SHOW_SHAPE
+    #ifdef DEBUG
         return hit.normal * .5 + .5;
     #endif
 
-    if (hit.isBackground || ! hit.model.material.transparent) {
-        color = shade(hit);
-    } else {
-        for(float r = 0.; r < REFRACT_SAMPLES_S; r++){
-            wl = r / REFRACT_SAMPLES_S;
-            // wl = time;
+    // Solid surface
 
-            Hit hit2 = marchTransparent(hit, wl);
-            color += (shade(hit2) * spectrum(wl)) / REFRACT_SAMPLES_S * MULT;
-            // color += sampleColour / REFRACT_SAMPLES_S;
-        }
+    if ( ! hit.model.material.transparent) {
+        return shadeSurface(hit);
     }
 
+    // Transparent surface
+    
+    float wavelength;
+    vec3 sampleColor;
+    vec3 color = vec3(0);
+
+    // March for each wavelength and blend together
+    for(float r = 0.; r < DISPERSION_SAMPLES; r++){
+        wavelength = r / DISPERSION_SAMPLES;
+        Hit hit2 = marchTransparent(hit, wavelength);
+        sampleColor = shadeSurface(hit2) * spectrum(wavelength);
+        // I don't have a model for correctly blending wavelengths together
+        // so there's a fudge multiplier to stop the result going grey
+        sampleColor /= DISPERSION_SAMPLES / WAVELENGTH_BLEND_MULTIPLIER;
+        color += sampleColor;
+    }
     return color;
 }
 
