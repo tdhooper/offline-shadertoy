@@ -354,7 +354,7 @@ vec3 shadeSurface(Hit hit) {
 
 
 // --------------------------------------------------------
-// Main
+// Refraction & Dispersion
 // Some refraction logic from https://www.shadertoy.com/view/lsXGzH
 // --------------------------------------------------------
 
@@ -408,6 +408,30 @@ Hit marchTransparent(Hit hit, float wavelength) {
     return hit;
 }
 
+vec3 shadeTransparentSurface(Hit hit) {
+    float wavelength;
+    vec3 sampleColor;
+    vec3 color = vec3(0);
+
+    // March for each wavelength and blend together
+    for(float r = 0.; r < DISPERSION_SAMPLES; r++){
+        wavelength = r / DISPERSION_SAMPLES;
+        Hit hit2 = marchTransparent(hit, wavelength);
+        sampleColor = shadeSurface(hit2) * spectrum(wavelength);
+        // I don't have a model for correctly blending wavelengths together
+        // so there's a fudge multiplier to stop the result going grey
+        sampleColor /= DISPERSION_SAMPLES / WAVELENGTH_BLEND_MULTIPLIER;
+        color += sampleColor;
+    }
+
+    return color;
+}
+
+
+// --------------------------------------------------------
+// Main
+// --------------------------------------------------------
+
 // https://www.shadertoy.com/view/Xl2XWt
 mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in vec3 up )
 {
@@ -428,29 +452,11 @@ vec3 getColor(vec2 p) {
         return hit.normal * .5 + .5;
     #endif
 
-    // Solid surface
-
     if ( ! hit.model.material.transparent) {
         return shadeSurface(hit);
     }
 
-    // Transparent surface
-    
-    float wavelength;
-    vec3 sampleColor;
-    vec3 color = vec3(0);
-
-    // March for each wavelength and blend together
-    for(float r = 0.; r < DISPERSION_SAMPLES; r++){
-        wavelength = r / DISPERSION_SAMPLES;
-        Hit hit2 = marchTransparent(hit, wavelength);
-        sampleColor = shadeSurface(hit2) * spectrum(wavelength);
-        // I don't have a model for correctly blending wavelengths together
-        // so there's a fudge multiplier to stop the result going grey
-        sampleColor /= DISPERSION_SAMPLES / WAVELENGTH_BLEND_MULTIPLIER;
-        color += sampleColor;
-    }
-    return color;
+    return shadeTransparentSurface(hit);    
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
