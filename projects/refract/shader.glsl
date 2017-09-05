@@ -20,15 +20,21 @@ precision mediump float;
 
 /* SHADERTOY FROM HERE */
 
+// --------------------------------------------------------
+// CONFIG
+// --------------------------------------------------------
 
 // #define DEBUG
 
-float time;
+const float MAX_TRACE_DISTANCE = 5.;
+const float INTERSECTION_PRECISION = .001;
+const int NUM_OF_TRACE_STEPS = 50;
 
-#define PI 3.14159265359
-#define HALF_PI 1.5707963267948966
-#define TAU 6.28318530718
-#define PHI 1.618033988749895
+const float REFRACTION_BOUNCES = 4.;
+const float DISPERSION_SAMPLES = 20.;
+const float WAVELENGTH_BLEND_MULTIPLIER = 5.;
+
+const float DISPERSION = .15; // Try changing
 
 
 // --------------------------------------------------------
@@ -53,6 +59,10 @@ float smax(float a, float b, float r) {
 // --------------------------------------------------------
 // Rotation controls
 // --------------------------------------------------------
+
+#define PI 3.14159265359
+
+float time;
 
 mat3 sphericalMatrix(float theta, float phi) {
     float cx = cos(theta);
@@ -119,7 +129,7 @@ Material transparentMaterial = Material(
     0,
     true,
     1. / 1.333,
-    .15
+    DISPERSION
 );
 
 Material backMaterial = Material(
@@ -215,9 +225,6 @@ Model map( vec3 p ){
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 5.; // max trace distance
-const float INTERSECTION_PRECISION = .001; // precision of the intersection
-const int NUM_OF_TRACE_STEPS = 50;
 
 struct CastRay {
     vec3 origin;
@@ -320,10 +327,6 @@ vec3 shadeSurface(Hit hit) {
 // Refraction & Dispersion
 // Some refraction logic from https://www.shadertoy.com/view/lsXGzH
 // --------------------------------------------------------
-
-const float REFRACTION_BOUNCES = 4.;
-const float DISPERSION_SAMPLES = 20.;
-const float WAVELENGTH_BLEND_MULTIPLIER = 5.;
 
 Hit marchTransparent(Hit hit, float wavelength) {
     enableTransparency = true;
