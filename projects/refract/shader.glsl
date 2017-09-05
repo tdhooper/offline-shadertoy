@@ -30,8 +30,8 @@ const float MAX_TRACE_DISTANCE = 5.;
 const float INTERSECTION_PRECISION = .001;
 const int NUM_OF_TRACE_STEPS = 50;
 
-const float REFRACTION_BOUNCES = 4.;
-const float DISPERSION_SAMPLES = 20.;
+const float REFRACTION_BOUNCES = 3.;
+const float DISPERSION_SAMPLES = 20.; // Higher = slower but smoother blending
 const float WAVELENGTH_BLEND_MULTIPLIER = 5.;
 
 const float DISPERSION = .15; // Try changing
