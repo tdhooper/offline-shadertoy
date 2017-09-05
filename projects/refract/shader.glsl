@@ -435,46 +435,10 @@ Model modelC(vec3 p) {
 
     pR(p.xz, PI * .5);
 
-    pModPolar(p.yz, rep);
-    vec3 pp = p;
-    
-    float bumpSize = .05;
-    float bumpSmooth = .1;
-    float bumpOffset = .25;
-
-
-    p.y -= bumpOffset;
-    float bA = length(p) - bumpSize;
-
-    p = pp;
-    pR(p.yz, PI / rep * 2.);
-    p.y -= bumpOffset;
-    float bB = length(p) - bumpSize;
-
-    p = pp;
-    pR(p.yz, PI / rep * -2.);
-    p.y -= bumpOffset;
-    float bC = length(p) - bumpSize;
-
-    float bumps = min(min(bA, bB), bC);
-
-    model.dist  = bumps;
-
-    // return model;
-
-    p = pp;
-
-// 
-
-    // 
-    // float sqq = 1.;
-
-    // p.z /= sqq;
-
     float sep = .1;
     float sz = .2;
     float rr = .2;
-    pp = p;
+    vec3 pp = p;
 
     p = pp;
     d = length(p) - .3;
@@ -487,12 +451,6 @@ Model modelC(vec3 p) {
     p.x += sz + sep;
     part = length(p) - sz;
     d = smax(d, -part, rr);
-
-    // d *= sqq;
-
-    d = smin(d, bA, bumpSmooth);
-    d = smin(d, bB, bumpSmooth);
-    d = smin(d, bC, bumpSmooth);
 
     model.dist = d;
 
