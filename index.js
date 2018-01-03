@@ -38,7 +38,7 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/refract/shader.glsl');
+var frag = glslify('./projects/rainbow-roller-remix/shader.glsl');
 
 var texture = regl.texture();
 
