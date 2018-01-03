@@ -3,6 +3,7 @@ precision highp float;
 uniform vec2 iResolution;
 uniform vec2 iOffset;
 uniform float iGlobalTime;
+uniform float iTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
@@ -19,6 +20,23 @@ precision mediump float;
 
 
 /* SHADERTOY FROM HERE */
+/*
+
+    Dispersion
+    ----------
+
+    Combines multiple samples that vary the refractive
+    index and wavelength.
+
+    This gets expensive for high dispersion values that
+    need more samples to reduce banding.
+
+    I don't think this is physically correct in any way,
+    as I'm using a very crude method to split the
+    visible spectrum.
+
+*/
+
 
 // --------------------------------------------------------
 // CONFIG
@@ -30,7 +48,7 @@ const float MAX_TRACE_DISTANCE = 5.;
 const float INTERSECTION_PRECISION = .001;
 const int NUM_OF_TRACE_STEPS = 50;
 
-const float REFRACTION_BOUNCES = 6.;
+const float REFRACTION_BOUNCES = 3.;
 const float DISPERSION_SAMPLES = 20.; // Higher = slower but smoother blending
 const float WAVELENGTH_BLEND_MULTIPLIER = 5.;
 
@@ -77,7 +95,7 @@ mat3 sphericalMatrix(float theta, float phi) {
 }
 
 mat3 mouseRotation(vec2 xy) {
-    vec2 p = (-iResolution.xy + 2. * iMouse.xy) / iResolution.x;
+    vec2 p = (-iResolution.xy + 2. * iMouse.xy) / iResolution.y;
     
     if (iMouse.x != 0. && iMouse.y != 0.) {
         xy = p;
@@ -85,8 +103,8 @@ mat3 mouseRotation(vec2 xy) {
 
     float rx, ry;
 
-    rx = (xy.y) * PI;
-    ry = (-xy.x) * PI;
+    rx = (xy.y * .25) * PI;
+    ry = (-xy.x * .25) * PI;
 
     return sphericalMatrix(rx, ry);
 }
@@ -97,7 +115,7 @@ mat3 modelRotation() {
     pR(defaultRotation, sin(time * PI * 2.) * .1);
     
     float a = time;
-    float r = mix(.1, .4, sin(time * PI * 1.) * .5 + .5);
+    float r = mix(.2, .8, sin(time * PI * 1.) * .5 + .5);
 
     defaultRotation = vec2(
         sin(a * PI * 2.) * r,
@@ -138,19 +156,11 @@ Material transparentMaterial = Material(
     0,
     true,
     1. / 1.333,
-    // 1./3.,
     DISPERSION
 );
 
 Material backMaterial = Material(
     1,
-    false,
-    0.,
-    0.
-); 
-
-Material solidMaterial = Material(
-    2,
     false,
     0.,
     0.
@@ -187,20 +197,11 @@ Model opU( Model m1, Model m2 ){
     }
 }
 
-
 Model backModel(vec3 p) {
     Model model = newModel();
     p.z += 2.;
     model.dist = dot(p, vec3(0,0,1)) - .7;
     model.uv = vec2(p.x, p.y);
-    return model;
-}
-
-Model solidModel(vec3 p) {
-    Model model = newModel();
-    model.dist = length(p) - .05;
-    model.uv = p.xy;
-    model.material = solidMaterial;
     return model;
 }
 
@@ -212,23 +213,18 @@ Model mainModel(vec3 p) {
     float indentSize = .2;
     float indentSmooth = .2;
 
-    p.x /= .5;
-    model.dist = (length(p) - .3) * .5;
+    // Sphere
+    d = length(p) - .3;
 
-    // p.y -= .1;
+    // Mirror
+    p.z *= sign(p.z);
 
-    // // Sphere
-    // d = length(p) - .3;
+    // Indent
+    p.z -= indentSize + indentOffset;
+    part = length(p) - indentSize;
+    d = smax(d, -part, indentSmooth);
 
-    // // Mirror
-    // p.z *= sign(p.z);
-
-    // // Indent
-    // p.z -= indentSize + indentOffset;
-    // part = length(p) - indentSize;
-    // d = smax(d, -part, indentSmooth);
-
-    // model.dist = d;
+    model.dist = d;
     return model;
 }
 
@@ -246,7 +242,6 @@ Model transparentModel(vec3 p) {
 Model map( vec3 p ){
     Model model = backModel(p);
     p *= modelRotation();
-    model = opU(model, solidModel(p));
     model = opU(model, transparentModel(p));
     return model;
 }
@@ -340,39 +335,19 @@ float makeLines(float x, float repeat, float thick) {
     return makeLine(x, thick);
 }
 
-vec3 lcd(vec2 uv) {
-    float repeat = 40.;
-    float x = uv.x;
-    x = mod(uv.x, 1. / repeat) * repeat;
-    vec3 color = vec3(0);
-    color += makeLine(x, 1./4.) * vec3(1,0,0);
-    color += makeLine(x + 1./4., 1./4.) * vec3(0,1,0);
-    color += makeLine(x - 1./4., 1./4.) * vec3(0,0,1);
-    color *= makeLines(uv.y, repeat / 2., .9);
-    return color;
-}
-
 vec3 shadeSurface(Hit hit) {
     vec3 color = vec3(0);
 
     if (hit.isBackground) {
         return color;
-    }
-
+    }    
+    
     if (hit.model.material.id == 1) {
         vec2 uv = hit.model.uv;
         float repeat = 5.;
         color += makeDots(uv + .5 / repeat, repeat, .1);
         color += makeLines(uv.x, repeat, .025);
         color += makeLines(uv.y, repeat, .025);
-    }
-
-    if (hit.model.material.id == 2) {
-        vec2 uv = hit.model.uv;
-        color = lcd(uv);
-        color *= 2.;
-        color = vec3(2);
-        // color = vec3(length(color));
     }
 
     return color;
@@ -467,7 +442,7 @@ vec3 getColor(vec2 p) {
 
     vec3 camUp = vec3(0,-1,0);
     vec3 camTar = vec3(0.);
-    vec3 camPos = vec3(0,0,1.);
+    vec3 camPos = vec3(0,0,1.25);
 
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     float focalLength = 2.;
@@ -484,21 +459,21 @@ vec3 getColor(vec2 p) {
         return shadeSurface(hit);
     }
 
-    return shadeTransparentSurface(hit);
+    return shadeTransparentSurface(hit);    
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.x;
+    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;    
     vec2 m = iMouse.xy / iResolution.xy;
 
-    time = iGlobalTime;
+    time = iTime;
     time /= 4.;
     time = mod(time, 1.);
+    
+    p /= 1.5;
 
     vec3 color = getColor(p);
 
     fragColor = vec4(color,1.0);
 }
-
-

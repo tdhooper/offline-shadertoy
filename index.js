@@ -38,7 +38,7 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/rainbow-roller-remix/shader.glsl');
+var frag = glslify('./projects/refract-core/shader.glsl');
 
 var texture = regl.texture();
 
@@ -74,6 +74,7 @@ const drawTriangle = regl({
             return props.offset || [0, 0];
         },
         iGlobalTime: regl.prop('time'),
+        iTime: regl.prop('time'),
         iMouse: function(context, props) {
             var mouse = props.mouse.map(function(value) {
                 return value * context.pixelRatio;
