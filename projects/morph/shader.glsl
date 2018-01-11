@@ -20,28 +20,15 @@ precision mediump float;
 
 /* SHADERTOY FROM HERE */
 
-#pragma glslify: import('./model.glsl')
+struct Model {
+    float dist;
+    vec3 colour;
+    float id;
+};
 
+float time;
 
-
-
-// checks to see which intersection is closer
-Model opU( Model m1, Model m2 ){
-    if (m1.dist < m2.dist) {
-        return m1;
-    } else {
-        return m2;
-    }
-}
-
-Model map( vec3 p ){
-    float d = length(p) - 1.;
-    Model model = model8(p);
-    return model;
-}
-
-
-
+#pragma glslify: map = require(./map.glsl, Model=Model, time=time)
 
 
 vec2 mousee;
@@ -249,6 +236,8 @@ vec3 linearToScreen(vec3 linearRGB) {
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     mousee = iMouse.xy;
+
+    time = iGlobalTime;
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;

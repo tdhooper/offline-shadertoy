@@ -3,13 +3,6 @@
 #pragma glslify: import('./polyhedra_transforms.glsl')
 
 
-struct Model {
-    float dist;
-    vec3 colour;
-    float id;
-};
-
-
 
 // Chunky dodecahedron
 Model model1(vec3 p) {
@@ -465,3 +458,242 @@ Model model8(vec3 p) {
     
     return Model(d, vec3(0), 1.);
 }
+
+
+float fSpike3(vec3 p, vec3 n) {
+    return fCone(p, .65, 1.7, n, 0.) - .02;
+}
+
+
+float fWedge(
+    vec3 p,
+    vec3 c1,
+    vec3 c2,
+    vec3 c3,
+    vec3 c4,
+    float thickness,
+    float round
+) {
+    float d = 1000.;
+    float part;
+    vec3 n1 = cross(c1, c2);
+    vec3 n2 = cross(c2, c3);
+    vec3 n3 = cross(c3, c4);
+    vec3 n4 = cross(c4, c1);
+    part = fPlane(p, n1, thickness);
+    d = part;
+    part = fPlane(p, n2, thickness);
+    d = smax(d, part, round);
+    part = fPlane(p, n3, thickness);
+    d = smax(d, part, round);
+    part = fPlane(p, n4, thickness);
+    d = smax(d, part, round);
+    return d;
+}
+
+
+
+Model modelSave(vec3 p) {
+
+    float part, part2, d, o;
+    vec3 colour, c1, c2, c3, c4, c5, b;
+    d = 1000.;
+        
+    pIcosahedron(p);
+    
+    Tri tri = Tri(pbc, pab, pca);
+    vec3 rab = normalize(cross(tri.a, tri.b));
+    vec3 rbc = normalize(cross(tri.b, tri.c));
+    vec3 rca = normalize(cross(tri.c, tri.a));
+    
+    c1 = bToC(0,1,0);
+    c2 = bToC(.5,.0,.5);
+    c3 = bToC(1.,.0,.0);
+    c4 = reflect(c2, rab);
+    
+    float thickness = .004;
+    float round = .04;
+
+    float hole = fWedge(p, c1, c2, c3, c4, .025, round);
+      
+    
+    c1 = bToC(.5,.0,.5);
+    c2 = bToC(0,1,0);
+    c3 = reflect(c1, rbc);
+    c4 = bToC(0,0,1);
+
+    float hole2 = fWedge(p, c1, c2, c3, c4, .01, round);
+    float holes = min(hole2, hole);
+    
+    
+    float outer = length(p) - 1.;
+    float inner = length(p) - .93;
+    float shell = max(outer, -inner);
+    
+    d = shell;
+    
+    c1 = bToCn(1,0,0);
+    float spike1 = fCone(p, 1., 1.25, c1, 0.) - .03;
+    c1 = bToCn(0,1,0);
+    float spike2 = fCone(p, 1.6, 1.1, c1, 0.) - .03;
+    c1 = bToCn(0,0,1);
+    float spike3 = fCone(p, 1.1, 1.05, c1, 0.) - .03;
+    c1 = bToCn(.5,.0,.5);
+    float spike4 = fCone(p, 1.15, 1.15, c1, 0.) - .03;
+    
+    float base = length(p) - .97;
+    
+    float spikes = base;
+    spikes = smin(spikes, spike1, .05);
+    spikes = smin(spikes, spike4, .05);
+    spikes = smin(spikes, spike2, .09);
+    //spikes = smin(spikes, spike3, .05);
+    
+    //spikes = min(spikes, length(p) - 1.);
+
+    
+    float spikesInner = spikes + 0.1;
+    spikes = max(spikes, -spikesInner);
+    
+    d = spikes;
+    
+    c1 = bToCn(.0,.5,.5);
+    float holee1 = fCone(p, .25, 2., -c1, -2.);
+    c1 = bToCn(.5,.5,.0);
+    float holee2 = fCone(p, .1, 2., -c1, -2.);
+    holes = min(holee1, holee2);
+
+    d = smax(d, -holes, .05);
+    //d = min(d, holes);
+    
+    //d = fOpUnionRound(d, part, 0.05);
+    
+    //d = smax(d, -holes, 0.02);
+    
+    return Model(d, colour, 1.);
+}
+
+
+Model model9(vec3 p) {
+
+    pIcosahedron(p);
+
+
+    float part, part2, d;
+    vec3 colour, c1, c2, c3, c4, c5, b, n, o;
+    d = 1000.;
+            
+    float hole, holes;
+    float spike, spikes;
+    
+    n = bToCn(0,0,1);
+    float sharedSpike = fCone(p, .6, 1.2, n, 0.) - .02;
+    
+    // Shell
+
+    float shell = length(p) - 1.;
+    float shellInner = length(p) - .93;
+    
+
+    n = bToCn(1,0,0);
+    hole = fCone(p, .95, 2., -n, -2.);
+    holes = hole;
+
+    n = bToCn(0,1,0);
+    spike = fCone(p, 1.5, 1.1, n, 0.) - .03;
+    spikes = spike;
+    
+    n = bToCn(0,0,1);
+    spike = fCone(p, 1.5, 1.1, n, 0.) - .03;
+    spike = smin(spike, sharedSpike, .1);
+    spikes = spike;
+    
+    n = bToCn(1,0,0);
+    spike = fCone(p, 1.5, 1.3, n, 0.) - .03;
+    spikes = smin(spike, spikes, .1);
+        
+
+    shell = smin(shell, spikes, .01);
+    shell = max(shell, -shellInner);
+    shell = smax(shell, -holes, .05);    
+
+    // Core
+    
+    float core = length(p) - .85;
+    float coreInner = length(p) - .7;
+    
+    
+    
+    n = bToCn(1,0,0);
+    spike = fCone(p, .35, 1.1, n, 0.) - .02;
+    spikes = spike;
+    
+
+    core = smin(core, spikes, .3);
+    
+    n = bToCn(0,0,1);
+    hole = fCone(p, .55, 2., -n, -2.);
+    holes = hole;
+    
+    n = bToCn(.2,.0,.8);
+    hole = fCone(p, .4, 2., -n, -2.);
+    holes = min(hole, holes);
+    
+    c1 = bToCn(.7,.0,.3);
+    c2 = bToCn(.0,.9,.1);
+    c3 = reflect(c1, triP.bc);
+    c4 = reflect(c2, triP.ca);
+    
+    holes = fWedge(p, c1, c2, c3, c4, .0, .07);
+    
+    core = max(core, -coreInner);
+    core = smax(core, -holes, .08);
+    
+    
+    
+    n = bToCn(1,0,0);
+    spike = fSpike3(p, n);
+    n = reflect(n, triP.bc);
+    spike = smin(spike, fSpike3(p, n), .15);
+    n = reflect(n, triP.ca);
+    spike = smin(spike, fSpike3(p, n), .15);
+    spikes = spike;
+    core = spike;
+    
+    n = bToCn(1,0,0);
+    hole = fCone(p, .45, 2., -n, -2.);
+    holes = hole;
+    
+    core = smax(core, -holes, .1);
+    
+    n = bToCn(1,0,0);
+    spike = fCone(p, .35, 1.2, n, 0.) - .02;
+    spikes = spike;
+    
+    core = min(core, spike);
+
+    d = min(shell, core);
+    //d = core;
+    
+    return Model(d, colour, 1.);
+}
+
+
+
+// checks to see which intersection is closer
+Model opU( Model m1, Model m2 ){
+    if (m1.dist < m2.dist) {
+        return m1;
+    } else {
+        return m2;
+    }
+}
+
+Model map( vec3 p ){
+    float d = length(p) - 1.;
+    Model model = modelSave(p);
+    return model;
+}
+
+
+#pragma glslify: export(map)

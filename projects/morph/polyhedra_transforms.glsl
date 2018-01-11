@@ -33,8 +33,12 @@ vec3 nc,pab,pbc,pca;
 Tri tri;
 TriPlanes triP;
 
+float cospin;
+float scospin;
+
 void initPolyhedron(int Type) {//setup folding planes and vertex
-    float cospin=cos(PI/float(Type)), scospin=sqrt(0.75-cospin*cospin);
+    cospin=cos(PI/float(Type));
+    scospin=sqrt(0.75-cospin*cospin);
     nc=vec3(-0.5,-cospin,scospin);//3rd folding plane. The two others are xz and yz planes
     pab=vec3(0.,0.,1.);
     pbc=vec3(scospin,0.,0.5);//No normalization in order to have 'barycentric' coordinates work evenly
