@@ -463,55 +463,29 @@ float makeLines(float x, float lines, float thick) {
     return str;
 }
 
-void shadeSurface(inout Hit hit){
-    
-    vec3 color = vec3(.04,.045,.05);
-    
-    if (hit.isBackground) {
-        hit.color = color;
-        hit.color = hit.ray.direction * .5 + .5;
-        //hit.color = vec3(sign(hit.ray.direction.x) * .5 + .5);
-        //hit.color = vec3(dot(vec3(0,0,1), hit.ray.direction) * .5 + .5);
-        //hit.color = vec3(sin(dot(vec3(0,1,0), hit.ray.direction) * 2.) * .5 + .5);
-        
-        vec3 d = hit.ray.direction;
-        vec3 y = vec3(0,1,0);
-        vec3 z = vec3(1,0,0);
-        vec3 dd = normalize(cross(d, z));
-        float angle = acos(dot(dd, y));
-        
-        angle *= sign(dot(cross(dd, y), z)) / PI;
-        angle += time * .5 - .125;
-        
-        // angle /= PI;
+vec2 angleDirection(vec3 dir) {
+    vec3 y = vec3(0,1,0);
+    vec3 x = vec3(1,0,0);
+    vec3 dirXAxis = normalize(cross(dir, x));
+    return dirXAxis.yz;
+}
 
-        float str = makeLines(angle, 4., .175);
+float angleFromDirection(vec2 dir) {
+    return atan(dir.x, dir.y);
+}
 
-        hit.color = vec3(1);
-        hit.color *= str;
+vec3 angleColor(float angle){
 
-        float hor = dot(hit.ray.direction, z);
-        // hit.color *= makeLines(hor, 5., .1);
-        
-        // hit.color = mix(hit.color, hit.color * spectrum(angle - .333), .5) * 1.5;
-        // hit.color *= mix(spectrum(angle+.1), vec3(1), .5) * 3.5;
-        hit.color *= mix(spectrum(.3), vec3(1), .5) * 3.5;
-        
-        // hit.color *= vec3(1,.8,.9) * 3.5;
-        // hit.color *= 2.;
+    angle /= PI;
+    angle += time * .5 - .125;
 
-        // if (angle < .33) {
-        //     hit.color *= vec3(1,0,0);
-        // } else if (angle < .66) {
-        //     hit.color *= vec3(0,1,0);
-        // } else {
-        //     hit.color *= vec3(0,0,1);
-        // }
+    float str = makeLines(angle, 4., .175);
 
-        return;
-    }
+    vec3 color = vec3(1);
+    color *= str;
+    color *= mix(spectrum(.3), vec3(1), .5) * 3.5;
 
-    hit.color = hit.model.material.albedo;
+    return color;
 }
 
 CastRay transparencyCastRay(Hit hit, float refractiveIndex) {
@@ -532,58 +506,95 @@ bool isInsideTransparentModel(vec3 pos) {
     return model.dist < 0. && model.material.transparency > 0.;
 }
 
-const float REFRACT_SAMPLES = 20.; // max trace distance
+const float REFRACT_SAMPLES = 100.; // max trace distance
 
+
+Hit marchTransparency(Hit hit, float refractiveIndex) {
+
+    CastRay castRay;
+
+    // First march ray through to the other side
+
+    castRay = transparencyCastRay(hit, refractiveIndex);
+    insideTransparency = true;
+    enableTransparency = true;
+    Hit hitInside = raymarch(castRay);
+    float thickness = hitInside.ray.len;
+    
+    // Then march back out into the scene
+    
+    castRay = transparencyCastRay(hitInside, 1. / refractiveIndex);
+    insideTransparency = false;
+    enableTransparency = false;
+    Hit hitOutside = raymarch(castRay);
+    enableTransparency = true;
+
+    return hitOutside;
+}
+
+
+float shortAngleDist(float a0, float a1) {
+    float max = PI * 2.;
+    float da = mod(a1 - a0, max);
+    return mod(2. * da, max - da);
+}
+
+float angleLerp(float a0, float a1, float t) {
+    // a0 = mod(a0, PI * 2.);
+    // a1 = mod(a1, PI * 2.);
+    return a0 + shortAngleDist(a0, a1) * t;
+}
+
+vec2 slerp(vec2 start, vec2 end, float percent)
+{
+     // Dot product - the cosine of the angle between 2 vectors.
+     float dot = dot(start, end);     
+     // Clamp it to be in the range of Acos()
+     // This may be unnecessary, but floating point
+     // precision can be a fickle mistress.
+     dot = clamp(dot, -1.0, 1.0);
+     // Acos(dot) returns the angle between start and end,
+     // And multiplying that by percent returns the angle between
+     // start and the final result.
+     float theta = acos(dot)*percent;
+     vec2 RelativeVec = normalize(end - start*dot); // Orthonormal basis
+     // The final result.
+     return ((start*cos(theta)) + (RelativeVec*sin(theta)));
+}
 
 Hit renderTransparency(Hit hit) {
 
     float riMax = hit.model.material.refractiveIndex;
     float riMin = riMax * .9;
-    float refractiveIndex;
 
     float wl;
-    Hit hitOutside;
     vec3 color = vec3(0);
 
-    CastRay castRay;
+    Hit hit1 = marchTransparency(hit, riMin);
+    Hit hit2 = marchTransparency(hit, riMax);
+
+    vec2 dir1 = angleDirection(hit1.ray.direction);
+    vec2 dir2 = angleDirection(hit2.ray.direction);
+
+    vec2 dir;
+    float angle;
+    vec3 sample;
 
     for(float i = 0.; i < REFRACT_SAMPLES; i++){
-
         wl = i / REFRACT_SAMPLES;
-        refractiveIndex = mix(riMin, riMax, wl);
-
-        // First march ray through to the other side
-
-        castRay = transparencyCastRay(hit, refractiveIndex);
-        insideTransparency = true;
-        enableTransparency = true;
-        Hit hitInside = raymarch(castRay);
-        float thickness = hitInside.ray.len;
-        
-        // Then march back out into the scene
-        
-        castRay = transparencyCastRay(hitInside, 1. / refractiveIndex);
-        insideTransparency = false;
-        enableTransparency = false;
-        hitOutside = raymarch(castRay);
-        enableTransparency = true;
-        
-        // Shade the final model
-        
-        shadeSurface(hitOutside);
-// 
-        hitOutside.color *= spectrum(wl) * 2.;
-        color += hitOutside.color;
-
+        // wl = 0.;
+        dir = slerp(dir1, dir2, wl);
+        angle = angleFromDirection(dir);
+        // angle = angle2;
+        sample = angleColor(angle);
+        sample *= spectrum(wl) * 2.;
+        color += sample;
     }
 
     color /= REFRACT_SAMPLES;
-    hitOutside.color = color;
+    hit.color = color;
 
-    // float core = thickness;
-    // hitOutside.color = mix(hitOutside.color, vec3(1), core);
-    
-    return hitOutside;
+    return hit;
 }
 
 
@@ -591,27 +602,17 @@ void mixTransparency(inout Hit hit, Hit hit2) {
     hit.color = mix(hit.color, hit2.color, hit.model.material.transparency);
 }
 
+
 vec3 render(Hit hit){
-    
-    shadeSurface(hit);
-    
+
     if (hit.isBackground) {
         return vec3(0);
-        return hit.color;
     }
 
     // return hit.normal * .5 + .5;
     
     if (hit.model.material.transparency > 0.) {
         Hit hit2 = renderTransparency(hit);
-        if ( ! hit2.isBackground && hit2.model.material.transparency > 0.) {
-            Hit hit3 = renderTransparency(hit2);
-            if ( ! hit3.isBackground && hit3.model.material.transparency > 0.) {
-                Hit hit4 = renderTransparency(hit3);
-                mixTransparency(hit3, hit4);
-            }
-            mixTransparency(hit2, hit3);
-        }
         mixTransparency(hit, hit2);
     }
 
