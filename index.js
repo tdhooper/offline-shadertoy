@@ -38,7 +38,7 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/morph/shader.glsl');
+var frag = glslify('./projects/spiral/shader.glsl');
 
 var texture = regl.texture();
 
