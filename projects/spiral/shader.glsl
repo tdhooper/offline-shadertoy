@@ -166,13 +166,13 @@ Model map( vec3 p ){
     globalScale = 1.;
     pModSpiral(p, 1.);
     pModSpiral(p, -1.);
-    pModSpiral(p, 1.);
-    pModSpiral(p, -1.);
+    // pModSpiral(p, 1.);
+    // pModSpiral(p, -1.);
     // pModSpiral(p, 1.);
     vec3 color = sign(p) * .5 + .5;
-    color = vec3(smoothstep(.25, .3, abs(mod(p.x, .5) - .25) * 4.), 0., 1.);
+    // color = vec3(smoothstep(.25, .3, abs(mod(p.x, .5) - .25) * 4.), 0., 1.);
     float d = fBox2(p.yz, vec2(.5));
-    d = length(p.yz) - .5;
+    // d = length(p.yz) - .5;
     d *= globalScale;
     Model model = Model(d, color);
     return model;
@@ -191,7 +191,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-1.);
+    camPos = vec3(0,0,-1.5);
     camPos *= cameraRotation();
 }
 
@@ -274,11 +274,12 @@ Hit raymarch(CastRay castRay){
 void shadeSurface(inout Hit hit){
 
     vec3 background = vec3(.1)* vec3(.5,0,1);
-
+    background = vec3(.2,.8,1.) * .9;
     if (hit.isBackground) {
         hit.color = background;
         return;
     }
+    pR(hit.normal.xz, 2.75);
     hit.color = hit.normal * .5 + .5;
     // hit.color = hit.model.albedo;
 }
@@ -342,7 +343,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     doCamera();
 
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
-    float focalLength = 2.;
+    float focalLength = 3.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
     Hit hit = raymarch(CastRay(camPos, rd));
 
