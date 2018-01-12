@@ -131,11 +131,19 @@ vec3 cartToPolar(vec3 p) {
     return vec3(a, z, r);
 }
 
-void pModSpiral(inout vec3 p) {
-    pModFlip1(p.yz, 1.5);
+float globalScale;
+
+void pModSpiral(inout vec3 p, float flip) {
+    float scale = .25;
+    globalScale *= scale;
+    p /= scale;
+    p = p.yxz;
     p = cartToPolar(p);
-    p.y += p.x * .5;
-    p.z -= 2.;
+    // float spacing = sin(time * 2.) * .5 + .5 + 1.;
+    float spacing = PI / 3.;
+    p.y += (p.x / PI) * spacing * flip;
+    p.z -= 1.5;
+    pMod1(p.y, spacing * 2.);
 }
 
 
@@ -148,9 +156,17 @@ struct Model {
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
-    pModSpiral(p);
+
+    globalScale = 1.;
+    pModSpiral(p, 1.);
+    pModSpiral(p, -1.);
+    pModSpiral(p, 1.);
+    pModSpiral(p, -1.);
+    // pModSpiral(p, 1.);
     vec3 color = sign(p) * .5 + .5;
-    float d = fBox(p, vec3(PI, .5, .5));
+    float d = fBox(p, vec3(PI * 2., .5, .5));
+    d = length(p.yz) - .5;
+    d *= globalScale;
     Model model = Model(d, color);
     return model;
 }
@@ -168,7 +184,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-10.);
+    camPos = vec3(0,0,-1.);
     camPos *= cameraRotation();
 }
 
@@ -180,7 +196,7 @@ void doCamera() {
 // --------------------------------------------------------
 
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
-const float INTERSECTION_PRECISION = .001; // precision of the intersection
+const float INTERSECTION_PRECISION = .0001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
 
@@ -257,7 +273,7 @@ void shadeSurface(inout Hit hit){
         return;
     }
     hit.color = hit.normal * .5 + .5;
-    hit.color = hit.model.albedo;
+    // hit.color = hit.model.albedo;
 }
 
 
