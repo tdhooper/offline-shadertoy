@@ -92,6 +92,16 @@ mat3 cameraRotation() {
 // Modelling
 // --------------------------------------------------------
 
+// Rotate around a coordinate axis (i.e. in a plane perpendicular to that axis) by angle <a>.
+// Read like this: R(p.xz, a) rotates "x towards z".
+// This is fast if <a> is a compile-time constant and slower (but still practical) if not.
+void pR(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+float vmax(vec2 v) {
+    return max(v.x, v.y);
+}
 
 float vmax(vec3 v) {
     return max(max(v.x, v.y), v.z);
@@ -103,22 +113,17 @@ float fBox(vec3 p, vec3 b) {
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
+float fBox2(vec2 p, vec2 b) {
+    vec2 d = abs(p) - b;
+    return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
+}
+
 // Repeat space along one axis. Use like this to repeat along the x axis:
 // <float cell = pMod1(p.x,5);> - using the return value is optional.
 float pMod1(inout float p, float size) {
     float halfsize = size*0.5;
     float c = floor((p + halfsize)/size);
     p = mod(p + halfsize, size) - halfsize;
-    return c;
-}
-
-// Same, but mirror every second cell so they match at the boundaries
-float pModFlip1(inout vec2 p, float size) {
-    float halfsize = size*0.5;
-    float c = floor((p.x + halfsize)/size);
-    p.x = mod(p.x + halfsize,size) - halfsize;
-    p *= mod(c, 2.0)*2. - 1.;
-    // p.y += 2.;
     return c;
 }
 
@@ -132,6 +137,7 @@ vec3 cartToPolar(vec3 p) {
 }
 
 float globalScale;
+bool debug = false;
 
 void pModSpiral(inout vec3 p, float flip) {
     float scale = .25;
@@ -139,11 +145,11 @@ void pModSpiral(inout vec3 p, float flip) {
     p /= scale;
     p = p.yxz;
     p = cartToPolar(p);
-    // float spacing = sin(time * 2.) * .5 + .5 + 1.;
-    float spacing = PI / 3.;
-    p.y += (p.x / PI) * spacing * flip;
     p.z -= 1.5;
-    pMod1(p.y, spacing * 2.);
+    float spacing = mix(.5, 3., sin(time * 2.) * .5 + .5);
+    float a = atan(spacing / PI) * -1.;
+    pR(p.xy, a * flip);
+    pMod1(p.y, cos(a) * spacing * 2.);
 }
 
 
@@ -164,7 +170,8 @@ Model map( vec3 p ){
     pModSpiral(p, -1.);
     // pModSpiral(p, 1.);
     vec3 color = sign(p) * .5 + .5;
-    float d = fBox(p, vec3(PI * 2., .5, .5));
+    color = vec3(smoothstep(.25, .3, abs(mod(p.x, .5) - .25) * 4.), 0., 1.);
+    float d = fBox2(p.yz, vec2(.5));
     d = length(p.yz) - .5;
     d *= globalScale;
     Model model = Model(d, color);
@@ -324,6 +331,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
+
+// debug = true;
+    if (p.y < 0.) {
+        debug = true;
+    }
 
     time = iGlobalTime;
 
