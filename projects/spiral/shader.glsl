@@ -139,17 +139,47 @@ vec3 cartToPolar(vec3 p) {
 float globalScale;
 bool debug = false;
 
-void pModSpiral(inout vec3 p, float flip) {
+vec3 pModSpiral(inout vec3 p, float flip) {
     float scale = .25;
     globalScale *= scale;
+
+    // pMod1(p.y, PI * .5);
+
+
     p /= scale;
     p = p.yxz;
+
     p = cartToPolar(p);
+
     p.z -= 1.5;
     float spacing = mix(.5, 3., sin(time * 2.) * .5 + .5);
     float a = atan(spacing / PI) * -1.;
+    // a = PI * -.25;
+
     pR(p.xy, a * flip);
-    pMod1(p.y, cos(a) * spacing * 2.);
+
+    float repeat = cos(a) * spacing * 2.;
+    float c = pMod1(p.y, repeat);
+    // float halfsize = repeat * .5;
+    // float c = floor((p.y + halfsize) / repeat);
+    // p.y = mod(p.y + halfsize, repeat) - halfsize;
+
+    // float len = sqrt(pow(spacing, 2.) - pow(repeat, 2.));
+    float len = sqrt(pow(spacing, 2.) + pow(PI, 2.));
+    // float len = sqrt(pow(spacing, 2.) - pow(repeat, 2.));
+    // float len = sqrt(pow(repeat, 2.) + pow(PI, 2.));
+
+    float offset = repeat / tan(PI * .5 - a);
+    p.x -= (offset + len * 2.) * c;
+    // p.x += len;
+
+
+    // p.x += time;
+    // p.x -= 13.1 * c - (spacing * c * .75);
+    // p.x -= PI * scale * .5;
+    // float len = 
+
+    return vec3(0., 0., 0.);
 }
 
 
@@ -164,14 +194,27 @@ Model map( vec3 p ){
     mat3 m = modelRotation();
 
     globalScale = 1.;
-    pModSpiral(p, 1.);
-    pModSpiral(p, -1.);
+    vec3 mm = pModSpiral(p, 1.);
+    // pModSpiral(p, -1.);
     // pModSpiral(p, 1.);
     // pModSpiral(p, -1.);
     // pModSpiral(p, 1.);
     vec3 color = sign(p) * .5 + .5;
     // color = vec3(smoothstep(.25, .3, abs(mod(p.x, .5) - .25) * 4.), 0., 1.);
+    // color = vec3(
+    //     smoothstep(0., .1, sin(p.x * 7.)),
+    //     smoothstep(0., .1, sin(p.x * 3.)),
+    //     smoothstep(0., .1, sin(p.x * 4.))
+    // );
+    color = vec3(
+        smoothstep(0., .1, sin(p.x * 20.)),
+        sin(p.x / 1.5),
+        sin(p.x / 3.)
+    );
+    // color = mm;
+
     float d = fBox2(p.yz, vec2(.5));
+    // float d = fBox(p, vec3(PI*.5, .5, .5));
     // d = length(p.yz) - .5;
     d *= globalScale;
     Model model = Model(d, color);
@@ -191,7 +234,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-1.5);
+    camPos = vec3(0,0,6.);
     camPos *= cameraRotation();
 }
 
@@ -281,7 +324,7 @@ void shadeSurface(inout Hit hit){
     }
     pR(hit.normal.xz, 2.75);
     hit.color = hit.normal * .5 + .5;
-    // hit.color = hit.model.albedo;
+    hit.color = hit.model.albedo;
 }
 
 
