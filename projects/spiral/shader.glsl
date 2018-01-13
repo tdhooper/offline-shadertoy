@@ -170,7 +170,7 @@ vec3 pModSpiral(inout vec3 p, float flip) {
     // float len = sqrt(pow(repeat, 2.) + pow(PI, 2.));
 
     float offset = repeat / tan(PI * .5 - a);
-    p.x -= (offset + len * 2.) * c;
+    p.x -= (offset + len * 2.) * c * flip;
     // p.x += len;
 
 
@@ -195,7 +195,7 @@ Model map( vec3 p ){
 
     globalScale = 1.;
     vec3 mm = pModSpiral(p, 1.);
-    // pModSpiral(p, -1.);
+    pModSpiral(p, -1.);
     // pModSpiral(p, 1.);
     // pModSpiral(p, -1.);
     // pModSpiral(p, 1.);
@@ -234,7 +234,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,6.);
+    camPos = vec3(0,0,3.);
     camPos *= cameraRotation();
 }
 
