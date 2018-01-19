@@ -133,6 +133,7 @@ vec3 cartToPolar(vec3 p) {
     float r = length(p.xy); // distance from center
     float z = p.z; // distance from the plane it lies on
     float a = atan(p.y, p.x); // angle around center
+    // r = pow(r, .7);
     return vec3(a, z, r);
 }
 
@@ -143,6 +144,12 @@ vec3 pModSpiral(inout vec3 p, float flip) {
     float scale = .25;
     globalScale *= scale;
 
+    float spacing = mix(.5, 3., sin(time * 2.) * .5 + .5);
+    spacing = 2. * time;
+    float a = atan(spacing / PI) * -1.;
+
+    // p.x *= spacing;
+
     // pMod1(p.y, PI * .5);
 
 
@@ -151,12 +158,14 @@ vec3 pModSpiral(inout vec3 p, float flip) {
 
     p = cartToPolar(p);
 
-    p.z -= 1.5;
-    float spacing = mix(.5, 3., sin(time * 2.) * .5 + .5);
-    float a = atan(spacing / PI) * -1.;
-    // a = PI * -.25;
 
+    // a = PI * -.25;
+    
+    // p.x *= 3.;
+    // p.y /= spacing;
     pR(p.xy, a * flip);
+
+    
 
     float repeat = cos(a) * spacing * 2.;
     float c = pMod1(p.y, repeat);
@@ -172,7 +181,10 @@ vec3 pModSpiral(inout vec3 p, float flip) {
     float offset = repeat / tan(PI * .5 - a);
     p.x -= (offset + len * 2.) * c * flip;
     // p.x += len;
+    
 
+    // p.z -= mix(2., 10., sin(p.x * .1 + time * 3.) * .5 + .5);
+    p.z -= 1.5;
 
     // p.x += time;
     // p.x -= 13.1 * c - (spacing * c * .75);
@@ -192,6 +204,8 @@ struct Model {
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
+
+    float slice = dot(p, vec3(0,0,1));
 
     globalScale = 1.;
     vec3 mm = pModSpiral(p, 1.);
@@ -214,9 +228,12 @@ Model map( vec3 p ){
     // color = mm;
 
     float d = fBox2(p.yz, vec2(.5));
-    // float d = fBox(p, vec3(PI*.5, .5, .5));
-    // d = length(p.yz) - .5;
+    // float d = fBox(p, vec3(1., .5, .5));
+    d = length(p.yz) - .5;
     d *= globalScale;
+
+    // d = max(d, slice);
+
     Model model = Model(d, color);
     return model;
 }
@@ -234,7 +251,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,3.);
+    camPos = vec3(0,0,-5.);
     camPos *= cameraRotation();
 }
 
@@ -246,9 +263,9 @@ void doCamera() {
 // --------------------------------------------------------
 
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
-const float INTERSECTION_PRECISION = .0001; // precision of the intersection
-const int NUM_OF_TRACE_STEPS = 100;
-const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
+const float INTERSECTION_PRECISION = .00001; // precision of the intersection
+const int NUM_OF_TRACE_STEPS = 1000;
+const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
