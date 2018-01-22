@@ -6,6 +6,9 @@ uniform float iGlobalTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
+uniform float guiSpacing;
+uniform float guiOffset;
+
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -146,6 +149,7 @@ vec3 pModSpiral(inout vec3 p, float flip) {
 
     float spacing = mix(.5, 3., sin(time * 2.) * .5 + .5);
     spacing = 2. * time;
+    spacing = guiSpacing;
     float a = atan(spacing / PI) * -1.;
 
     // p.x *= spacing;
@@ -184,7 +188,7 @@ vec3 pModSpiral(inout vec3 p, float flip) {
     
 
     // p.z -= mix(2., 10., sin(p.x * .1 + time * 3.) * .5 + .5);
-    p.z -= 1.5;
+    p.z -= guiOffset;
 
     // p.x += time;
     // p.x -= 13.1 * c - (spacing * c * .75);

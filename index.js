@@ -6,6 +6,8 @@ var Timer = require('./lib/timer');
 var stateStore = require('./lib/state-store');
 var FileSaver = require('file-saver');
 var pad = require('pad-number');
+var fs = require('fs');
+var GUI = require('./lib/gui');
 
 var pixelRatio = window.devicePixelRatio;
 pixelRatio = 1;
@@ -40,6 +42,11 @@ var regl = Regl({
 var vert = glslify('./quad.vert');
 var frag = glslify('./projects/spiral/shader.glsl');
 
+var guiConf = JSON.parse(fs.readFileSync('./projects/spiral/gui.json', 'utf8'));
+var gui = new GUI(guiConf, function() {
+    render();
+});
+
 var texture = regl.texture();
 
 var image = new Image();
@@ -55,6 +62,35 @@ image.onload = function() {
     render();
 };
 
+const uniforms = {
+    iResolution: function(context, props) {
+        var resolution = [context.viewportWidth, context.viewportHeight];
+        return props.resolution || resolution;
+    },
+    iOffset: function(context, props) {
+        return props.offset || [0, 0];
+    },
+    iGlobalTime: regl.prop('time'),
+    iTime: regl.prop('time'),
+    iMouse: function(context, props) {
+        var mouse = props.mouse.map(function(value) {
+            return value * context.pixelRatio;
+        });
+        mouse[1] = context.viewportHeight - mouse[1];
+        //console.log(mouse[0] / context.viewportWidth);
+        //console.log(mouse[1] / context.viewportHeight)
+        return mouse;
+    },
+    iChannel0: texture
+};
+
+Object.keys(gui.state).forEach(function(key) {
+    var name = 'gui' + key[0].toUpperCase() + key.slice(1);
+    uniforms[name] = function() {
+        return gui.state[key];
+    };
+});
+
 const drawTriangle = regl({
     frag: frag,
     vert: vert,
@@ -65,27 +101,7 @@ const drawTriangle = regl({
             [2,  2]
         ]
     },
-    uniforms: {
-        iResolution: function(context, props) {
-            var resolution = [context.viewportWidth, context.viewportHeight];
-            return props.resolution || resolution;
-        },
-        iOffset: function(context, props) {
-            return props.offset || [0, 0];
-        },
-        iGlobalTime: regl.prop('time'),
-        iTime: regl.prop('time'),
-        iMouse: function(context, props) {
-            var mouse = props.mouse.map(function(value) {
-                return value * context.pixelRatio;
-            });
-            mouse[1] = context.viewportHeight - mouse[1];
-            //console.log(mouse[0] / context.viewportWidth);
-            //console.log(mouse[1] / context.viewportHeight)
-            return mouse;
-        },
-        iChannel0: texture
-    },
+    uniforms: uniforms,
 
     // This tells regl the number of vertices to draw in this command
     count: 3
@@ -97,7 +113,8 @@ var mouse = [0,0,0,0];
 function saveState() {
     stateStore.save('state', {
         timer: timer.serialize(),
-        mouse: mouse
+        mouse: mouse,
+        gui: gui.saveState()
     });
 }
 
@@ -111,6 +128,7 @@ function restoreState() {
         window.timer = timer; 
     }
     mouse = state.mouse || mouse;
+    gui.loadState(state.gui);
 }
 
 function render(offset, resolution) {
