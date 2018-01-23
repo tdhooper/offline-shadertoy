@@ -6,8 +6,10 @@ uniform float iGlobalTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
-uniform float guiSpacing;
-uniform float guiOffset;
+uniform float guiLevel1Spacing;
+uniform float guiLevel2Spacing;
+uniform float guiLevel1Offset;
+uniform float guiLevel2Offset;
 
 
 void mainImage(out vec4 a, in vec2 b);
@@ -143,13 +145,10 @@ vec3 cartToPolar(vec3 p) {
 float globalScale;
 bool debug = false;
 
-vec3 pModSpiral(inout vec3 p, float flip) {
+vec3 pModSpiral(inout vec3 p, float flip, float spacing, float zoffset) {
     float scale = .25;
     globalScale *= scale;
 
-    float spacing = mix(.5, 3., sin(time * 2.) * .5 + .5);
-    spacing = 2. * time;
-    spacing = guiSpacing;
     float a = atan(spacing / PI) * -1.;
 
     // p.x *= spacing;
@@ -188,7 +187,7 @@ vec3 pModSpiral(inout vec3 p, float flip) {
     
 
     // p.z -= mix(2., 10., sin(p.x * .1 + time * 3.) * .5 + .5);
-    p.z -= guiOffset;
+    p.z -= zoffset;
 
     // p.x += time;
     // p.x -= 13.1 * c - (spacing * c * .75);
@@ -212,8 +211,8 @@ Model map( vec3 p ){
     float slice = dot(p, vec3(0,0,1));
 
     globalScale = 1.;
-    vec3 mm = pModSpiral(p, 1.);
-    pModSpiral(p, -1.);
+    vec3 mm = pModSpiral(p, 1., guiLevel1Spacing, guiLevel1Offset);
+    pModSpiral(p, -1., guiLevel2Spacing, guiLevel2Offset);
     // pModSpiral(p, 1.);
     // pModSpiral(p, -1.);
     // pModSpiral(p, 1.);
@@ -345,7 +344,7 @@ void shadeSurface(inout Hit hit){
     }
     pR(hit.normal.xz, 2.75);
     hit.color = hit.normal * .5 + .5;
-    hit.color = hit.model.albedo;
+    // hit.color = hit.model.albedo;
 }
 
 

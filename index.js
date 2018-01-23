@@ -84,12 +84,20 @@ const uniforms = {
     iChannel0: texture
 };
 
-Object.keys(gui.state).forEach(function(key) {
-    var name = 'gui' + key[0].toUpperCase() + key.slice(1);
-    uniforms[name] = function() {
-        return gui.state[key];
-    };
-});
+addGuiUniforms = function(prefix, state) {
+    Object.keys(state).forEach(function(key) {
+        var name = prefix + key[0].toUpperCase() + key.slice(1);
+        if (state[key] instanceof Object) {
+            addGuiUniforms(name, state[key]);
+            return;
+        }
+        uniforms[name] = function() {
+            return state[key];
+        };
+    });
+};
+
+addGuiUniforms('gui', gui.state);
 
 const drawTriangle = regl({
     frag: frag,
