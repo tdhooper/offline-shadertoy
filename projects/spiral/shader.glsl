@@ -6,10 +6,20 @@ uniform float iGlobalTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
+uniform bool guiLevel1Enabled;
+uniform bool guiLevel2Enabled;
+uniform bool guiLevel3Enabled;
+
 uniform float guiLevel1Spacing;
 uniform float guiLevel2Spacing;
+uniform float guiLevel3Spacing;
+
 uniform float guiLevel1Offset;
 uniform float guiLevel2Offset;
+uniform float guiLevel3Offset;
+
+uniform float guiThickness;
+uniform bool guiNormals;
 
 
 void mainImage(out vec4 a, in vec2 b);
@@ -211,8 +221,17 @@ Model map( vec3 p ){
     float slice = dot(p, vec3(0,0,1));
 
     globalScale = 1.;
-    vec3 mm = pModSpiral(p, 1., guiLevel1Spacing, guiLevel1Offset);
-    pModSpiral(p, -1., guiLevel2Spacing, guiLevel2Offset);
+
+    if (guiLevel1Enabled) {
+        pModSpiral(p, 1., guiLevel1Spacing, guiLevel1Offset);
+        if (guiLevel2Enabled) {
+            pModSpiral(p, -1., guiLevel2Spacing, guiLevel2Offset);
+            if (guiLevel3Enabled) {
+                pModSpiral(p, 1., guiLevel3Spacing, guiLevel3Offset);
+            }
+        }
+    }
+
     // pModSpiral(p, 1.);
     // pModSpiral(p, -1.);
     // pModSpiral(p, 1.);
@@ -232,7 +251,7 @@ Model map( vec3 p ){
 
     float d = fBox2(p.yz, vec2(.5));
     // float d = fBox(p, vec3(1., .5, .5));
-    d = length(p.yz) - .5;
+    d = length(p.yz) - guiThickness;
     d *= globalScale;
 
     // d = max(d, slice);
@@ -254,7 +273,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-5.);
+    camPos = vec3(0,0,-2.);
     camPos *= cameraRotation();
 }
 
@@ -343,8 +362,11 @@ void shadeSurface(inout Hit hit){
         return;
     }
     pR(hit.normal.xz, 2.75);
-    hit.color = hit.normal * .5 + .5;
-    // hit.color = hit.model.albedo;
+    if (guiNormals) {
+        hit.color = hit.normal * -.5 + .5;
+    } else {
+        hit.color = hit.model.albedo;
+    }
 }
 
 
