@@ -185,11 +185,20 @@ function stepTo(time) {
     render();
 }
 
+function exportGui() {
+    var str = JSON.stringify(gui.exportConfig(), undefined, '\t');
+    var re = /\[[\s]*([^\s,\]]*,?)[\s]*([^\s,\]]*,?)[\s]*([^\s,\]]*,?)[\s]*\]/g;
+    str = str.replace(re, '[$1$2$3]');
+    str = str.replace(/,([^\s])/g, ', $1');
+    console.log(str);
+}
+
 window.play = play;
 window.pause = pause;
 window.stop = stop;
 window.toggle = toggle;
 window.stepTo = stepTo;
+window.exportGui = exportGui;
 
 var canvas = regl._gl.canvas;
 mouseChange(canvas, function(buttons, x, y, mods) {
@@ -205,7 +214,7 @@ mouseChange(canvas, function(buttons, x, y, mods) {
 function scrub(evt) {
     pause();
     stepTo(parseFloat(this.value));
-};
+}
 
 scrubber.addEventListener('change', scrub);
 scrubber.addEventListener('mousedown', function() {
