@@ -114,6 +114,23 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
+mat3 rotationMatrix(vec3 axis, float angle)
+{
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+    
+    return mat3(
+        oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
+        oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
+        oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c
+    );
+}
+
+
+
 float vmax(vec2 v) {
     return max(v.x, v.y);
 }
@@ -152,10 +169,102 @@ vec3 cartToPolar(vec3 p) {
     return vec3(a, z, r);
 }
 
+vec2 closestPointOnLine(vec2 line, vec2 point){
+    line = normalize(line);
+    float d = dot(point, line);
+    return line * d;
+}
+
 float globalScale;
 bool debug = false;
 
-vec3 pModSpiral(inout vec3 p, float flip, float spacing, float zoffset) {
+vec3 pModSpiral(inout vec3 p, float flip, float lead, float radius) {
+
+    float x = p.x;
+    // p.x = 0.;
+
+    float helixAngle = atan((2. * PI * radius) / lead);
+    float leadAngle = atan(lead / (2. * PI * radius));
+    vec3 axis = vec3(1, 0, 0);
+
+    vec2 line = vec2(2. * PI * radius, lead);
+    vec2 point = vec2(atan(p.y, p.z), p.x);
+    vec2 closest = closestPointOnLine(line, point);
+
+    float angle = (p.x / lead) * PI * 2.;
+    // angle = closest.x;
+
+    vec3 normal = vec3(0, sin(angle), cos(angle));
+    vec3 tangent = cross(axis, normal) * rotationMatrix(normal, leadAngle);
+
+    // p.x = 0.;
+    pR(p.yz, angle);
+    // pR(p.yx, helixAngle);
+    
+    // 
+    p.z -= radius;
+
+
+    return vec3(0., 0., 0.);
+}
+
+vec3 pModSpiral2(inout vec3 p, float flip, float lead, float radius) {
+
+    float x = p.x;
+    // p.x = 0.;
+
+    float helixAngle = atan((2. * PI * radius) / lead);
+    float leadAngle = atan(lead / (2. * PI * radius));
+    vec3 axis = vec3(1, 0, 0);
+    float angle = (p.x / lead) * PI * 2.;
+    vec3 normal = vec3(0, sin(angle), cos(angle));
+    vec3 tangent = cross(axis, normal) * rotationMatrix(normal, leadAngle);
+
+    // p.x = x;
+    p.x = 0.;
+    pR(p.yz, angle);
+    pR(p.yx, helixAngle);
+    
+    // 
+    p.z -= radius;
+    // p.x = x;
+    
+    
+    // p -= normal * radius;
+    // p.x = 0.;
+    // p *= rotationMatrix(normal, helixAngle);
+
+    return vec3(0., 0., 0.);
+}
+
+vec3 pModSpiralDebug(inout vec3 p, float flip, float lead, float radius) {
+
+    float x = p.x;
+    // p.x = 0.;
+
+    float helixAngle = atan((2. * PI * radius) / lead);
+    float leadAngle = atan(lead / (2. * PI * radius));
+    vec3 axis = vec3(1, 0, 0);
+    float angle = (p.x / lead) * PI * 2.;
+    vec3 normal = vec3(0, sin(angle), cos(angle));
+    vec3 tangent = cross(axis, normal) * rotationMatrix(normal, leadAngle);
+
+    // p.x = x;
+    // p.x = 0.;
+    pR(p.yx, helixAngle);
+    // pR(p.yz, angle);
+    // 
+    p.z -= radius;
+    
+    
+    // p -= normal * radius;
+    // p.x = 0.;
+    // p *= rotationMatrix(normal, helixAngle);
+
+    return vec3(0., 0., 0.);
+}
+
+vec3 xpModSpiral(inout vec3 p, float flip, float spacing, float zoffset) {
     float scale = .25;
     globalScale *= scale;
 
@@ -208,6 +317,12 @@ vec3 pModSpiral(inout vec3 p, float flip, float spacing, float zoffset) {
 }
 
 
+// Need to find nearest thread angle/position
+// for x/phi position 
+// mod(x, lead)
+// 
+
+
 struct Model {
     float dist;
     vec3 albedo;
@@ -218,9 +333,9 @@ struct Model {
 Model map( vec3 p ){
     mat3 m = modelRotation();
 
-    float slice = dot(p, vec3(0,0,1));
+    float slice = dot(p, vec3(1,0,0));
 
-    globalScale = 1.;
+    vec3 pp = p;
 
     if (guiLevel1Enabled) {
         pModSpiral(p, 1., guiLevel1Spacing, guiLevel1Offset);
@@ -231,30 +346,20 @@ Model map( vec3 p ){
             }
         }
     }
+    float d = length(p.yz) - guiThickness;
 
-    // pModSpiral(p, 1.);
-    // pModSpiral(p, -1.);
-    // pModSpiral(p, 1.);
-    vec3 color = sign(p) * .5 + .5;
-    // color = vec3(smoothstep(.25, .3, abs(mod(p.x, .5) - .25) * 4.), 0., 1.);
-    // color = vec3(
-    //     smoothstep(0., .1, sin(p.x * 7.)),
-    //     smoothstep(0., .1, sin(p.x * 3.)),
-    //     smoothstep(0., .1, sin(p.x * 4.))
-    // );
-    color = vec3(
+    vec3 color = vec3(
         smoothstep(0., .1, sin(p.x * 20.)),
         sin(p.x / 1.5),
         sin(p.x / 3.)
     );
-    // color = mm;
 
-    float d = fBox2(p.yz, vec2(.5));
-    // float d = fBox(p, vec3(1., .5, .5));
-    d = length(p.yz) - guiThickness;
-    d *= globalScale;
+    p = pp;
+    pModSpiralDebug(p, 1., guiLevel1Spacing, guiLevel1Offset);
+    d = min(d, length(p.yz) - guiThickness);
 
     // d = max(d, slice);
+    // d = slice;
 
     Model model = Model(d, color);
     return model;
@@ -273,7 +378,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-2.);
+    camPos = vec3(0,0,-5.);
     camPos *= cameraRotation();
 }
 
