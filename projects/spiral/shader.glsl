@@ -20,6 +20,7 @@ uniform float guiLevel3Offset;
 
 uniform float guiThickness;
 uniform bool guiNormals;
+uniform bool guiPolar;
 
 
 void mainImage(out vec4 a, in vec2 b);
@@ -114,6 +115,21 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
+mat3 rotationMatrix(vec3 axis, float angle)
+{
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+    
+    return mat3(
+        oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
+        oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
+        oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c
+    );       
+}
+
 float vmax(vec2 v) {
     return max(v.x, v.y);
 }
@@ -169,16 +185,32 @@ vec3 pModSpiral(inout vec3 p, float flip, float spacing, float zoffset) {
     p /= scale;
     p = p.yxz;
 
-    p = cartToPolar(p);
+    vec3 polar = cartToPolar(p);
+
+    vec3 axis = vec3(0, 0, -1);
+    pR(axis.yz, polar.x);
+    pR(axis.xy, PI * .5);
+
+    p.y += polar.x * spacing * .5;
+
+    p *= rotationMatrix(axis, a * flip);
+
+    if (guiPolar) {
+        p = cartToPolar(p);
+    }
+
+    // have a matrix that rotates around xy
+    // as we move around the pole, change the axis it rotates around
+    // as well as offsetting
 
 
     // a = PI * -.25;
     
     // p.x *= 3.;
     // p.y /= spacing;
-    pR(p.xy, a * flip);
 
     
+    spacing *= 1.5;
 
     float repeat = cos(a) * spacing * 2.;
     float c = pMod1(p.y, repeat);
@@ -218,7 +250,7 @@ struct Model {
 Model map( vec3 p ){
     mat3 m = modelRotation();
 
-    float slice = dot(p, vec3(0,0,1));
+    float slice = dot(p, vec3(0,0,-1));
 
     globalScale = 1.;
 
