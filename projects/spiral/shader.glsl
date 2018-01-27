@@ -107,6 +107,9 @@ mat3 cameraRotation() {
 // Modelling
 // --------------------------------------------------------
 
+
+#define saturate(x) clamp(x, 0., 1.)
+
 // Rotate around a coordinate axis (i.e. in a plane perpendicular to that axis) by angle <a>.
 // Read like this: R(p.xz, a) rotates "x towards z".
 // This is fast if <a> is a compile-time constant and slower (but still practical) if not.
@@ -150,6 +153,26 @@ float fBox2(vec2 p, vec2 b) {
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
 
+// Distance to line segment between <a> and <b>, used for fCapsule() version 2below
+float fLineSegment(vec3 p, vec3 a, vec3 b) {
+    vec3 ab = b - a;
+    float t = saturate(dot(p - a, ab) / dot(ab, ab));
+    return length((ab*t + a) - p);
+}
+
+// Capsule version 2: between two end points <a> and <b> with radius r 
+float fCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    return fLineSegment(p, a, b) - r;
+}
+
+// Cylinder standing upright on the xz plane
+float fCylinder(vec3 p, float r, float height) {
+    float d = length(p.xz) - r;
+    d = max(d, abs(p.y) - height);
+    return d;
+}
+
+
 // Repeat space along one axis. Use like this to repeat along the x axis:
 // <float cell = pMod1(p.x,5);> - using the return value is optional.
 float pMod1(inout float p, float size) {
@@ -178,7 +201,58 @@ vec2 closestPointOnLine(vec2 line, vec2 point){
 float globalScale;
 bool debug = false;
 
+
+vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
+
+    vec2 line = vec2(2. * PI * radius, -lead * radius);
+    vec2 point = vec2(atan(p.y, p.z), p.x);
+    vec2 closest = closestPointOnLine(line, point);
+
+    // closest = point;
+    vec3 spiral = vec3(
+        closest.y,
+        sin(closest.x) * radius,
+        cos(closest.x) * radius
+    );
+
+    debugP = vec3(
+        point.y,
+        sin(point.x) * radius,
+        cos(point.x) * radius
+    );
+
+    return spiral;
+}
+
+vec3 closestSpiral2(vec3 p, float lead, float radius) {
+    vec3 cp = vec3(0);
+    vec3 pp = p;
+
+    vec3 closestA = closestSpiral(p, cp, lead, radius);
+
+    pR(p.yz, PI * -.5);
+    p.x += lead * .25;
+    vec3 closestB = closestSpiral(p, cp, lead, radius);
+    closestB.x -= lead * .25;
+    pR(closestB.yz, PI * .5);
+
+    p = pp;
+    if (length(p - closestA) < length(p - closestB)) {
+        return closestA;
+    }
+    return closestB;
+}
+
 vec3 pModSpiral(inout vec3 p, float flip, float lead, float radius) {
+
+    float angle = (p.x / lead) * PI * 2.;
+    pR(p.yz, angle);
+    p.z -= radius;
+    return vec3(0., 0., 0.);
+}
+
+
+vec3 pModSpiral3(inout vec3 p, float flip, float lead, float radius) {
 
     float x = p.x;
     // p.x = 0.;
@@ -329,11 +403,28 @@ struct Model {
 };
 
 
+float debugDisplay(vec3 p, vec3 sample, vec3 closest, vec3 cp) {
+    float d = 1e12;
+    d = min(d, length(p - sample) - .1);
+    d = min(d, length(p - cp) - .2);
+    d = min(d, length(p - closest) - .3);
+    d = min(d, fCapsule(p, sample, cp, .05));
+    d = min(d, fCapsule(p, cp, closest, .05));
+    return d;
+}
+
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
 
-    float slice = dot(p, vec3(1,0,0));
+    float slice = dot(p, vec3(0,1,0));
+
+    float lead = guiLevel1Spacing;
+    float radius = guiLevel1Offset;
+
+    vec3 a = vec3(0);
+    vec3 cps = closestSpiral(p, a, guiLevel1Spacing, guiLevel1Offset);
+    float sp = length(p - cps) - guiThickness * .5;
 
     vec3 pp = p;
 
@@ -354,12 +445,40 @@ Model map( vec3 p ){
         sin(p.x / 3.)
     );
 
+    // p = pp;
+    // pModSpiralDebug(p, 1., guiLevel1Spacing, guiLevel1Offset);
+    // d = min(d, length(p.yz) - guiThickness);
+
+
+    d = min(d, sp);
+
+    d = sp;
+
+
     p = pp;
-    pModSpiralDebug(p, 1., guiLevel1Spacing, guiLevel1Offset);
-    d = min(d, length(p.yz) - guiThickness);
+    vec3 sample = vec3(time * .5 * lead - lead, -1.5, -3);
+    vec3 cp = vec3(0);
+    vec3 closest = closestSpiral(sample, cp, lead, radius);
+    d = min(d, debugDisplay(p, sample, closest, cp));
+
+    pR(sample.yz, PI * -.5);
+    sample.x += lead * .25;
+    closest = closestSpiral(sample, cp, lead, radius);
+    pR(sample.yz, PI * .5);
+    closest.x -= lead * .25;
+    pR(closest.yz, PI * .5);
+    sample.x -= lead * .25;
+    pR(cp.yz, PI * .5);
+    cp.x -= lead * .25;
+    d = min(d, debugDisplay(p, sample, closest, cp));
+
+    pR(p.xy, PI * .5);
+    d = min(d, fCylinder(p, radius * .5, lead / 2.));
+
 
     // d = max(d, slice);
     // d = slice;
+
 
     Model model = Model(d, color);
     return model;
@@ -378,7 +497,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-5.);
+    camPos = vec3(0,0,20.);
     camPos *= cameraRotation();
 }
 
@@ -392,7 +511,7 @@ void doCamera() {
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
 const float INTERSECTION_PRECISION = .00001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 1000;
-const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
+const float FUDGE_FACTOR = .5; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
