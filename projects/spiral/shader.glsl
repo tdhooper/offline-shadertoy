@@ -192,6 +192,15 @@ vec3 cartToPolar(vec3 p) {
     return vec3(a, z, r);
 }
 
+// Cylindrical coordinates
+vec3 cartToPolar2(vec3 p) {
+    float r = length(p.xy); // distance from center
+    float z = p.z; // distance from the plane it lies on
+    float a = atan(p.y, p.x); // angle around center
+    a /= PI * 2.;
+    return vec3(z, a, r);
+}
+
 vec2 closestPointOnLine(vec2 line, vec2 point){
     line = normalize(line);
     float d = dot(point, line);
@@ -203,6 +212,7 @@ bool debug = false;
 
 
 vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
+
 
     vec2 line = vec2(2. * PI * radius, -lead * radius);
     vec2 point = vec2(atan(p.y, p.z), p.x);
@@ -230,11 +240,8 @@ vec3 closestSpiral2(vec3 p, float lead, float radius) {
 
     vec3 closestA = closestSpiral(p, cp, lead, radius);
 
-    pR(p.yz, PI * -.5);
-    p.x += lead * .25;
+    pR(p.yz, PI * -1.);
     vec3 closestB = closestSpiral(p, cp, lead, radius);
-    closestB.x -= lead * .25;
-    pR(closestB.yz, PI * .5);
 
     p = pp;
     if (length(p - closestA) < length(p - closestB)) {
@@ -407,11 +414,62 @@ float debugDisplay(vec3 p, vec3 sample, vec3 closest, vec3 cp) {
     float d = 1e12;
     d = min(d, length(p - sample) - .1);
     d = min(d, length(p - cp) - .2);
-    d = min(d, length(p - closest) - .3);
+    d = min(d, length(p - closest) - guiThickness);
     d = min(d, fCapsule(p, sample, cp, .05));
     d = min(d, fCapsule(p, cp, closest, .05));
     return d;
 }
+
+vec3 polarToCart(vec3 p) {
+    return vec3(
+        p.x,
+        sin(p.y * (PI * 2.)) * p.z,
+        cos(p.y * (PI * 2.)) * p.z
+    );
+}
+
+Model prototype2d(vec3 p, float lead, float radius) {
+    vec3 color = vec3(0);
+    float d = 1e12;
+
+
+    vec3 pp = p;
+
+    p = cartToPolar2(p.zyx);
+    p.z -= radius;
+    p.y *= radius * PI * 2.;
+
+
+    d = fBox(p, vec3(lead * .5, (radius * PI * 2.) * .5, .1));
+
+    vec2 line = vec2(lead, radius * PI * 2.);
+    vec2 closest = closestPointOnLine(line, p.xy);
+
+    color.rg = p.xy / vec2(lead, 1.);
+    color.rg = mod(color.rg, .5);
+    color.b = p.y + .5;
+    color = vec3(0);
+
+    float e = length(p.xy - closest);
+    color.r = smoothstep(0., .1, e);
+
+    p = pp;
+    // closest.y *= radius * 2. * PI;
+    vec3 closestCart = polarToCart(vec3(closest, radius));
+
+    float f = length(p - closestCart);
+    color.g = smoothstep(0., .1, f);
+    color = closestCart;
+
+
+    // closest.x *= radius;
+    // vec3 spiral = polarToCart(vec3(closest, radius));
+    // p = pp;
+    // d = min(d, length(p - spiral) - .5);
+
+    return Model(d, color);
+}
+
 
 
 Model map( vec3 p ){
@@ -422,9 +480,11 @@ Model map( vec3 p ){
     float lead = guiLevel1Spacing;
     float radius = guiLevel1Offset;
 
+    return prototype2d(p, lead, radius);
+
     vec3 a = vec3(0);
     vec3 cps = closestSpiral(p, a, guiLevel1Spacing, guiLevel1Offset);
-    float sp = length(p - cps) - guiThickness * .5;
+    float sp = length(p - cps) - guiThickness;
 
     vec3 pp = p;
 
@@ -461,15 +521,15 @@ Model map( vec3 p ){
     vec3 closest = closestSpiral(sample, cp, lead, radius);
     d = min(d, debugDisplay(p, sample, closest, cp));
 
-    pR(sample.yz, PI * -.5);
-    sample.x += lead * .25;
+    pR(sample.yz, PI * -1.);
+    // sample.x += lead * .25;
     closest = closestSpiral(sample, cp, lead, radius);
-    pR(sample.yz, PI * .5);
-    closest.x -= lead * .25;
-    pR(closest.yz, PI * .5);
-    sample.x -= lead * .25;
-    pR(cp.yz, PI * .5);
-    cp.x -= lead * .25;
+    // pR(sample.yz, PI * .5);
+    // closest.x -= lead * .25;
+    // pR(closest.yz, PI * .5);
+    // sample.x -= lead * .25;
+    // pR(cp.yz, PI * .5);
+    // cp.x -= lead * .25;
     d = min(d, debugDisplay(p, sample, closest, cp));
 
     pR(p.xy, PI * .5);
@@ -497,7 +557,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,20.);
+    camPos = vec3(0,0,-20.);
     camPos *= cameraRotation();
 }
 
