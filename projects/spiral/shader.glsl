@@ -440,7 +440,7 @@ Model prototype2d(vec3 p, float lead, float radius) {
     p.y *= radius * PI * 2.;
 
 
-    d = fBox(p, vec3(lead * .5, (radius * PI * 2.) * .5, .1));
+    d = fBox(p, vec3(lead * .5, (radius * PI * 2.) * .5, .01));
 
     vec2 line = vec2(lead, radius * PI * 2.);
     vec2 closest = closestPointOnLine(line, p.xy);
@@ -451,21 +451,22 @@ Model prototype2d(vec3 p, float lead, float radius) {
     color = vec3(0);
 
     float e = length(p.xy - closest);
-    color.r = smoothstep(0., .1, e);
+    // color.r = smoothstep(0., .1, e);
 
     p = pp;
-    // closest.y *= radius * 2. * PI;
+    closest.y /= radius * 2. * PI;
     vec3 closestCart = polarToCart(vec3(closest, radius));
+    // vec3 closestCart = vec3(closest, 0.);
 
     float f = length(p - closestCart);
     color.g = smoothstep(0., .1, f);
-    color = closestCart;
+    // color = closestCart;
 
 
     // closest.x *= radius;
     // vec3 spiral = polarToCart(vec3(closest, radius));
     // p = pp;
-    // d = min(d, length(p - spiral) - .5);
+    d = min(d, length(p - closestCart) - .5);
 
     return Model(d, color);
 }
