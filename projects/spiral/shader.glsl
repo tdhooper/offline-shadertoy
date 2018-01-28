@@ -428,10 +428,18 @@ vec3 polarToCart(vec3 p) {
     );
 }
 
+
 Model prototype2d(vec3 p, float lead, float radius) {
     vec3 color = vec3(0);
     float d = 1e12;
 
+    float size = lead * .5;
+    float halfsize = size*0.5;
+    float c = floor((p.x + halfsize)/size);
+    p.x = mod(p.x + halfsize,size) - halfsize;
+    pR(p.yz, PI * mod(c, 2.));
+
+    // p.x = mod(p.x - lead * .25, lead * .5) - lead * .25;
 
     vec3 pp = p;
 
@@ -467,6 +475,8 @@ Model prototype2d(vec3 p, float lead, float radius) {
     // vec3 spiral = polarToCart(vec3(closest, radius));
     // p = pp;
     d = min(d, length(p - closestCart) - .5);
+
+    // color = vec3(p.x / lead);
 
     return Model(d, color);
 }
