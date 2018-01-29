@@ -23,7 +23,7 @@ var scrubber = document.createElement('input');
 scrubber.classList.add('scrubber');
 scrubber.setAttribute('type', 'range');
 scrubber.min = 0;
-scrubber.max = 1000 * 6; // milliseconds
+scrubber.max = 1000; // milliseconds
 scrubber.step = 10;
 controls.appendChild(scrubber);
 

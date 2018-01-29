@@ -192,14 +192,22 @@ vec3 cartToPolar(vec3 p) {
     return vec3(a, z, r);
 }
 
-// Cylindrical coordinates
+
 vec3 cartToPolar2(vec3 p) {
-    float r = length(p.xy); // distance from center
-    float z = p.z; // distance from the plane it lies on
-    float a = atan(p.y, p.x); // angle around center
-    a /= PI * 2.;
-    return vec3(z, a, r);
+    float x = p.x; // distance from the plane it lies on
+    float a = atan(p.y, p.z); // angle around center
+    float r = length(p.zy); // distance from center
+    return vec3(x, a, r);
 }
+
+vec3 polarToCart(vec3 p) {
+    return vec3(
+        p.x,
+        sin(p.y * (PI * 2.)) * p.z,
+        cos(p.y * (PI * 2.)) * p.z
+    );
+}
+
 
 vec2 closestPointOnLine(vec2 line, vec2 point){
     line = normalize(line);
@@ -213,26 +221,23 @@ bool debug = false;
 
 vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
 
+    p = cartToPolar2(p);
+    p.y *= radius;
 
-    vec2 line = vec2(2. * PI * radius, -lead * radius);
-    vec2 point = vec2(atan(p.y, p.z), p.x);
-    vec2 closest = closestPointOnLine(line, point);
+    // pR(p.xy, (p.z / lead) * PI * 2.);
 
-    // closest = point;
-    vec3 spiral = vec3(
-        closest.y,
-        sin(closest.x) * radius,
-        cos(closest.x) * radius
-    );
+    debugP = polarToCart(vec3(p.xy, radius));
 
-    debugP = vec3(
-        point.y,
-        sin(point.x) * radius,
-        cos(point.x) * radius
-    );
+    vec2 line = vec2(lead, radius * PI * 2.);
+    vec2 closest = closestPointOnLine(line, p.xy);
 
-    return spiral;
+    closest.y /= radius * 2. * PI;
+    vec3 closestCart = polarToCart(vec3(closest, radius));
+
+    return closestCart;
 }
+
+
 
 vec3 closestSpiral2(vec3 p, float lead, float radius) {
     vec3 cp = vec3(0);
@@ -240,8 +245,12 @@ vec3 closestSpiral2(vec3 p, float lead, float radius) {
 
     vec3 closestA = closestSpiral(p, cp, lead, radius);
 
-    pR(p.yz, PI * -1.);
+    p.yz *= vec2(-1);
     vec3 closestB = closestSpiral(p, cp, lead, radius);
+    // closestB.yz *= vec2(-1);
+    // pR(closestB.yz, PI);
+
+    return closestA;
 
     p = pp;
     if (length(p - closestA) < length(p - closestB)) {
@@ -414,30 +423,21 @@ float debugDisplay(vec3 p, vec3 sample, vec3 closest, vec3 cp) {
     float d = 1e12;
     d = min(d, length(p - sample) - .1);
     d = min(d, length(p - cp) - .2);
-    d = min(d, length(p - closest) - guiThickness);
+    d = min(d, length(p - closest) - guiThickness * 1.5);
     d = min(d, fCapsule(p, sample, cp, .05));
     d = min(d, fCapsule(p, cp, closest, .05));
     return d;
 }
 
-vec3 polarToCart(vec3 p) {
-    return vec3(
-        p.x,
-        sin(p.y * (PI * 2.)) * p.z,
-        cos(p.y * (PI * 2.)) * p.z
-    );
-}
-
-
 Model prototype2d(vec3 p, float lead, float radius) {
     vec3 color = vec3(0);
     float d = 1e12;
 
-    float size = lead * .5;
-    float halfsize = size*0.5;
-    float c = floor((p.x + halfsize)/size);
-    p.x = mod(p.x + halfsize,size) - halfsize;
-    pR(p.yz, PI * mod(c, 2.));
+    // float size = lead * .5;
+    // float halfsize = size*0.5;
+    // float c = floor((p.x + halfsize)/size);
+    // p.x = mod(p.x + halfsize,size) - halfsize;
+    // pR(p.yz, PI * mod(c, 2.));
 
     // p.x = mod(p.x - lead * .25, lead * .5) - lead * .25;
 
@@ -448,7 +448,7 @@ Model prototype2d(vec3 p, float lead, float radius) {
     p.y *= radius * PI * 2.;
 
 
-    d = fBox(p, vec3(lead * .5, (radius * PI * 2.) * .5, .01));
+    // d = fBox(p, vec3(lead * .5, (radius * PI * 2.) * .5, .01));
 
     vec2 line = vec2(lead, radius * PI * 2.);
     vec2 closest = closestPointOnLine(line, p.xy);
@@ -474,7 +474,7 @@ Model prototype2d(vec3 p, float lead, float radius) {
     // closest.x *= radius;
     // vec3 spiral = polarToCart(vec3(closest, radius));
     // p = pp;
-    d = min(d, length(p - closestCart) - .5);
+    d = min(d, length(p - closestCart) - guiThickness);
 
     // color = vec3(p.x / lead);
 
@@ -491,13 +491,14 @@ Model map( vec3 p ){
     float lead = guiLevel1Spacing;
     float radius = guiLevel1Offset;
 
-    return prototype2d(p, lead, radius);
+    // return prototype2d(p, lead, radius);
+    vec3 pp = p;
+
 
     vec3 a = vec3(0);
-    vec3 cps = closestSpiral(p, a, guiLevel1Spacing, guiLevel1Offset);
+    vec3 cps = closestSpiral(p, a, lead, radius);
     float sp = length(p - cps) - guiThickness;
 
-    vec3 pp = p;
 
     if (guiLevel1Enabled) {
         pModSpiral(p, 1., guiLevel1Spacing, guiLevel1Offset);
@@ -527,24 +528,32 @@ Model map( vec3 p ){
 
 
     p = pp;
-    vec3 sample = vec3(time * .5 * lead - lead, -1.5, -3);
+
+    float dim = lead * 2.;
+    vec3 sample = vec3(mix(-dim, dim, time), -1.5, -3);
+    sample.y = sample.z = 0.;
+    // sample.z = radius * -1.;
     vec3 cp = vec3(0);
     vec3 closest = closestSpiral(sample, cp, lead, radius);
     d = min(d, debugDisplay(p, sample, closest, cp));
 
-    pR(sample.yz, PI * -1.);
+    // pR(sample.yz, PI);
+    // closest = closestSpiral(sample, cp, lead, radius);
+    // d = min(d, debugDisplay(p, sample, closest, cp));
+
+    // pR(sample.yz, PI * -1.);
     // sample.x += lead * .25;
-    closest = closestSpiral(sample, cp, lead, radius);
+    // closest = closestSpiral(sample, cp, lead, radius);
     // pR(sample.yz, PI * .5);
     // closest.x -= lead * .25;
     // pR(closest.yz, PI * .5);
     // sample.x -= lead * .25;
     // pR(cp.yz, PI * .5);
     // cp.x -= lead * .25;
-    d = min(d, debugDisplay(p, sample, closest, cp));
+    // d = min(d, debugDisplay(p, sample, closest, cp));
 
     pR(p.xy, PI * .5);
-    d = min(d, fCylinder(p, radius * .5, lead / 2.));
+    d = min(d, fCylinder(p, .05, lead / 2.));
 
 
     // d = max(d, slice);
@@ -582,7 +591,7 @@ void doCamera() {
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
 const float INTERSECTION_PRECISION = .00001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 1000;
-const float FUDGE_FACTOR = .5; // Default is 1, reduce to fix overshoots
+const float FUDGE_FACTOR = .9; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
