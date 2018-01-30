@@ -458,10 +458,10 @@ struct Model {
 float debugDisplay(vec3 p, vec3 sample, vec3 closest, vec3 cp) {
     float d = 1e12;
     d = min(d, length(p - sample) - .1);
-    d = min(d, length(p - cp) - .2);
+    // d = min(d, length(p - cp) - .2);
     d = min(d, length(p - closest) - guiThickness * 1.5);
-    d = min(d, fCapsule(p, sample, cp, .05));
-    d = min(d, fCapsule(p, cp, closest, .05));
+    d = min(d, fCapsule(p, sample, closest, .05));
+    // d = min(d, fCapsule(p, cp, closest, .05));
     return d;
 }
 
@@ -566,9 +566,9 @@ Model map( vec3 p ){
     p = pp;
 
    
-    float dim = radius;
+    float dim = lead * 2.;
     dim = mix(-dim, dim, time);
-    vec3 sample = vec3(-lead * 2., 0, dim);
+    vec3 sample = vec3(dim, 0, 0);
     // sample.y = sample.z = 0.;
     // sample.z = radius * -1.;
     vec3 cp = vec3(0);
@@ -615,7 +615,7 @@ Model mapDebug(vec3 p) {
     float d = abs(dot(p, vec3(0,1,0)) - time * 10. + 5.) - .001;
     Model model = map(p);
 
-    // return model;
+    return model;
 
     if (model.dist < d) {
         return model;
