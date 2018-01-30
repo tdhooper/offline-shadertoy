@@ -220,12 +220,11 @@ float globalScale;
 bool debug = false;
 
 
-vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
+
+vec3 closestSpiralA(vec3 p, inout vec3 debugP, float lead, float radius) {
 
     p = cartToPolar2(p);
     p.y *= radius;
-
-    // pR(p.xy, (p.z / lead) * PI * 2.);
 
     debugP = polarToCart(vec3(p.xy, radius));
 
@@ -234,6 +233,41 @@ vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
 
     closest.y /= radius * 2. * PI;
     vec3 closestCart = polarToCart(vec3(closest, radius));
+
+    return closestCart;
+}
+
+vec3 opU(vec3 p, vec3 m1, vec3 m2) {
+    if (length(p - m1) < length(p - m2)) {
+        return m1;
+    } else {
+        return m2;
+    }
+}
+
+
+
+vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
+
+    float c = pMod1(p.x, lead);
+    vec3 pp = p;
+
+    vec3 closestCartA = closestSpiralA(p, debugP, lead, radius);
+
+    p.x += lead;
+    vec3 closestCartB = closestSpiralA(p, debugP, lead, radius);
+    closestCartB.x -= lead;
+
+    p = pp;
+    p.x -= lead;
+    vec3 closestCartC = closestSpiralA(p, debugP, lead, radius);
+    closestCartC.x += lead;
+
+    p = pp;
+
+    vec3 closestCart = opU(p, closestCartA, opU(p, closestCartB, closestCartC));
+
+    closestCart.x += lead * c;
 
     return closestCart;
 }
@@ -486,6 +520,7 @@ Model prototype2d(vec3 p, float lead, float radius) {
 
 
 Model map( vec3 p ){
+    // pR(p.zy, time * 8.);
     mat3 m = modelRotation();
 
     float slice = dot(p, vec3(0,1,0));
@@ -495,7 +530,6 @@ Model map( vec3 p ){
 
     // return prototype2d(p, lead, radius);
     vec3 pp = p;
-
 
     vec3 a = vec3(0);
     vec3 cps = closestSpiral(p, a, lead, radius);
@@ -531,15 +565,15 @@ Model map( vec3 p ){
 
     p = pp;
 
-    /*
-
-    float dim = lead * 2.;
-    vec3 sample = vec3(mix(-dim, dim, time), -1.5, -3);
-    sample.y = sample.z = 0.;
+   
+    float dim = radius;
+    dim = mix(-dim, dim, time);
+    vec3 sample = vec3(-lead * 2., 0, dim);
+    // sample.y = sample.z = 0.;
     // sample.z = radius * -1.;
     vec3 cp = vec3(0);
     vec3 closest = closestSpiral(sample, cp, lead, radius);
-    d = min(d, debugDisplay(p, sample, closest, cp));
+    // d = min(d, debugDisplay(p, sample, closest, cp));
 
     // pR(sample.yz, PI);
     // closest = closestSpiral(sample, cp, lead, radius);
@@ -556,10 +590,10 @@ Model map( vec3 p ){
     // cp.x -= lead * .25;
     // d = min(d, debugDisplay(p, sample, closest, cp));
 
-    pR(p.xy, PI * .5);
-    d = min(d, fCylinder(p, .05, lead / 2.));
+    // pR(p.xy, PI * .5);
+    // d = min(d, fCylinder(p, .05, lead / 2.));
 
-    */
+    
 
     // d = max(d, slice);
     // d = slice;
@@ -603,7 +637,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-20.);
+    camPos = vec3(0,0,-50.);
     camPos *= cameraRotation();
 }
 
@@ -614,7 +648,7 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 30.; // max trace distance
+const float MAX_TRACE_DISTANCE = 100.; // max trace distance
 const float INTERSECTION_PRECISION = .00001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 1000;
 const float FUDGE_FACTOR = .9; // Default is 1, reduce to fix overshoots
@@ -694,7 +728,7 @@ void shadeSurface(inout Hit hit){
 
     if (hit.model.id == 0) {
         float dist = map(hit.pos).dist;
-        hit.color = distanceMeter(dist * 2., hit.ray.len, hit.ray.direction, 20.);
+        hit.color = distanceMeter(dist * 2., hit.ray.len, hit.ray.direction, 50.);
         return;
     }
 
