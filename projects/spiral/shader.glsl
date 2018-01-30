@@ -35,6 +35,7 @@ precision mediump float;
 
 /* SHADERTOY FROM HERE */
 
+#pragma glslify: distanceMeter = require(./distance-meter.glsl)
 
 vec2 mousee;
 
@@ -416,6 +417,7 @@ vec3 xpModSpiral(inout vec3 p, float flip, float spacing, float zoffset) {
 struct Model {
     float dist;
     vec3 albedo;
+    int id;
 };
 
 
@@ -478,7 +480,7 @@ Model prototype2d(vec3 p, float lead, float radius) {
 
     // color = vec3(p.x / lead);
 
-    return Model(d, color);
+    return Model(d, color, 1);
 }
 
 
@@ -529,6 +531,8 @@ Model map( vec3 p ){
 
     p = pp;
 
+    /*
+
     float dim = lead * 2.;
     vec3 sample = vec3(mix(-dim, dim, time), -1.5, -3);
     sample.y = sample.z = 0.;
@@ -555,13 +559,35 @@ Model map( vec3 p ){
     pR(p.xy, PI * .5);
     d = min(d, fCylinder(p, .05, lead / 2.));
 
+    */
 
     // d = max(d, slice);
     // d = slice;
 
 
-    Model model = Model(d, color);
+    Model model = Model(d, color, 1);
+
+    Model meter = Model(slice, color, 0);
+
+    if (slice < d) {
+
+    }
+
     return model;
+}
+
+Model mapDebug(vec3 p) {
+
+    float d = abs(dot(p, vec3(0,1,0)) - time * 10. + 5.) - .001;
+    Model model = map(p);
+
+    // return model;
+
+    if (model.dist < d) {
+        return model;
+    }
+
+    return Model(d, vec3(0), 0);
 }
 
 
@@ -633,7 +659,7 @@ Hit raymarch(CastRay castRay){
         if (currentDist < INTERSECTION_PRECISION || ray.len > MAX_TRACE_DISTANCE) {
             break;
         }
-        model = map(ray.origin + ray.direction * ray.len);
+        model = mapDebug(ray.origin + ray.direction * ray.len);
         currentDist = model.dist;
         ray.len += currentDist * FUDGE_FACTOR;
     }
@@ -665,6 +691,13 @@ void shadeSurface(inout Hit hit){
         hit.color = background;
         return;
     }
+
+    if (hit.model.id == 0) {
+        float dist = map(hit.pos).dist;
+        hit.color = distanceMeter(dist * 2., hit.ray.len, hit.ray.direction, 20.);
+        return;
+    }
+
     pR(hit.normal.xz, 2.75);
     if (guiNormals) {
         hit.color = hit.normal * -.5 + .5;
