@@ -223,16 +223,26 @@ bool debug = false;
 
 vec3 closestSpiralA(vec3 p, inout vec3 debugP, float lead, float radius) {
 
+    // pR(p.yz, (p.x / lead) * PI * 2.);
+
     p = cartToPolar2(p);
+    // p.y += PI * 2. * (p.x / lead);
     p.y *= radius;
+    // float x = p.x;
+    // p.x = 0.;
 
     debugP = polarToCart(vec3(p.xy, radius));
 
     vec2 line = vec2(lead, radius * PI * 2.);
     vec2 closest = closestPointOnLine(line, p.xy);
 
+    // closest.y -= PI * 2. * (x / lead);
+    // closest.x = x;
+
     closest.y /= radius * 2. * PI;
     vec3 closestCart = polarToCart(vec3(closest, radius));
+
+    // closestCart.x = x;
 
     return closestCart;
 }
@@ -295,11 +305,17 @@ vec3 closestSpiral2(vec3 p, float lead, float radius) {
 }
 
 vec3 pModSpiral(inout vec3 p, float flip, float lead, float radius) {
-
-    float angle = (p.x / lead) * PI * 2.;
-    pR(p.yz, angle);
-    p.z -= radius;
-    return vec3(0., 0., 0.);
+    vec3 a = vec3(0);
+    vec3 closest = closestSpiral(p, a, lead, radius);
+    float helixAngle = atan((2. * PI * radius) / lead);
+    // float leadAngle = atan(lead / (2. * PI * radius));
+    vec3 normal = normalize(closest - vec3(closest.x,0,0));
+    vec3 tangent = vec3(1,0,0) * rotationMatrix(normal, helixAngle);
+    float x = (closest.x / lead) * radius * PI * 2.;
+    float y = dot(p - closest, cross(tangent, normal));
+    float z = dot(p - closest, normal);
+    p = vec3(x, y, z);
+    return vec3(0.);
 }
 
 
@@ -558,9 +574,9 @@ Model map( vec3 p ){
     // d = min(d, length(p.yz) - guiThickness);
 
 
-    d = min(d, sp);
+    // d = min(d, sp);
 
-    d = sp;
+    // d = sp;
 
 
     p = pp;
