@@ -6,19 +6,8 @@ uniform float iGlobalTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
-uniform bool guiLevel1Enabled;
-uniform bool guiLevel2Enabled;
-uniform bool guiLevel3Enabled;
-
-uniform float guiLevel1Spacing;
-uniform float guiLevel2Spacing;
-uniform float guiLevel3Spacing;
-
-uniform float guiLevel1Offset;
-uniform float guiLevel2Offset;
-uniform float guiLevel3Offset;
-
-uniform float guiThickness;
+uniform float guiLead;
+uniform float guiInnerRatio;
 uniform bool guiNormals;
 
 
@@ -221,28 +210,15 @@ bool debug = false;
 
 
 
-vec3 closestSpiralA(vec3 p, inout vec3 debugP, float lead, float radius) {
-
-    // pR(p.yz, (p.x / lead) * PI * 2.);
-
+vec3 closestSpiralA(vec3 p, float lead, float radius) {
     p = cartToPolar2(p);
-    // p.y += PI * 2. * (p.x / lead);
     p.y *= radius;
-    // float x = p.x;
-    // p.x = 0.;
-
-    debugP = polarToCart(vec3(p.xy, radius));
 
     vec2 line = vec2(lead, radius * PI * 2.);
     vec2 closest = closestPointOnLine(line, p.xy);
 
-    // closest.y -= PI * 2. * (x / lead);
-    // closest.x = x;
-
     closest.y /= radius * 2. * PI;
     vec3 closestCart = polarToCart(vec3(closest, radius));
-
-    // closestCart.x = x;
 
     return closestCart;
 }
@@ -255,21 +231,20 @@ vec3 opU(vec3 p, vec3 m1, vec3 m2) {
     }
 }
 
-
-vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
+vec3 closestSpiral(vec3 p, float lead, float radius) {
 
     float c = pMod1(p.x, lead);
     vec3 pp = p;
 
-    vec3 closestCartA = closestSpiralA(p, debugP, lead, radius);
+    vec3 closestCartA = closestSpiralA(p, lead, radius);
 
     p.x += lead;
-    vec3 closestCartB = closestSpiralA(p, debugP, lead, radius);
+    vec3 closestCartB = closestSpiralA(p, lead, radius);
     closestCartB.x -= lead;
 
     p = pp;
     p.x -= lead;
-    vec3 closestCartC = closestSpiralA(p, debugP, lead, radius);
+    vec3 closestCartC = closestSpiralA(p, lead, radius);
     closestCartC.x += lead;
 
     p = pp;
@@ -281,33 +256,9 @@ vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
     return closestCart;
 }
 
-
-
-vec3 closestSpiral2(vec3 p, float lead, float radius) {
-    vec3 cp = vec3(0);
-    vec3 pp = p;
-
-    vec3 closestA = closestSpiral(p, cp, lead, radius);
-
-    p.yz *= vec2(-1);
-    vec3 closestB = closestSpiral(p, cp, lead, radius);
-    // closestB.yz *= vec2(-1);
-    // pR(closestB.yz, PI);
-
-    return closestA;
-
-    p = pp;
-    if (length(p - closestA) < length(p - closestB)) {
-        return closestA;
-    }
-    return closestB;
-}
-
 vec3 pModSpiral(inout vec3 p, float flip, float lead, float radius) {
-    vec3 a = vec3(0);
-    vec3 closest = closestSpiral(p, a, lead, radius);
+    vec3 closest = closestSpiral(p, lead, radius);
     float helixAngle = atan((2. * PI * radius) / lead);
-    // float leadAngle = atan(lead / (2. * PI * radius));
     vec3 normal = normalize(closest - vec3(closest.x,0,0));
     vec3 tangent = vec3(1,0,0) * rotationMatrix(normal, helixAngle);
     float x = (closest.x / lead) * radius * PI * 2.;
@@ -316,146 +267,6 @@ vec3 pModSpiral(inout vec3 p, float flip, float lead, float radius) {
     p = vec3(x, y, z);
     return vec3(0.);
 }
-
-
-vec3 pModSpiral3(inout vec3 p, float flip, float lead, float radius) {
-
-    float x = p.x;
-    // p.x = 0.;
-
-    float helixAngle = atan((2. * PI * radius) / lead);
-    float leadAngle = atan(lead / (2. * PI * radius));
-    vec3 axis = vec3(1, 0, 0);
-
-    vec2 line = vec2(2. * PI * radius, lead);
-    vec2 point = vec2(atan(p.y, p.z), p.x);
-    vec2 closest = closestPointOnLine(line, point);
-
-    float angle = (p.x / lead) * PI * 2.;
-    // angle = closest.x;
-
-    vec3 normal = vec3(0, sin(angle), cos(angle));
-    vec3 tangent = cross(axis, normal) * rotationMatrix(normal, leadAngle);
-
-    // p.x = 0.;
-    pR(p.yz, angle);
-    // pR(p.yx, helixAngle);
-    
-    // 
-    p.z -= radius;
-
-
-    return vec3(0., 0., 0.);
-}
-
-vec3 pModSpiral2(inout vec3 p, float flip, float lead, float radius) {
-
-    float x = p.x;
-    // p.x = 0.;
-
-    float helixAngle = atan((2. * PI * radius) / lead);
-    float leadAngle = atan(lead / (2. * PI * radius));
-    vec3 axis = vec3(1, 0, 0);
-    float angle = (p.x / lead) * PI * 2.;
-    vec3 normal = vec3(0, sin(angle), cos(angle));
-    vec3 tangent = cross(axis, normal) * rotationMatrix(normal, leadAngle);
-
-    // p.x = x;
-    p.x = 0.;
-    pR(p.yz, angle);
-    pR(p.yx, helixAngle);
-    
-    // 
-    p.z -= radius;
-    // p.x = x;
-    
-    
-    // p -= normal * radius;
-    // p.x = 0.;
-    // p *= rotationMatrix(normal, helixAngle);
-
-    return vec3(0., 0., 0.);
-}
-
-vec3 pModSpiralDebug(inout vec3 p, float flip, float lead, float radius) {
-
-    float x = p.x;
-    // p.x = 0.;
-
-    float helixAngle = atan((2. * PI * radius) / lead);
-    float leadAngle = atan(lead / (2. * PI * radius));
-    vec3 axis = vec3(1, 0, 0);
-    float angle = (p.x / lead) * PI * 2.;
-    vec3 normal = vec3(0, sin(angle), cos(angle));
-    vec3 tangent = cross(axis, normal) * rotationMatrix(normal, leadAngle);
-
-    // p.x = x;
-    // p.x = 0.;
-    pR(p.yx, helixAngle);
-    // pR(p.yz, angle);
-    // 
-    p.z -= radius;
-    
-    
-    // p -= normal * radius;
-    // p.x = 0.;
-    // p *= rotationMatrix(normal, helixAngle);
-
-    return vec3(0., 0., 0.);
-}
-
-vec3 xpModSpiral(inout vec3 p, float flip, float spacing, float zoffset) {
-    float scale = .25;
-    globalScale *= scale;
-
-    float a = atan(spacing / PI) * -1.;
-
-    // p.x *= spacing;
-
-    // pMod1(p.y, PI * .5);
-
-
-    p /= scale;
-    p = p.yxz;
-
-    p = cartToPolar(p);
-
-
-    // a = PI * -.25;
-    
-    // p.x *= 3.;
-    // p.y /= spacing;
-    pR(p.xy, a * flip);
-
-    
-
-    float repeat = cos(a) * spacing * 2.;
-    float c = pMod1(p.y, repeat);
-    // float halfsize = repeat * .5;
-    // float c = floor((p.y + halfsize) / repeat);
-    // p.y = mod(p.y + halfsize, repeat) - halfsize;
-
-    // float len = sqrt(pow(spacing, 2.) - pow(repeat, 2.));
-    float len = sqrt(pow(spacing, 2.) + pow(PI, 2.));
-    // float len = sqrt(pow(spacing, 2.) - pow(repeat, 2.));
-    // float len = sqrt(pow(repeat, 2.) + pow(PI, 2.));
-
-    float offset = repeat / tan(PI * .5 - a);
-    p.x -= (offset + len * 2.) * c * flip;
-    // p.x += len;
-    
-
-    // p.z -= mix(2., 10., sin(p.x * .1 + time * 3.) * .5 + .5);
-    p.z -= zoffset;
-
-    // p.x += time;
-    // p.x -= 13.1 * c - (spacing * c * .75);
-    // p.x -= PI * scale * .5;
-    // float len = 
-
-    return vec3(0., 0., 0.);
-}
-
 
 float pModHelix(inout vec3 p, float lead, float innerRatio) {
     float radius = mix(.25, .5, innerRatio);
@@ -466,11 +277,6 @@ float pModHelix(inout vec3 p, float lead, float innerRatio) {
 }
 
 
-// Need to find nearest thread angle/position
-// for x/phi position 
-// mod(x, lead)
-// 
-
 
 struct Model {
     float dist;
@@ -479,97 +285,23 @@ struct Model {
 };
 
 
-float debugDisplay(vec3 p, vec3 sample, vec3 closest, vec3 cp) {
-    float d = 1e12;
-    d = min(d, length(p - sample) - .1);
-    // d = min(d, length(p - cp) - .2);
-    d = min(d, length(p - closest) - guiThickness * 1.5);
-    d = min(d, fCapsule(p, sample, closest, .05));
-    // d = min(d, fCapsule(p, cp, closest, .05));
-    return d;
-}
-
-Model prototype2d(vec3 p, float lead, float radius) {
-    vec3 color = vec3(0);
-    float d = 1e12;
-
-    // float size = lead * .5;
-    // float halfsize = size*0.5;
-    // float c = floor((p.x + halfsize)/size);
-    // p.x = mod(p.x + halfsize,size) - halfsize;
-    // pR(p.yz, PI * mod(c, 2.));
-
-    // p.x = mod(p.x - lead * .25, lead * .5) - lead * .25;
-
-    vec3 pp = p;
-
-    p = cartToPolar2(p.zyx);
-    p.z -= radius;
-    p.y *= radius * PI * 2.;
-
-
-    // d = fBox(p, vec3(lead * .5, (radius * PI * 2.) * .5, .01));
-
-    vec2 line = vec2(lead, radius * PI * 2.);
-    vec2 closest = closestPointOnLine(line, p.xy);
-
-    color.rg = p.xy / vec2(lead, 1.);
-    color.rg = mod(color.rg, .5);
-    color.b = p.y + .5;
-    color = vec3(0);
-
-    float e = length(p.xy - closest);
-    // color.r = smoothstep(0., .1, e);
-
-    p = pp;
-    closest.y /= radius * 2. * PI;
-    vec3 closestCart = polarToCart(vec3(closest, radius));
-    // vec3 closestCart = vec3(closest, 0.);
-
-    float f = length(p - closestCart);
-    color.g = smoothstep(0., .1, f);
-    // color = closestCart;
-
-
-    // closest.x *= radius;
-    // vec3 spiral = polarToCart(vec3(closest, radius));
-    // p = pp;
-    d = min(d, length(p - closestCart) - guiThickness);
-
-    // color = vec3(p.x / lead);
-
-    return Model(d, color, 1);
-}
-
-
 
 Model map( vec3 p ){
-    // pR(p.zy, time * 8.);
     mat3 m = modelRotation();
 
     float slice = dot(p, vec3(0,1,0));
 
-    float lead = guiLevel1Spacing;
-    float radius = guiLevel1Offset;
+    float lead = guiLead;
+    float innerRatio = guiInnerRatio;
 
-    // return prototype2d(p, lead, radius);
     vec3 pp = p;
-
-    vec3 a = vec3(0);
-    vec3 cps = closestSpiral(p, a, lead, radius);
-    float sp = length(p - cps) - guiThickness;
 
     float scale = 1.;
 
-    if (guiLevel1Enabled) {
-        scale *= pModHelix(p, guiLevel1Spacing, guiLevel1Offset);
-        if (guiLevel2Enabled) {
-            scale *= pModHelix(p, guiLevel2Spacing, guiLevel2Offset);
-            if (guiLevel3Enabled) {
-                scale *= pModHelix(p, guiLevel3Spacing, guiLevel3Offset);
-            }
-        }
-    }
+    scale *= pModHelix(p, lead, innerRatio);
+    scale *= pModHelix(p, lead, innerRatio);
+    scale *= pModHelix(p, lead, innerRatio);
+
     float d = length(p.yz) - .5;
 
     d /= scale;
@@ -580,61 +312,7 @@ Model map( vec3 p ){
         sin(p.x / 3.)
     );
 
-    // p = pp;
-    // pModSpiralDebug(p, 1., guiLevel1Spacing, guiLevel1Offset);
-    // d = min(d, length(p.yz) - guiThickness);
-
-
-    // d = min(d, sp);
-
-    // d = sp;
-
-
-    p = pp;
-
-   
-    float dim = lead * 2.;
-    dim = mix(-dim, dim, time);
-    vec3 sample = vec3(dim, 0, 0);
-    // sample.y = sample.z = 0.;
-    // sample.z = radius * -1.;
-    vec3 cp = vec3(0);
-    vec3 closest = closestSpiral(sample, cp, lead, radius);
-    // d = min(d, debugDisplay(p, sample, closest, cp));
-
-    // pR(sample.yz, PI);
-    // closest = closestSpiral(sample, cp, lead, radius);
-    // d = min(d, debugDisplay(p, sample, closest, cp));
-
-    // pR(sample.yz, PI * -1.);
-    // sample.x += lead * .25;
-    // closest = closestSpiral(sample, cp, lead, radius);
-    // pR(sample.yz, PI * .5);
-    // closest.x -= lead * .25;
-    // pR(closest.yz, PI * .5);
-    // sample.x -= lead * .25;
-    // pR(cp.yz, PI * .5);
-    // cp.x -= lead * .25;
-    // d = min(d, debugDisplay(p, sample, closest, cp));
-
-    // pR(p.xy, PI * .5);
-    // d = min(d, fCylinder(p, .05, lead / 2.));
-
-    
-
-    // d = max(d, slice);
-    // d = slice;
-
-
-    Model model = Model(d, color, 1);
-
-    Model meter = Model(slice, color, 0);
-
-    if (slice < d) {
-
-    }
-
-    return model;
+    return Model(d, color, 1);
 }
 
 Model mapDebug(vec3 p) {
@@ -642,7 +320,7 @@ Model mapDebug(vec3 p) {
     float d = abs(dot(p, vec3(0,0,1)) - .5 * 10. + 5.) - .001;
     Model model = map(p);
 
-    // return model;
+    return model;
 
     if (model.dist < d) {
         return model;
@@ -664,7 +342,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-10.);
+    camPos = vec3(0,0,-3.);
     camPos *= cameraRotation();
 }
 
