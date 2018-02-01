@@ -1,0 +1,19 @@
+{
+    "level1": {
+        "enabled": [true],
+        "spacing": [0, 10, 1.6988734151155993],
+        "offset": [0, 0.99, 0.5]
+    },
+    "level2": {
+        "enabled": [true],
+        "spacing": [0, 10, 1.6988734151155993],
+        "offset": [0, 0.99, 0.5]
+    },
+    "level3": {
+        "enabled": [true],
+        "spacing": [0, 10, 0.9269714983085116],
+        "offset": [0, 0.99, 0.5]
+    },
+    "thickness": [0, 2, 0.6461369836917247],
+    "normals": [true]
+}
