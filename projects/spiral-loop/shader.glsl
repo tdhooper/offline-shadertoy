@@ -386,15 +386,12 @@ Model map(vec3 p) {
     float t2 = smoothstep(2./3., 1., t);
 
     t1 = t2 = t0 = t;
+    // t2 = smoothstep(0., 1., t);
 
     // t1 = 0.;
     // t2 = 0.;
 
     float s = mix(.5, 0., innerRatio);
-
-    float offsetA = innerRatio * .25 + .25;
-    float offsetB = offsetA * (1. + s);
-    offsetB = mix(offsetA, offsetB, t1);
 
     float rotA = PI * .5;
     float rotB = rotA + PI * .5;
@@ -404,6 +401,10 @@ Model map(vec3 p) {
     float scaleB = s;
 
     scaleB = 1./pow(1./s, t1);
+    // scaleB = mix(1., s, t1);
+
+    float offsetA = innerRatio * .25 + .25;
+    float offsetB = offsetA * 1./pow(1./(1.+s), t1);
 
     pR(p.xy, rotB);
     p *= scaleB;
@@ -482,8 +483,8 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,1.5);
-    // camPos *= cameraRotation();
+    camPos = vec3(0,0,-1.5);
+    camPos *= cameraRotation();
 }
 
 
