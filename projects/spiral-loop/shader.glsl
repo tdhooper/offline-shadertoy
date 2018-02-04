@@ -278,6 +278,16 @@ float pModHelix(inout vec3 p, float lead, float innerRatio) {
     return 1. / scale;
 }
 
+float pModHelixUnwrap(inout vec3 p, float lead, float innerRatio, float t) {
+    float radius = mix(.25, .5, innerRatio);
+    float offset = pow(t * 3., 4.) * .25;
+    p.z += offset;
+    radius += offset;
+    pModSpiral(p, 1., lead, radius);
+    float scale = mix(.5, 0., innerRatio);
+    p /= scale;
+    return 1. / scale;
+}
 
 
 struct Model {
@@ -375,7 +385,7 @@ Model map(vec3 p) {
     float t1 = smoothstep(1./3., 2./3., t);
     float t2 = smoothstep(2./3., 1., t);
 
-    t1 = t0;
+    t1 = t2 = t0 = t;
 
     // t1 = 0.;
     // t2 = 0.;
@@ -387,7 +397,7 @@ Model map(vec3 p) {
     offsetB = mix(offsetA, offsetB, t1);
 
     float rotA = PI * .5;
-    float rotB = rotA + PI * .59;
+    float rotB = rotA + PI * .5;
     rotB = mix(rotA, rotB, t1);
 
     float scaleA = 1.;
@@ -398,7 +408,7 @@ Model map(vec3 p) {
     p *= scaleB;
     p.z += offsetB;
 
-    scaleB *= pModHelix(p, lead, innerRatio);
+    scaleB *= pModHelixUnwrap(p, lead, innerRatio, t2);
     p.x *= -1.;
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
@@ -414,57 +424,34 @@ Model map(vec3 p) {
     part /= scaleB;
     d = mix(d, part, t0);
 
-    p = pp;
-
-    pR(p.xy, rotA);
-    p *= scaleA;
-    p.z += offsetA;
-
-    scaleA *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
-    scaleA *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
-
-    part = length(p.yz) - .5;
-    part /= scaleA;
-
-    d = mix(d, part, t2);
-
     return Model(d, vec3(0), 1);
 }
 
 Model mapo( vec3 p ){
-    float dA = level1(p);
-    float dB = level2(p);
 
-    float d = mix(dA, dB, guiMix);
+    float lead = guiLead;
+    float innerRatio = guiInnerRatio;
 
-    // if (guiDebug) {
-    //     d = dB;
-    // }
+    float offset = innerRatio * .25 + .25;
+    p.z += offset;
 
-    return Model(d, vec3(.5), 1);
+    pR(p.xy, PI * .5);
+    float scale = 1.;
 
-    Model mA = Model(dA, vec3(0,1,1), 1);
-    Model mB = Model(dB, vec3(1,0,1), 1);
+    scale *= pModHelixUnwrap(p, lead, innerRatio, mod(time, 1.));
+    p.x *= -1.;
 
-    return opU(mA, mB);
+    float d = length(p.yz) - .5;
 
-    // float d = dA;
+    d /= scale;
 
-    // if (guiDebug) {
-    //     d = dB;
-    // }
+    vec3 color = vec3(
+        smoothstep(0., .1, sin(p.x * 20.)),
+        sin(p.x / 1.5),
+        sin(p.x / 3.)
+    );
 
-    // float d = min(dA, dB);
-
-    // vec3 color = vec3(
-    //     smoothstep(0., .1, sin(p.x * 20.)),
-    //     sin(p.x / 1.5),
-    //     sin(p.x / 3.)
-    // );
-
-    // return Model(d, color, 1);
+    return Model(d, color, 1);
 }
 
 Model mapDebug(vec3 p) {
@@ -494,8 +481,8 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-1.5);
-    camPos *= cameraRotation();
+    camPos = vec3(0,0,1.5);
+    // camPos *= cameraRotation();
 }
 
 
