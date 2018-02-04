@@ -385,7 +385,7 @@ Model map(vec3 p) {
     float t1 = smoothstep(1./3., 2./3., t);
     float t2 = smoothstep(2./3., 1., t);
 
-    t1 = t2 = t0 = t;
+    t1 = t0 = t2 = t;
 
     // t2 = 0.;
     // t2 = smoothstep(0., 1., t);
@@ -409,6 +409,8 @@ Model map(vec3 p) {
     p.z += .5;
 
     scaleB *= pModHelixUnwrap(p, lead, innerRatio, t2);
+    p.x *= -1.;
+    scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
@@ -476,12 +478,13 @@ Model mapDebug(vec3 p) {
 vec3 camPos;
 vec3 camTar;
 vec3 camUp;
+float camDist = .25;
 
 
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-.7);
+    camPos = vec3(0,0,-camDist);
     camPos *= cameraRotation();
 }
 
@@ -583,6 +586,9 @@ void shadeSurface(inout Hit hit){
         hit.color = hit.model.albedo;
         hit.color *= dot(vec3(0,1,0), hit.normal) * .5 + .5;
     }
+    float fog = length(camPos - hit.pos);
+    fog = smoothstep(camDist, camDist * 2., fog);
+    hit.color = mix(hit.color, background, fog);
 }
 
 
