@@ -390,8 +390,12 @@ Model map(vec3 p) {
 
     t1 = t0 = t2 = t;
 
-    float tSubdivide = clamp(range(0., .5, t), 0., 1.);
-    float tSubdivide2 = clamp(range(.5, 1., t), 0., 1.);
+    // float tSubdivide = clamp(range(0., .5, t), 0., 1.);
+    // float tSubdivide2 = clamp(range(.5, 1., t), 0., 1.);
+
+    float tSubdivide = pow(clamp(range(-.5, .5, t), 0., 1.), 1.);
+    float tSubdivide2 = pow(clamp(range(0., 1., t), 0., 1.), 1.);
+    float tSubdivide3 = pow(clamp(range(.5, 1.5, t), 0., 1.), 1.);
 
     // t2 = 0.;
     // t2 = smoothstep(0., 1., t);
@@ -422,6 +426,12 @@ Model map(vec3 p) {
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
+    vec3 color = vec3(
+        smoothstep(0., .1, sin(p.x * 20.)),
+        sin(p.x / 1.5),
+        sin(p.x / 3.)
+    );
+
     // 1
 
     part = length(p.yz) - .5;
@@ -435,7 +445,7 @@ Model map(vec3 p) {
 
     part = length(p.yz) - .5;
     part /= scaleB;
-    d = mix(d, part, tSubdivide);
+    d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide * 3.33 + 1.), 0., 1.));
 
     // 2
 
@@ -444,9 +454,19 @@ Model map(vec3 p) {
 
     part = length(p.yz) - .5;
     part /= scaleB;
-    d = mix(d, part, tSubdivide2);
+    d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide2 * 3.33 + 1.), 0., 1.));
 
-    return Model(d, vec3(0), 1);
+    // 3
+
+    scaleB *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
+
+    part = length(p.yz) - .5;
+    part /= scaleB;
+    d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide3 * 3.33 + 1.), 0., 1.));
+
+
+    return Model(d, color, 1);
 }
 
 Model mapo( vec3 p ){
@@ -518,7 +538,7 @@ void doCamera() {
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
 const float INTERSECTION_PRECISION = .0001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
-const float FUDGE_FACTOR = .9; // Default is 1, reduce to fix overshoots
+const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
@@ -659,6 +679,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
+
+    p.x -= .75;
 
     time = iGlobalTime * .5;
 
