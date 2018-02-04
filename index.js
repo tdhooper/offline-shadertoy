@@ -132,7 +132,7 @@ function restoreState() {
         return;
     }
     if (state.timer) {
-        timer = Timer.fromObject(state.timer);   
+        timer = Timer.fromObject(state.timer);
         window.timer = timer; 
     }
     mouse = state.mouse || mouse;
