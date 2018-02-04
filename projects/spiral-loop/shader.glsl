@@ -362,7 +362,78 @@ Model opU(Model m1, Model m2) {
 
 */
 
-Model map( vec3 p ){
+Model map(vec3 p) {
+    float part, d;
+    float lead = guiLead;
+    float innerRatio = guiInnerRatio;
+
+    vec3 pp = p;
+
+    float t = mod(time, 1.);
+
+    float t0 = smoothstep(0., 1./3., t);
+    float t1 = smoothstep(1./3., 2./3., t);
+    float t2 = smoothstep(2./3., 1., t);
+
+    // t1 = t0;
+
+    // t1 = 0.;
+    // t2 = 0.;
+
+    float s = mix(.5, 0., innerRatio);
+
+    float offsetA = innerRatio * .25 + .25;
+    float offsetB = offsetA * (1. + s);
+    offsetB = mix(offsetA, offsetB, t1);
+
+    float rotA = PI * .5;
+    float rotB = rotA + PI * .59;
+    rotB = mix(rotA, rotB, t1);
+
+    float scaleA = 1.;
+    float scaleB = s;
+    scaleB = mix(scaleA, scaleB, t1);
+
+    pR(p.xy, rotB);
+    p *= scaleB;
+    p.z += offsetB;
+
+    scaleB *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
+    scaleB *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
+
+    part = length(p.yz) - .5;
+    part /= scaleB;
+    d = part;
+
+    scaleB *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
+
+    part = length(p.yz) - .5;
+    part /= scaleB;
+    d = mix(d, part, t0);
+
+    p = pp;
+
+    pR(p.xy, rotA);
+    p *= scaleA;
+    p.z += offsetA;
+
+    scaleA *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
+    scaleA *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
+
+    part = length(p.yz) - .5;
+    part /= scaleA;
+
+    d = mix(d, part, t2);
+
+    return Model(d, vec3(0), 1);
+}
+
+Model mapo( vec3 p ){
     float dA = level1(p);
     float dB = level2(p);
 
