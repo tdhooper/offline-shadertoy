@@ -125,6 +125,9 @@ mat3 rotationMatrix(vec3 axis, float angle)
 }
 
 
+float range(float vmin, float vmax, float value) {
+  return (value - vmin) / (vmax - vmin);
+}
 
 float vmax(vec2 v) {
     return max(v.x, v.y);
@@ -387,6 +390,9 @@ Model map(vec3 p) {
 
     t1 = t0 = t2 = t;
 
+    float tSubdivide = clamp(range(0., .5, t), 0., 1.);
+    float tSubdivide2 = clamp(range(.5, 1., t), 0., 1.);
+
     // t2 = 0.;
     // t2 = smoothstep(0., 1., t);
 
@@ -394,9 +400,10 @@ Model map(vec3 p) {
     // t2 = 0.;
 
     float s = mix(.5, 0., innerRatio);
+    s *= s;
 
     float rotA = PI * .5;
-    float rotB = rotA + PI * .5;
+    float rotB = rotA;
     rotB = mix(rotA, rotB, t1);
 
     float scaleA = 1.;
@@ -408,23 +415,36 @@ Model map(vec3 p) {
     p *= scaleB;
     p.z += .5;
 
-    scaleB *= pModHelixUnwrap(p, lead, innerRatio, t2);
+    scaleB *= pModHelixUnwrap(p, lead, innerRatio, t0);
+    p.x *= -1.;
+    scaleB *= pModHelixUnwrap(p, lead, innerRatio, t0);
     p.x *= -1.;
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
-    scaleB *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
+
+    // 1
 
     part = length(p.yz) - .5;
     part /= scaleB;
     d = part;
 
+    // 2
+
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
     part = length(p.yz) - .5;
     part /= scaleB;
-    d = mix(d, part, t0);
+    d = mix(d, part, tSubdivide);
+
+    // 2
+
+    scaleB *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
+
+    part = length(p.yz) - .5;
+    part /= scaleB;
+    d = mix(d, part, tSubdivide2);
 
     return Model(d, vec3(0), 1);
 }
@@ -587,7 +607,7 @@ void shadeSurface(inout Hit hit){
         hit.color *= dot(vec3(0,1,0), hit.normal) * .5 + .5;
     }
     float fog = length(camPos - hit.pos);
-    fog = smoothstep(camDist, camDist * 2., fog);
+    fog = smoothstep(camDist, camDist * 1.5, fog);
     hit.color = mix(hit.color, background, fog);
 }
 
@@ -640,7 +660,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
 
-    time = iGlobalTime;
+    time = iGlobalTime * .5;
 
 // debug = true;
     if (p.x > (time - .5) * 3.) {
