@@ -375,7 +375,7 @@ Model map(vec3 p) {
     float t1 = smoothstep(1./3., 2./3., t);
     float t2 = smoothstep(2./3., 1., t);
 
-    // t1 = t0;
+    t1 = t0;
 
     // t1 = 0.;
     // t2 = 0.;
