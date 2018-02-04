@@ -402,7 +402,8 @@ Model map(vec3 p) {
 
     float scaleA = 1.;
     float scaleB = s;
-    scaleB = mix(scaleA, scaleB, t1);
+
+    scaleB = 1./pow(1./s, t1);
 
     pR(p.xy, rotB);
     p *= scaleB;
