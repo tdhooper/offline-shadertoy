@@ -9,6 +9,8 @@ uniform sampler2D iChannel0;
 uniform float guiLead;
 uniform float guiInnerRatio;
 uniform bool guiNormals;
+uniform bool guiDebug;
+uniform float guiMix;
 
 
 void mainImage(out vec4 a, in vec2 b);
@@ -284,35 +286,114 @@ struct Model {
     int id;
 };
 
-
-
-Model map( vec3 p ){
-    mat3 m = modelRotation();
-
-    float slice = dot(p, vec3(0,1,0));
+float level1(vec3 p) {
 
     float lead = guiLead;
     float innerRatio = guiInnerRatio;
 
-    vec3 pp = p;
+    float offset = innerRatio * .25 + .25;
+    p.z += offset;
 
+    pR(p.xy, PI * .5);
     float scale = 1.;
 
     scale *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
     scale *= pModHelix(p, lead, innerRatio);
-    scale *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
 
     float d = length(p.yz) - .5;
 
     d /= scale;
 
-    vec3 color = vec3(
-        smoothstep(0., .1, sin(p.x * 20.)),
-        sin(p.x / 1.5),
-        sin(p.x / 3.)
-    );
+    return d;
+}
 
-    return Model(d, color, 1);
+float level2(vec3 p) {
+    float lead = guiLead;
+    float innerRatio = guiInnerRatio;
+
+    float offset = innerRatio * .25 + .25;
+
+    float s = mix(.5, 0., innerRatio);
+    offset *= 1. + s;
+
+    pR(p.xy, PI * .5);
+    float scale = 1.;
+
+    pR(p.xy, PI * .59);
+    scale = s;
+
+    p *= scale;
+
+    p.z += offset;
+
+    scale *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
+    scale *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
+    scale *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
+
+    float d = length(p.yz) - .5;
+
+    d /= scale;
+
+    return d;
+}
+
+Model opU(Model m1, Model m2) {
+    if (m1.dist < m2.dist) {
+        return m1;
+    } else {
+        return m2;
+    }
+}
+
+/*
+
+    t = 0 - 1
+
+0    1 spiral (2nd hidden)
+1    animate open 2nd sprial
+2    zoom into so it looks like 1 spiral
+3    blend into initial state     
+    1 spiral
+
+*/
+
+Model map( vec3 p ){
+    float dA = level1(p);
+    float dB = level2(p);
+
+    float d = mix(dA, dB, guiMix);
+
+    // if (guiDebug) {
+    //     d = dB;
+    // }
+
+    return Model(d, vec3(.5), 1);
+
+    Model mA = Model(dA, vec3(0,1,1), 1);
+    Model mB = Model(dB, vec3(1,0,1), 1);
+
+    return opU(mA, mB);
+
+    // float d = dA;
+
+    // if (guiDebug) {
+    //     d = dB;
+    // }
+
+    // float d = min(dA, dB);
+
+    // vec3 color = vec3(
+    //     smoothstep(0., .1, sin(p.x * 20.)),
+    //     sin(p.x / 1.5),
+    //     sin(p.x / 3.)
+    // );
+
+    // return Model(d, color, 1);
 }
 
 Model mapDebug(vec3 p) {
@@ -342,7 +423,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-3.);
+    camPos = vec3(0,0,-1.5);
     camPos *= cameraRotation();
 }
 
@@ -353,9 +434,9 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 100.; // max trace distance
-const float INTERSECTION_PRECISION = .00001; // precision of the intersection
-const int NUM_OF_TRACE_STEPS = 1000;
+const float MAX_TRACE_DISTANCE = 30.; // max trace distance
+const float INTERSECTION_PRECISION = .0001; // precision of the intersection
+const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = .9; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
@@ -442,6 +523,7 @@ void shadeSurface(inout Hit hit){
         hit.color = hit.normal * -.5 + .5;
     } else {
         hit.color = hit.model.albedo;
+        hit.color *= dot(vec3(0,1,0), hit.normal) * .5 + .5;
     }
 }
 
@@ -494,12 +576,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
 
+    time = iGlobalTime;
+
 // debug = true;
-    if (p.y < 0.) {
+    if (p.x > (time - .5) * 3.) {
         debug = true;
     }
 
-    time = iGlobalTime;
 
     doCamera();
 

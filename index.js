@@ -10,7 +10,7 @@ var fs = require('fs');
 var GUI = require('./lib/gui');
 
 var pixelRatio = window.devicePixelRatio;
-pixelRatio = 1;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
