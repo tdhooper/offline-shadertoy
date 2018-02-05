@@ -1,7 +1,7 @@
 {
-    "lead": [0.1, 1, 0.5],
-    "innerRatio": [0, 0.99, 0.5],
+    "lead": [0.1, 1, 0.41026955999175807],
+    "innerRatio": [0, 0.99, 0.627683529696976],
     "mix": [0, 1, 0.5],
-    "normals": [true],
+    "normals": [false],
     "debug": [true]
 }

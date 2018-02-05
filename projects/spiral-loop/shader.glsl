@@ -67,6 +67,7 @@ mat3 sphericalMatrix(float theta, float phi) {
 mat3 mouseRotation(bool enable, vec2 xy) {
     if (enable) {
         vec2 mouse = mousee.xy / iResolution.xy;
+        mouse = vec2(0.6621212121212121, 0.5879120879120879);
 
         if (mouse.x != 0. && mouse.y != 0.) {
             xy.x = mouse.x;
@@ -470,6 +471,7 @@ Model map(vec3 p) {
     part /= scaleB;
     d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide3 * 3.33 + 1.), 0., 1.));
 
+    color = vec3(1.);
 
     return Model(d, color, 1);
 }
@@ -523,7 +525,7 @@ Model mapDebug(vec3 p) {
 vec3 camPos;
 vec3 camTar;
 vec3 camUp;
-float camDist = .25;
+float camDist = .15;
 
 
 void doCamera() {
@@ -632,7 +634,7 @@ void shadeSurface(inout Hit hit){
         hit.color *= dot(vec3(0,1,0), hit.normal) * .5 + .5;
     }
     float fog = length(camPos - hit.pos);
-    fog = smoothstep(camDist, camDist * 1.5, fog);
+    fog = smoothstep(camDist, camDist * 2.5, fog);
     // fog = 0.;
     hit.color = mix(hit.color, background, fog);
 }
@@ -699,7 +701,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     doCamera();
 
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
-    float focalLength = 3.;
+    float focalLength = 10.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
     Hit hit = raymarch(CastRay(camPos, rd));
 

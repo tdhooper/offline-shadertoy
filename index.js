@@ -10,7 +10,7 @@ var fs = require('fs');
 var GUI = require('./lib/gui');
 
 var pixelRatio = window.devicePixelRatio;
-pixelRatio = .5;
+pixelRatio = .25;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -77,8 +77,8 @@ const uniforms = {
             return value * context.pixelRatio;
         });
         mouse[1] = context.viewportHeight - mouse[1];
-        //console.log(mouse[0] / context.viewportWidth);
-        //console.log(mouse[1] / context.viewportHeight)
+        // console.log(mouse[0] / context.viewportWidth);
+        // console.log(mouse[1] / context.viewportHeight)
         return mouse;
     },
     iChannel0: texture
