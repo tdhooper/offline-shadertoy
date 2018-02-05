@@ -393,6 +393,7 @@ Model map(vec3 p) {
     // float tSubdivide = clamp(range(0., .5, t), 0., 1.);
     // float tSubdivide2 = clamp(range(.5, 1., t), 0., 1.);
 
+    float tSubdivide0 = pow(clamp(range(-1., 0., t), 0., 1.), 1.);
     float tSubdivide = pow(clamp(range(-.5, .5, t), 0., 1.), 1.);
     float tSubdivide2 = pow(clamp(range(0., 1., t), 0., 1.), 1.);
     float tSubdivide3 = pow(clamp(range(.5, 1.5, t), 0., 1.), 1.);
@@ -423,8 +424,6 @@ Model map(vec3 p) {
     p.x *= -1.;
     scaleB *= pModHelixUnwrap(p, lead, innerRatio, t0);
     p.x *= -1.;
-    scaleB *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
 
     vec3 color = vec3(
         smoothstep(0., .1, sin(p.x * 20.)),
@@ -432,11 +431,17 @@ Model map(vec3 p) {
         sin(p.x / 3.)
     );
 
+    d = length(p.yz) - .5;
+    d /= scaleB;
+
     // 1
+
+    scaleB *= pModHelix(p, lead, innerRatio);
+    p.x *= -1.;
 
     part = length(p.yz) - .5;
     part /= scaleB;
-    d = part;
+    d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide0 * 3.33 + 1.), 0., 1.));
 
     // 2
 
@@ -447,7 +452,7 @@ Model map(vec3 p) {
     part /= scaleB;
     d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide * 3.33 + 1.), 0., 1.));
 
-    // 2
+    // 3
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
@@ -456,7 +461,7 @@ Model map(vec3 p) {
     part /= scaleB;
     d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide2 * 3.33 + 1.), 0., 1.));
 
-    // 3
+    // 4
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
@@ -628,6 +633,7 @@ void shadeSurface(inout Hit hit){
     }
     float fog = length(camPos - hit.pos);
     fog = smoothstep(camDist, camDist * 1.5, fog);
+    // fog = 0.;
     hit.color = mix(hit.color, background, fog);
 }
 
