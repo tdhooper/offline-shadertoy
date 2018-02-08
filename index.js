@@ -8,9 +8,10 @@ var FileSaver = require('file-saver');
 var pad = require('pad-number');
 var fs = require('fs');
 var GUI = require('./lib/gui');
+var WebCaptureClient = require('web-frames-capture');
 
 var pixelRatio = window.devicePixelRatio;
-pixelRatio = .25;
+pixelRatio = 1;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -328,3 +329,35 @@ function save(width, height) {
 }
 
 window.save = save;
+
+var captureSetup = function(config) {
+    pause();
+    canvas.width = config.width;
+    canvas.height = config.height;
+    canvas.style.width = config.width + 'px';
+    canvas.style.height = config.height + 'px';
+};
+
+var captureTeardown = function() {
+    // Restore your scene as it was before captureSetup
+};
+
+var captureRender = function(milliseconds) {
+    stepTo(milliseconds);
+};
+
+// Default config used by the UI
+var captureConfig = {
+  fps: 30,
+  seconds: 2, // (duration)
+  width: 640 * 2,
+  height: 360 * 2
+};
+
+var webCapture = new WebCaptureClient(
+  canvas, // The canvas element you're drawing to
+  captureSetup,
+  captureTeardown,
+  captureRender,
+  captureConfig
+);

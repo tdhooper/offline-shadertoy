@@ -21,7 +21,8 @@
     "glslify-import": "^3.0.0",
     "mouse-change": "^1.4.0",
     "pad-number": "0.0.4",
-    "regl": "^1.3.0"
+    "regl": "^1.3.0",
+    "web-frames-capture": "^0.1.0"
   },
   "glslify": {
     "transform": [
