@@ -376,6 +376,17 @@ Model opU(Model m1, Model m2) {
 
 */
 
+float anim(float t, float index) {
+    float step = .5;
+    float a = index * step;
+    return pow(clamp(range(a - step * 2., a, t), 0., 1.), 1.);
+}
+
+float unzip(float x, float t) {
+    return clamp(1. - (abs(x * .01) - t * 3.33 + 1.), 0., 1.);
+}
+
+
 Model map(vec3 p) {
     float part, d;
     float lead = guiLead;
@@ -390,20 +401,6 @@ Model map(vec3 p) {
     float t2 = smoothstep(2./3., 1., t);
 
     t1 = t0 = t2 = t;
-
-    // float tSubdivide = clamp(range(0., .5, t), 0., 1.);
-    // float tSubdivide2 = clamp(range(.5, 1., t), 0., 1.);
-
-    float tSubdivide0 = pow(clamp(range(-1., 0., t), 0., 1.), 1.);
-    float tSubdivide = pow(clamp(range(-.5, .5, t), 0., 1.), 1.);
-    float tSubdivide2 = pow(clamp(range(0., 1., t), 0., 1.), 1.);
-    float tSubdivide3 = pow(clamp(range(.5, 1.5, t), 0., 1.), 1.);
-
-    // t2 = 0.;
-    // t2 = smoothstep(0., 1., t);
-
-    // t1 = 0.;
-    // t2 = 0.;
 
     float s = mix(.5, 0., innerRatio);
     s *= s;
@@ -442,7 +439,7 @@ Model map(vec3 p) {
 
     part = length(p.yz) - .5;
     part /= scaleB;
-    d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide0 * 3.33 + 1.), 0., 1.));
+    d = mix(d, part, unzip(p.x, anim(t, 0.)));
 
     // 2
 
@@ -451,7 +448,7 @@ Model map(vec3 p) {
 
     part = length(p.yz) - .5;
     part /= scaleB;
-    d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide * 3.33 + 1.), 0., 1.));
+    d = mix(d, part, unzip(p.x, anim(t, 1.)));
 
     // 3
 
@@ -460,7 +457,7 @@ Model map(vec3 p) {
 
     part = length(p.yz) - .5;
     part /= scaleB;
-    d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide2 * 3.33 + 1.), 0., 1.));
+    d = mix(d, part, unzip(p.x, anim(t, 2.)));
 
     // 4
 
@@ -469,7 +466,7 @@ Model map(vec3 p) {
 
     part = length(p.yz) - .5;
     part /= scaleB;
-    d = mix(d, part, clamp(1. - (abs(p.x * .01) - tSubdivide3 * 3.33 + 1.), 0., 1.));
+    d = mix(d, part, unzip(p.x, anim(t, 3.)));
 
     color = vec3(1.);
 
