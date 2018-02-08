@@ -11,7 +11,7 @@ var GUI = require('./lib/gui');
 var WebCaptureClient = require('web-frames-capture');
 
 var pixelRatio = window.devicePixelRatio;
-pixelRatio = 1;
+pixelRatio = .25;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);

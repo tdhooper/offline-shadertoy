@@ -67,7 +67,7 @@ mat3 sphericalMatrix(float theta, float phi) {
 mat3 mouseRotation(bool enable, vec2 xy) {
     if (enable) {
         vec2 mouse = mousee.xy / iResolution.xy;
-        mouse = vec2(0.6621212121212121, 0.5879120879120879);
+        // mouse = vec2(0.6621212121212121, 0.5879120879120879);
 
         if (mouse.x != 0. && mouse.y != 0.) {
             xy.x = mouse.x;
@@ -377,12 +377,16 @@ Model opU(Model m1, Model m2) {
 */
 
 float anim(float t, float index) {
+    // float st = 1. / 2.;
+    // float b = st * index;
+    // return clamp(range(b, b + st, t), 0., 1.);
     float step = .5;
     float a = index * step;
     return pow(clamp(range(a - step * 2., a, t), 0., 1.), 1.);
 }
 
 float unzip(float x, float t) {
+    return t;
     return clamp(1. - (abs(x * .01) - t * 3.33 + 1.), 0., 1.);
 }
 
@@ -698,7 +702,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     doCamera();
 
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
-    float focalLength = 10.;
+    float focalLength = 3.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
     Hit hit = raymarch(CastRay(camPos, rd));
 
