@@ -11,7 +11,7 @@ var GUI = require('./lib/gui');
 var WebCaptureClient = require('web-frames-capture');
 
 var pixelRatio = window.devicePixelRatio;
-pixelRatio = .25;
+pixelRatio = 1;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -24,7 +24,7 @@ var scrubber = document.createElement('input');
 scrubber.classList.add('scrubber');
 scrubber.setAttribute('type', 'range');
 scrubber.min = 0;
-scrubber.max = 2000; // milliseconds
+scrubber.max = 1000; // milliseconds
 scrubber.step = 10;
 controls.appendChild(scrubber);
 

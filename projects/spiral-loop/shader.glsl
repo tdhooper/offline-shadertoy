@@ -67,7 +67,7 @@ mat3 sphericalMatrix(float theta, float phi) {
 mat3 mouseRotation(bool enable, vec2 xy) {
     if (enable) {
         vec2 mouse = mousee.xy / iResolution.xy;
-        // mouse = vec2(0.6621212121212121, 0.5879120879120879);
+        mouse = vec2(0.6621212121212121, 0.5879120879120879);
 
         if (mouse.x != 0. && mouse.y != 0.) {
             xy.x = mouse.x;
@@ -380,13 +380,13 @@ float anim(float t, float index) {
     // float st = 1. / 2.;
     // float b = st * index;
     // return clamp(range(b, b + st, t), 0., 1.);
-    float step = .5;
+    float step = 1.;
     float a = index * step;
     return pow(clamp(range(a - step * 2., a, t), 0., 1.), 1.);
 }
 
 float unzip(float x, float t) {
-    return t;
+    // return t;
     return clamp(1. - (abs(x * .01) - t * 3.33 + 1.), 0., 1.);
 }
 
@@ -407,24 +407,20 @@ Model map(vec3 p) {
     t1 = t0 = t2 = t;
 
     float s = mix(.5, 0., innerRatio);
-    s *= s;
-
-    float rotA = PI * .5;
-    float rotB = rotA;
-    rotB = mix(rotA, rotB, t1);
+    // s *= s;
 
     float scaleA = 1.;
     float scaleB = s;
 
     scaleB = 1./pow(1./s, t1);
 
-    pR(p.xy, rotB);
+    pR(p.xy, PI * .5 * t);
     p *= scaleB;
     p.z += .5;
 
     scaleB *= pModHelixUnwrap(p, lead, innerRatio, t0);
     p.x *= -1.;
-    scaleB *= pModHelixUnwrap(p, lead, innerRatio, t0);
+    scaleB *= pModHelixUnwrap(p, lead, innerRatio, 0.);
     p.x *= -1.;
 
     vec3 color = vec3(
@@ -463,14 +459,14 @@ Model map(vec3 p) {
     part /= scaleB;
     d = mix(d, part, unzip(p.x, anim(t, 2.)));
 
-    // 4
+    // // 4
 
-    scaleB *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
+    // scaleB *= pModHelix(p, lead, innerRatio);
+    // p.x *= -1.;
 
-    part = length(p.yz) - .5;
-    part /= scaleB;
-    d = mix(d, part, unzip(p.x, anim(t, 3.)));
+    // part = length(p.yz) - .5;
+    // part /= scaleB;
+    // d = mix(d, part, unzip(p.x, anim(t, 3.)));
 
     color = vec3(1.);
 
@@ -691,7 +687,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     p.x -= .75;
 
-    time = iGlobalTime * .5;
+    time = iGlobalTime;
 
 // debug = true;
     if (p.x > (time - .5) * 3.) {
@@ -702,7 +698,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     doCamera();
 
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
-    float focalLength = 3.;
+    float focalLength = 10.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
     Hit hit = raymarch(CastRay(camPos, rd));
 
