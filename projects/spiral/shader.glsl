@@ -220,8 +220,7 @@ float globalScale;
 bool debug = false;
 
 
-
-vec3 closestSpiralA(vec3 p, float lead, float radius) {
+vec3 closestSpiralB(vec3 p, float lead, float radius) {
 
     p = cartToPolar2(p);
     p.y *= radius;
@@ -243,6 +242,19 @@ vec3 opU(vec3 p, vec3 m1, vec3 m2) {
     }
 }
 
+vec3 closestSpiralA(vec3 p, float lead, float radius) {
+    vec3 s1 = closestSpiralB(p, lead, radius);
+
+    vec3 pp = p;
+
+    pR(p.yz, PI);
+    vec3 s2 = closestSpiralB(p, lead, radius);
+    pR(s2.yz, -PI);
+
+    p = pp;
+
+    return opU(p, s1, s2);
+}
 
 
 vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
