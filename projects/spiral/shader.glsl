@@ -133,6 +133,14 @@ mat3 rotationMatrix(vec3 axis, float angle)
     );
 }
 
+// Sign function that doesn't return 0
+float sgn(float x) {
+    return (x<0.)?-1.:1.;
+}
+
+vec2 sgn(vec2 x) {
+    return vec2(sgn(x.x), sgn(x.y));
+}
 
 
 float vmax(vec2 v) {
@@ -181,6 +189,30 @@ float pMod1(inout float p, float size) {
     float c = floor((p + halfsize)/size);
     p = mod(p + halfsize, size) - halfsize;
     return c;
+}
+
+// Repeat around the origin by a fixed angle.
+// For easier use, num of repetitions is use to specify the angle.
+float pModPolar(inout vec2 p, float repetitions) {
+    float angle = 2.*PI/repetitions;
+    float a = atan(p.y, p.x) + angle/2.;
+    float r = length(p);
+    float c = floor(a/angle);
+    a = mod(a,angle) - angle/2.;
+    p = vec2(cos(a), sin(a))*r;
+    // For an odd number of repetitions, fix cell index of the cell in -x direction
+    // (cell index would be e.g. -5 and 5 in the two halves of the cell):
+    if (abs(c) >= (repetitions/2.)) c = abs(c);
+    return c;
+}
+
+// Reflect space at a plane
+float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
+    float t = dot(p, planeNormal)+offset;
+    if (t < 0.) {
+        p = p - (2.*t)*planeNormal;
+    }
+    return sgn(t);
 }
 
 // Cylindrical coordinates
@@ -243,17 +275,23 @@ vec3 opU(vec3 p, vec3 m1, vec3 m2) {
 }
 
 vec3 closestSpiralA(vec3 p, float lead, float radius) {
+
+    float rot = p.x * PI * 2. / lead;
+    rot += PI * -.5;
+
+    float rep = 2.;
+
+    pR(p.yz, -rot);
+
+    float c = pModPolar(p.yz, rep);
+
+    pR(p.yz, rot);
+
     vec3 s1 = closestSpiralB(p, lead, radius);
 
-    vec3 pp = p;
+    pR(s1.yz, c * PI * 2. / rep);
 
-    pR(p.yz, PI);
-    vec3 s2 = closestSpiralB(p, lead, radius);
-    pR(s2.yz, -PI);
-
-    p = pp;
-
-    return opU(p, s1, s2);
+    return s1;
 }
 
 
