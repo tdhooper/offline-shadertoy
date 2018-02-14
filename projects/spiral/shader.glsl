@@ -266,14 +266,6 @@ vec3 closestSpiralB(vec3 p, float lead, float radius) {
     return closestCart;
 }
 
-vec3 opU(vec3 p, vec3 m1, vec3 m2) {
-    if (length(p - m1) < length(p - m2)) {
-        return m1;
-    } else {
-        return m2;
-    }
-}
-
 vec3 closestSpiralA(vec3 p, float lead, float radius) {
 
     float rot = p.x * PI * 2. / lead;
@@ -296,28 +288,13 @@ vec3 closestSpiralA(vec3 p, float lead, float radius) {
 
 
 vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
-
-    float c = pMod1(p.x, lead);
-    vec3 pp = p;
-
-    vec3 closestCartA = closestSpiralA(p, lead, radius);
-
-    p.x += lead;
-    vec3 closestCartB = closestSpiralA(p, lead, radius);
-    closestCartB.x -= lead;
-
-    p = pp;
-    p.x -= lead;
-    vec3 closestCartC = closestSpiralA(p, lead, radius);
-    closestCartC.x += lead;
-
-    p = pp;
-
-    vec3 closestCart = opU(p, closestCartA, opU(p, closestCartB, closestCartC));
-
-    closestCart.x += lead * c;
-
-    return closestCart;
+    float repeat = .1;
+    float c = pMod1(p.x, lead * repeat);
+    pR(p.yz, c * PI * repeat * -2.);
+    vec3 closest = closestSpiralA(p, lead, radius);
+    pR(closest.yz, c * PI * repeat * 2.);
+    closest.x += c * lead * repeat;
+    return closest;
 }
 
 
@@ -589,6 +566,7 @@ Model map( vec3 p ){
     vec3 cps = closestSpiral(p, a, lead, radius);
     float sp = length(p - cps) - guiThickness;
 
+    // return Model(sp, vec3(0), 1);
 
     if (guiLevel1Enabled) {
         pModSpiral(p, 1., guiLevel1Spacing, guiLevel1Offset);
