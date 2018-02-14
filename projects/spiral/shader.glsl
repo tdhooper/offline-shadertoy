@@ -267,25 +267,12 @@ vec3 closestSpiralB(vec3 p, float lead, float radius) {
 }
 
 vec3 closestSpiralA(vec3 p, float lead, float radius) {
-
-    float rot = p.x * PI * 2. / lead;
-    rot += PI * -.5;
-
-    float rep = 2.;
-
-    pR(p.yz, -rot);
-
-    float c = pModPolar(p.yz, rep);
-
-    pR(p.yz, rot);
-
+    float flip = max(0., sign(dot(p, vec3(0,0,-1))));
+    pR(p.yz, PI * flip);
     vec3 s1 = closestSpiralB(p, lead, radius);
-
-    pR(s1.yz, c * PI * 2. / rep);
-
+    pR(s1.yz, PI * -flip);
     return s1;
 }
-
 
 vec3 closestSpiral(vec3 p, inout vec3 debugP, float lead, float radius) {
     float repeat = .1;
