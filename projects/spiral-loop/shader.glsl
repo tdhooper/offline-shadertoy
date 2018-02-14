@@ -178,6 +178,7 @@ float pMod1(inout float p, float size) {
     return c;
 }
 
+
 // Cylindrical coordinates
 vec3 cartToPolar(vec3 p) {
     p = p.zxy;
@@ -199,8 +200,8 @@ vec3 cartToPolar2(vec3 p) {
 vec3 polarToCart(vec3 p) {
     return vec3(
         p.x,
-        sin(p.y * (PI * 2.)) * p.z,
-        cos(p.y * (PI * 2.)) * p.z
+        sin(p.y) * p.z,
+        cos(p.y) * p.z
     );
 }
 
@@ -215,18 +216,26 @@ float globalScale;
 bool debug = false;
 
 
+vec3 closestSpiralB(vec3 p, float lead, float radius) {
 
-vec3 closestSpiralA(vec3 p, float lead, float radius) {
     p = cartToPolar2(p);
     p.y *= radius;
 
     vec2 line = vec2(lead, radius * PI * 2.);
     vec2 closest = closestPointOnLine(line, p.xy);
 
-    closest.y /= radius * 2. * PI;
+    closest.y /= radius;
     vec3 closestCart = polarToCart(vec3(closest, radius));
 
     return closestCart;
+}
+
+vec3 closestSpiralA(vec3 p, float lead, float radius) {
+    float flip = max(0., sign(dot(p, vec3(0,0,-1))));
+    pR(p.yz, PI * flip);
+    vec3 s1 = closestSpiralB(p, lead, radius);
+    pR(s1.yz, PI * -flip);
+    return s1;
 }
 
 vec3 opU(vec3 p, vec3 m1, vec3 m2) {
@@ -239,25 +248,25 @@ vec3 opU(vec3 p, vec3 m1, vec3 m2) {
 
 vec3 closestSpiral(vec3 p, float lead, float radius) {
 
-    float c = pMod1(p.x, lead);
+    float c = pMod1(p.x, lead * .5);
     vec3 pp = p;
 
     vec3 closestCartA = closestSpiralA(p, lead, radius);
 
-    p.x += lead;
+    p.x += lead * .5;
     vec3 closestCartB = closestSpiralA(p, lead, radius);
-    closestCartB.x -= lead;
+    closestCartB.x -= lead * .5;
 
     p = pp;
-    p.x -= lead;
+    p.x -= lead * .5;
     vec3 closestCartC = closestSpiralA(p, lead, radius);
-    closestCartC.x += lead;
+    closestCartC.x += lead * .5;
 
     p = pp;
 
     vec3 closestCart = opU(p, closestCartA, opU(p, closestCartB, closestCartC));
 
-    closestCart.x += lead * c;
+    closestCart.x += lead * c * .5;
 
     return closestCart;
 }
