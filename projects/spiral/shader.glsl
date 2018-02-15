@@ -656,7 +656,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-50.);
+    camPos = vec3(0,0,-15.);
     camPos *= cameraRotation();
 }
 
