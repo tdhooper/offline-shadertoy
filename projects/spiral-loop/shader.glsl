@@ -67,7 +67,7 @@ mat3 sphericalMatrix(float theta, float phi) {
 mat3 mouseRotation(bool enable, vec2 xy) {
     if (enable) {
         vec2 mouse = mousee.xy / iResolution.xy;
-        mouse = vec2(0.6621212121212121, 0.5879120879120879);
+        // mouse = vec2(0.6621212121212121, 0.5879120879120879);
 
         if (mouse.x != 0. && mouse.y != 0.) {
             xy.x = mouse.x;
@@ -377,12 +377,14 @@ Model opU(Model m1, Model m2) {
 */
 
 float anim(float t, float index) {
-    // float st = 1. / 2.;
-    // float b = st * index;
-    // return clamp(range(b, b + st, t), 0., 1.);
-    float step = 1.;
-    float a = index * step;
-    return pow(clamp(range(a - step * 2., a, t), 0., 1.), 1.);
+    float overlap = .5;
+    float steps = 2.;
+    float all = mix(steps, 1., overlap);
+    float width = 1. / (all - 1.);
+    float each = width * (1.- overlap);
+    float start = index * each - width * .5;
+    float end = start + width;
+    return pow(clamp(range(start, end, t), 0., 1.), 1.);
 }
 
 float unzip(float x, float t) {
@@ -450,14 +452,14 @@ Model map(vec3 p) {
     part /= scaleB;
     d = mix(d, part, unzip(p.x, anim(t, 1.)));
 
-    // 3
+    // // 3
 
-    scaleB *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
+    // scaleB *= pModHelix(p, lead, innerRatio);
+    // p.x *= -1.;
 
-    part = length(p.yz) - .5;
-    part /= scaleB;
-    d = mix(d, part, unzip(p.x, anim(t, 2.)));
+    // part = length(p.yz) - .5;
+    // part /= scaleB;
+    // d = mix(d, part, unzip(p.x, anim(t, 2.)));
 
     // // 4
 
@@ -468,7 +470,7 @@ Model map(vec3 p) {
     // part /= scaleB;
     // d = mix(d, part, unzip(p.x, anim(t, 3.)));
 
-    color = vec3(1.);
+    // color = vec3(1.);
 
     return Model(d, color, 1);
 }
@@ -522,7 +524,7 @@ Model mapDebug(vec3 p) {
 vec3 camPos;
 vec3 camTar;
 vec3 camUp;
-float camDist = .15;
+float camDist = .915;
 
 
 void doCamera() {
@@ -676,6 +678,55 @@ vec3 linearToScreen(vec3 linearRGB) {
 }
 
 
+float plot(float height, vec2 p, float y){
+    float thick = .005;
+    y *= height;
+    return (
+        smoothstep( y - thick, y, p.y) - 
+        smoothstep( y, y + thick, p.y)
+    );
+}
+
+vec3 hlCol(vec3 color, float highlight) {
+    return mix(color, vec3(1), highlight);
+}
+
+float plotFade(float x) {
+    return smoothstep(1., .5, x);
+}
+
+void renderPaths(inout vec3 color, vec2 fragCoord) {
+    vec2 p = fragCoord.xy / iResolution.xy;
+    p.y -= .02;
+    float height = 1./4.;
+    float focus = .25;
+
+    if (p.y > height + .02) {
+        return;
+    }
+
+    // p *= 2.;
+    // p -= .5;
+
+    float x = p.x;
+
+    // x = mod(x - .5, 1.);
+    color = vec3(0);
+
+    // x *= focus;
+    // x += time;
+    // x -= .5 * focus;
+
+    float hp = time - x;
+    float hl = smoothstep(.1, .0, hp) - smoothstep(.0, -.005, hp);
+
+    
+    color += plot(height, p, anim(x, 0.)) * hlCol(vec3(1,1,1), hl);
+    color += plot(height, p, anim(x, 1.)) * hlCol(vec3(1,1,0), hl);
+    color += plot(height, p, anim(x, 2.)) * hlCol(vec3(0,1,1), hl);    
+    color += plot(height, p, anim(x, 3.)) * hlCol(vec3(1,0,1), hl);    
+    // color += plot(height, p, x) * hlCol(vec3(0,1,1), hl);
+}
 
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -688,6 +739,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p.x -= .75;
 
     time = iGlobalTime;
+
+    // vec3 c = vec3(1.);
+    // renderPaths(c, fragCoord);
+    // fragColor = vec4(c,1.0);
+    // return;
+
 
 // debug = true;
     if (p.x > (time - .5) * 3.) {
