@@ -231,10 +231,10 @@ vec3 closestSpiralB(vec3 p, float lead, float radius) {
 }
 
 vec3 closestSpiralA(vec3 p, float lead, float radius) {
-    float flip = max(0., sign(dot(p, vec3(0,0,-1))));
-    pR(p.yz, PI * flip);
+    // float flip = max(0., sign(dot(p, vec3(0,0,-1))));
+    // pR(p.yz, PI * flip);
     vec3 s1 = closestSpiralB(p, lead, radius);
-    pR(s1.yz, PI * -flip);
+    // pR(s1.yz, PI * -flip);
     return s1;
 }
 
@@ -248,25 +248,25 @@ vec3 opU(vec3 p, vec3 m1, vec3 m2) {
 
 vec3 closestSpiral(vec3 p, float lead, float radius) {
 
-    float c = pMod1(p.x, lead * .5);
+    float c = pMod1(p.x, lead);
     vec3 pp = p;
 
     vec3 closestCartA = closestSpiralA(p, lead, radius);
 
-    p.x += lead * .5;
+    p.x += lead;
     vec3 closestCartB = closestSpiralA(p, lead, radius);
-    closestCartB.x -= lead * .5;
+    closestCartB.x -= lead;
 
     p = pp;
-    p.x -= lead * .5;
+    p.x -= lead;
     vec3 closestCartC = closestSpiralA(p, lead, radius);
-    closestCartC.x += lead * .5;
+    closestCartC.x += lead;
 
     p = pp;
 
     vec3 closestCart = opU(p, closestCartA, opU(p, closestCartB, closestCartC));
 
-    closestCart.x += lead * c * .5;
+    closestCart.x += lead * c;
 
     return closestCart;
 }
@@ -425,13 +425,15 @@ Model map(vec3 p) {
 
     scaleB = 1./pow(1./s, t1);
 
-    pR(p.xy, PI * .5 * t);
+    pR(p.xy, PI * -.5 * t);
     p *= scaleB;
     p.z += .5;
 
     scaleB *= pModHelixUnwrap(p, lead, innerRatio, t0);
     p.x *= -1.;
     scaleB *= pModHelixUnwrap(p, lead, innerRatio, 0.);
+    p.x *= -1.;
+    scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
     vec3 color = vec3(
@@ -533,7 +535,7 @@ Model mapDebug(vec3 p) {
 vec3 camPos;
 vec3 camTar;
 vec3 camUp;
-float camDist = .915;
+float camDist = .15;
 
 
 void doCamera() {
@@ -764,7 +766,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     doCamera();
 
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
-    float focalLength = 10.;
+    float focalLength = 3.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
     Hit hit = raymarch(CastRay(camPos, rd));
 
