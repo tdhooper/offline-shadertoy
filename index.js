@@ -11,7 +11,7 @@ var GUI = require('./lib/gui');
 var WebCaptureClient = require('web-frames-capture');
 
 var pixelRatio = window.devicePixelRatio;
-pixelRatio = 1;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -41,9 +41,9 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/spiral/shader.glsl');
+var frag = glslify('./projects/spiral-loop/shader.glsl');
 
-var guiConf = JSON.parse(fs.readFileSync('./projects/spiral/gui.json', 'utf8'));
+var guiConf = JSON.parse(fs.readFileSync('./projects/spiral-loop/gui.json', 'utf8'));
 var gui = new GUI(guiConf, function() {
     render();
 });
