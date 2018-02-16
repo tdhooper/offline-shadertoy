@@ -293,7 +293,9 @@ float pModHelix(inout vec3 p, float lead, float innerRatio) {
 
 float pModHelixUnwrap(inout vec3 p, float lead, float innerRatio, float t) {
     float radius = mix(.25, .5, innerRatio);
-    float offset = pow(t * 3., 4.) * .25;
+    float width = cos(asin(t));
+    float adjust = (1. / width);
+    float offset = ((.5 * adjust) - .5) * 5.;
     p.z += offset;
     radius += offset;
     pModSpiral(p, 1., lead, radius);
@@ -419,6 +421,7 @@ Model map(vec3 p) {
 
     float s = mix(.5, 0., innerRatio);
     // s *= s;
+    // s = 1.;
 
     float scaleA = 1.;
     float scaleB = s;
