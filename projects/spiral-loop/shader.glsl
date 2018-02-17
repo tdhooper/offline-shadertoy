@@ -11,7 +11,12 @@ uniform float guiInnerRatio;
 uniform bool guiNormals;
 uniform bool guiDebug;
 uniform float guiMix;
-
+uniform float guiOffsetX;
+uniform float guiOffsetY;
+uniform float guiZoom;
+uniform float guiRotateX;
+uniform float guiRotateY;
+uniform float guiRotateModel;
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -67,6 +72,8 @@ mat3 sphericalMatrix(float theta, float phi) {
 mat3 mouseRotation(bool enable, vec2 xy) {
     if (enable) {
         vec2 mouse = mousee.xy / iResolution.xy;
+        mouse = vec2(guiRotateX, guiRotateY);
+
         // mouse = vec2(0.6621212121212121, 0.5879120879120879);
 
         if (mouse.x != 0. && mouse.y != 0.) {
@@ -395,11 +402,12 @@ float anim(float t, float index) {
     float each = width * (1.- overlap);
     float start = index * each - width * .5;
     float end = start + width;
-    return pow(clamp(range(start, end, t), 0., 1.), 1.);
+    return clamp(range(start, end, t), 0., 1.);
 }
 
 float unzip(float x, float t) {
     // return t;
+    // t = smoothstep(0., 1., t);
     return clamp(1. - (abs(x * .01) - t * 3.33 + 1.), 0., 1.);
 }
 
@@ -428,7 +436,7 @@ Model map(vec3 p) {
 
     scaleB = 1./pow(1./s, t1);
 
-    pR(p.xy, PI * -.5 * t);
+    pR(p.xy, PI * -.5 * t + guiRotateModel * PI * 2.);
     p *= scaleB;
     p.z += .5;
 
@@ -538,7 +546,7 @@ Model mapDebug(vec3 p) {
 vec3 camPos;
 vec3 camTar;
 vec3 camUp;
-float camDist = .15;
+float camDist = guiZoom;
 
 
 void doCamera() {
@@ -750,9 +758,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
 
-    p.x -= .75;
+    p.x -= guiOffsetX;
+    p.y -= guiOffsetY;
 
-    time = iGlobalTime;
+    time = iGlobalTime * .5;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
