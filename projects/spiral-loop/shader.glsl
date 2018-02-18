@@ -156,6 +156,10 @@ float fBox2(vec2 p, vec2 b) {
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
 
+float fBox2(vec2 p, vec2 b, float round) {
+    return fBox2(p, b * (1. - round)) - round * vmax(b);
+}
+
 // Distance to line segment between <a> and <b>, used for fCapsule() version 2below
 float fLineSegment(vec3 p, vec3 a, vec3 b) {
     vec3 ab = b - a;
@@ -415,6 +419,22 @@ float rangec(float a, float b, float t) {
     return clamp(range(a, b, t), 0., 1.);
 }
 
+void addPipe(inout float d, vec3 p, float scale, float t) {
+    float boundry = .6;
+    float part;
+    float separate = (
+        rangec(0., boundry * .02, t) * .2 +
+        rangec(boundry * .02, boundry, t) * .8
+    );
+    separate = pow(separate, .5);
+    float round = rangec(boundry, 1., t);
+    // separate = rangec(0., boundry, t);
+    part = fBox2(p.yz, vec2(mix(guiLead * 2., .5, separate), .5), 0.);
+    part = mix(part, length(p.yz) - .5, round);
+    part /= scale;
+    d = mix(d, part, rangec(.0, .0001, t));
+}
+
 Model map(vec3 p) {
     float part, d, tt;
     float lead = guiLead;
@@ -469,10 +489,7 @@ Model map(vec3 p) {
     uv = mod(uv, 1.);
 
     tt = unzip(p.x, anim(t, 0.));
-    part = fBox2(p.yz, vec2(mix(lead * 2., .5, rangec(.0, .5, tt)), .5));
-    part = mix(part, length(p.yz) - .5, rangec(.5, 1., tt));
-    part /= scaleB;
-    d = mix(d, part, rangec(.0, .1, tt));
+    addPipe(d, p, scaleB, tt);
 
     // 2
 
@@ -485,10 +502,7 @@ Model map(vec3 p) {
     // p.x -= 50.;
 
     tt = unzip(p.x, anim(t, 1.));
-    part = fBox2(p.yz, vec2(mix(lead * 2., .5, rangec(.0, .5, tt)), .5));
-    part = mix(part, length(p.yz) - .5, rangec(.5, 1., tt));
-    part /= scaleB;
-    d = mix(d, part, rangec(.0, .1, tt));
+    addPipe(d, p, scaleB, tt);
 
     // uv = mix(uv, uv2, step(.5, unzip(p.x, anim(t, 1.))));
     // // // 3
