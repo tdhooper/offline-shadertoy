@@ -9,7 +9,7 @@ uniform sampler2D iChannel0;
 uniform float guiLead;
 uniform float guiInnerRatio;
 uniform bool guiNormals;
-uniform bool guiDebug;
+uniform float guiDebug;
 uniform float guiMix;
 uniform float guiOffsetX;
 uniform float guiOffsetY;
@@ -17,6 +17,9 @@ uniform float guiZoom;
 uniform float guiRotateX;
 uniform float guiRotateY;
 uniform float guiRotateModel;
+uniform bool guiFlip;
+uniform float guiNormalX;
+uniform float guiNormalY;
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -158,6 +161,18 @@ float fBox2(vec2 p, vec2 b) {
 
 float fBox2(vec2 p, vec2 b, float round) {
     return fBox2(p, b * (1. - round)) - round * vmax(b);
+}
+
+float fBox2(inout float side, vec2 p, vec2 b) {
+    vec2 d = abs(p) - b;
+    // side = sign(d.x - d.y) + 1.;
+    // side = max(0., sign(vmax(d)))
+    if (d.x > d.y) {
+        side = max(0., sign(p.x));
+    } else {
+        side = max(0., sign(p.y)) + 2.;
+    }
+    return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
 
 // Distance to line segment between <a> and <b>, used for fCapsule() version 2below
@@ -412,14 +427,19 @@ float anim(float t, float index) {
 float unzip(float x, float t) {
     // return t;
     // t = smoothstep(0., 1., t);
-    return clamp(1. - (abs(x * .01) - t * 3.33 + 1.), 0., 1.);
+    float size = 1.9;
+    return clamp(1. - (abs(x * .005) - t * size + 1.), 0., 1.);
 }
 
 float rangec(float a, float b, float t) {
     return clamp(range(a, b, t), 0., 1.);
 }
 
-void addPipe(inout float d, vec3 p, float scale, float t) {
+vec3 colA = vec3(.5,0,.75); // purple
+vec3 colB = vec3(0,1,.25); // green
+
+
+void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float t) {
     float boundry = .6;
     float part;
     float separate = (
@@ -429,10 +449,29 @@ void addPipe(inout float d, vec3 p, float scale, float t) {
     separate = pow(separate, .5);
     float round = rangec(boundry, 1., t);
     // separate = rangec(0., boundry, t);
-    part = fBox2(p.yz, vec2(mix(guiLead * 2., .5, separate), .5), 0.);
+
+    float side= 0.;
+    part = fBox2(side, p.yz, vec2(mix(guiLead * 2., .5, separate), .5));
     part = mix(part, length(p.yz) - .5, round);
     part /= scale;
+
     d = mix(d, part, rangec(.0, .0001, t));
+
+    vec3 col = mix(colB, colA, step(3., side));
+    // col = mix(col, colA, round);
+
+    float r = mix(.2, 1., rangec(.8, 1., t));
+    float a = abs(atan(p.y, p.z) / (PI));
+    float b = smoothstep(r, r+.01, a);
+
+    col = mix(colA, col, b);
+
+    // float a = abs(atan(p.y, p.z) / (PI));
+    // float b = smoothstep(0., .5, a) - smoothstep(.5, 1., a);
+    // vec3 col2 = mix(colA, colB, b);
+    // col = mix(col, col2, round);
+
+    color = mix(color, col, rangec(.0, .1, t));
 }
 
 Model map(vec3 p) {
@@ -464,6 +503,10 @@ Model map(vec3 p) {
     p *= scaleB;
     p.z += .5;
 
+    if (guiFlip) {
+        p.x *= -1.;
+    }
+
     scaleB *= pModHelixUnwrap(p, lead, innerRatio, t0);
     p.x *= -1.;
     scaleB *= pModHelixUnwrap(p, lead, innerRatio, 0.);
@@ -476,33 +519,32 @@ Model map(vec3 p) {
         sin(p.x / 1.5),
         sin(p.x / 3.)
     );
+    color = colA;
 
-    d = length(p.yz) - .5;
-    d /= scaleB;
+    // d = length(p.yz) - .5;
+    // d /= scaleB;
+
+    d = 1e12;
+
+    addPipe(d, color, p, scaleB, 1.);
 
     // 1
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
-    uv = vec2(p.x / lead, atan(p.y, p.z) / (PI * 2.));
-    uv = mod(uv, 1.);
-
     tt = unzip(p.x, anim(t, 0.));
-    addPipe(d, p, scaleB, tt);
+    addPipe(d, color, p, scaleB, tt);
 
     // 2
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
-    uv2 = vec2(1.) - vec2(p.x / lead, atan(p.y, p.z) / (PI * 2.));
-    uv2 = mod(uv2, 1.);
-
     // p.x -= 50.;
 
     tt = unzip(p.x, anim(t, 1.));
-    addPipe(d, p, scaleB, tt);
+    addPipe(d, color, p, scaleB, tt);
 
     // uv = mix(uv, uv2, step(.5, unzip(p.x, anim(t, 1.))));
     // // // 3
@@ -525,7 +567,7 @@ Model map(vec3 p) {
 
     // color = vec3(1.);
 
-    color = vec3(mod(uv, 1.), 0.);
+    // color = vec3(mod(uv, 1.), 0.);
 
     color = vec3(.8);
 
@@ -682,12 +724,15 @@ void shadeSurface(inout Hit hit){
         return;
     }
 
-    pR(hit.normal.xz, 2.75);
+    // pR(hit.normal.xz, 2.75);
+    hit.normal *= sphericalMatrix(guiNormalX * PI * 2., guiNormalY * PI * 2.);
     if (guiNormals) {
         hit.color = hit.normal * -.5 + .5;
     } else {
-        hit.color = hit.model.albedo;
-        hit.color *= dot(vec3(0,1,0), hit.normal) * .5 + .5;
+        vec3 albedo = hit.model.albedo;
+        hit.color = vec3(0);
+        hit.color += albedo * (dot(vec3(0,1,0), hit.normal) * .5 + .5) * colA;
+        hit.color += albedo * (dot(vec3(1,0,0), hit.normal) * .5 + .5) * colB;
     }
     float fog = length(camPos - hit.pos);
     fog = smoothstep(camDist, camDist * 2.5, fog);
