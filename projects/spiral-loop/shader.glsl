@@ -411,11 +411,15 @@ float unzip(float x, float t) {
     return clamp(1. - (abs(x * .01) - t * 3.33 + 1.), 0., 1.);
 }
 
+float rangec(float a, float b, float t) {
+    return clamp(range(a, b, t), 0., 1.);
+}
 
 Model map(vec3 p) {
-    float part, d;
+    float part, d, tt;
     float lead = guiLead;
     float innerRatio = guiInnerRatio;
+    vec2 uv, uv2;
 
     vec3 pp = p;
 
@@ -461,20 +465,33 @@ Model map(vec3 p) {
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
-    part = length(p.yz) - .5;
+    uv = vec2(p.x / lead, atan(p.y, p.z) / (PI * 2.));
+    uv = mod(uv, 1.);
+
+    tt = unzip(p.x, anim(t, 0.));
+    part = fBox2(p.yz, vec2(mix(lead * 2., .5, rangec(.0, .5, tt)), .5));
+    part = mix(part, length(p.yz) - .5, rangec(.5, 1., tt));
     part /= scaleB;
-    d = mix(d, part, unzip(p.x, anim(t, 0.)));
+    d = mix(d, part, rangec(.0, .1, tt));
 
     // 2
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
-    part = length(p.yz) - .5;
-    part /= scaleB;
-    d = mix(d, part, unzip(p.x, anim(t, 1.)));
+    uv2 = vec2(1.) - vec2(p.x / lead, atan(p.y, p.z) / (PI * 2.));
+    uv2 = mod(uv2, 1.);
 
-    // // 3
+    // p.x -= 50.;
+
+    tt = unzip(p.x, anim(t, 1.));
+    part = fBox2(p.yz, vec2(mix(lead * 2., .5, rangec(.0, .5, tt)), .5));
+    part = mix(part, length(p.yz) - .5, rangec(.5, 1., tt));
+    part /= scaleB;
+    d = mix(d, part, rangec(.0, .1, tt));
+
+    // uv = mix(uv, uv2, step(.5, unzip(p.x, anim(t, 1.))));
+    // // // 3
 
     // scaleB *= pModHelix(p, lead, innerRatio);
     // p.x *= -1.;
@@ -493,6 +510,10 @@ Model map(vec3 p) {
     // d = mix(d, part, unzip(p.x, anim(t, 3.)));
 
     // color = vec3(1.);
+
+    color = vec3(mod(uv, 1.), 0.);
+
+    color = vec3(.8);
 
     return Model(d, color, 1);
 }
@@ -589,7 +610,7 @@ struct Hit {
 };
 
 vec3 calcNormal( in vec3 pos ){
-    vec3 eps = vec3( 0.001, 0.0, 0.0 );
+    vec3 eps = vec3( 0.0001, 0.0, 0.0 );
     vec3 nor = vec3(
         map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
         map(pos+eps.yxy).dist - map(pos-eps.yxy).dist,
