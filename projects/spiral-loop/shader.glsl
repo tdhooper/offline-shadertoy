@@ -447,6 +447,15 @@ float rangec(float a, float b, float t) {
     return clamp(range(a, b, t), 0., 1.);
 }
 
+
+#ifndef HALF_PI
+#define HALF_PI 1.5707963267948966
+#endif
+
+float sineIn(float t) {
+  return sin((t - 1.0) * HALF_PI) + 1.0;
+}
+
 float unzip(float x, float t) {
     // return t;
     // t = smoothstep(0., 1., t);
@@ -454,7 +463,8 @@ float unzip(float x, float t) {
     float speed = .01;
     size = guiZipSize;
     speed = guiZipSpeed;
-    t = pow(t, 1.75);
+    // t = pow(t, 1.5);
+    // t = mix(sineIn(t), t, t);
     return rangec(size, 0., abs(x) + size - t * size * speed);
 }
 
@@ -470,11 +480,11 @@ void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt) {
     float boundry = .7;
     float part;
     float separate = (
-        rangec(0., boundry * .02, t) * .2 +
-        rangec(boundry * .02, boundry, t) * .8
+        rangec(0., boundry * .01, t) * .5 +
+        rangec(boundry * .01, boundry, t) * .5
     );
-    separate = pow(separate, .5);
-    float round = rangec(.3, 1., t);
+    // separate = pow(separate, .5);
+    float round = rangec(.0, 1., t);
     // separate = rangec(0., boundry, t);
     // round = 0.;
 
@@ -955,7 +965,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p.x -= guiOffsetX;
     p.y -= guiOffsetY;
 
-    time = iGlobalTime;
+    time = iGlobalTime * .75;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
