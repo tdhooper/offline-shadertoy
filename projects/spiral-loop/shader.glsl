@@ -17,9 +17,15 @@ uniform float guiZoom;
 uniform float guiRotateX;
 uniform float guiRotateY;
 uniform float guiRotateModel;
+uniform float guiRotateModelX;
 uniform bool guiFlip;
 uniform float guiNormalX;
 uniform float guiNormalY;
+uniform float guiFocal;
+uniform float guiZipOffset;
+uniform float guiZipSize;
+uniform float guiZipSpeed;
+
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -105,6 +111,18 @@ mat3 cameraRotation() {
     return m;
 }
 
+// --------------------------------------------------------
+// Spectrum colour palette
+// IQ https://www.shadertoy.com/view/ll2GD3
+// --------------------------------------------------------
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
 
 // --------------------------------------------------------
 // Modelling
@@ -421,34 +439,44 @@ float anim(float t, float index) {
     float each = width * (1.- overlap);
     float start = index * each - width * .5;
     float end = start + width;
-    return clamp(range(start, end, t), 0., 1.);
+    return range(start, end, t);
 }
 
-float unzip(float x, float t) {
-    // return t;
-    // t = smoothstep(0., 1., t);
-    float size = 1.9;
-    return clamp(1. - (abs(x * .005) - t * size + 1.), 0., 1.);
-}
 
 float rangec(float a, float b, float t) {
     return clamp(range(a, b, t), 0., 1.);
 }
 
+float unzip(float x, float t) {
+    // return t;
+    // t = smoothstep(0., 1., t);
+    float size = 2.2;
+    float speed = .01;
+    size = guiZipSize;
+    speed = guiZipSpeed;
+    t = pow(t, 1.75);
+    return rangec(size, 0., abs(x) + size - t * size * speed);
+}
+
+
 vec3 colA = vec3(.5,0,.75); // purple
 vec3 colB = vec3(0,1,.25); // green
 
 
-void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float t) {
-    float boundry = .6;
+void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt) {
+    float t = clamp(0., 1., tt);
+    // t = pow(t, 2.);
+    // t = smoothstep(0., 1., tt);
+    float boundry = .7;
     float part;
     float separate = (
         rangec(0., boundry * .02, t) * .2 +
         rangec(boundry * .02, boundry, t) * .8
     );
     separate = pow(separate, .5);
-    float round = rangec(boundry, 1., t);
+    float round = rangec(.3, 1., t);
     // separate = rangec(0., boundry, t);
+    // round = 0.;
 
     float side= 0.;
     part = fBox2(side, p.yz, vec2(mix(guiLead * 2., .5, separate), .5));
@@ -464,7 +492,9 @@ void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float t) {
     float a = abs(atan(p.y, p.z) / (PI));
     float b = smoothstep(r, r+.01, a);
 
-    col = mix(colA, col, b);
+    // col = mix(colA, col, b);
+
+    col = spectrum(.5 - t * .5 + .25);
 
     // float a = abs(atan(p.y, p.z) / (PI));
     // float b = smoothstep(0., .5, a) - smoothstep(.5, 1., a);
@@ -474,11 +504,15 @@ void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float t) {
     color = mix(color, col, rangec(.0, .1, t));
 }
 
+float sss = 1. + 10. * guiDebug;
+
 Model map(vec3 p) {
     float part, d, tt;
     float lead = guiLead;
     float innerRatio = guiInnerRatio;
     vec2 uv, uv2;
+
+    p /= sss;
 
     vec3 pp = p;
 
@@ -499,7 +533,9 @@ Model map(vec3 p) {
 
     scaleB = 1./pow(1./s, t1);
 
+    pR(p.yz, guiRotateModelX * PI * 2.);
     pR(p.xy, PI * -.5 * t + guiRotateModel * PI * 2.);
+    
     p *= scaleB;
     p.z += .5;
 
@@ -533,7 +569,11 @@ Model map(vec3 p) {
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
-    tt = unzip(p.x, anim(t, 0.));
+    float scb = scaleB;
+
+    float offset = guiZipOffset / lead;
+
+    tt = unzip(p.x - offset, anim(t, 0.));
     addPipe(d, color, p, scaleB, tt);
 
     // 2
@@ -543,7 +583,7 @@ Model map(vec3 p) {
 
     // p.x -= 50.;
 
-    tt = unzip(p.x, anim(t, 1.));
+    tt = unzip(p.x + offset, anim(t, 1.));
     addPipe(d, color, p, scaleB, tt);
 
     // uv = mix(uv, uv2, step(.5, unzip(p.x, anim(t, 1.))));
@@ -569,7 +609,10 @@ Model map(vec3 p) {
 
     // color = vec3(mod(uv, 1.), 0.);
 
-    color = vec3(.8);
+    color = vec3(.95);
+    // color = colA;
+
+    d *= sss;
 
     return Model(d, color, 1);
 }
@@ -623,7 +666,7 @@ Model mapDebug(vec3 p) {
 vec3 camPos;
 vec3 camTar;
 vec3 camUp;
-float camDist = guiZoom;
+float camDist = guiZoom * sss;
 
 
 void doCamera() {
@@ -709,10 +752,73 @@ Hit raymarch(CastRay castRay){
 // Rendering
 // --------------------------------------------------------
 
+// LIGHTING
+
+float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
+{
+    float res = 1.0;
+    float t = mint;
+    for( int i=0; i<16; i++ )
+    {
+        float h = map( ro + rd*t ).dist;
+        res = min( res, 8.0*h/t );
+        t += clamp( h, 0.02, 0.10 );
+        if( h<0.001 || t>tmax ) break;
+    }
+    return clamp( res, 0.0, 1.0 );
+
+}
+
+
+float calcAO( in vec3 pos, in vec3 nor )
+{
+    float occ = 0.0;
+    float sca = 1.0;
+    for( int i=0; i<5; i++ )
+    {
+        float hr = 0.01 + 0.12*float(i)/4.0;
+        vec3 aopos =  nor * hr + pos;
+        float dd = map( aopos ).dist;
+        occ += -(dd-hr)*sca;
+        sca *= 0.95;
+    }
+    return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
+}
+
+
+
+vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
+
+    // lighitng        
+    float occ = calcAO( pos, nor );
+    vec3  lig = normalize( vec3(-0.6, 0.7, 0.5) );
+    float amb = clamp( 0.5+0.5*nor.y, 0.0, 1.0 );
+    float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
+    float bac = clamp( dot( nor, normalize(vec3(-lig.x,0.0,-lig.z))), 0.0, 1.0 )*clamp( 1.0-pos.y,0.0,1.0);
+    float dom = smoothstep( -0.1, 0.1, ref.y );
+    float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
+    float spe = pow(clamp( dot( ref, lig ), 0.0, 1.0 ),16.0);
+    
+    dif *= softshadow( pos, lig, 0.02, 2.5 );
+    //dom *= softshadow( pos, ref, 0.02, 2.5 );
+
+    vec3 lin = vec3(0.0);
+    lin += 1.20*dif*vec3(.95,0.80,0.60);
+    lin += 1.20*spe*vec3(1.00,0.85,0.55)*dif;
+    lin += 0.80*amb*vec3(0.50,0.70,.80)*occ;
+    lin += 0.30*dom*vec3(0.50,0.70,1.00)*occ;
+    lin += 0.30*bac*vec3(0.25,0.25,0.25)*occ;
+    lin += 0.20*fre*vec3(1.00,1.00,1.00)*occ;
+    col = col*lin;
+
+    return col;
+}
+
 void shadeSurface(inout Hit hit){
 
     vec3 background = vec3(.1)* vec3(.5,0,1);
     background = vec3(.2,.8,1.) * .9;
+    background = vec3(.9);
     if (hit.isBackground) {
         hit.color = background;
         return;
@@ -729,10 +835,18 @@ void shadeSurface(inout Hit hit){
     if (guiNormals) {
         hit.color = hit.normal * -.5 + .5;
     } else {
+        vec3 ref = reflect(hit.ray.direction, hit.normal);
         vec3 albedo = hit.model.albedo;
-        hit.color = vec3(0);
-        hit.color += albedo * (dot(vec3(0,1,0), hit.normal) * .5 + .5) * colA;
-        hit.color += albedo * (dot(vec3(1,0,0), hit.normal) * .5 + .5) * colB;
+        // hit.color = vec3(0);
+        // hit.color += albedo * (dot(vec3(0,1,0), hit.normal) * .5 + .5) * colA;
+        // hit.color += albedo * (dot(vec3(1,0,0), hit.normal) * .5 + .5) * colB;
+        hit.color = doLighting(
+            albedo,
+            hit.pos,
+            hit.normal,
+            ref,
+            hit.ray.direction
+        );
     }
     float fog = length(camPos - hit.pos);
     fog = smoothstep(camDist, camDist * 2.5, fog);
@@ -841,7 +955,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p.x -= guiOffsetX;
     p.y -= guiOffsetY;
 
-    time = iGlobalTime * .5;
+    time = iGlobalTime;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
@@ -858,7 +972,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     doCamera();
 
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
-    float focalLength = 3.;
+    float focalLength = pow(2., guiFocal);
+    focalLength = 3.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
     Hit hit = raymarch(CastRay(camPos, rd));
 
