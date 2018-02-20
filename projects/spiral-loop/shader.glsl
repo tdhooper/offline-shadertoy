@@ -158,6 +158,10 @@ float range(float vmin, float vmax, float value) {
   return (value - vmin) / (vmax - vmin);
 }
 
+float rangec(float a, float b, float t) {
+    return clamp(range(a, b, t), 0., 1.);
+}
+
 float vmax(vec2 v) {
     return max(v.x, v.y);
 }
@@ -339,10 +343,19 @@ float pModHelixUnwrap(inout vec3 p, float lead, float innerRatio, float t) {
     float radius = mix(.25, .5, innerRatio);
     float width = cos(asin(t));
     float adjust = (1. / width);
-    float offset = ((.5 * adjust) - .5) * 5.;
+    float offset = ((.5 * adjust) - .5) * 7.;
+
+    vec3 pp = p;
+    pp.z -= radius;
+    pR(pp.xy, PI * -.5);
+    pp.x *= -1.;
+
     p.z += offset;
     radius += offset;
     pModSpiral(p, 1., lead, radius);
+
+    p = mix(p, pp, rangec(.8, 1., t));
+
     float scale = mix(.5, 0., innerRatio);
     p /= scale;
     return 1. / scale;
@@ -442,10 +455,6 @@ float anim(float t, float index) {
     return range(start, end, t);
 }
 
-
-float rangec(float a, float b, float t) {
-    return clamp(range(a, b, t), 0., 1.);
-}
 
 
 #ifndef HALF_PI
@@ -572,6 +581,8 @@ Model map(vec3 p) {
 
     d = length(p.yz) - .5;
     d /= scaleB;
+
+    // return Model(d, vec3(.8), 1);
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
