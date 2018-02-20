@@ -635,7 +635,7 @@ Model map(vec3 p) {
 
     // color = vec3(mod(uv, 1.), 0.);
 
-    // color = vec3(.95);
+    color = vec3(.8);
     // color = colA;
 
     d *= sss;
@@ -981,7 +981,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p.x -= guiOffsetX;
     p.y -= guiOffsetY;
 
-    time = iGlobalTime * .75;
+    time = iGlobalTime * .5;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
