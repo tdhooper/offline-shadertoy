@@ -557,6 +557,10 @@ Model map(vec3 p) {
     p.x *= -1.;
     scaleB *= pModHelixUnwrap(p, lead, innerRatio, 0.);
     p.x *= -1.;
+
+    d = length(p.yz) - .5;
+    d /= scaleB;
+
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
@@ -569,8 +573,6 @@ Model map(vec3 p) {
 
     // d = length(p.yz) - .5;
     // d /= scaleB;
-
-    d = 1e12;
 
     addPipe(d, color, p, scaleB, 1.);
 
