@@ -456,7 +456,7 @@ float sineIn(float t) {
   return sin((t - 1.0) * HALF_PI) + 1.0;
 }
 
-float unzip(float x, float t) {
+float unzip(vec3 p, float t) {
     // return t;
     // t = smoothstep(0., 1., t);
     float size = 2.2;
@@ -465,7 +465,12 @@ float unzip(float x, float t) {
     speed = guiZipSpeed;
     // t = pow(t, 1.5);
     // t = mix(sineIn(t), t, t);
-    return rangec(size, 0., abs(x) + size - t * size * speed);
+
+    if (p.y < 0.) {
+        t -= (7.6 * sign(p.x)) / size / speed;
+    }
+
+    return range(size, 0., abs(p.x) + size - t * size * speed);
 }
 
 
@@ -474,7 +479,13 @@ vec3 colB = vec3(0,1,.25); // green
 
 
 void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt) {
+
+    // if (p.y < 0.) {
+    //     tt += .076;
+    // }
+
     float t = clamp(0., 1., tt);
+
     // t = pow(t, 2.);
     // t = smoothstep(0., 1., tt);
     float boundry = .7;
@@ -493,7 +504,7 @@ void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt) {
     part = mix(part, length(p.yz) - .5, round);
     part /= scale;
 
-    d = mix(d, part, rangec(.0, .0001, t));
+    d = mix(d, part, smoothstep(.0, .01, t));
 
     vec3 col = mix(colB, colA, step(3., side));
     // col = mix(col, colA, round);
@@ -505,13 +516,14 @@ void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt) {
     // col = mix(colA, col, b);
 
     col = spectrum(.5 - t * .5 + .25);
+    col = p.y > 0. ? colA : colB;
 
     // float a = abs(atan(p.y, p.z) / (PI));
     // float b = smoothstep(0., .5, a) - smoothstep(.5, 1., a);
     // vec3 col2 = mix(colA, colB, b);
     // col = mix(col, col2, round);
 
-    color = mix(color, col, rangec(.0, .1, t));
+    color = mix(color, col, step(0., tt));
 }
 
 float sss = 1. + 10. * guiDebug;
@@ -585,8 +597,10 @@ Model map(vec3 p) {
 
     float offset = guiZipOffset / lead;
 
-    tt = unzip(p.x - offset, anim(t, 0.));
+    tt = unzip(p - vec3(offset,0,0), anim(t, 0.));
     addPipe(d, color, p, scaleB, tt);
+
+    color = vec3(1);
 
     // 2
 
@@ -595,7 +609,7 @@ Model map(vec3 p) {
 
     // p.x -= 50.;
 
-    tt = unzip(p.x + offset, anim(t, 1.));
+    tt = unzip(p + vec3(offset,0,0), anim(t, 1.));
     addPipe(d, color, p, scaleB, tt);
 
     // uv = mix(uv, uv2, step(.5, unzip(p.x, anim(t, 1.))));
@@ -621,7 +635,7 @@ Model map(vec3 p) {
 
     // color = vec3(mod(uv, 1.), 0.);
 
-    color = vec3(.95);
+    // color = vec3(.95);
     // color = colA;
 
     d *= sss;
@@ -850,15 +864,15 @@ void shadeSurface(inout Hit hit){
         vec3 ref = reflect(hit.ray.direction, hit.normal);
         vec3 albedo = hit.model.albedo;
         // hit.color = vec3(0);
-        // hit.color += albedo * (dot(vec3(0,1,0), hit.normal) * .5 + .5) * colA;
+        hit.color += albedo * (dot(vec3(0,1,0), hit.normal) * .5 + .5);
         // hit.color += albedo * (dot(vec3(1,0,0), hit.normal) * .5 + .5) * colB;
-        hit.color = doLighting(
-            albedo,
-            hit.pos,
-            hit.normal,
-            ref,
-            hit.ray.direction
-        );
+        // hit.color = doLighting(
+        //     albedo,
+        //     hit.pos,
+        //     hit.normal,
+        //     ref,
+        //     hit.ray.direction
+        // );
     }
     float fog = length(camPos - hit.pos);
     fog = smoothstep(camDist, camDist * 2.5, fog);
