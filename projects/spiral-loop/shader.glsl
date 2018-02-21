@@ -153,6 +153,9 @@ mat3 rotationMatrix(vec3 axis, float angle)
     );
 }
 
+float sineIn(float t) {
+  return sin((t - 1.0) * HALF_PI) + 1.0;
+}
 
 float range(float vmin, float vmax, float value) {
   return (value - vmin) / (vmax - vmin);
@@ -197,25 +200,6 @@ float fBox2(inout float side, vec2 p, vec2 b) {
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
 
-// Distance to line segment between <a> and <b>, used for fCapsule() version 2below
-float fLineSegment(vec3 p, vec3 a, vec3 b) {
-    vec3 ab = b - a;
-    float t = saturate(dot(p - a, ab) / dot(ab, ab));
-    return length((ab*t + a) - p);
-}
-
-// Capsule version 2: between two end points <a> and <b> with radius r 
-float fCapsule(vec3 p, vec3 a, vec3 b, float r) {
-    return fLineSegment(p, a, b) - r;
-}
-
-// Cylinder standing upright on the xz plane
-float fCylinder(vec3 p, float r, float height) {
-    float d = length(p.xz) - r;
-    d = max(d, abs(p.y) - height);
-    return d;
-}
-
 
 // Repeat space along one axis. Use like this to repeat along the x axis:
 // <float cell = pMod1(p.x,5);> - using the return value is optional.
@@ -226,19 +210,7 @@ float pMod1(inout float p, float size) {
     return c;
 }
 
-
-// Cylindrical coordinates
 vec3 cartToPolar(vec3 p) {
-    p = p.zxy;
-    float r = length(p.xy); // distance from center
-    float z = p.z; // distance from the plane it lies on
-    float a = atan(p.y, p.x); // angle around center
-    // r = pow(r, .7);
-    return vec3(a, z, r);
-}
-
-
-vec3 cartToPolar2(vec3 p) {
     float x = p.x; // distance from the plane it lies on
     float a = atan(p.y, p.z); // angle around center
     float r = length(p.zy); // distance from center
@@ -266,7 +238,7 @@ bool debug = false;
 
 vec3 closestSpiralB(vec3 p, float lead, float radius) {
 
-    p = cartToPolar2(p);
+    p = cartToPolar(p);
     p.y *= radius;
 
     vec2 line = vec2(lead, radius * PI * 2.);
@@ -368,81 +340,7 @@ struct Model {
     int id;
 };
 
-float level1(vec3 p) {
 
-    float lead = guiLead;
-    float innerRatio = guiInnerRatio;
-
-    float offset = innerRatio * .25 + .25;
-    p.z += offset;
-
-    pR(p.xy, PI * .5);
-    float scale = 1.;
-
-    scale *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
-    scale *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
-
-    float d = length(p.yz) - .5;
-
-    d /= scale;
-
-    return d;
-}
-
-float level2(vec3 p) {
-    float lead = guiLead;
-    float innerRatio = guiInnerRatio;
-
-    float offset = innerRatio * .25 + .25;
-
-    float s = mix(.5, 0., innerRatio);
-    offset *= 1. + s;
-
-    pR(p.xy, PI * .5);
-    float scale = 1.;
-
-    pR(p.xy, PI * .59);
-    scale = s;
-
-    p *= scale;
-
-    p.z += offset;
-
-    scale *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
-    scale *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
-    scale *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
-
-    float d = length(p.yz) - .5;
-
-    d /= scale;
-
-    return d;
-}
-
-Model opU(Model m1, Model m2) {
-    if (m1.dist < m2.dist) {
-        return m1;
-    } else {
-        return m2;
-    }
-}
-
-/*
-
-    t = 0 - 1
-
-0    1 spiral (2nd hidden)
-1    animate open 2nd sprial
-2    zoom into so it looks like 1 spiral
-3    blend into initial state     
-    1 spiral
-
-*/
 
 float anim(float t, float index) {
     float overlap = .5;
@@ -453,16 +351,6 @@ float anim(float t, float index) {
     float start = index * each - width * .5;
     float end = start + width;
     return range(start, end, t);
-}
-
-
-
-#ifndef HALF_PI
-#define HALF_PI 1.5707963267948966
-#endif
-
-float sineIn(float t) {
-  return sin((t - 1.0) * HALF_PI) + 1.0;
 }
 
 float unzip(vec3 p, float t, float invert) {
@@ -496,10 +384,6 @@ vec3 colB = vec3(0,1,.25); // green
 
 
 void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt) {
-
-    // if (p.y < 0.) {
-    //     tt += .076;
-    // }
 
     float t = clamp(0., 1., tt);
 
@@ -559,20 +443,11 @@ Model map(vec3 p) {
 
     float t = mod(time, 1.);
 
-    float t0 = smoothstep(0., 1./3., t);
-    float t1 = smoothstep(1./3., 2./3., t);
-    float t2 = smoothstep(2./3., 1., t);
-
-    t1 = t0 = t2 = t;
-
     float s = mix(.5, 0., innerRatio);
     // s *= s;
     // s = 1.;
 
-    float scaleA = 1.;
-    float scaleB = s;
-
-    scaleB = 1./pow(1./s, t1);
+    float scaleB = 1./pow(1./s, t);
 
     pR(p.yz, guiRotateModelX * PI * 2.);
     pR(p.xy, PI * -.5 * t + guiRotateModel * PI * 2.);
@@ -584,7 +459,7 @@ Model map(vec3 p) {
         p.x *= -1.;
     }
 
-    scaleB *= pModHelixUnwrap(p, lead, innerRatio, t0);
+    scaleB *= pModHelixUnwrap(p, lead, innerRatio, t);
     p.x *= -1.;
     scaleB *= pModHelixUnwrap(p, lead, innerRatio, 0.);
     p.x *= -1.;
@@ -597,17 +472,7 @@ Model map(vec3 p) {
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
-    vec3 color = vec3(
-        smoothstep(0., .1, sin(p.x * 20.)),
-        sin(p.x / 1.5),
-        sin(p.x / 3.)
-    );
-    color = colA;
-
-    color = vec3(1);
-
-    // d = length(p.yz) - .5;
-    // d /= scaleB;
+    vec3 color = vec3(1);
 
     addPipe(d, color, p, scaleB, 1.);
 
@@ -616,18 +481,10 @@ Model map(vec3 p) {
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
 
-    float scb = scaleB;
-
     float offset = guiZipOffset / lead;
-
-    vec3 cc = vec3(0);
-
-    // cc += vec3(0,1,0) * mod(p.x / factor, 1.);
 
     tt = unzip(p - vec3(offset,0,0), anim(t, 0.), -1.);
     addPipe(d, color, p, scaleB, tt);
-
-    
 
     // 2
 
@@ -635,73 +492,16 @@ Model map(vec3 p) {
     p.x *= -1.;
     p.y *= -1.;
 
-    // p.x -= 50.;
-
-    // cc += vec3(0,0,1) * mod(p.x / factor, 1.);
-
     tt = unzip(p + vec3(offset,0,0), anim(t, 1.), 1.);
     addPipe(d, color, p, scaleB, tt);
 
-    // color = cc;
-    
-
-    // uv = mix(uv, uv2, step(.5, unzip(p.x, anim(t, 1.))));
-    // // // 3
-
-    // scaleB *= pModHelix(p, lead, innerRatio);
-    // p.x *= -1.;
-
-    // part = length(p.yz) - .5;
-    // part /= scaleB;
-    // d = mix(d, part, unzip(p.x, anim(t, 2.)));
-
-    // // 4
-
-    // scaleB *= pModHelix(p, lead, innerRatio);
-    // p.x *= -1.;
-
-    // part = length(p.yz) - .5;
-    // part /= scaleB;
-    // d = mix(d, part, unzip(p.x, anim(t, 3.)));
-
-    // color = vec3(1.);
-
-    // color = vec3(mod(uv, 1.), 0.);
-
     color = vec3(.8);
-    // color = colA;
 
     d *= sss;
 
     return Model(d, color, 1);
 }
 
-Model mapo( vec3 p ){
-
-    float lead = guiLead;
-    float innerRatio = guiInnerRatio;
-
-    float offset = innerRatio * .25 + .25;
-    p.z += offset;
-
-    pR(p.xy, PI * .5);
-    float scale = 1.;
-
-    scale *= pModHelixUnwrap(p, lead, innerRatio, mod(time, 1.));
-    p.x *= -1.;
-
-    float d = length(p.yz) - .5;
-
-    d /= scale;
-
-    vec3 color = vec3(
-        smoothstep(0., .1, sin(p.x * 20.)),
-        sin(p.x / 1.5),
-        sin(p.x / 3.)
-    );
-
-    return Model(d, color, 1);
-}
 
 Model mapDebug(vec3 p) {
 
