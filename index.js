@@ -9,7 +9,6 @@ var pad = require('pad-number');
 var fs = require('fs');
 var GUI = require('./lib/gui');
 var WebCaptureClient = require('web-frames-capture');
-
 var pixelRatio = window.devicePixelRatio;
 pixelRatio = .5;
 
@@ -137,7 +136,7 @@ function restoreState() {
         window.timer = timer; 
     }
     mouse = state.mouse || mouse;
-    gui.loadState(state.gui);
+    // gui.loadState(state.gui);
 }
 
 function render(offset, resolution) {
@@ -348,7 +347,7 @@ var captureRender = function(milliseconds) {
 
 // Default config used by the UI
 var captureConfig = {
-  fps: 30,
+  fps: 35,
   seconds: 1, // (duration)
   width: 640 * 2,
   height: 360 * 2,
