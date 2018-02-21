@@ -475,11 +475,16 @@ float unzip(vec3 p, float t) {
     // t = pow(t, 1.5);
     // t = mix(sineIn(t), t, t);
 
+    t *= size * speed;
+
     if (p.y < 0.) {
-        t -= (7.6 * sign(p.x)) / size / speed;
+        float radius = mix(.25, .5, guiInnerRatio);
+        float scale = mix(.5, 0., guiInnerRatio);
+        float factor = radius / scale * PI * 2.;
+        t -= sign(p.x) * (factor - .5);
     }
 
-    return range(size, 0., abs(p.x) + size - t * size * speed);
+    return range(size, 0., abs(p.x) + size - t);
 }
 
 
@@ -608,6 +613,10 @@ Model map(vec3 p) {
 
     float offset = guiZipOffset / lead;
 
+    vec3 cc = vec3(0);
+
+    // cc += vec3(0,1,0) * mod(p.x / factor, 1.);
+
     tt = unzip(p - vec3(offset,0,0), anim(t, 0.));
     addPipe(d, color, p, scaleB, tt);
 
@@ -620,8 +629,13 @@ Model map(vec3 p) {
 
     // p.x -= 50.;
 
+    // cc += vec3(0,0,1) * mod(p.x / factor, 1.);
+
     tt = unzip(p + vec3(offset,0,0), anim(t, 1.));
     addPipe(d, color, p, scaleB, tt);
+
+    // color = cc;
+    
 
     // uv = mix(uv, uv2, step(.5, unzip(p.x, anim(t, 1.))));
     // // // 3
