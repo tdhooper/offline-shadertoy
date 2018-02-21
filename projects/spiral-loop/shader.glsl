@@ -472,8 +472,11 @@ float unzip(vec3 p, float t, float invert) {
     float speed = .01;
     size = guiZipSize;
     speed = guiZipSpeed;
-    t = pow(t, 1.25);
-    // t = mix(sineIn(t), t, t);
+
+    // speed *= 1. + max(0., sign(-p.x * invert)) * .5;
+
+    // t = pow(t, 1.25);
+    // t = mix(sineIn(t), t, .5);
 
     t *= size * speed;
 
@@ -1011,7 +1014,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p.x -= guiOffsetX;
     p.y -= guiOffsetY;
 
-    time = iGlobalTime * .55;
+    time = iGlobalTime;
+    time *= .55;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
