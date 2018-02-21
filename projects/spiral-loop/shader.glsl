@@ -465,23 +465,23 @@ float sineIn(float t) {
   return sin((t - 1.0) * HALF_PI) + 1.0;
 }
 
-float unzip(vec3 p, float t,float invert) {
+float unzip(vec3 p, float t, float invert) {
     // return t;
     // t = smoothstep(0., 1., t);
     float size = 2.2;
     float speed = .01;
     size = guiZipSize;
     speed = guiZipSpeed;
-    // t = pow(t, 1.5);
+    // t = pow(t, 1.25);
     // t = mix(sineIn(t), t, t);
 
     t *= size * speed;
 
-    if (p.y < 0.) {
+    if (sign(p.y) == sign(p.x) * invert) {
         float radius = mix(.25, .5, guiInnerRatio);
         float scale = mix(.5, 0., guiInnerRatio);
         float factor = radius / scale * PI * 2.;
-        t += sign(p.x) * (factor - .5) * invert;
+        t -= (factor - .5);
     }
 
     return range(size, 0., abs(p.x) + size - t);
@@ -502,11 +502,11 @@ void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt) {
 
     // t = pow(t, 2.);
     // t = smoothstep(0., 1., tt);
-    float boundry = .7;
+    float boundry = 1.;
     float part;
     float separate = (
-        rangec(0., boundry * .01, t) * .5 +
-        rangec(boundry * .01, boundry, t) * .5
+        rangec(0., boundry * .01, t) * .3 +
+        rangec(boundry * .01, boundry, t) * .7
     );
     // separate = pow(separate, .5);
     float round = rangec(.0, 1., t);
@@ -1010,7 +1010,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     p.x -= guiOffsetX;
     p.y -= guiOffsetY;
 
-    time = iGlobalTime * .5;
+    time = iGlobalTime * .55;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
