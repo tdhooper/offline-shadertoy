@@ -472,7 +472,7 @@ float unzip(vec3 p, float t, float invert) {
     float speed = .01;
     size = guiZipSize;
     speed = guiZipSpeed;
-    // t = pow(t, 1.25);
+    t = pow(t, 1.25);
     // t = mix(sineIn(t), t, t);
 
     t *= size * speed;
@@ -500,8 +500,9 @@ void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt) {
 
     float t = clamp(0., 1., tt);
 
+    // t = sineIn(t);
     // t = pow(t, 2.);
-    // t = smoothstep(0., 1., tt);
+    // t = pow(smoothstep(0., 1., t), 2.);
     float boundry = 1.;
     float part;
     float separate = (
