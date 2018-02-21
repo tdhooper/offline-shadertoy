@@ -465,7 +465,7 @@ float sineIn(float t) {
   return sin((t - 1.0) * HALF_PI) + 1.0;
 }
 
-float unzip(vec3 p, float t) {
+float unzip(vec3 p, float t,float invert) {
     // return t;
     // t = smoothstep(0., 1., t);
     float size = 2.2;
@@ -481,7 +481,7 @@ float unzip(vec3 p, float t) {
         float radius = mix(.25, .5, guiInnerRatio);
         float scale = mix(.5, 0., guiInnerRatio);
         float factor = radius / scale * PI * 2.;
-        t -= sign(p.x) * (factor - .5);
+        t += sign(p.x) * (factor - .5) * invert;
     }
 
     return range(size, 0., abs(p.x) + size - t);
@@ -537,7 +537,8 @@ void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt) {
     // vec3 col2 = mix(colA, colB, b);
     // col = mix(col, col2, round);
 
-    color = mix(color, col, step(0., tt));
+    col = mix(color, col, step(0., tt));
+    color = mix(color, col, rangec(1., 0., tt));
 }
 
 float sss = 1. + 10. * guiDebug;
@@ -599,6 +600,8 @@ Model map(vec3 p) {
     );
     color = colA;
 
+    color = vec3(1);
+
     // d = length(p.yz) - .5;
     // d /= scaleB;
 
@@ -617,21 +620,22 @@ Model map(vec3 p) {
 
     // cc += vec3(0,1,0) * mod(p.x / factor, 1.);
 
-    tt = unzip(p - vec3(offset,0,0), anim(t, 0.));
+    tt = unzip(p - vec3(offset,0,0), anim(t, 0.), -1.);
     addPipe(d, color, p, scaleB, tt);
 
-    color = vec3(1);
+    
 
     // 2
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
+    p.y *= -1.;
 
     // p.x -= 50.;
 
     // cc += vec3(0,0,1) * mod(p.x / factor, 1.);
 
-    tt = unzip(p + vec3(offset,0,0), anim(t, 1.));
+    tt = unzip(p + vec3(offset,0,0), anim(t, 1.), 1.);
     addPipe(d, color, p, scaleB, tt);
 
     // color = cc;
