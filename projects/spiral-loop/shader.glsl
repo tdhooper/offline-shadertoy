@@ -426,12 +426,12 @@ float pattern(vec2 p, float t) {
     // return mix(colA, colB, step(.5, t));
     p = abs(p);
     // t = 0.;
-    t = rangec(-.5, .0, t);
-    t = circularIn(t);
-    float width = mix(.365, 1., t);
+    t = rangec(-.5, .5, t);
+    // t = circularIn(t);
+    float width = mix(.365, 1., 0.);
     float d = dot(p, vec2(0,1)) - width;
     float fill = smoothstep(.0, .01, d);
-    return fill;
+    return fill * (1.-t);
 }
 
 void addPipe(inout float d, vec3 p, float scale, float tt) {
@@ -719,7 +719,7 @@ void shadeSurface(inout Hit hit){
     vec3 background = vec3(.1)* vec3(.5,0,1);
     background = vec3(.2,.8,1.) * .9;
     background = vec3(.9);
-    background = vec3(.1);
+    // background = vec3(.1);
     if (hit.isBackground) {
         hit.color = background;
         return;
