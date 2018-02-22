@@ -353,7 +353,7 @@ float anim(float t, float index) {
     return range(start, end, t);
 }
 
-float unzip(vec3 p, float t, float invert) {
+float unzip(vec3 p, float t) {
     // return t;
     // t = smoothstep(0., 1., t);
     float size = 2.2;
@@ -361,14 +361,12 @@ float unzip(vec3 p, float t, float invert) {
     size = guiZipSize;
     speed = guiZipSpeed;
 
-    // speed *= 1. + max(0., sign(-p.x * invert)) * .5;
-
     // t = pow(t, 1.25);
     // t = mix(sineIn(t), t, .5);
 
     t *= size * speed;
 
-    if (sign(p.y) == sign(p.x) * invert) {
+    if (sign(p.y) != sign(p.x)) {
         float radius = mix(.25, .5, guiInnerRatio);
         float scale = mix(.5, 0., guiInnerRatio);
         float factor = radius / scale * PI * 2.;
@@ -483,16 +481,15 @@ Model map(vec3 p) {
 
     float offset = guiZipOffset / lead;
 
-    tt = unzip(p - vec3(offset,0,0), anim(t, 0.), -1.);
+    tt = unzip(p - vec3(offset,0,0), anim(t, 0.));
     addPipe(d, color, p, scaleB, tt);
 
     // 2
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
-    p.y *= -1.;
 
-    tt = unzip(p + vec3(offset,0,0), anim(t, 1.), 1.);
+    tt = unzip(p + vec3(offset,0,0), anim(t, 1.));
     addPipe(d, color, p, scaleB, tt);
 
     color = vec3(.8);
