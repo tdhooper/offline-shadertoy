@@ -157,6 +157,14 @@ float sineIn(float t) {
   return sin((t - 1.0) * HALF_PI) + 1.0;
 }
 
+float circularOut(float t) {
+  return sqrt((2.0 - t) * t);
+}
+
+float circularIn(float t) {
+  return 1.0 - sqrt(1.0 - t * t);
+}
+
 float range(float vmin, float vmax, float value) {
   return (value - vmin) / (vmax - vmin);
 }
@@ -360,7 +368,7 @@ float anim(float t, float index) {
     return range(start, end, t);
 }
 
-float unzip(vec3 p, float t, inout float t2) {
+float unzip(vec3 p, float t, bool offset) {
     // return t;
     // t = smoothstep(0., 1., t);
     float size = 2.2;
@@ -372,16 +380,13 @@ float unzip(vec3 p, float t, inout float t2) {
     // t = mix(sineIn(t), t, .5);
 
     t *= size * speed;
-    t2 = t;
 
-    if (sign(p.y) != sign(p.x)) {
+    if (sign(p.y) != sign(p.x) && offset) {
         float radius = mix(.25, .5, guiInnerRatio);
         float scale = mix(.5, 0., guiInnerRatio);
         float factor = radius / scale * PI * 2.;
         t -= (factor - .5);
     }
-
-    t2 = range(size, 0., abs(p.x) + size - t2);
 
     return range(size, 0., abs(p.x) + size - t);
 }
@@ -408,7 +413,7 @@ float hexagon(vec2 p) {
     return e;
 }
 
-vec3 pattern(vec2 p) {
+vec3 patternB(vec2 p) {
     p *= 5.9 * 1.5;
     // pMod2(p, vec2(1.));
     // float d = length(p) - .33;
@@ -417,7 +422,19 @@ vec3 pattern(vec2 p) {
     return vec3(fill);
 }
 
-void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt, float t2) {
+float pattern(vec2 p, float t) {
+    // return mix(colA, colB, step(.5, t));
+    p = abs(p);
+    // t = 0.;
+    t = rangec(-.5, .0, t);
+    t = circularIn(t);
+    float width = mix(.365, 1., t);
+    float d = dot(p, vec2(0,1)) - width;
+    float fill = smoothstep(.0, .01, d);
+    return fill;
+}
+
+void addPipe(inout float d, vec3 p, float scale, float tt) {
 
     float t = clamp(0., 1., tt);
 
@@ -441,40 +458,24 @@ void addPipe(inout float d, inout vec3 color, vec3 p, float scale, float tt, flo
     part /= scale;
 
     d = mix(d, part, smoothstep(.0, .01, t));
+}
 
+void addColor(inout vec3 color, vec3 p, float tt, float tnext) {
     vec2 uv = vec2(p.x * .8, atan(p.y, p.z) / PI);
-
     vec3 col = vec3(mod(uv, 1.), 0.);
-    col = pattern(uv);
+    float fill = pattern(uv, tnext);
 
-    // vec3 col = mix(colB, colA, step(3., side));
-    // col = mix(col, colA, round);
-
-    // float r = mix(.2, 1., rangec(.8, 1., t));
-    // float a = abs(atan(p.y, p.z) / (PI));
-    // float b = smoothstep(r, r+.01, a);
-
-    // col = mix(colA, col, b);
-
-    // col = spectrum(.5 - t * .5 + .25);
-    // col = p.y > 0. ? colA : colB;
-
-    // float a = abs(atan(p.y, p.z) / (PI));
-    // float b = smoothstep(0., .5, a) - smoothstep(.5, 1., a);
-    // vec3 col2 = mix(colA, colB, b);
-    // col = mix(col, col2, round);
-
-    color = mix(color, col, rangec(.5, 1.5, t2));
-    // color = mix(color, col, rangec(4., 1., t2));
+    col = mix(color, colB, fill);
+    color = mix(color, col, step(.0, tt));
 }
 
 float sss = 1. + 10. * guiDebug;
 
 Model map(vec3 p) {
-    float part, d, tt, t2;
+    float part, d, t1, t2, t3, t4;
     float lead = guiLead;
     float innerRatio = guiInnerRatio;
-    vec2 uv, uv2;
+    vec2 uv1, uv2, uv3;
 
     p /= sss;
 
@@ -509,36 +510,33 @@ Model map(vec3 p) {
     // return Model(d, vec3(.8), 1);
 
     float offset = guiZipOffset / lead;
-    vec3 color = vec3(1);
+    vec3 color = colA;
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
-
-
-    tt = unzip(p - vec3(offset,0,0), anim(t, -1.), t2);
-    addPipe(d, color, p * vec3(-1,-1,1), scaleB, tt, t2);
-
-    // color = vec3(1);
-
-    // 1
+    t1 = unzip(p - vec3(offset,0,0), anim(t, -1.), true);
+    t2 = unzip((p * 13.7 + vec3(offset,0,0)), anim(t, 0.), false);
+    addPipe(d, p, scaleB, t1);
+    addColor(color, p, t1, t2);
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
-
-    tt = unzip(p - vec3(offset,0,0), anim(t, 0.), t2);
-    addPipe(d, color, p, scaleB, tt, t2);
-
-    // 2
+    t1 = unzip(p - vec3(offset,0,0), anim(t, 0.), true);
+    t2 = unzip((p * 13.7 - vec3(offset,0,0)), anim(t, 1.), false);
+    addPipe(d, p, scaleB, t1);
+    addColor(color, p, t1, t2);
 
     scaleB *= pModHelix(p, lead, innerRatio);
     p.x *= -1.;
+    t1 = unzip(p + vec3(offset,0,0), anim(t, 1.), true);
+    t2 = unzip((p * 13.7 + vec3(offset,0,0)), anim(t, 2.), false);
+    addPipe(d, p, scaleB, t1);
+    addColor(color, p, t1, t2);
+    
 
-    tt = unzip(p + vec3(offset,0,0), anim(t, 1.), t2);
-    addPipe(d, color, p * vec3(-1,-1,1), scaleB, tt, t2);
+    // d -= color.r * .0005;
 
-    d -= color.r * .0005;
-
-    color = vec3(.8);
+    // color = vec3(.8);
 
     d *= sss;
 
@@ -721,6 +719,7 @@ void shadeSurface(inout Hit hit){
     vec3 background = vec3(.1)* vec3(.5,0,1);
     background = vec3(.2,.8,1.) * .9;
     background = vec3(.9);
+    background = vec3(.1);
     if (hit.isBackground) {
         hit.color = background;
         return;
