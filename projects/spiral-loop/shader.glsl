@@ -472,6 +472,14 @@ void addColor(inout vec3 color, vec3 p, float tt, float tnext) {
 float sss = 1. + 10. * guiDebug;
 
 Model map(vec3 p) {
+
+    // p += vec3(-.1,0,.2);
+    // return Model(
+    //     mix(length(p) - .15, fBox(p, vec3(.15)), .2),
+    //     vec3(0,1,0),
+    //     1
+    // );
+
     float part, d, t1, t2, t3, t4;
     float lead = guiLead;
     float innerRatio = guiInnerRatio;
@@ -687,7 +695,7 @@ float calcAO( in vec3 pos, in vec3 nor )
 
 
 
-vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
+vec3 doLighting2(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
 
     // lighitng        
     float occ = calcAO( pos, nor );
@@ -714,14 +722,45 @@ vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
     return col;
 }
 
-void shadeSurface(inout Hit hit){
+
+vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
+
+    // lighitng        
+    vec3  lig = normalize( vec3(-2., .3, -1.) );
+    // lig *= sphericalMatrix(guiNormalX * PI * 2., guiNormalY * PI * 2.);
+    float amb = clamp( 0.5+0.5*nor.y, 0.0, 1.0 );
+    float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
+    float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
+    vec3  hal = normalize( lig-rd );
+    float spe = pow(clamp( dot( nor, hal ), 0.0, 1.0 ),16.0);
+                    
+    vec3 cA = vec3(.66,.25,1);
+    vec3 cB = vec3(.25,1,.75);
+    vec3 cC = vec3(1,0,1);
+
+    col = mix(cA, cB, rangec(.0, 1., dot(-rd, nor))); // need better ramp
+    col += cC * rangec(.5, 1., dif) * .5;
+
+    vec3 lin = vec3(0);
+    lin += .5 * dif;
+    lin += .2 * spe * dif;
+    lin += .7 * fre;
+    lin += amb;
+    col = col*lin;
+
+    return col;
+}
+
+void render(inout vec3 color, Hit hit){
 
     vec3 background = vec3(.1)* vec3(.5,0,1);
-    background = vec3(.2,.8,1.) * .9;
-    background = vec3(.9);
+    // background = vec3(.2,.8,1.) * .9;
+    // background = vec3(1);
     // background = vec3(.1);
+    background = color;
+
     if (hit.isBackground) {
-        hit.color = background;
+        color = background;
         return;
     }
 
@@ -732,35 +771,27 @@ void shadeSurface(inout Hit hit){
     }
 
     // pR(hit.normal.xz, 2.75);
-    hit.normal *= sphericalMatrix(guiNormalX * PI * 2., guiNormalY * PI * 2.);
-    if (guiNormals) {
+    //hit.normal *= sphericalMatrix(guiNormalX * PI * 2., guiNormalY * PI * 2.);
+    if (false) {
         hit.color = hit.normal * -.5 + .5;
     } else {
         vec3 ref = reflect(hit.ray.direction, hit.normal);
         vec3 albedo = hit.model.albedo;
         // hit.color = vec3(0);
-        hit.color += albedo * (dot(vec3(0,1,0), hit.normal) * .5 + .5);
+        // hit.color += albedo * (dot(vec3(0,1,0), hit.normal) * .5 + .5);
         // hit.color += albedo * (dot(vec3(1,0,0), hit.normal) * .5 + .5) * colB;
-        // hit.color = doLighting(
-        //     albedo,
-        //     hit.pos,
-        //     hit.normal,
-        //     ref,
-        //     hit.ray.direction
-        // );
+        color = doLighting(
+            albedo,
+            hit.pos,
+            hit.normal,
+            ref,
+            hit.ray.direction
+        );
     }
     float fog = length(camPos - hit.pos);
     fog = smoothstep(camDist, camDist * 2.5, fog);
     // fog = 0.;
-    hit.color = mix(hit.color, background, fog);
-}
-
-
-vec3 render(Hit hit){
-
-    shadeSurface(hit);
-
-    return hit.color;
+    color = mix(color, background, fog);
 }
 
 
@@ -853,11 +884,17 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
 
+
+    vec3 bgA = vec3(.75,.9,1.);
+    vec3 bgB = vec3(.75,1.,1.);
+
+    vec3 color = mix(bgA, bgB, dot(normalize(-p), normalize(vec2(-.2,.6))));
+
     p.x -= guiOffsetX;
     p.y -= guiOffsetY;
 
     time = iGlobalTime;
-    time *= .55;
+    // time *= .55;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
@@ -879,7 +916,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 rd = normalize(camMat * vec3(p, focalLength));
     Hit hit = raymarch(CastRay(camPos, rd));
 
-    vec3 color = render(hit);
+    render(color, hit);
     color = linearToScreen(color);
     fragColor = vec4(color,1.0);
 }
