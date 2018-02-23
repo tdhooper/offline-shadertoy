@@ -208,6 +208,11 @@ float fBox2(inout float side, vec2 p, vec2 b) {
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
 
+// Torus in the XZ-plane
+float fTorus(vec3 p, float smallRadius, float largeRadius) {
+    return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
+}
+
 
 // Repeat space along one axis. Use like this to repeat along the x axis:
 // <float cell = pMod1(p.x,5);> - using the return value is optional.
@@ -472,18 +477,18 @@ void addColor(inout vec3 color, vec3 p, float tt, float tnext) {
 float sss = 1. + 10. * guiDebug;
 
 Model map(vec3 p) {
-
-    // p += vec3(-.1,0,.2);
-    // return Model(
-    //     mix(length(p) - .15, fBox(p, vec3(.15)), .2),
-    //     vec3(0,1,0),
-    //     1
-    // );
-
     float part, d, t1, t2, t3, t4;
     float lead = guiLead;
     float innerRatio = guiInnerRatio;
     vec2 uv1, uv2, uv3;
+
+    p += vec3(-.2,0,.3);
+    p *= sphericalMatrix(2.9 * PI * 2., 1.77 * 2.);
+    p.x -= .2;
+    pMod1(p.x, .3);
+    pR(p.xz, -.3);
+    d = fTorus(p.zxy, .065, .19);
+    return Model(d, vec3(0,1,0), 1);
 
     p /= sss;
 
