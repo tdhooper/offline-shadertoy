@@ -477,6 +477,8 @@ void addColor(inout vec3 color, vec3 p, float tt, float tnext) {
 
 float sss = 1. + 10. * guiDebug;
 
+const int HELIX_ITERATIONS = 3;
+
 Model map(vec3 p) {
     float part, d, t1, t2, t3, t4;
     float lead = guiLead;
@@ -535,27 +537,20 @@ Model map(vec3 p) {
     float offset = guiZipOffset / lead;
     vec3 color = colA;
 
-    scaleB *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
-    t1 = unzip(p - vec3(offset,0,0), anim(t, -1.), true);
-    t2 = unzip((p * 13.7 + vec3(offset,0,0)), anim(t, 0.), false);
-    addPipe(d, p, scaleB, t1);
-    addColor(color, p, t1, t2);
+    float step = -1.;
+    float reverse = 1.;
+    float invert = 1.;
 
-    scaleB *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
-    t1 = unzip(p - vec3(offset,0,0), anim(t, 0.), true);
-    t2 = unzip((p * 13.7 - vec3(offset,0,0)), anim(t, 1.), false);
-    addPipe(d, p, scaleB, t1);
-    addColor(color, p, t1, t2);
-
-    scaleB *= pModHelix(p, lead, innerRatio);
-    p.x *= -1.;
-    t1 = unzip(p + vec3(offset,0,0), anim(t, 1.), true);
-    t2 = unzip((p * 13.7 + vec3(offset,0,0)), anim(t, 2.), false);
-    addPipe(d, p, scaleB, t1);
-    addColor(color, p, t1, t2);
-    
+    for (int i = 0; i <= HELIX_ITERATIONS; i++) {
+        scaleB *= pModHelix(p, lead, innerRatio);
+        p.x *= -1.;
+        t1 = unzip(p + vec3(offset,0,0) * invert, anim(t, step), true);
+        // t2 = unzip((p * 13.7 + vec3(offset,0,0)), anim(t, 0.), false);
+        addPipe(d, p, scaleB, t1);
+        addColor(color, p, t1, t1);
+        step += 1.;
+        invert *= -1.;
+    }
 
     // d -= color.r * .0005;
 
