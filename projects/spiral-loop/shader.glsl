@@ -485,21 +485,21 @@ Model map(vec3 p) {
 
     p /= sss;
 
-    d = length(p.yz) - .001;
-    d = min(d, length(p.zx) - .002);
-    d = min(d, length(p.xy) - .003);
+    // d = length(p.yz) - .001;
+    // d = min(d, length(p.zx) - .002);
+    // d = min(d, length(p.xy) - .003);
 
-    d = min(d, length(p - vec3(.01)) - .003);
+    // d = min(d, length(p - vec3(.01)) - .003);
 
-    p += vec3(-.02,0,.03);
-    p *= sphericalMatrix(2.9 * PI * 2., 1.77 * 2.);
-    p.x -= .02;
-    pMod1(p.x, .03);
-    pR(p.xz, -.03);
-    d = min(d, fTorus(p.zxy, .005, .015));
+    // p += vec3(-.02,0,.03);
+    // p *= sphericalMatrix(2.9 * PI * 2., 1.77 * 2.);
+    // p.x -= .02;
+    // pMod1(p.x, .03);
+    // pR(p.xz, -.03);
+    // d = min(d, fTorus(p.zxy, .005, .015));
 
-    d *= sss;
-    return Model(d, vec3(0,1,0), 1);
+    // d *= sss;
+    // return Model(d, vec3(0,1,0), 1);
 
 
     vec3 pp = p;
@@ -606,9 +606,9 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 1.; // max trace distance
-const float INTERSECTION_PRECISION = .0001; // precision of the intersection
-const int NUM_OF_TRACE_STEPS = 1000;
+const float MAX_TRACE_DISTANCE = 2.; // max trace distance
+const float INTERSECTION_PRECISION = .001; // precision of the intersection
+const int NUM_OF_TRACE_STEPS = 100;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
@@ -781,7 +781,7 @@ vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
     vec3 up = normalize(vec3(1));
 
     // lighitng        
-    vec3  lig = normalize(vec3(-1,1,0));
+    vec3  lig = normalize(vec3(0,.2,1));
     // lig *= sphericalMatrix(guiNormalX * PI * 2., guiNormalY * PI * 2.);
     float amb = clamp(dot(nor, up) * .5 + .5, 0., 1.);
     float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
@@ -789,12 +789,13 @@ vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
     vec3  hal = normalize( lig-rd );
     float spe = pow(clamp( dot( nor, hal ), 0.0, 1.0 ),16.0);
                     
-    vec3 cA = vec3(.75,.35,1);
+    vec3 cA = vec3(.7,.3,.9);
     vec3 cB = vec3(.4,.9,.8);
     vec3 cC = vec3(.7,0,.7);
 
     col = mix(cA, cB, rangec(.0, 1., dot(-rd, nor))); // need better ramp
-    col += cC * rangec(.5, 1., dif) * .5;
+    col = mix(col, vec3(.8,.5,1), rangec(.5, 1., dif) * .5);
+    col += cC * rangec(.5, 1., dif) * .1;
 
     dif *= softshadow( pos, lig, 0.02, 2.5 );
 
@@ -802,8 +803,8 @@ vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
     lin += .4 * dif;
     lin += .1 * spe * dif;
     lin += .2 * fre;
-    lin += .7 * amb;
-    lin += .25;
+    lin += .3 * amb;
+    lin += .7;
     col = col*lin;
 
     // col = normalize(pos);
@@ -945,8 +946,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 m = mousee.xy / iResolution.xy;
 
 
-    vec3 bgA = vec3(.6,.7,.9)* .5;
-    vec3 bgB = vec3(.7,.9,1.) * .5;
+    vec3 bgA = vec3(.6,.7,.9) * .9;
+    vec3 bgB = vec3(.7,.9,1.) * .9;
 
     vec3 color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))));
 
@@ -977,10 +978,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     focalLength = 3.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
     
-    float x = xray(CastRay(camPos, rd));
-    fragColor = vec4(vec3(x),1);
+    // float x = xray(CastRay(camPos, rd));
+    // fragColor = vec4(vec3(x),1);
+    // return;
 
-    return;
     Hit hit = raymarch(CastRay(camPos, rd));
 
     render(color, hit);
