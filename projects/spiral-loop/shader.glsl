@@ -482,15 +482,24 @@ Model map(vec3 p) {
     float innerRatio = guiInnerRatio;
     vec2 uv1, uv2, uv3;
 
-    p += vec3(-.2,0,.3);
+    p /= sss;
+
+    d = length(p.yz) - .001;
+    d = min(d, length(p.zx) - .002);
+    d = min(d, length(p.xy) - .003);
+
+    d = min(d, length(p - vec3(.01)) - .003);
+
+    p += vec3(-.02,0,.03);
     p *= sphericalMatrix(2.9 * PI * 2., 1.77 * 2.);
-    p.x -= .2;
-    pMod1(p.x, .3);
-    pR(p.xz, -.3);
-    d = fTorus(p.zxy, .065, .19);
+    p.x -= .02;
+    pMod1(p.x, .03);
+    pR(p.xz, -.03);
+    d = min(d, fTorus(p.zxy, .005, .015));
+
+    d *= sss;
     return Model(d, vec3(0,1,0), 1);
 
-    p /= sss;
 
     vec3 pp = p;
 
