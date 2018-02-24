@@ -400,6 +400,7 @@ float unzip(vec3 p, float t, bool offset) {
 vec3 colA = vec3(.5,0,.75); // purple
 vec3 colB = vec3(0,1,.25); // green
 
+
 float hexagon(vec2 p) {
     vec2 q = vec2( p.x*2.0*0.5773503, p.y + p.x*0.5773503 );
     
@@ -739,29 +740,36 @@ vec3 doLighting2(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
 
 vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
 
+    vec3 up = normalize(vec3(1));
+
     // lighitng        
-    vec3  lig = normalize( vec3(-2., .3, -1.) );
+    vec3  lig = normalize(vec3(-1,1,0));
     // lig *= sphericalMatrix(guiNormalX * PI * 2., guiNormalY * PI * 2.);
-    float amb = clamp( 0.5+0.5*nor.y, 0.0, 1.0 );
+    float amb = clamp(dot(nor, up) * .5 + .5, 0., 1.);
     float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
     float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
     vec3  hal = normalize( lig-rd );
     float spe = pow(clamp( dot( nor, hal ), 0.0, 1.0 ),16.0);
                     
-    vec3 cA = vec3(.66,.25,1);
-    vec3 cB = vec3(.25,1,.75);
-    vec3 cC = vec3(1,0,1);
+    vec3 cA = vec3(.75,.35,1);
+    vec3 cB = vec3(.4,.9,.8);
+    vec3 cC = vec3(.7,0,.7);
 
     col = mix(cA, cB, rangec(.0, 1., dot(-rd, nor))); // need better ramp
     col += cC * rangec(.5, 1., dif) * .5;
 
+    dif *= softshadow( pos, lig, 0.02, 2.5 );
+
     vec3 lin = vec3(0);
-    lin += .5 * dif;
-    lin += .2 * spe * dif;
-    lin += .7 * fre;
-    lin += amb;
+    lin += .4 * dif;
+    lin += .1 * spe * dif;
+    lin += .2 * fre;
+    lin += .7 * amb;
+    lin += .25;
     col = col*lin;
 
+    // col = normalize(pos);
+    // col = vec3(amb);
     return col;
 }
 
@@ -899,16 +907,18 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 m = mousee.xy / iResolution.xy;
 
 
-    vec3 bgA = vec3(.75,.9,1.);
-    vec3 bgB = vec3(.75,1.,1.);
+    vec3 bgA = vec3(.6,.7,.9)* .5;
+    vec3 bgB = vec3(.7,.9,1.) * .5;
 
-    vec3 color = mix(bgA, bgB, dot(normalize(-p), normalize(vec2(-.2,.6))));
+    vec3 color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))));
+
+    // color = bgA;
 
     p.x -= guiOffsetX;
     p.y -= guiOffsetY;
 
     time = iGlobalTime;
-    // time *= .55;
+    time *= .55;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
@@ -931,6 +941,14 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     Hit hit = raymarch(CastRay(camPos, rd));
 
     render(color, hit);
+
+    vec2 uv = fragCoord/iResolution.xy;
+    float vig = pow(
+        16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
+        0.05
+    );
+    color *= vec3(.9, .95, 1.) * vig * 1.1;
+
     color = linearToScreen(color);
     fragColor = vec4(color,1.0);
 }
