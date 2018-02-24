@@ -606,9 +606,9 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 30.; // max trace distance
+const float MAX_TRACE_DISTANCE = 1.; // max trace distance
 const float INTERSECTION_PRECISION = .0001; // precision of the intersection
-const int NUM_OF_TRACE_STEPS = 100;
+const int NUM_OF_TRACE_STEPS = 1000;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
@@ -668,6 +668,44 @@ Hit raymarch(CastRay castRay){
     }
 
     return Hit(ray, model, pos, isBackground, normal, vec3(0));
+}
+
+float xray(CastRay castRay){
+
+    float currentDist = INTERSECTION_PRECISION * 2.0;
+    Model model;
+
+    Ray ray = Ray(castRay.origin, castRay.direction, 0.);
+
+    float col = 0.;
+    float a;
+    float stepSize = float(MAX_TRACE_DISTANCE) / float(NUM_OF_TRACE_STEPS);
+    vec3 pos;
+    float fog;
+
+    for( int i=0; i< NUM_OF_TRACE_STEPS ; i++ ){
+        
+        pos = ray.origin + ray.direction * ray.len;
+        model = mapDebug(pos);
+        currentDist = model.dist;
+        ray.len += stepSize;
+
+        a = rangec(.005, 0., abs(currentDist));
+        a = pow(a, 5.);
+        a = (a * 50.) * stepSize;
+        
+        fog = length(camPos - pos);
+        fog = smoothstep(camDist, camDist * 2.5, fog);
+
+        col += a * (1. - fog);
+    }
+
+    
+    // fog = 0.;
+    // color = mix(color, background, fog);
+
+
+    return col;
 }
 
 
@@ -938,6 +976,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float focalLength = pow(2., guiFocal);
     focalLength = 3.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
+    
+    float x = xray(CastRay(camPos, rd));
+    fragColor = vec4(vec3(x),1);
+
+    return;
     Hit hit = raymarch(CastRay(camPos, rd));
 
     render(color, hit);
