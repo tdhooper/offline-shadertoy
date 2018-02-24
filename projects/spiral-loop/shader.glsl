@@ -631,14 +631,29 @@ struct Hit {
     vec3 color;
 };
 
-vec3 calcNormal( in vec3 pos ){
-    vec3 eps = vec3( 0.0001, 0.0, 0.0 );
+vec3 calcNormalX(vec3 pos){
+    vec3 eps = vec3(.0001,0,0);
     vec3 nor = vec3(
         map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
         map(pos+eps.yxy).dist - map(pos-eps.yxy).dist,
         map(pos+eps.yyx).dist - map(pos-eps.yyx).dist );
     return normalize(nor);
 }
+
+const int NORMAL_STEPS = 3;
+
+vec3 calcNormal(vec3 pos){
+    vec3 axis = vec3(1,0,0);
+    vec3 eps = vec3(.0001,0,0);
+    vec3 nor = vec3(0);
+    for(int i = 0; i < NORMAL_STEPS; i++){
+        nor += (map(pos+eps).dist - map(pos-eps).dist) * axis;
+        eps = eps.zxy;
+        axis = axis.zxy;
+    }
+    return normalize(nor);
+}
+
 
 Hit raymarch(CastRay castRay){
 
