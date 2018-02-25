@@ -139,8 +139,22 @@ function restoreState() {
     // gui.loadState(state.gui);
 }
 
+var frameCount = 0;
+var lastTime = 0;
+var fpsTimeout;
+
 function render(offset, resolution) {
+    if ( ! fpsTimeout) {
+        fpsTimeout = setTimeout(function() {
+            document.title = frameCount;
+            frameCount = 0;
+            fpsTimeout = undefined;
+        }, 1000);
+    }
+    frameCount += 1;
+
     var time = timer.elapsed();
+    lastTime = time;
     scrubber.value = time;
     saveState();
     drawTriangle({
