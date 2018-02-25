@@ -506,6 +506,8 @@ Model map(vec3 p) {
 
     vec3 pp = p;
 
+    d = 1e12;
+
     float t = mod(time, 1.);
 
     float s = mix(.5, 0., innerRatio);
@@ -529,7 +531,7 @@ Model map(vec3 p) {
     scaleB *= pModHelixUnwrap(p, lead, innerRatio, 0.);
     p.x *= -1.;
 
-    d = length(p.yz) - .5;
+    d = min(d, length(p.yz) - .5);
     d /= scaleB;
 
     // return Model(d, vec3(.8), 1);
@@ -564,7 +566,8 @@ Model map(vec3 p) {
 
 Model mapDebug(vec3 p) {
 
-    float d = abs(dot(p, vec3(0,0,1)) - .5 * 10. + 5.) - .001;
+    vec3 n = normalize(vec3(1,0,1));
+    float d = abs(dot(p, n) - .5 * 10. + 5.) - .001;
     Model model = map(p);
 
     return model;
@@ -601,9 +604,9 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 2.; // max trace distance
+const float MAX_TRACE_DISTANCE = 3.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
-const int NUM_OF_TRACE_STEPS = 100;
+const int NUM_OF_TRACE_STEPS = 1000;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
@@ -652,7 +655,7 @@ vec3 calcNormalB(vec3 pos){
 const int NORMAL_STEPS = 6;
 
 vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3(.0001,0,0);
+    vec3 eps = vec3(.00001,0,0);
     vec3 nor = vec3(0);
     float invert = 1.;
     for (int i = 0; i < NORMAL_STEPS; i++){
@@ -662,6 +665,7 @@ vec3 calcNormal(vec3 pos){
     }
     return normalize(nor);
 }
+
 
 Hit raymarch(CastRay castRay){
 
@@ -804,6 +808,7 @@ vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
     vec3 up = normalize(vec3(1));
 
     // lighitng        
+    float occ = mix(calcAO( pos, nor ), 1., .8);
     vec3  lig = normalize(vec3(0,.2,1));
     // lig *= sphericalMatrix(guiNormalX * PI * 2., guiNormalY * PI * 2.);
     float amb = clamp(dot(nor, up) * .5 + .5, 0., 1.);
@@ -823,11 +828,11 @@ vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
     dif *= softshadow( pos, lig, 0.02, 2.5 );
 
     vec3 lin = vec3(0);
-    lin += .4 * dif;
+    lin += .5 * dif;
     lin += .1 * spe * dif;
-    lin += .2 * fre;
-    lin += .3 * amb;
-    lin += .7;
+    lin += .2 * fre * occ;
+    lin += .5 * amb * occ;
+    lin += .4 * occ;
     col = col*lin;
 
     // col = normalize(pos);
@@ -850,7 +855,7 @@ void render(inout vec3 color, Hit hit){
 
     if (hit.model.id == 0) {
         float dist = map(hit.pos).dist;
-        hit.color = distanceMeter(dist * 10., hit.ray.len, hit.ray.direction, 10.);
+        color = distanceMeter(dist * 10., hit.ray.len, hit.ray.direction, 10.);
         return;
     }
 
@@ -861,8 +866,8 @@ void render(inout vec3 color, Hit hit){
     } else {
         vec3 ref = reflect(hit.ray.direction, hit.normal);
         vec3 albedo = hit.model.albedo;
-        // hit.color = vec3(0);
-        // hit.color += albedo * (dot(vec3(0,1,0), hit.normal) * .5 + .5);
+        // color = vec3(0);
+        // color += albedo * (dot(vec3(0,1,0), hit.normal) * .5 + .5);
         // hit.color += albedo * (dot(vec3(1,0,0), hit.normal) * .5 + .5) * colB;
         color = doLighting(
             albedo,
@@ -875,7 +880,9 @@ void render(inout vec3 color, Hit hit){
     float fog = length(camPos - hit.pos);
     fog = smoothstep(camDist, camDist * 2.5, fog);
     // fog = 0.;
+    // fog = pow(fog, 2.);
     color = mix(color, background, fog);
+    // color = hit.normal * .5 + .5;
 }
 
 
@@ -969,18 +976,18 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 m = mousee.xy / iResolution.xy;
 
 
-    vec3 bgA = vec3(.6,.7,.9) * .9;
-    vec3 bgB = vec3(.7,.9,1.) * .9;
+    vec3 bgA = vec3(.6,.7,.9) * .5;
+    vec3 bgB = vec3(.7,.9,1.) * .5;
 
     vec3 color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))));
 
-    // color = bgA;
+    color = vec3(.4,.3,.5) * .9;
 
     p.x -= guiOffsetX;
     p.y -= guiOffsetY;
 
     time = iGlobalTime;
-    time *= .55;
+    // time *= .55;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
@@ -1014,7 +1021,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
         0.05
     );
-    color *= vec3(.9, .95, 1.) * vig * 1.1;
+    // color *= vec3(.9, .95, 1.) * vig * 1.1;
+    color *= vec3(.9, .95, 1.);
 
     color = linearToScreen(color);
     fragColor = vec4(color,1.0);
