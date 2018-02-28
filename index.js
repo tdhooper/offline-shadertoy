@@ -10,6 +10,9 @@ var fs = require('fs');
 var GUI = require('./lib/gui');
 var WebCaptureClient = require('web-frames-capture');
 var pixelRatio = window.devicePixelRatio;
+var createCamera = require('first-person-camera');
+var pressed = require('key-pressed');
+
 pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
@@ -70,6 +73,8 @@ const uniforms = {
     iOffset: function(context, props) {
         return props.offset || [0, 0];
     },
+    cameraMatrix: regl.prop('cameraMatrix'),
+    cameraPosition: regl.prop('cameraPosition'),
     iGlobalTime: regl.prop('time'),
     iTime: regl.prop('time'),
     iMouse: function(context, props) {
@@ -135,13 +140,18 @@ function restoreState() {
         timer = Timer.fromObject(state.timer);
         window.timer = timer; 
     }
-    mouse = state.mouse || mouse;
+    // mouse = state.mouse || mouse;
     // gui.loadState(state.gui);
 }
 
 var frameCount = 0;
 var lastTime = 0;
 var fpsTimeout;
+
+var cameraMatrix = [];
+var cameraPosition = [];
+var camera = createCamera();
+var lastMouse = [0,0];
 
 function render(offset, resolution) {
     if ( ! fpsTimeout) {
@@ -157,11 +167,23 @@ function render(offset, resolution) {
     lastTime = time;
     scrubber.value = time;
     saveState();
+
+    camera.control(time / 100000, [
+      pressed('W'), pressed('S'),
+      pressed('A'), pressed('D'),
+      pressed('R'), pressed('F')
+    ], mouse.slice(0,2), lastMouse.slice(0,2));
+    cameraMatrix = camera.view();
+
+    lastMouse = mouse;
+
     drawTriangle({
         time: time / 1000,
         mouse: mouse,
         offset: offset,
-        resolution: resolution
+        resolution: resolution,
+        cameraMatrix: cameraMatrix,
+        cameraPosition: camera.position
     });
 }
 

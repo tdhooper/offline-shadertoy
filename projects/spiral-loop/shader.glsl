@@ -6,6 +6,9 @@ uniform float iGlobalTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
+uniform mat4 cameraMatrix;
+uniform vec3 cameraPosition;
+
 uniform float guiLead;
 uniform float guiInnerRatio;
 uniform bool guiNormals;
@@ -480,6 +483,14 @@ float sss = 1. + 10. * guiDebug;
 const int HELIX_ITERATIONS = 3;
 
 Model map(vec3 p) {
+    
+    p = mod(p, .4) - .2;
+    return Model(
+        length(p) - .1,
+        vec3(0),
+        1
+    );
+
     float part, d, t1, t2, t3, t4;
     float lead = guiLead;
     float innerRatio = guiInnerRatio;
@@ -983,8 +994,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     color = vec3(.4,.3,.5) * .9;
 
-    p.x -= guiOffsetX;
-    p.y -= guiOffsetY;
+    // p.x -= guiOffsetX;
+    // p.y -= guiOffsetY;
 
     time = iGlobalTime;
     // time *= .55;
@@ -1000,13 +1011,18 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         debug = true;
     }
 
-
     doCamera();
 
-    mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
+    // mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
+    mat4 camMat = cameraMatrix;
     float focalLength = pow(2., guiFocal);
     focalLength = 3.;
-    vec3 rd = normalize(camMat * vec3(p, focalLength));
+    // vec3 rd = normalize(camMat * vec3(p, focalLength));
+    vec3 rd = normalize(
+        (vec4(p, focalLength, 1) * camMat).xyz
+    );
+
+    camPos = cameraPosition;
     
     // float x = xray(CastRay(camPos, rd));
     // fragColor = vec4(vec3(x),1);
