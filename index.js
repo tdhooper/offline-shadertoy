@@ -150,8 +150,11 @@ var fpsTimeout;
 
 var cameraMatrix = [];
 var cameraPosition = [];
-var camera = createCamera();
+var camera = createCamera({
+    position: [0,0,-1]
+});
 var lastMouse = [0,0];
+var startMouse = [0,0];
 
 function render(offset, resolution) {
     if ( ! fpsTimeout) {
@@ -168,7 +171,13 @@ function render(offset, resolution) {
     scrubber.value = time;
     saveState();
 
-    camera.control(time / 100000, [
+    var down = mouse[2] && ! lastMouse[2];
+
+    if (down) {
+        lastMouse = mouse;
+    }
+
+    camera.control(time / 1000000, [
       pressed('W'), pressed('S'),
       pressed('A'), pressed('D'),
       pressed('R'), pressed('F')
@@ -237,13 +246,16 @@ window.stepTo = stepTo;
 window.exportGui = exportGui;
 
 var canvas = regl._gl.canvas;
+
 mouseChange(canvas, function(buttons, x, y, mods) {
     var lmbPressed = buttons == 1;
     if (lmbPressed) {
-        mouse = [x, y, 0, 0];
+        mouse = [x, y, true, 0];
         if ( ! timer.running) {
             render();
         }
+    } else {
+        mouse[2] = false;
     }
 });
 

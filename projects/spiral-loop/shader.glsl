@@ -484,9 +484,13 @@ const int HELIX_ITERATIONS = 3;
 
 Model map(vec3 p) {
     
+    float ww = length(p - cameraPosition) - .05;
+    ww = 1e23;
     p = mod(p, .4) - .2;
+    float dd = length(p) - .1;
+    dd = min(dd, ww);
     return Model(
-        length(p) - .1,
+        dd,
         vec3(0),
         1
     );
@@ -890,6 +894,7 @@ void render(inout vec3 color, Hit hit){
     }
     float fog = length(camPos - hit.pos);
     fog = smoothstep(camDist, camDist * 2.5, fog);
+    color = hit.pos * 4.;
     // fog = 0.;
     // fog = pow(fog, 2.);
     color = mix(color, background, fog);
@@ -1013,17 +1018,19 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     doCamera();
 
+    camPos = cameraPosition;
+    // camPos = vec3(0,0,1);
+
     // mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     mat4 camMat = cameraMatrix;
     float focalLength = pow(2., guiFocal);
     focalLength = 3.;
     // vec3 rd = normalize(camMat * vec3(p, focalLength));
     vec3 rd = normalize(
-        (vec4(p, focalLength, 1) * camMat).xyz
+        (vec4(p, -focalLength, 1) * camMat).xyz
     );
 
-    camPos = cameraPosition;
-    
+
     // float x = xray(CastRay(camPos, rd));
     // fragColor = vec4(vec3(x),1);
     // return;
