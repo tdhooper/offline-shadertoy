@@ -484,16 +484,16 @@ const int HELIX_ITERATIONS = 3;
 
 Model map(vec3 p) {
     
-    float ww = length(p - cameraPosition) - .05;
-    ww = 1e23;
-    p = mod(p, .4) - .2;
-    float dd = length(p) - .1;
-    dd = min(dd, ww);
-    return Model(
-        dd,
-        vec3(0),
-        1
-    );
+    // float ww = length(p - cameraPosition) - .05;
+    // ww = 1e23;
+    // p = mod(p, .4) - .2;
+    // float dd = length(p) - .1;
+    // dd = min(dd, ww);
+    // return Model(
+    //     dd,
+    //     vec3(0),
+    //     1
+    // );
 
     float part, d, t1, t2, t3, t4;
     float lead = guiLead;
@@ -619,7 +619,7 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 3.; // max trace distance
+const float MAX_TRACE_DISTANCE = 6.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 1000;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
@@ -735,7 +735,7 @@ float xray(CastRay castRay){
         a = rangec(.005, 0., abs(currentDist));
         a = pow(a, 5.);
         a = (a * 50.) * stepSize;
-        
+
         fog = length(camPos - pos);
         fog = smoothstep(camDist, camDist * 2.5, fog);
 
@@ -894,7 +894,7 @@ void render(inout vec3 color, Hit hit){
     }
     float fog = length(camPos - hit.pos);
     fog = smoothstep(camDist, camDist * 2.5, fog);
-    color = hit.pos * 4.;
+    // color = hit.pos * 4.;
     // fog = 0.;
     // fog = pow(fog, 2.);
     color = mix(color, background, fog);
@@ -1003,7 +1003,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // p.y -= guiOffsetY;
 
     time = iGlobalTime;
-    // time *= .55;
+    time *= .25;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
@@ -1020,6 +1020,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     camPos = cameraPosition;
     // camPos = vec3(0,0,1);
+    camDist = length(camPos);
 
     // mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     mat4 camMat = cameraMatrix;
