@@ -10,7 +10,7 @@ var fs = require('fs');
 var GUI = require('./lib/gui');
 var WebCaptureClient = require('web-frames-capture');
 var pixelRatio = window.devicePixelRatio;
-var createCamera = require('first-person-camera');
+var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 
 pixelRatio = .5;
