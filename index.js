@@ -180,7 +180,8 @@ function render(offset, resolution) {
     camera.control(time / 1000000, [
       pressed('W'), pressed('S'),
       pressed('A'), pressed('D'),
-      pressed('R'), pressed('F')
+      pressed('R'), pressed('F'),
+      pressed('Q'), pressed('E')
     ], mouse.slice(0,2), lastMouse.slice(0,2));
     cameraMatrix = camera.view();
 
