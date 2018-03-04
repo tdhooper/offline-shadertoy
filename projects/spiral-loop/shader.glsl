@@ -484,16 +484,16 @@ const int HELIX_ITERATIONS = 3;
 
 Model map(vec3 p) {
     
-    float ww = length(p - cameraPosition) - .05;
-    ww = 1e23;
-    p = mod(p, .4) - .2;
-    float dd = length(p) - .1;
-    dd = min(dd, ww);
-    return Model(
-        dd,
-        vec3(0),
-        1
-    );
+    // float ww = length(p - cameraPosition) - .05;
+    // ww = 1e23;
+    // p = mod(p, .4) - .2;
+    // float dd = length(p) - .1;
+    // dd = min(dd, ww);
+    // return Model(
+    //     dd,
+    //     vec3(0),
+    //     1
+    // );
 
     float part, d, t1, t2, t3, t4;
     float lead = guiLead;
@@ -893,8 +893,8 @@ void render(inout vec3 color, Hit hit){
         );
     }
     float fog = length(camPos - hit.pos);
-    fog = smoothstep(.0, 2. * 2.5, fog);
-    color = max(hit.pos, vec3(0)) * .5;
+    fog = smoothstep(.0, float(MAX_TRACE_DISTANCE), fog);
+    // color = max(hit.pos, vec3(0)) * .5;
     // fog = 0.;
     fog = pow(fog, 2.);
     color = mix(color, background, fog);
