@@ -12,6 +12,7 @@ var WebCaptureClient = require('web-frames-capture');
 var pixelRatio = window.devicePixelRatio;
 var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
+var equal = require('deep-equal');
 
 pixelRatio = .5;
 
@@ -155,16 +156,9 @@ var camera = createCamera({
 });
 var lastMouse = [0,0];
 var startMouse = [0,0];
+var lastConfig = {};
 
 function render(offset, resolution) {
-    if ( ! fpsTimeout) {
-        fpsTimeout = setTimeout(function() {
-            document.title = frameCount;
-            frameCount = 0;
-            fpsTimeout = undefined;
-        }, 1000);
-    }
-    frameCount += 1;
 
     var time = timer.elapsed();
     lastTime = time;
@@ -187,27 +181,37 @@ function render(offset, resolution) {
 
     lastMouse = mouse;
 
-    drawTriangle({
+    var config = {
         time: time / 1000,
         mouse: mouse,
         offset: offset,
         resolution: resolution,
         cameraMatrix: cameraMatrix,
         cameraPosition: camera.position
-    });
+    };
+
+    if ( ! equal(config, lastConfig)) {
+        if ( ! fpsTimeout) {
+            fpsTimeout = setTimeout(function() {
+                document.title = frameCount;
+                frameCount = 0;
+                fpsTimeout = undefined;
+            }, 1000);
+        }
+        frameCount += 1;
+        drawTriangle(config);
+    }
+
+    lastConfig = config;
 }
 
 function play() {
     timer.play();
-    tick = regl.frame(function() {
-        render();
-    });
 }
 
 function pause() {
     if (timer.running) {
         timer.pause();
-        tick && tick.cancel();
         saveState();
     }
 }
@@ -252,9 +256,6 @@ mouseChange(canvas, function(buttons, x, y, mods) {
     var lmbPressed = buttons == 1;
     if (lmbPressed) {
         mouse = [x, y, true, 0];
-        if ( ! timer.running) {
-            render();
-        }
     } else {
         mouse[2] = false;
     }
@@ -279,8 +280,12 @@ restoreState();
 if (timer.running) {
     play();
 } else {
-    render();    
+    render(); 
 }
+
+regl.frame(function() {
+    render();
+});
 
 window.addEventListener(
     'resize',
