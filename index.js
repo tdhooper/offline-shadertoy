@@ -146,7 +146,6 @@ function restoreState() {
 }
 
 var frameCount = 0;
-var lastTime = 0;
 var fpsTimeout;
 
 var cameraMatrix = [];
@@ -158,10 +157,11 @@ var lastMouse = [0,0];
 var startMouse = [0,0];
 var lastConfig = {};
 
+var lastTime = performance.now();
+
 function render(offset, resolution) {
 
     var time = timer.elapsed();
-    lastTime = time;
     scrubber.value = time;
     saveState();
 
@@ -171,7 +171,10 @@ function render(offset, resolution) {
         lastMouse = mouse;
     }
 
-    camera.control(time / 1000000, [
+    var realTime = performance.now();
+    var elapsed = realTime - lastTime;
+    lastTime = realTime;
+    camera.control(elapsed, [
       pressed('W'), pressed('S'),
       pressed('A'), pressed('D'),
       pressed('R'), pressed('F'),
