@@ -162,7 +162,6 @@ var lastTime = performance.now();
 function render(offset, resolution) {
 
     var time = timer.elapsed();
-    scrubber.value = time;
     saveState();
 
     var down = mouse[2] && ! lastMouse[2];
@@ -202,6 +201,7 @@ function render(offset, resolution) {
             }, 1000);
         }
         frameCount += 1;
+        scrubber.value = time;
         drawTriangle(config);
     }
 
