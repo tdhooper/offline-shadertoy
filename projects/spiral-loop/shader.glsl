@@ -338,7 +338,7 @@ float pModHelixUnwrap(inout vec3 p, float lead, float innerRatio, float t) {
     float radius = mix(.25, .5, innerRatio);
     float width = cos(asin(t));
     float adjust = (1. / width);
-    float offset = ((.5 * adjust) - .5) * 7.;
+    float offset = ((.5 * adjust) - .5) * 9.;
 
     vec3 pp = p;
     pp.z -= radius;
@@ -349,7 +349,7 @@ float pModHelixUnwrap(inout vec3 p, float lead, float innerRatio, float t) {
     radius += offset;
     pModSpiral(p, 1., lead, radius);
 
-    p = mix(p, pp, rangec(.8, 1., t));
+    p = mix(p, pp, rangec(.85, 1., t));
 
     float scale = mix(.5, 0., innerRatio);
     p /= scale;
@@ -619,7 +619,7 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 2.; // max trace distance
+const float MAX_TRACE_DISTANCE = 1.9; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 1000;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
@@ -893,7 +893,7 @@ void render(inout vec3 color, Hit hit){
         );
     }
     float fog = length(camPos - hit.pos);
-    fog = smoothstep(float(MAX_TRACE_DISTANCE) * .4, float(MAX_TRACE_DISTANCE), fog);
+    fog = smoothstep(float(MAX_TRACE_DISTANCE) * .36, float(MAX_TRACE_DISTANCE), fog);
     // color = max(hit.pos, vec3(0)) * .5;
     // fog = 0.;
     // fog = pow(fog, 2.);
@@ -1003,7 +1003,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // p.y -= guiOffsetY;
 
     time = iGlobalTime;
-    time *= .25;
+    // time *= .8;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);
