@@ -619,7 +619,7 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 6.; // max trace distance
+const float MAX_TRACE_DISTANCE = 2.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 1000;
 const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
@@ -893,10 +893,10 @@ void render(inout vec3 color, Hit hit){
         );
     }
     float fog = length(camPos - hit.pos);
-    fog = smoothstep(.0, float(MAX_TRACE_DISTANCE), fog);
+    fog = smoothstep(float(MAX_TRACE_DISTANCE) * .4, float(MAX_TRACE_DISTANCE), fog);
     // color = max(hit.pos, vec3(0)) * .5;
     // fog = 0.;
-    fog = pow(fog, 2.);
+    // fog = pow(fog, 2.);
     color = mix(color, background, fog);
     // color = hit.normal * .5 + .5;
 }
