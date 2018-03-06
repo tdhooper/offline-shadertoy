@@ -12,9 +12,8 @@ var WebCaptureClient = require('web-frames-capture');
 var pixelRatio = window.devicePixelRatio;
 var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
-var equal = require('deep-equal');
 
-pixelRatio = .5;
+pixelRatio = .25;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -47,9 +46,7 @@ var vert = glslify('./quad.vert');
 var frag = glslify('./projects/spiral-loop/shader.glsl');
 
 var guiConf = JSON.parse(fs.readFileSync('./projects/spiral-loop/gui.json', 'utf8'));
-var gui = new GUI(guiConf, function() {
-    render();
-});
+var gui = new GUI(guiConf);
 
 var texture = regl.texture();
 
@@ -97,8 +94,8 @@ addGuiUniforms = function(prefix, state) {
             addGuiUniforms(name, state[key]);
             return;
         }
-        uniforms[name] = function() {
-            return state[key];
+        uniforms[name] = function(context, props) {
+            return props.gui[key];
         };
     });
 };
@@ -128,7 +125,8 @@ function saveState() {
     stateStore.save('state', {
         timer: timer.serialize(),
         mouse: mouse,
-        gui: gui.saveState()
+        gui: gui.saveState(),
+        cameraMatrix: camera.view()
     });
 }
 
@@ -141,21 +139,24 @@ function restoreState() {
         timer = Timer.fromObject(state.timer);
         window.timer = timer; 
     }
-    // mouse = state.mouse || mouse;
-    // gui.loadState(state.gui);
+    mouse = state.mouse || mouse;
+    gui.loadState(state.gui);
+    if (state.cameraMatrix) {
+        camera = createCamera({
+            view: state.cameraMatrix
+        });
+    }
 }
 
 var frameCount = 0;
 var fpsTimeout;
 
-var cameraMatrix = [];
-var cameraPosition = [];
 var camera = createCamera({
     position: [0,0,-1]
 });
-var lastMouse = [0,0];
+var lastMouse;
 var startMouse = [0,0];
-var lastConfig = {};
+var lastConfigJson;
 
 var lastTime = performance.now();
 
@@ -163,6 +164,10 @@ function render(offset, resolution) {
 
     var time = timer.elapsed();
     saveState();
+
+    if ( ! lastMouse) {
+        lastMouse = mouse;
+    }
 
     var down = mouse[2] && ! lastMouse[2];
 
@@ -173,13 +178,12 @@ function render(offset, resolution) {
     var realTime = performance.now();
     var elapsed = realTime - lastTime;
     lastTime = realTime;
-    camera.control(elapsed, [
+    camera.control(elapsed * .1, [
       pressed('W'), pressed('S'),
       pressed('A'), pressed('D'),
       pressed('R'), pressed('F'),
       pressed('Q'), pressed('E')
     ], mouse.slice(0,2), lastMouse.slice(0,2));
-    cameraMatrix = camera.view();
 
     lastMouse = mouse;
 
@@ -188,11 +192,14 @@ function render(offset, resolution) {
         mouse: mouse,
         offset: offset,
         resolution: resolution,
-        cameraMatrix: cameraMatrix,
-        cameraPosition: camera.position
+        cameraMatrix: camera.view(),
+        cameraPosition: camera.position,
+        gui: gui.state
     };
 
-    if ( ! equal(config, lastConfig)) {
+    var configJson = JSON.stringify(config);
+
+    if (configJson !== lastConfigJson) {
         if ( ! fpsTimeout) {
             fpsTimeout = setTimeout(function() {
                 document.title = frameCount;
@@ -205,7 +212,7 @@ function render(offset, resolution) {
         drawTriangle(config);
     }
 
-    lastConfig = config;
+    lastConfigJson = configJson;
 }
 
 function play() {
@@ -282,8 +289,6 @@ restoreState();
 
 if (timer.running) {
     play();
-} else {
-    render(); 
 }
 
 regl.frame(function() {
