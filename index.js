@@ -46,6 +46,8 @@ var vert = glslify('./quad.vert');
 var frag = glslify('./projects/spiral-loop/shader.glsl');
 
 var guiConf = JSON.parse(fs.readFileSync('./projects/spiral-loop/gui.json', 'utf8'));
+var stateConf = JSON.parse(fs.readFileSync('./projects/spiral-loop/state.json', 'utf8'));
+
 var gui = new GUI(guiConf);
 
 var texture = regl.texture();
@@ -121,17 +123,20 @@ const drawTriangle = regl({
 var timer = new Timer();
 var mouse = [0,0,0,0];
 
-function saveState() {
-    stateStore.save('state', {
+function getState() {
+    return {
         timer: timer.serialize(),
         mouse: mouse,
         gui: gui.saveState(),
         cameraMatrix: camera.view()
-    });
+    };
 }
 
-function restoreState() {
-    var state = stateStore.restore('state');
+function saveState() {
+    stateStore.save('state', getState());
+}
+
+function restoreState(state) {
     if ( ! state) {
         return;
     }
@@ -253,12 +258,19 @@ function exportGui() {
     console.log(str);
 }
 
+function exportState() {
+    var state = getState();
+    var str = JSON.stringify(state, undefined, '\t');
+    console.log(str);
+}
+
 window.play = play;
 window.pause = pause;
 window.stop = stop;
 window.toggle = toggle;
 window.stepTo = stepTo;
 window.exportGui = exportGui;
+window.exportState = exportState;
 
 var canvas = regl._gl.canvas;
 
@@ -285,7 +297,9 @@ scrubber.addEventListener('mouseup', function() {
 });
 
 
-restoreState();
+restoreState(stateConf);
+restoreState(stateStore.restore('state'));
+
 
 if (timer.running) {
     play();
