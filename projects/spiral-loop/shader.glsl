@@ -997,7 +997,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec3 color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))));
 
-    color = vec3(.4,.3,.5) * .9;
+    color = vec3(.4,.3,.5);
 
     // p.x -= guiOffsetX;
     // p.y -= guiOffsetY;
@@ -1047,6 +1047,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     );
     // color *= vec3(.9, .95, 1.) * vig * 1.1;
     color *= vec3(.9, .95, 1.);
+    // if (p.x + p.y < 0.) {
+    color = mix(color, vec3(pow(length(color * .6), 2.)), .1);
+    color *= 1.05;
+    color = pow(color, vec3(1.2,1.3,1.2));
 
     color = linearToScreen(color);
     fragColor = vec4(color,1.0);
