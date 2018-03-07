@@ -338,7 +338,7 @@ float pModHelixUnwrap(inout vec3 p, float lead, float innerRatio, float t) {
     float radius = mix(.25, .5, innerRatio);
     float width = cos(asin(t));
     float adjust = (1. / width);
-    float offset = ((.5 * adjust) - .5) * 9.;
+    float offset = ((.5 * adjust) - .5) * 7.;
 
     vec3 pp = p;
     pp.z -= radius;
@@ -349,7 +349,7 @@ float pModHelixUnwrap(inout vec3 p, float lead, float innerRatio, float t) {
     radius += offset;
     pModSpiral(p, 1., lead, radius);
 
-    p = mix(p, pp, rangec(.85, 1., t));
+    p = mix(p, pp, rangec(.8, 1., t));
 
     float scale = mix(.5, 0., innerRatio);
     p /= scale;
