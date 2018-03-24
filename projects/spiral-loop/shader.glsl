@@ -1024,8 +1024,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     // mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     mat4 camMat = cameraMatrix;
-    float focalLength = pow(2., guiFocal);
-    focalLength = 3.;
+    float focalLength = guiFocal;
+    // focalLength = 3.;
     // vec3 rd = normalize(camMat * vec3(p, focalLength));
     vec3 rd = normalize(
         (vec4(p, -focalLength, 1) * camMat).xyz
