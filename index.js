@@ -45,10 +45,9 @@ var regl = Regl({
 var vert = glslify('./quad.vert');
 var frag = glslify('./projects/spiral-loop/shader.glsl');
 
-var guiConf = JSON.parse(fs.readFileSync('./projects/spiral-loop/gui.json', 'utf8'));
-var stateConf = JSON.parse(fs.readFileSync('./projects/spiral-loop/state.json', 'utf8'));
+var config = JSON.parse(fs.readFileSync('./projects/spiral-loop/config.json', 'utf8'));
 
-var gui = new GUI(guiConf);
+var gui = new GUI();
 
 var texture = regl.texture();
 
@@ -102,34 +101,17 @@ addGuiUniforms = function(prefix, state) {
     });
 };
 
-addGuiUniforms('gui', gui.state);
-
-const drawTriangle = regl({
-    frag: frag,
-    vert: vert,
-    attributes: {
-        position: [
-            [-2, 0],
-            [0, -2],
-            [2,  2]
-        ]
-    },
-    uniforms: uniforms,
-
-    // This tells regl the number of vertices to draw in this command
-    count: 3
-});
-
 var timer = new Timer();
 var mouse = [0,0,0,0];
 
 function getState() {
-    return {
+    var state = {
         timer: timer.serialize(),
         mouse: mouse,
-        gui: gui.saveState(),
         cameraMatrix: camera.view()
     };
+    Object.assign(state, gui.exportConfig());
+    return state;
 }
 
 function saveState() {
@@ -145,7 +127,7 @@ function restoreState(state) {
         window.timer = timer; 
     }
     mouse = state.mouse || mouse;
-    gui.loadState(state.gui);
+    gui.loadConfig(state);
     if (state.cameraMatrix) {
         camera = createCamera({
             view: state.cameraMatrix
@@ -164,6 +146,26 @@ var startMouse = [0,0];
 var lastConfigJson;
 
 var lastTime = performance.now();
+
+restoreState(config);
+restoreState(stateStore.restore('state'));
+addGuiUniforms('gui', gui.state);
+
+const drawTriangle = regl({
+    frag: frag,
+    vert: vert,
+    attributes: {
+        position: [
+            [-2, 0],
+            [0, -2],
+            [2,  2]
+        ]
+    },
+    uniforms: uniforms,
+
+    // This tells regl the number of vertices to draw in this command
+    count: 3
+});
 
 function render(offset, resolution) {
 
@@ -250,13 +252,13 @@ function stepTo(time) {
     render();
 }
 
-function exportGui() {
-    var str = JSON.stringify(gui.exportConfig(), undefined, '\t');
-    var re = /\[[\s]*([^\s,\]]*,?)[\s]*([^\s,\]]*,?)[\s]*([^\s,\]]*,?)[\s]*\]/g;
-    str = str.replace(re, '[$1$2$3]');
-    str = str.replace(/,([^\s])/g, ', $1');
-    console.log(str);
-}
+// function exportGui() {
+//     var str = JSON.stringify(gui.exportConfig(), undefined, '\t');
+//     var re = /\[[\s]*([^\s,\]]*,?)[\s]*([^\s,\]]*,?)[\s]*([^\s,\]]*,?)[\s]*\]/g;
+//     str = str.replace(re, '[$1$2$3]');
+//     str = str.replace(/,([^\s])/g, ', $1');
+//     console.log(str);
+// }
 
 function exportState() {
     var state = getState();
@@ -269,7 +271,6 @@ window.pause = pause;
 window.stop = stop;
 window.toggle = toggle;
 window.stepTo = stepTo;
-window.exportGui = exportGui;
 window.exportState = exportState;
 
 var canvas = regl._gl.canvas;
@@ -297,8 +298,6 @@ scrubber.addEventListener('mouseup', function() {
 });
 
 
-restoreState(stateConf);
-restoreState(stateStore.restore('state'));
 
 
 if (timer.running) {
