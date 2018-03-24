@@ -3,7 +3,7 @@ var glslify = require('glslify');
 var mouseChange = require('mouse-change');
 var debounce = require('debounce');
 var Timer = require('./lib/timer');
-var stateStore = require('./lib/state-store');
+var configStore = require('./lib/state-store');
 var FileSaver = require('file-saver');
 var pad = require('pad-number');
 var fs = require('fs');
@@ -104,33 +104,33 @@ addGuiUniforms = function(prefix, state) {
 var timer = new Timer();
 var mouse = [0,0,0,0];
 
-function getState() {
-    var state = {
+function getConfig() {
+    var config = {
         timer: timer.serialize(),
         mouse: mouse,
         cameraMatrix: camera.view()
     };
-    Object.assign(state, gui.exportConfig());
-    return state;
+    Object.assign(config, gui.exportConfig());
+    return config;
 }
 
-function saveState() {
-    stateStore.save('state', getState());
+function saveConfig() {
+    configStore.save('config', getConfig());
 }
 
-function restoreState(state) {
-    if ( ! state) {
+function restoreConfig(config) {
+    if ( ! config) {
         return;
     }
-    if (state.timer) {
-        timer = Timer.fromObject(state.timer);
+    if (config.timer) {
+        timer = Timer.fromObject(config.timer);
         window.timer = timer; 
     }
-    mouse = state.mouse || mouse;
-    gui.loadConfig(state);
-    if (state.cameraMatrix) {
+    mouse = config.mouse || mouse;
+    gui.loadConfig(config);
+    if (config.cameraMatrix) {
         camera = createCamera({
-            view: state.cameraMatrix
+            view: config.cameraMatrix
         });
     }
 }
@@ -143,12 +143,12 @@ var camera = createCamera({
 });
 var lastMouse;
 var startMouse = [0,0];
-var lastConfigJson;
+var lastStateJson;
 
 var lastTime = performance.now();
 
-restoreState(config);
-restoreState(stateStore.restore('state'));
+restoreConfig(config);
+restoreConfig(configStore.restore('config'));
 addGuiUniforms('gui', gui.state);
 
 const drawTriangle = regl({
@@ -170,7 +170,7 @@ const drawTriangle = regl({
 function render(offset, resolution) {
 
     var time = timer.elapsed();
-    saveState();
+    saveConfig();
 
     if ( ! lastMouse) {
         lastMouse = mouse;
@@ -194,7 +194,7 @@ function render(offset, resolution) {
 
     lastMouse = mouse;
 
-    var config = {
+    var state = {
         time: time / 1000,
         mouse: mouse,
         offset: offset,
@@ -204,9 +204,9 @@ function render(offset, resolution) {
         gui: gui.state
     };
 
-    var configJson = JSON.stringify(config);
+    var stateJson = JSON.stringify(state);
 
-    if (configJson !== lastConfigJson) {
+    if (stateJson !== lastStateJson) {
         if ( ! fpsTimeout) {
             fpsTimeout = setTimeout(function() {
                 document.title = frameCount;
@@ -216,10 +216,10 @@ function render(offset, resolution) {
         }
         frameCount += 1;
         scrubber.value = time;
-        drawTriangle(config);
+        drawTriangle(state);
     }
 
-    lastConfigJson = configJson;
+    lastStateJson = stateJson;
 }
 
 function play() {
@@ -229,7 +229,7 @@ function play() {
 function pause() {
     if (timer.running) {
         timer.pause();
-        saveState();
+        saveConfig();
     }
 }
 
@@ -252,17 +252,9 @@ function stepTo(time) {
     render();
 }
 
-// function exportGui() {
-//     var str = JSON.stringify(gui.exportConfig(), undefined, '\t');
-//     var re = /\[[\s]*([^\s,\]]*,?)[\s]*([^\s,\]]*,?)[\s]*([^\s,\]]*,?)[\s]*\]/g;
-//     str = str.replace(re, '[$1$2$3]');
-//     str = str.replace(/,([^\s])/g, ', $1');
-//     console.log(str);
-// }
-
-function exportState() {
-    var state = getState();
-    var str = JSON.stringify(state, undefined, '\t');
+function exportConfig() {
+    var config = getConfig();
+    var str = JSON.stringify(config, undefined, '\t');
     console.log(str);
 }
 
@@ -271,7 +263,7 @@ window.pause = pause;
 window.stop = stop;
 window.toggle = toggle;
 window.stepTo = stepTo;
-window.exportState = exportState;
+window.exportConfig = exportConfig;
 
 var canvas = regl._gl.canvas;
 
