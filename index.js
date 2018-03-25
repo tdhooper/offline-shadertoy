@@ -135,7 +135,7 @@ var lastStateJson;
 
 var lastTime = performance.now();
 
-Object.assign(config, configStore.restore('config'));
+// Object.assign(config, configStore.restore('config'));
 restoreConfig(config);
 
 

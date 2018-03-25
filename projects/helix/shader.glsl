@@ -3,7 +3,6 @@ precision highp float;
 uniform vec2 iResolution;
 uniform vec2 iOffset;
 uniform float iTime;
-uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
 uniform bool guiLevel1Enabled;
@@ -168,56 +167,42 @@ vec3 closestHelix(vec3 p, float lead, float radius) {
 }
 
 // Cartesian to helix coordinates
-vec3 helixCoordinates(vec3 p, vec3 closest, float lead, float radius) {
+void pModHelix(inout vec3 p, float lead, float radius) {
+    vec3 closest = closestHelix(p, lead, radius);
     float helixAngle = atan((2. * PI * radius) / lead);
     vec3 normal = normalize(closest - vec3(closest.x,0,0));
     vec3 tangent = vec3(1,0,0) * rotationMatrix(normal, helixAngle);
     float x = (closest.x / lead) * radius * PI * 2.;
     float y = dot(p - closest, cross(tangent, normal));
     float z = dot(p - closest, normal);
-    return vec3(x,y,z);
+    p = vec3(x, y, z);
 }
 
-vec3 mousePos;
-bool mouseDown;
-
-Model visualiseClosest(vec3 p) {
-    float lead = 3.;
-    float radius = 1.5;
-    
-    vec3 helix = closestHelixSection(p, lead, radius);
-    float d = length(p - helix) - .1;
-    
-    vec3 testPoint = vec3(sin(iTime * .75) * 3., cos(iTime * .75) * .8, 0.);
-    if (mouseDown) {
-        testPoint = mousePos;
-    }
-
-    vec3 testHelix = closestHelixSection(testPoint, lead, radius);
-
-    d = min(d, length(p - testHelix) - .2);
-    d = min(d, length(p - testPoint) - .1);
-    d = min(d, fCapsule(p, testPoint, testHelix, .05));
-
-    return Model(d, vec2(0), 0);
+float pModHelixScale(inout vec3 p, float lead, float innerRatio) {
+    float radius = mix(.25, .5, innerRatio);
+    pModHelix(p, lead, radius);
+    float scale = mix(.5, 0., innerRatio);
+    p /= scale;
+    return 1. / scale;
 }
+
 
 Model map(vec3 p) {
-    #ifdef VISUALISE_CLOSEST
-        return visualiseClosest(p);
-    #endif
-    
-    float lead = mix(1., 8., guiLevel1Lead);
-    float radius = mix(0.001, 1.8, guiLevel1Radius);
+    float lead = mix(.1, 8., guiLevel1Lead);
+    float radius = mix(0., .99, guiLevel1Radius);
 
-    vec3 helix = closestHelix(p, lead, radius);
-    float d = length(p - helix) - .5;
-    
-    vec3 hp = helixCoordinates(p, helix, lead, radius);
-    vec2 uv = vec2(hp.x, atan(hp.y, hp.z) / PI / 2.);
-    
+    float scale = 1.;
+
+    if (guiLevel1Enabled) {
+        scale *= pModHelixScale(p, lead, radius);
+    }
+
+    float d = length(p.yz) - .5;
+    d /= scale;
+
+    vec2 uv = cartToPolar(p).xy;
     return Model(d, uv, 0);
-}        
+}
 
 
 // --------------------------------------------------------
@@ -234,14 +219,10 @@ vec3 render(Hit hit){
         uv = cos(uv * PI * 2.);
         uv = smoothstep(.5, .55, uv);
         col = vec3(1.-uv.yx, 1.);
-        #ifdef VISUALISE_CLOSEST
-        col = vec3(1);
-        #endif
         vec3 light = normalize(vec3(.5,1,0));
         vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
         col *= diffuse;
     }
-    #ifndef VISUALISE_CLOSEST
     if (hit.isBackground || hit.pos.z > 0.) {
         vec3 debugPlanePos = intersectPlane(
             hit.rayOrigin, hit.rayDirection, vec3(0,0,1), 0.
@@ -250,7 +231,6 @@ vec3 render(Hit hit){
         vec3 meter = vec3(mod(dist, 1./4.));
         col = mix(col, meter, .5);
     }
-    #endif
     return col;
 }
 
@@ -315,9 +295,8 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
-    vec2 m = (-iResolution.xy + 2.0*iMouse.xy)/iResolution.y;
 
-    vec3 camPos = vec3(0,0,-6);
+    vec3 camPos = vec3(0,0,-2);
     vec3 camTar = vec3(0);
     vec3 camUp = vec3(0,1,0);
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
@@ -325,10 +304,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float focalLength = 2.;
     vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
 
-    vec3 mouseRayDirection = normalize(camMat * vec3(m, focalLength));
-    mousePos = intersectPlane(camPos, mouseRayDirection, vec3(0,0,1), 0.);
-    mouseDown = iMouse.z > 0.;
-    
     Hit hit = raymarch(camPos, rayDirection);
 
     vec3 color = render(hit);
