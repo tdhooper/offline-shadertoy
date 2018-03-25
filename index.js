@@ -43,9 +43,9 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/rhombille-triangle/shader.glsl');
+var frag = glslify('./projects/spiral/shader.glsl');
 
-var config = JSON.parse(fs.readFileSync('./projects/rhombille-triangle/config.json', 'utf8'));
+var config = JSON.parse(fs.readFileSync('./projects/spiral/config.json', 'utf8'));
 // var config = {};
 
 var gui = new GUI();

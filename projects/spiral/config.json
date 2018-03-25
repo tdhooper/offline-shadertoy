@@ -1,0 +1,32 @@
+{
+    "mouse": [
+        315,
+        204,
+        false,
+        0
+    ],
+    "showControls": true,
+    "controls": {
+        "level1": {
+            "enabled": [true],
+            "spacing": [{"midi": "pot1", "step": 1}, 0, 50, 10],
+            "offset": [{"midi": "pot2", "step": 0.1}, 0, 5, 2]
+        },
+        "level2": {
+            "enabled": [false],
+            "spacing": [0, 10, 1.6988734151155993],
+            "offset": [0, 2, 1.7867461779664062]
+        },
+        "level3": {
+            "enabled": [false],
+            "spacing": [0, 10, 0.9269714983085116],
+            "offset": [0, 1, 2.8894632019765316]
+        },
+        "thickness": [0, 2, 0.6461369836917247],
+        "normals": [true]
+    },
+    "midiSlots": {
+        "pot1": {"channel": 11, "controller": 11},
+        "pot2": {"channel": 11, "controller": 12}
+    }
+}
