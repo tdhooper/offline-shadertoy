@@ -133,8 +133,6 @@ mat3 translate(vec2 t){
                );
 }
 
-mat3 tr;
-
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
@@ -172,8 +170,6 @@ float sTri(vec2 p, float radius)
 
 float tex(vec2 p) {
     
-    p = (vec3(p,1)* inverse(tr)).xy;
-
     float r = .03;
 
     float d = sTri(p, r);
@@ -210,7 +206,7 @@ vec3 drawShape(vec2 p, vec2 a, vec2 b, vec2 point, float weight) {
     float maxWeight = 0.;
     d += mix(minWeight, maxWeight, weight);
 
-    return vec3(smoothstep(.02, .0, d)); 
+    return vec3(smoothstep(.002, .0, d)); 
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
@@ -223,19 +219,22 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 offset = iResolution.xy / 2.;
     
     vec2 uv = (fragCoord.xy - offset) * view;
-
     uv.y += .04;
-    tr = scale(vec2(guiScale));
+
+    mat3 tr = scale(vec2(guiScale));
     tr *= rotate2d(guiRotation * PI);
     tr *= translate(vec2(guiOffsetX, guiOffsetY) * guiScale * .1);
+    mat3 itr = inverse(tr);
 
-    uv = (vec3(uv,1)* tr).xy;
-    
-    Vec23 result = shapePoints(uv);
+    vec2 shapeUv = (vec3(uv, 1)* tr).xy;
+    Vec23 result = shapePoints(shapeUv);
+
+    result.a = (vec3(result.a, 1) * itr).xy;
+    result.b = (vec3(result.b, 1) * itr).xy;
+    result.c = (vec3(result.c, 1) * itr).xy;
 
     vec2 center = mix(result.a, result.b, .5);
     float weight = tex(center);
-
     vec3 color = drawShape(uv, result.a, result.b, result.c, weight);
 
     fragColor = vec4(color ,1.);
