@@ -5,7 +5,11 @@ uniform vec2 iOffset;
 uniform float iTime;
 uniform sampler2D iChannel0;
 
+uniform mat4 cameraMatrix;
+uniform vec3 cameraPosition;
+
 uniform float guiZoom;
+uniform float guiRotate;
 
 uniform bool guiLevel1Enabled;
 uniform bool guiLevel2Enabled;
@@ -63,7 +67,11 @@ struct Hit {
 #define PI 3.14159265359
 
 #define saturate(x) clamp(x, 0., 1.)
-    
+
+void pR(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
 // Repeat space along one axis
 float pMod1(inout float p, float size) {
     float halfsize = size*0.5;
@@ -196,13 +204,15 @@ float pModHelixScale(inout vec3 p, float lead, float innerRatio) {
 
 
 Model map(vec3 p) {
-    float lead1 = mix(.1, 8., guiLevel1Lead);
+    pR(p.yz, guiRotate * PI * 2.);
+
+    float lead1 = mix(.001, 8., pow(guiLevel1Lead, 2.));
     float radius1 = mix(0., .99, guiLevel1Radius);
 
-    float lead2 = mix(.1, 8., guiLevel2Lead);
+    float lead2 = mix(.001, 8., pow(guiLevel2Lead, 2.));
     float radius2 = mix(0., .99, guiLevel2Radius);
 
-    float lead3 = mix(.1, 8., guiLevel3Lead);
+    float lead3 = mix(.001, 8., pow(guiLevel3Lead, 2.));
     float radius3 = mix(0., .99, guiLevel3Radius);
 
     float scale = 1.;
@@ -229,11 +239,13 @@ Model map(vec3 p) {
 // Rendering
 // --------------------------------------------------------
 
+vec3 camPos;
+
 vec3 render(Hit hit){
     vec3 col;
-    if (hit.isBackground) {
-        col = vec3(.1);
-    } else {
+    vec3 bg = vec3(.5,.8,.75);
+    col = bg;
+    if ( ! hit.isBackground) {
         vec2 uv = hit.model.uv;
         uv *= vec2(4., 8.);
         uv = cos(uv * PI * 2.);
@@ -242,15 +254,17 @@ vec3 render(Hit hit){
         vec3 light = normalize(vec3(.5,1,0));
         vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
         col *= diffuse;
+        col = hit.normal * .5 + .5;
+        col = mix(col, bg, smoothstep(.5, 2., length(camPos - hit.pos)));
     }
-    if (hit.isBackground || hit.pos.z > 0.) {
-        vec3 debugPlanePos = intersectPlane(
-            hit.rayOrigin, hit.rayDirection, vec3(0,0,1), 0.
-        );
-        float dist = map(debugPlanePos).dist;
-        vec3 meter = vec3(mod(dist, 1./4.));
-        col = mix(col, meter, .5);
-    }
+    // if (hit.isBackground || hit.pos.z > 0.) {
+    //     vec3 debugPlanePos = intersectPlane(
+    //         hit.rayOrigin, hit.rayDirection, vec3(0,0,1), 0.
+    //     );
+    //     float dist = map(debugPlanePos).dist;
+    //     vec3 meter = vec3(mod(dist, 1./4.));
+    //     col = mix(col, meter, .5);
+    // }
     return col;
 }
 
@@ -316,13 +330,19 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    vec3 camPos = vec3(0,0,-guiZoom);
-    vec3 camTar = vec3(0);
-    vec3 camUp = vec3(0,1,0);
-    mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
+    // vec3 camPos = vec3(0,0,guiZoom);
+    // pR(camPos.xz, iTime);
+    // vec3 camTar = vec3(0);
+    // vec3 camUp = vec3(0,1,0);
+    // mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
 
-    float focalLength = 2.;
-    vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
+    camPos = cameraPosition * guiZoom;
+    mat4 camMat = cameraMatrix;
+
+    float focalLength = 1.;
+    vec3 rayDirection = normalize(
+        (vec4(p, -focalLength, 1) * camMat).xyz
+    );
 
     Hit hit = raymarch(camPos, rayDirection);
 

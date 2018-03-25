@@ -3,7 +3,7 @@ var glslify = require('glslify');
 var mouseChange = require('mouse-change');
 var debounce = require('debounce');
 var Timer = require('./lib/timer');
-var configStore = require('./lib/state-store');
+var stateStore = require('./lib/state-store');
 var FileSaver = require('file-saver');
 var pad = require('pad-number');
 var fs = require('fs');
@@ -13,7 +13,7 @@ var pixelRatio = window.devicePixelRatio;
 var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 
-pixelRatio = 1;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -102,11 +102,21 @@ function getConfig() {
     return config;
 }
 
-function saveConfig() {
-    configStore.save('config', getConfig());
+function getState() {
+    var state = {
+        timer: timer.serialize(),
+        mouse: mouse,
+        cameraMatrix: camera.view()
+    };
+    Object.assign(state, gui.exportState());
+    return state;
 }
 
-function restoreConfig(config) {
+function saveState() {
+    stateStore.save('state', getState());
+}
+
+function loadConfig(config) {
     if ( ! config) {
         return;
     }
@@ -123,6 +133,23 @@ function restoreConfig(config) {
     }
 }
 
+function loadState(state) {
+    if ( ! state) {
+        return;
+    }
+    if (state.timer) {
+        timer = Timer.fromObject(state.timer);
+        window.timer = timer; 
+    }
+    mouse = state.mouse || mouse;
+    gui.loadState(state);
+    if (state.cameraMatrix) {
+        camera = createCamera({
+            view: state.cameraMatrix
+        });
+    }
+}
+
 var frameCount = 0;
 var fpsTimeout;
 
@@ -135,9 +162,8 @@ var lastStateJson;
 
 var lastTime = performance.now();
 
-// Object.assign(config, configStore.restore('config'));
-restoreConfig(config);
-
+loadConfig(config);
+loadState(stateStore.restore('state'));
 
 Object.keys(gui.state).forEach(function(key) {
     uniforms[key] = function(context, props) {
@@ -165,7 +191,7 @@ const drawTriangle = regl({
 function render(offset, resolution) {
 
     var time = timer.elapsed();
-    saveConfig();
+    saveState();
 
     if ( ! lastMouse) {
         lastMouse = mouse;
@@ -211,6 +237,7 @@ function render(offset, resolution) {
         }
         frameCount += 1;
         scrubber.value = time;
+        console.log(1);
         drawTriangle(state);
     }
 
@@ -224,7 +251,7 @@ function play() {
 function pause() {
     if (timer.running) {
         timer.pause();
-        saveConfig();
+        saveState();
     }
 }
 
