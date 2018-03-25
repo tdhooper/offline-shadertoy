@@ -5,6 +5,11 @@ uniform vec2 iOffset;
 uniform float iGlobalTime;
 uniform vec4 iMouse;
 
+uniform float guiRotation;
+uniform float guiScale;
+uniform float guiOffsetX;
+uniform float guiOffsetY;
+
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
@@ -280,9 +285,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 mouse = (iMouse.xy - offset) * view;
 
     uv.y += .04;
-    tr = scale(vec2(8.));
-    tr *= rotate2d(PI * .5);
-    tr *= translate(vec2(.75,.0));
+    tr = scale(vec2(guiScale));
+    tr *= rotate2d(guiRotation * PI);
+    tr *= translate(vec2(guiOffsetX, guiOffsetY) * guiScale * .1);
+
     uv = (vec3(uv,1)* tr).xy;
     
     Vec23 result = shapePoints(uv);

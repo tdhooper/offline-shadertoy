@@ -1,0 +1,14 @@
+{
+    "controls": {
+        "rotation": [{"midi": "pot1", "step": 0.01}, 0, 1, 0.5],
+        "scale": [{"midi": "pot2", "step": 0.2}, 1, 30, 8],
+        "offsetX": [{"midi": "pot3", "step": 0.01}, -10, 10, 0.75],
+        "offsetY": [{"midi": "pot4", "step": 0.01}, -10, 10, 0]
+    },
+    "midiSlots": {
+        "pot1": {"channel": 11, "controller": 11},
+        "pot2": {"channel": 11, "controller": 12},
+        "pot3": {"channel": 11, "controller": 13},
+        "pot4": {"channel": 11, "controller": 14}
+    }
+}
