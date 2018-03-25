@@ -21,7 +21,7 @@
         "focal": [0, 10, 3],
         "rotateX": [0, 1, 0.6204676984110781],
         "rotateY": [0, 1, 0.9],
-        "rotateModel": [0, 1, 0.5030833039600972],
+        "rotateModel": [{"midi": "pot2", "step": 0.01}, 0, 1, 0.5030833039600972],
         "rotateModelX": [0, 1, 0],
         "flip": [false],
         "debug": [0, 1, 0.6749066960348409],
@@ -32,7 +32,8 @@
         "zipSpeed": [0, 15, 3.3]
     },
     "midiSlots": {
-        "pot1": [11, 11]
+        "pot1": {"channel": 11, "controller": 11},
+        "pot2": {"channel": 11, "controller": 12}
     },
     "cameraMatrix": {
         "0": -0.725907564163208,
