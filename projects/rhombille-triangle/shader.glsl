@@ -44,14 +44,6 @@ mat3 inverse(mat3 m) {
 }
 
 
-// --------------------------------------------------------
-// mattz
-// https://www.shadertoy.com/view/4d2GzV
-// --------------------------------------------------------
-
-float blend;
-
-
 const float sqrt3 = 1.7320508075688772;
 const float i3 = 0.5773502691896258;
 
@@ -62,56 +54,21 @@ const mat2 hex2cart = mat2(1, 0, -.5, .5 * sqrt3);
 #define PHI (1.618033988749895)
 #define TAU 6.283185307179586
 
-struct TriPoints {
-    vec2 a;
-    vec2 b;
-    vec2 c;
-    vec2 center;
-    vec2 ab;
-    vec2 bc;
-    vec2 ca;
-};
-
-TriPoints closestTriPoints(vec2 p) {    
-    vec2 pTri = cart2hex * p;
-    vec2 pi = floor(pTri);
-    vec2 pf = fract(pTri);
-    
-    float split1 = step(pf.y, pf.x);
-    float split2 = step(pf.x, pf.y);
-    
-    vec2 a = vec2(split1, 1);
-    vec2 b = vec2(1, split2);
-    vec2 c = vec2(0, 0);
-
-    a += pi;
-    b += pi;
-    c += pi;
-
-    a = hex2cart * a;
-    b = hex2cart * b;
-    c = hex2cart * c;
-    
-    vec2 center = (a + b + c) / 3.;
-    
-    vec2 ab = (a + b) / 2.;
-    vec2 bc = (b + c) / 2.;
-    vec2 ca = (c + a) / 2.;
-
-    return TriPoints(a, b, c, center, ab, bc, ca);
-}
-
+const float c6 = cos(TAU/6.);
+const float s6 = sin(TAU/6.);
+const mat2 rot6 = mat2(c6, -s6, s6, c6);
 
 struct Vec23 {
     vec2 a;
     vec2 b;
     vec2 c;
 };
-    
-    
-const float c6 = cos(TAU/6.);
-const float s6 = sin(TAU/6.);
-const mat2 rot6 = mat2(c6, -s6, s6, c6);
+
+
+// --------------------------------------------------------
+// Adapted from mattz
+// https://www.shadertoy.com/view/4d2GzV
+// --------------------------------------------------------
 
 Vec23 shapePoints(vec2 p) {
 
@@ -200,7 +157,6 @@ float pModPolar(inout vec2 p, float repetitions) {
 // signed distance to an equilateral triangle
 float sTri(vec2 p, float radius)
 {
-
     const float k = sqrt(3.0);
     
     p.x = abs(p.x) - radius;
@@ -218,8 +174,6 @@ float tex(vec2 p) {
     
     p = (vec3(p,1)* inverse(tr)).xy;
 
-    //p.y += .05;
-
     float r = .03;
 
     float d = sTri(p, r);
@@ -235,15 +189,6 @@ float tex(vec2 p) {
     float w = 1. - smoothstep(0., .15, d);
     
     return clamp(w, .0, .9);
-    
-    /*
-    p /= scl;
-    float rad = .25;
-    vec2 center = vec2(sin(iTime) * rad, 0.);
-    float d = length(p);
-    float w = smoothstep(.5, .0, d);
-    return clamp(w, 0., .9);
-    */
 }
 
 float sLine(vec2 p, vec2 a, vec2 b) {
@@ -251,7 +196,7 @@ float sLine(vec2 p, vec2 a, vec2 b) {
   return abs(dot(normalize(vec2(dir.y, -dir.x)), a - p));
 }
 
-vec3 drawShape(vec2 p, vec2 a, vec2 b, vec2 point) {
+vec3 drawShape(vec2 p, vec2 a, vec2 b, vec2 point, float weight) {
     float d = 1e12;
     float part;
     
@@ -260,9 +205,6 @@ vec3 drawShape(vec2 p, vec2 a, vec2 b, vec2 point) {
 
     part = sLine(p, b, point);
     d = max(-d, -part);
-    
-    vec2 center = mix(a, b, .5);
-    float weight = tex(center);
     
     float minWeight = length(a - b) * .5;
     float maxWeight = 0.;
@@ -278,11 +220,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         0, 1. / iResolution.y / (iResolution.x / iResolution.y)
     );
     
-    
     vec2 offset = iResolution.xy / 2.;
     
     vec2 uv = (fragCoord.xy - offset) * view;
-    vec2 mouse = (iMouse.xy - offset) * view;
 
     uv.y += .04;
     tr = scale(vec2(guiScale));
@@ -293,34 +233,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     Vec23 result = shapePoints(uv);
 
-    vec3 color = vec3(0);
-    
-    float sc = 1./1.5;
-    color.r = clamp(sc - length(uv - result.a), 0., 1.) * 1. / sc;
-    color.g = clamp(sc - length(uv - result.b), 0., 1.) * 1. / sc;
-    color.b = clamp(sc - length(uv - result.c), 0., 1.) * 1. / sc;
-    color *= .5;
-    
-    Vec23 mouseResult = shapePoints(mouse);
+    vec2 center = mix(result.a, result.b, .5);
+    float weight = tex(center);
 
-    color.b += clamp(1. - ceil(length(uv - mouse) - .05), 0., 1.);
-    
-    
-    float mouseA = clamp(1. - ceil(length(uv - mouseResult.a) - .05), 0., 1.);
-    float mouseB = clamp(1. - ceil(length(uv - mouseResult.b) - .05), 0., 1.);
-    float mouseC = clamp(1. - ceil(length(uv - mouseResult.c) - .05), 0., 1.);
-    color = mix(color, vec3(1,0,0), mouseA);
-    color = mix(color, vec3(0,1,0), mouseB);
-    color = mix(color, vec3(0,0,1), mouseC);
-    
-    color = vec3(0);
-    color += drawShape(uv, result.a, result.b, result.c);
-    
-    //color = vec3(tex(uv));
-    
-    
-    //color *= vec3(abs(result.ang)/PI);
-    
-    
+    vec3 color = drawShape(uv, result.a, result.b, result.c, weight);
+
     fragColor = vec4(color ,1.);
 }
