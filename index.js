@@ -13,7 +13,7 @@ var pixelRatio = window.devicePixelRatio;
 var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 
-pixelRatio = 1.;
+pixelRatio = 1;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -43,9 +43,10 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/spiral-loop/shader.glsl');
+var frag = glslify('./projects/rhombille-triangle/shader.glsl');
 
-var config = JSON.parse(fs.readFileSync('./projects/spiral-loop/config.json', 'utf8'));
+// var config = JSON.parse(fs.readFileSync('./projects/spiral-loop/config.json', 'utf8'));
+var config = {};
 
 var gui = new GUI();
 
@@ -148,7 +149,7 @@ var lastStateJson;
 var lastTime = performance.now();
 
 restoreConfig(config);
-restoreConfig(configStore.restore('config'));
+// restoreConfig(configStore.restore('config'));
 addGuiUniforms('gui', gui.state);
 
 const drawTriangle = regl({
