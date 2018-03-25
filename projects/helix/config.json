@@ -1,15 +1,134 @@
 {
     "showControls": false,
     "controls": {
+        "zoom": [
+            {
+                "midi": "pot0",
+                "step": 0.1
+            },
+            0.2,
+            3,
+            2
+        ],
         "level1": {
-            "enabled": [{"midi": "toggle1"}, true],
-            "lead": [{"midi": "pot1", "step": 0.01}, 0, 1, 0.5],
-            "radius": [{"midi": "pot2", "step": 0.01}, 0, 1, 0.5]
+            "enabled": [
+                {
+                    "midi": "toggle1"
+                },
+                true
+            ],
+            "lead": [
+                {
+                    "midi": "pot1",
+                    "step": 0.01
+                },
+                0,
+                1,
+                0.060000000000000164
+            ],
+            "radius": [
+                {
+                    "midi": "pot2",
+                    "step": 0.01
+                },
+                0,
+                1,
+                0.42000000000000015
+            ]
+        },
+        "level2": {
+            "enabled": [
+                {
+                    "midi": "toggle2"
+                },
+                true
+            ],
+            "lead": [
+                {
+                    "midi": "pot3",
+                    "step": 0.01
+                },
+                0,
+                1,
+                0.07999999999999995
+            ],
+            "radius": [
+                {
+                    "midi": "pot4",
+                    "step": 0.01
+                },
+                0,
+                1,
+                0.32999999999999996
+            ]
+        },
+        "level3": {
+            "enabled": [
+                {
+                    "midi": "toggle3"
+                },
+                true
+            ],
+            "lead": [
+                {
+                    "midi": "pot5",
+                    "step": 0.01
+                },
+                0,
+                1,
+                0.07000000000000003
+            ],
+            "radius": [
+                {
+                    "midi": "pot6",
+                    "step": 0.01
+                },
+                0,
+                1,
+                0.6000000000000001
+            ]
         }
     },
     "midiSlots": {
-        "pot1": {"channel": 11, "controller": 11},
-        "pot2": {"channel": 11, "controller": 12},
-        "toggle1": {"channel": 11, "note": "G#0"}
+        "pot0": {
+            "channel": 11,
+            "controller": 18
+        },
+        "pot1": {
+            "channel": 11,
+            "controller": 11
+        },
+        "pot2": {
+            "channel": 11,
+            "controller": 12
+        },
+        "pot3": {
+            "channel": 11,
+            "controller": 13
+        },
+        "pot4": {
+            "channel": 11,
+            "controller": 14
+        },
+        "pot5": {
+            "channel": 11,
+            "controller": 15
+        },
+        "pot6": {
+            "channel": 11,
+            "controller": 16
+        },
+        "toggle1": {
+            "channel": 11,
+            "note": "G#0"
+        },
+        "toggle2": {
+            "channel": 11,
+            "note": "A#0"
+        },
+        "toggle3": {
+            "channel": 11,
+            "note": "C1"
+        }
     }
 }

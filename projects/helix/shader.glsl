@@ -5,11 +5,19 @@ uniform vec2 iOffset;
 uniform float iTime;
 uniform sampler2D iChannel0;
 
+uniform float guiZoom;
+
 uniform bool guiLevel1Enabled;
+uniform bool guiLevel2Enabled;
+uniform bool guiLevel3Enabled;
 
 uniform float guiLevel1Lead;
+uniform float guiLevel2Lead;
+uniform float guiLevel3Lead;
 
 uniform float guiLevel1Radius;
+uniform float guiLevel2Radius;
+uniform float guiLevel3Radius;
 
 uniform float guiThickness;
 uniform bool guiNormals;
@@ -188,13 +196,25 @@ float pModHelixScale(inout vec3 p, float lead, float innerRatio) {
 
 
 Model map(vec3 p) {
-    float lead = mix(.1, 8., guiLevel1Lead);
-    float radius = mix(0., .99, guiLevel1Radius);
+    float lead1 = mix(.1, 8., guiLevel1Lead);
+    float radius1 = mix(0., .99, guiLevel1Radius);
+
+    float lead2 = mix(.1, 8., guiLevel2Lead);
+    float radius2 = mix(0., .99, guiLevel2Radius);
+
+    float lead3 = mix(.1, 8., guiLevel3Lead);
+    float radius3 = mix(0., .99, guiLevel3Radius);
 
     float scale = 1.;
 
     if (guiLevel1Enabled) {
-        scale *= pModHelixScale(p, lead, radius);
+        scale *= pModHelixScale(p, lead1, radius1);
+    }
+    if (guiLevel2Enabled) {
+        scale *= pModHelixScale(p, lead2, radius2);
+    }
+    if (guiLevel3Enabled) {
+        scale *= pModHelixScale(p, lead3, radius3);
     }
 
     float d = length(p.yz) - .5;
@@ -296,7 +316,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    vec3 camPos = vec3(0,0,-2);
+    vec3 camPos = vec3(0,0,-guiZoom);
     vec3 camTar = vec3(0);
     vec3 camUp = vec3(0,1,0);
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
