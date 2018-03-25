@@ -89,19 +89,6 @@ const uniforms = {
     iChannel0: texture
 };
 
-addGuiUniforms = function(prefix, state) {
-    Object.keys(state).forEach(function(key) {
-        var name = prefix + key[0].toUpperCase() + key.slice(1);
-        if (state[key] instanceof Object) {
-            addGuiUniforms(name, state[key]);
-            return;
-        }
-        uniforms[name] = function(context, props) {
-            return props.gui[key];
-        };
-    });
-};
-
 var timer = new Timer();
 var mouse = [0,0,0,0];
 
@@ -150,7 +137,13 @@ var lastTime = performance.now();
 
 restoreConfig(config);
 // restoreConfig(configStore.restore('config'));
-addGuiUniforms('gui', gui.state);
+
+Object.keys(gui.state).forEach(function(key) {
+    uniforms[key] = function(context, props) {
+        return props.gui[key];
+    };
+});
+
 
 const drawTriangle = regl({
     frag: frag,
