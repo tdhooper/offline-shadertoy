@@ -15,9 +15,14 @@ canvas {
 
 .controls {
 	padding: 5px 10px;
+    /*display: none;*/
 }
 
 .scrubber {
 	width: 100%;
 	margin: 0;
+}
+
+.dg {
+    /*display: none;*/
 }

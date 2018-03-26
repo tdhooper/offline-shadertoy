@@ -98,6 +98,15 @@ float fDisc(vec3 p, float r) {
     return l < 0. ? abs(p.y) : length(vec2(p.y, l));
 }
 
+float vmax(vec2 v) {
+    return max(v.x, v.y);
+}
+
+float fBox2(vec2 p, vec2 b) {
+    vec2 d = abs(p) - b;
+    return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
+}
+
 vec3 intersectPlane(vec3 rayOrigin, vec3 rayDirection, vec3 normal, float offset) {
     float dist = dot(normal, normal * offset - rayOrigin) / dot(normal, rayDirection);
     return rayOrigin + rayDirection * dist;
@@ -228,6 +237,7 @@ Model map(vec3 p) {
     }
 
     float d = length(p.yz) - .5;
+    d = fBox2(p.yz, vec2(.5));
     d /= scale;
 
     vec2 uv = cartToPolar(p).xy;
@@ -243,7 +253,7 @@ vec3 camPos;
 
 vec3 render(Hit hit){
     vec3 col;
-    vec3 bg = vec3(.5,.8,.75);
+    vec3 bg = vec3(.9,.3, .9) * .2;
     col = bg;
     if ( ! hit.isBackground) {
         vec2 uv = hit.model.uv;
@@ -254,8 +264,10 @@ vec3 render(Hit hit){
         vec3 light = normalize(vec3(.5,1,0));
         vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
         col *= diffuse;
-        col = hit.normal * .5 + .5;
-        col = mix(col, bg, smoothstep(.5, 2., length(camPos - hit.pos)));
+        vec3 ref = reflect(hit.rayDirection, hit.normal);
+        col = normalize(hit.normal) * .5 + .5;
+        // col = vec3(col.b);
+        col = mix(col, bg, clamp(0., 1., smoothstep(length(camPos * .25), length(camPos * 2.5), length(camPos - hit.pos))));
     }
     // if (hit.isBackground || hit.pos.z > 0.) {
     //     vec3 debugPlanePos = intersectPlane(
@@ -274,14 +286,14 @@ vec3 render(Hit hit){
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 30.;
-const float INTERSECTION_PRECISION = .001;
-const int NUM_OF_TRACE_STEPS = 100;
-const float FUDGE_FACTOR = .1;
+const float MAX_TRACE_DISTANCE = 5.;
+const float INTERSECTION_PRECISION = .0001;
+const int NUM_OF_TRACE_STEPS = 200;
+const float FUDGE_FACTOR = .5;
 
 
 vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3( 0.001, 0.0, 0.0 );
+    vec3 eps = vec3( 0.0001, 0.0, 0.0 );
     vec3 nor = vec3(
         map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
         map(pos+eps.yxy).dist - map(pos-eps.yxy).dist,
@@ -347,7 +359,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     Hit hit = raymarch(camPos, rayDirection);
 
     vec3 color = render(hit);
-    color = pow(color, vec3(1. / 2.2)); // Gamma
+    // color = pow(color, vec3(1. / 2.2)); // Gamma
     fragColor = vec4(color,1);
 }
 

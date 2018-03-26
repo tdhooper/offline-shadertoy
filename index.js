@@ -237,7 +237,6 @@ function render(offset, resolution) {
         }
         frameCount += 1;
         scrubber.value = time;
-        console.log(1);
         drawTriangle(state);
     }
 
