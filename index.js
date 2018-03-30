@@ -13,7 +13,7 @@ var pixelRatio = window.devicePixelRatio;
 var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 
-pixelRatio = .25;
+pixelRatio = 1.;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);

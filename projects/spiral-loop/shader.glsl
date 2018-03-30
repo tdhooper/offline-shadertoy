@@ -1024,7 +1024,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // p.y -= guiOffsetY;
 
     time = iGlobalTime;
-    time *= .3;
+    // time *= .3;
 
     // vec3 c = vec3(1.);
     // renderPaths(c, fragCoord);

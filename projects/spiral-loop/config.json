@@ -1,8 +1,8 @@
 {
     "id": "spiralloop1",
     "timer": {
-        "running": true,
-        "elapsed": 246668.60000000015
+        "running": false,
+        "elapsed": 0
     },
     "mouse": [
         297,
