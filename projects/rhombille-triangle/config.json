@@ -1,4 +1,5 @@
 {
+    "id": "rhombilletriangle1",
     "controls": {
         "rotation": [{"midi": "pot1", "step": 0.01}, 0, 1, 0.5],
         "scale": [{"midi": "pot2", "step": 0.2}, 1, 30, 8],

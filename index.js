@@ -43,10 +43,12 @@ var regl = Regl({
 });
 
 var vert = glslify('./quad.vert');
-var frag = glslify('./projects/helix/shader.glsl');
+var frag = glslify('./projects/rhombille-triangle/shader.glsl');
 
-var config = JSON.parse(fs.readFileSync('./projects/helix/config.json', 'utf8'));
+var config = JSON.parse(fs.readFileSync('./projects/rhombille-triangle/config.json', 'utf8'));
 // var config = {};
+
+var configId;
 
 var gui = new GUI();
 
@@ -94,6 +96,7 @@ var mouse = [0,0,0,0];
 
 function getConfig() {
     var config = {
+        id: configId,
         timer: timer.serialize(),
         mouse: mouse,
         cameraMatrix: camera.view()
@@ -113,7 +116,7 @@ function getState() {
 }
 
 function saveState() {
-    stateStore.save('state', getState());
+    stateStore.save('state-' + configId, getState());
 }
 
 function loadConfig(config) {
@@ -124,6 +127,7 @@ function loadConfig(config) {
         timer = Timer.fromObject(config.timer);
         window.timer = timer; 
     }
+    configId = config.id || 'generic';
     mouse = config.mouse || mouse;
     gui.loadConfig(config);
     if (config.cameraMatrix) {
@@ -163,7 +167,7 @@ var lastStateJson;
 var lastTime = performance.now();
 
 loadConfig(config);
-loadState(stateStore.restore('state'));
+loadState(stateStore.restore('state-' + configId));
 
 Object.keys(gui.state).forEach(function(key) {
     uniforms[key] = function(context, props) {
