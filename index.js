@@ -51,9 +51,9 @@ var vert = glslify('./quad.vert');
 // icosahedron-twist
 
 var frag = glslify('./projects/icosahedron-twist/shader.glsl');
-// var config = JSON.parse(fs.readFileSync('./projects/icosahedron-twist/config.json', 'utf8'));
+var config = JSON.parse(fs.readFileSync('./projects/icosahedron-twist/config.json', 'utf8'));
 
-var config = {};
+// var config = {};
 
 var configId;
 

@@ -1,0 +1,21 @@
+{
+    "id": "icosahedrontwist1",
+    "showControls": false,
+    "controls": {
+        "twist": [
+            {
+                "midi": "pot1",
+                "step": 0.01
+            },
+            -1,
+            1,
+            0.5
+        ]
+    },
+    "midiSlots": {
+        "pot1": {
+            "channel": 11,
+            "controller": 11
+        }
+    }
+}
