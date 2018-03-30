@@ -761,15 +761,36 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
     float res = 1.0;
     float t = mint;
-    for( int i=0; i<16; i++ )
+    float ph = 1e10; // big, such that y = 0 on the first iteration
+    
+    for( int i=0; i<32; i++ )
     {
         float h = map( ro + rd*t ).dist;
-        res = min( res, 8.0*h/t );
-        t += clamp( h, 0.02, 0.10 );
-        if( h<0.001 || t>tmax ) break;
+
+        // traditional technique
+        if( false )
+        {
+            res = min( res, 10.0*h/t );
+        }
+        // improved technique
+        else
+        {
+            // use this if you are getting artifact on the first iteration, or unroll the
+            // first iteration out of the loop
+            //float y = (i==0) ? 0.0 : h*h/(2.0*ph); 
+
+            float y = h*h/(2.0*ph);
+            float d = sqrt(h*h-y*y);
+            res = min( res, 10.0*d/max(0.0,t-y) );
+            ph = h;
+        }
+        
+        t += h;
+        
+        if( res<0.0001 || t>tmax ) break;
+        
     }
     return clamp( res, 0.0, 1.0 );
-
 }
 
 
