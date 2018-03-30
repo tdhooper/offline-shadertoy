@@ -2,7 +2,7 @@ precision highp float;
 
 uniform vec2 iResolution;
 uniform vec2 iOffset;
-uniform float iGlobalTime;
+uniform float iTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
@@ -21,15 +21,13 @@ precision mediump float;
 /* SHADERTOY FROM HERE */
 
 
-//#define MODEL_ROTATION vec2(.3, .25)
-#define MODEL_ROTATION vec2(0.6190476190476191, 0.5445134575569358)
+#define MODEL_ROTATION vec2(.3, .25)
 #define CAMERA_ROTATION vec2(.5, .5)
-
 
 // 0: Defaults
 // 1: Model
 // 2: Camera
-#define MOUSE_CONTROL 0
+#define MOUSE_CONTROL 1
 
 //#define DEBUG
 
@@ -305,22 +303,17 @@ HexSpec newHexSpec(float subdivisions) {
 // Animation 1
     
 float animSubdivisions1() {
-    return 3.4;
     return mix(2.4, 3.4, cos(time * PI) * .5 + .5);
 }
 
 HexSpec animHex1(vec3 hexCenter, float subdivisions) {
     HexSpec spec = newHexSpec(subdivisions);
     
-    float offset = time * 3. * PI + 2.;
+    float offset = time * 3. * PI;
     offset -= subdivisions;
-    float dist = dot(hexCenter, pca);
-    float blend = dist;
-    blend = cos(dist * 40. + 10.) * .5;
-    //blend += cos(dist * 50. + 40.);
-    float s = 1. * 2.;
-    blend = blend / s + (1. / s);
-    spec.height = mix(1.75, 4.5, blend);
+    float blend = dot(hexCenter, pca);
+    blend = cos(blend * 30. + offset) * .5 + .5;
+    spec.height = mix(1.75, 2., blend);
 
     spec.thickness = spec.height;
 
@@ -443,15 +436,12 @@ Model hexModel(
     vec3 color;
 
     float faceBlend = (spec.height - length(p)) / spec.thickness;
-
     faceBlend = clamp(faceBlend, 0., 1.);
     color = mix(FACE_COLOR, BACK_COLOR, step(.5, faceBlend));
     
-    vec3 edgeColor = spectrum(dot(hexCenter, pca) * 8. + length(p) * .5 + .8);    
-    float edgeBlend = smoothstep(-.1, -.1, edgeDist);
+    vec3 edgeColor = spectrum(dot(hexCenter, pca) * 5. + length(p) + .8);    
+    float edgeBlend = smoothstep(-.04, -.005, edgeDist);
     color = mix(color, edgeColor, edgeBlend); 
-
-    //color = edgeColor;
 
     return Model(d, color, edgeBlend);
 }
@@ -554,10 +544,10 @@ vec3 doLighting(Model model, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
 // Adapted from cabbibo https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 20.; // max trace distance
+const float MAX_TRACE_DISTANCE = 8.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
-const int NUM_OF_TRACE_STEPS = 200;
-const float FUDGE_FACTOR = .5; // Default is 1, reduce to fix overshoots
+const int NUM_OF_TRACE_STEPS = 100;
+const float FUDGE_FACTOR = .9; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
@@ -670,7 +660,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 }
 
 void doCamera(out vec3 camPos, out vec3 camTar, out float camRoll, in float time, in vec2 mouse) {
-    float dist = 10.8;
+    float dist = 5.5;
     camRoll = 0.;
     camTar = vec3(0,0,0);
     camPos = vec3(0,0,-dist);
@@ -696,7 +686,7 @@ vec3 linearToScreen(vec3 linearRGB) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iGlobalTime;
+    time = iTime;
 
     #ifdef LOOP
         #if LOOP == 1
@@ -715,15 +705,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = iMouse.xy / iResolution.xy;
 
-    time = m.x * 2.;
-    time = 0.;
-
     vec3 camPos = vec3( 0., 0., 2.);
     vec3 camTar = vec3( 0. , 0. , 0. );
     float camRoll = 0.;
     
     // camera movement
-    doCamera(camPos, camTar, camRoll, iGlobalTime, m);
+    doCamera(camPos, camTar, camRoll, iTime, m);
     
     // camera matrix
     mat3 camMat = calcLookAtMatrix( camPos, camTar, camRoll );  // 0.0 is the camera roll

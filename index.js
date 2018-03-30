@@ -49,11 +49,12 @@ var vert = glslify('./quad.vert');
 // spiral-loop
 // spiral
 // icosahedron-twist
+// geodesic-tiling
 
-var frag = glslify('./projects/icosahedron-twist/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/icosahedron-twist/config.json', 'utf8'));
+var frag = glslify('./projects/geodesic-tiling/shader.glsl');
+// var config = JSON.parse(fs.readFileSync('./projects/icosahedron-twist/config.json', 'utf8'));
 
-// var config = {};
+var config = {};
 
 var configId;
 
