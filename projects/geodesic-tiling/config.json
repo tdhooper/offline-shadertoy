@@ -1,0 +1,11 @@
+{
+    "id": "geodesictiling1",
+    "controls": {
+        "scene": [{"midi": "pot1", "step": 0.01, "loop": true}, 0, 1, 0],
+        "blend": [{"midi": "pot2", "step": 0.025}, 0, 1, 0]
+    },
+    "midiSlots": {
+        "pot1": {"channel": 11, "controller": 11},
+        "pot2": {"channel": 11, "controller": 12}
+    }
+}

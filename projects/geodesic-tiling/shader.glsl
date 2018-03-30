@@ -6,6 +6,9 @@ uniform float iTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
+uniform float guiScene;
+uniform float guiBlend;
+
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -20,6 +23,7 @@ precision mediump float;
 
 /* SHADERTOY FROM HERE */
 
+#define CONTROL
 
 #define MODEL_ROTATION vec2(.3, .25)
 #define CAMERA_ROTATION vec2(.5, .5)
@@ -32,7 +36,7 @@ precision mediump float;
 //#define DEBUG
 
 // 1, 2, or 3
-#define LOOP 1
+// #define LOOP 1
 
 
 // --------------------------------------------------------
@@ -365,6 +369,15 @@ float sineInOut(float t) {
 }
 
 float transitionValues(float a, float b, float c) {
+    #ifdef CONTROL
+        float r;
+        r = mix(a, b, clamp(guiScene * 4., 0., 1.));
+        r = mix(r, c, clamp(guiScene * 4. - 1., 0., 1.));
+        r = mix(r, b, clamp(guiScene * 4. - 2., 0., 1.));
+        r = mix(r, a, clamp(guiScene * 4. - 3., 0., 1.));
+        return r;
+    #endif
+
     #ifdef LOOP
         #if LOOP == 1
             return a;
