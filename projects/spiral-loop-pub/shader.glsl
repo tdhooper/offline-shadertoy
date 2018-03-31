@@ -6,9 +6,6 @@ uniform float iGlobalTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
-uniform mat4 cameraMatrix;
-uniform vec3 cameraPosition;
-
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
@@ -33,6 +30,27 @@ float guiZipOffset = 30.;
 float guiZipSize = 60.;
 float guiZipSpeed = 3.3;
 float guiZoom = 0.1;
+
+mat4 cameraMatrix = mat4(
+    -0.7063226699829102,
+    0.7052236199378967,
+    0.06198469549417496,
+    0,
+    -0.30620118975639343,
+    -0.3832840919494629,
+    0.8714323043823242,
+    0,
+    0.6382971405982971,
+    0.5965006947517395,
+    0.48660656809806824,
+    0,
+    0.14653973281383514,
+    0.6211488246917725,
+    0.13233166933059692,
+    1
+);
+
+vec3 cameraPosition = vec3(0.14653973281383514, 0.6211488246917725, 0.13233166933059692);
 
 
 vec2 mousee;
