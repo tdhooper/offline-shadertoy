@@ -178,7 +178,7 @@ var lastStateJson;
 var lastTime = performance.now();
 
 loadConfig(config);
-// loadState(stateStore.restore('state-' + configId));
+loadState(stateStore.restore('state-' + configId));
 
 Object.keys(gui.state).forEach(function(key) {
     uniforms[key] = function(context, props) {

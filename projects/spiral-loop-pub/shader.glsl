@@ -19,8 +19,6 @@ precision mediump float;
 
 /* SHADERTOY FROM HERE */
 
-#pragma glslify: distanceMeter = require(./distance-meter.glsl)
-
 float guiLead = 0.6;
 float guiInnerRatio = 0.4407892623709694;
 float guiFocal = 3.;
@@ -30,6 +28,7 @@ float guiZipOffset = 30.;
 float guiZipSize = 60.;
 float guiZipSpeed = 3.3;
 float guiZoom = 0.1;
+float guiModelScale = 7.749066960348409;
 
 mat4 cameraMatrix = mat4(
     -0.7063226699829102,
@@ -51,7 +50,6 @@ mat4 cameraMatrix = mat4(
 );
 
 vec3 camPosition = vec3(0.14653973281383514, 0.6211488246917725, 0.13233166933059692);
-
 
 float time;
 
@@ -99,10 +97,6 @@ float rangec(float a, float b, float t) {
 
 float vmax(vec2 v) {
     return max(v.x, v.y);
-}
-
-float vmax(vec3 v) {
-    return max(max(v.x, v.y), v.z);
 }
 
 float fBox2(vec2 p, vec2 b) {
@@ -244,13 +238,13 @@ float anim(float t, float index) {
     return range(start, end, t);
 }
 
-float unzip(vec3 p, float t, bool offset) {
+float unzip(vec3 p, float t) {
     float size = guiZipSize;
     float speed = guiZipSpeed;
 
     t *= size * speed;
 
-    if (sign(p.y) != sign(p.x) && offset) {
+    if (sign(p.y) != sign(p.x)) {
         float radius = mix(.25, .5, guiInnerRatio);
         float scale = mix(.5, 0., guiInnerRatio);
         float factor = radius / scale * PI * 2.;
@@ -280,10 +274,13 @@ void addPipe(inout float d, vec3 p, float scale, float tt) {
     d = mix(d, part, smoothstep(.0, .01, t));
 }
 
-float sss;
-
-
-const int HELIX_ITERATIONS = 2;
+void unzipHelixModel(inout float d, inout float scale, inout vec3 p, float lead, float innerRatio, float step, float invert) {
+    float offset = guiZipOffset / lead;
+    scale *= pModHelixScale(p, lead, innerRatio);
+    p.x *= -1.;
+    float t1 = unzip(p + vec3(offset,0,0) * invert, anim(time, step));
+    addPipe(d, p, scale, t1);
+}
 
 Model map(vec3 p) {
 
@@ -292,59 +289,40 @@ Model map(vec3 p) {
     float innerRatio = guiInnerRatio;
     vec2 uv1, uv2, uv3;
 
-    p /= sss;
+    p /= guiModelScale;
 
     vec3 pp = p;
 
     d = 1e12;
 
-    float t = mod(time, 1.);
-
     float s = mix(.5, 0., innerRatio);
 
-    float scaleB = 1./pow(1./s, t);
+    float scale = 1./pow(1./s, time);
 
-    pR(p.xy, PI * -.5 * t + guiRotateModel * PI * 2.);
+    pR(p.xy, PI * -.5 * time + guiRotateModel * PI * 2.);
     
-    p *= scaleB;
+    p *= scale;
     p.z += .5;
 
-    if (false) {
-        p.x *= -1.;
-    }
-
-    scaleB *= pModHelixUnwrap(p, lead, innerRatio, t);
+    scale *= pModHelixUnwrap(p, lead, innerRatio, time);
     p.x *= -1.;
-    scaleB *= pModHelixUnwrap(p, lead, innerRatio, 0.);
+    scale *= pModHelixScale(p, lead, innerRatio);
     p.x *= -1.;
+    // scaleB *= pModHelixScale(p, lead, innerRatio);
+    // p.x *= -1.;
 
     d = min(d, length(p.yz) - .5);
-    d /= scaleB;
+    d /= scale;
 
-    float offset = guiZipOffset / lead;
-    vec3 color;
+    unzipHelixModel(d, scale, p, lead, innerRatio, -1., 1.);
+    unzipHelixModel(d, scale, p, lead, innerRatio, 0., -1.);
+    unzipHelixModel(d, scale, p, lead, innerRatio, 1., 1.);
 
-    float step = -1.;
-    float reverse = 1.;
-    float invert = 1.;
+    d *= guiModelScale;
 
-    for (int i = 0; i <= HELIX_ITERATIONS; i++) {
-        scaleB *= pModHelixScale(p, lead, innerRatio);
-        p.x *= -1.;
-        t1 = unzip(p + vec3(offset,0,0) * invert, anim(t, step), true);
-        addPipe(d, p, scaleB, t1);
-        step += 1.;
-        invert *= -1.;
-    }
-
-    d *= sss;
-
-    return Model(d, color, 1);
+    return Model(d, vec3(0), 1);
 }
 
-// --------------------------------------------------------
-// Camera
-// --------------------------------------------------------
 
 // --------------------------------------------------------
 // Ray Marching
@@ -352,9 +330,9 @@ Model map(vec3 p) {
 // --------------------------------------------------------
 
 const float MAX_TRACE_DISTANCE = 1.5; // max trace distance
-const float INTERSECTION_PRECISION = .00001; // precision of the intersection
-const int NUM_OF_TRACE_STEPS = 1000;
-const float FUDGE_FACTOR = .5; // Default is 1, reduce to fix overshoots
+const float INTERSECTION_PRECISION = .001; // precision of the intersection
+const int NUM_OF_TRACE_STEPS = 100;
+const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
@@ -373,8 +351,7 @@ struct Hit {
     vec3 pos;
     bool isBackground;
     vec3 normal;
-    vec3 color;
-    bool isBorder;
+    bool isOutline;
 };
 
 // Faster runtime
@@ -405,11 +382,12 @@ vec3 calcNormal(vec3 pos){
 Hit raymarch(CastRay castRay){
 
     float currentDist = INTERSECTION_PRECISION * 2.0;
-    float borderDist = INTERSECTION_PRECISION * 2.0;
+    float outlineDist = INTERSECTION_PRECISION * 2.0;
     Model model;
 
-    bool border = false;
-    bool away = false;
+    float outline = .0027;
+    bool isOutline = false;
+    bool miss = false;
 
     float lastDist = currentDist;
 
@@ -422,13 +400,11 @@ Hit raymarch(CastRay castRay){
         model = map(ray.origin + ray.direction * ray.len);
         lastDist = currentDist;
         currentDist = model.dist;
-        away = currentDist > lastDist;
-        borderDist = currentDist * -1. + .0015;
-        if (borderDist > .0 && borderDist < currentDist && away) {
-            currentDist = borderDist;
-            border = true;
-        } else {
-            border = false;
+        miss = currentDist > lastDist;
+        outlineDist = currentDist * -1. + outline;
+        isOutline = outlineDist > .0 && outlineDist < currentDist && miss;
+        if (isOutline) {
+            currentDist = outlineDist;
         }
         ray.len += currentDist * FUDGE_FACTOR;
     }
@@ -444,7 +420,7 @@ Hit raymarch(CastRay castRay){
         normal = calcNormal(pos);
     }
 
-    return Hit(ray, model, pos, isBackground, normal, vec3(0), border);
+    return Hit(ray, model, pos, isBackground, normal, isOutline);
 }
 
 
@@ -531,17 +507,9 @@ void render(inout vec3 color, Hit hit){
         return;
     }
 
-    if (hit.isBorder) {
+    if (hit.isOutline) {
         color = vec3(background * .33);
-    }
-
-    if (hit.model.id == 0) {
-        float dist = map(hit.pos).dist;
-        color = distanceMeter(dist * 10., hit.ray.len, hit.ray.direction, 10.);
-        return;
-    }
-
-    if ( ! hit.isBorder) {
+    } else {
         vec3 ref = reflect(hit.ray.direction, hit.normal);
         color = doLighting(
             hit.pos,
@@ -558,14 +526,13 @@ void render(inout vec3 color, Hit hit){
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    sss = 1. + 10. * guiDebug;
-
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
     vec3 color = mix(vec3(.4,.3,.5) * .9, vec3(.6), -.2);
 
     time = iGlobalTime;
-    // time *= .3;
+    time *= .7;
+    time = mod(time, 1.);
 
     float camDist = length(camPosition);
 
