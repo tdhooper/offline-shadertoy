@@ -50,20 +50,8 @@ mat4 cameraMatrix = mat4(
     1
 );
 
-vec3 cameraPosition = vec3(0.14653973281383514, 0.6211488246917725, 0.13233166933059692);
+vec3 camPosition = vec3(0.14653973281383514, 0.6211488246917725, 0.13233166933059692);
 
-
-vec2 mousee;
-
-#define MODEL_ROTATION vec2(.5, .5)
-#define CAMERA_ROTATION vec2(.5, .5)
-
-// 0: Defaults
-// 1: Model
-// 2: Camera
-#define MOUSE_CONTROL 2
-
-//#define DEBUG
 
 float time;
 
@@ -74,38 +62,8 @@ float time;
 
 
 // --------------------------------------------------------
-// Rotation controls
+// Utils
 // --------------------------------------------------------
-
-mat3 sphericalMatrix(float theta, float phi) {
-    float cx = cos(theta);
-    float cy = cos(phi);
-    float sx = sin(theta);
-    float sy = sin(phi);
-    return mat3(
-        cy, -sy * -sx, -sy * cx,
-        0, cx, sx,
-        sy, cy * -sx, cy * cx
-    );
-}
-
-// --------------------------------------------------------
-// Spectrum colour palette
-// IQ https://www.shadertoy.com/view/ll2GD3
-// --------------------------------------------------------
-
-vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
-    return a + b*cos( 6.28318*(c*t+d) );
-}
-
-vec3 spectrum(float n) {
-    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
-}
-
-// --------------------------------------------------------
-// Modelling
-// --------------------------------------------------------
-
 
 #define saturate(x) clamp(x, 0., 1.)
 
@@ -131,18 +89,6 @@ mat3 rotationMatrix(vec3 axis, float angle)
     );
 }
 
-float sineIn(float t) {
-  return sin((t - 1.0) * HALF_PI) + 1.0;
-}
-
-float circularOut(float t) {
-  return sqrt((2.0 - t) * t);
-}
-
-float circularIn(float t) {
-  return 1.0 - sqrt(1.0 - t * t);
-}
-
 float range(float vmin, float vmax, float value) {
   return (value - vmin) / (vmax - vmin);
 }
@@ -159,38 +105,10 @@ float vmax(vec3 v) {
     return max(max(v.x, v.y), v.z);
 }
 
-// Box: correct distance to corners
-float fBox(vec3 p, vec3 b) {
-    vec3 d = abs(p) - b;
-    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
-}
-
 float fBox2(vec2 p, vec2 b) {
     vec2 d = abs(p) - b;
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
-
-float fBox2(vec2 p, vec2 b, float round) {
-    return fBox2(p, b * (1. - round)) - round * vmax(b);
-}
-
-float fBox2(inout float side, vec2 p, vec2 b) {
-    vec2 d = abs(p) - b;
-    // side = sign(d.x - d.y) + 1.;
-    // side = max(0., sign(vmax(d)))
-    if (d.x > d.y) {
-        side = max(0., sign(p.x));
-    } else {
-        side = max(0., sign(p.y)) + 2.;
-    }
-    return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
-}
-
-// Torus in the XZ-plane
-float fTorus(vec3 p, float smallRadius, float largeRadius) {
-    return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
-}
-
 
 // Repeat space along one axis. Use like this to repeat along the x axis:
 // <float cell = pMod1(p.x,5);> - using the return value is optional.
@@ -198,13 +116,6 @@ float pMod1(inout float p, float size) {
     float halfsize = size*0.5;
     float c = floor((p + halfsize)/size);
     p = mod(p + halfsize, size) - halfsize;
-    return c;
-}
-
-// Repeat in two dimensions
-vec2 pMod2(inout vec2 p, vec2 size) {
-    vec2 c = floor((p + size*0.5)/size);
-    p = mod(p + size*0.5,size) - size*0.5;
     return c;
 }
 
@@ -223,18 +134,27 @@ vec3 polarToCart(vec3 p) {
     );
 }
 
-
 vec2 closestPointOnLine(vec2 line, vec2 point){
     line = normalize(line);
     float d = dot(point, line);
     return line * d;
 }
 
-float globalScale;
-bool debug = false;
+// Closest of two points
+vec3 closestPoint(vec3 pos, vec3 p1, vec3 p2) {
+    if (length(pos - p1) < length(pos - p2)) {
+        return p1;
+    } else {
+        return p2;
+    }
+}
 
+// --------------------------------------------------------
+// Helix
+// --------------------------------------------------------
 
-vec3 closestSpiralB(vec3 p, float lead, float radius) {
+// Closest point on a helix for one revolution
+vec3 closestHelixSection(vec3 p, float lead, float radius) {
 
     p = cartToPolar(p);
     p.y *= radius;
@@ -248,49 +168,21 @@ vec3 closestSpiralB(vec3 p, float lead, float radius) {
     return closestCart;
 }
 
-vec3 closestSpiralA(vec3 p, float lead, float radius) {
-    // float flip = max(0., sign(dot(p, vec3(0,0,-1))));
-    // pR(p.yz, PI * flip);
-    vec3 s1 = closestSpiralB(p, lead, radius);
-    // pR(s1.yz, PI * -flip);
-    return s1;
-}
-
-vec3 opU(vec3 p, vec3 m1, vec3 m2) {
-    if (length(p - m1) < length(p - m2)) {
-        return m1;
-    } else {
-        return m2;
-    }
-}
-
-vec3 closestSpiral(vec3 p, float lead, float radius) {
-
+// Closest point on a helix for infinite revolutions
+vec3 closestHelix(vec3 p, float lead, float radius) {
     float c = pMod1(p.x, lead);
-    vec3 pp = p;
-
-    vec3 closestCartA = closestSpiralA(p, lead, radius);
-
-    p.x += lead;
-    vec3 closestCartB = closestSpiralA(p, lead, radius);
-    closestCartB.x -= lead;
-
-    p = pp;
-    p.x -= lead;
-    vec3 closestCartC = closestSpiralA(p, lead, radius);
-    closestCartC.x += lead;
-
-    p = pp;
-
-    vec3 closestCart = opU(p, closestCartA, opU(p, closestCartB, closestCartC));
-
-    closestCart.x += lead * c;
-
-    return closestCart;
+    vec3 offset = vec3(lead, 0, 0);
+    vec3 A = closestHelixSection(p, lead, radius);
+    vec3 B = closestHelixSection(p + offset, lead, radius) - offset;
+    vec3 C = closestHelixSection(p - offset, lead, radius) + offset;
+    vec3 closest = closestPoint(p, A, closestPoint(p, B, C));
+    closest += offset * c;
+    return closest;
 }
 
-vec3 pModSpiral(inout vec3 p, float flip, float lead, float radius) {
-    vec3 closest = closestSpiral(p, lead, radius);
+// Cartesian to helix coordinates
+void pModHelix(inout vec3 p, float lead, float radius) {
+    vec3 closest = closestHelix(p, lead, radius);
     float helixAngle = atan((2. * PI * radius) / lead);
     vec3 normal = normalize(closest - vec3(closest.x,0,0));
     vec3 tangent = vec3(1,0,0) * rotationMatrix(normal, helixAngle);
@@ -298,12 +190,11 @@ vec3 pModSpiral(inout vec3 p, float flip, float lead, float radius) {
     float y = dot(p - closest, cross(tangent, normal));
     float z = dot(p - closest, normal);
     p = vec3(x, y, z);
-    return vec3(0.);
 }
 
-float pModHelix(inout vec3 p, float lead, float innerRatio) {
+float pModHelixScale(inout vec3 p, float lead, float innerRatio) {
     float radius = mix(.25, .5, innerRatio);
-    pModSpiral(p, 1., lead, radius);
+    pModHelix(p, lead, radius);
     float scale = mix(.5, 0., innerRatio);
     p /= scale;
     return 1. / scale;
@@ -322,7 +213,7 @@ float pModHelixUnwrap(inout vec3 p, float lead, float innerRatio, float t) {
 
     p.z += offset;
     radius += offset;
-    pModSpiral(p, 1., lead, radius);
+    pModHelix(p, lead, radius);
 
     p = mix(p, pp, rangec(.8, 1., t));
 
@@ -332,13 +223,15 @@ float pModHelixUnwrap(inout vec3 p, float lead, float innerRatio, float t) {
 }
 
 
+// --------------------------------------------------------
+// Modelling
+// --------------------------------------------------------
+
 struct Model {
     float dist;
     vec3 albedo;
     int id;
 };
-
-
 
 float anim(float t, float index) {
     float overlap = .5;
@@ -352,15 +245,8 @@ float anim(float t, float index) {
 }
 
 float unzip(vec3 p, float t, bool offset) {
-    // return t;
-    // t = smoothstep(0., 1., t);
-    float size = 2.2;
-    float speed = .01;
-    size = guiZipSize;
-    speed = guiZipSpeed;
-
-    // t = pow(t, 1.25);
-    // t = mix(sineIn(t), t, .5);
+    float size = guiZipSize;
+    float speed = guiZipSpeed;
 
     t *= size * speed;
 
@@ -374,109 +260,32 @@ float unzip(vec3 p, float t, bool offset) {
     return range(size, 0., abs(p.x) + size - t);
 }
 
-
-vec3 colA = vec3(.5,0,.75); // purple
-vec3 colB = vec3(0,1,.25); // green
-
-
-float hexagon(vec2 p) {
-    vec2 q = vec2( p.x*2.0*0.5773503, p.y + p.x*0.5773503 );
-    
-    vec2 pi = floor(q);
-    vec2 pf = fract(q);
-
-    float v = mod(pi.x + pi.y, 3.0);
-
-    float ca = step(1.0,v);
-    float cb = step(2.0,v);
-    vec2  ma = step(pf.xy,pf.yx);
-    
-    // distance to borders
-    float e = dot( ma, 1.0-pf.yx + ca*(pf.x+pf.y-1.0) + cb*(pf.yx-2.0*pf.xy) );
-
-    return e;
-}
-
-vec3 patternB(vec2 p) {
-    p *= 5.9 * 1.5;
-    // pMod2(p, vec2(1.));
-    // float d = length(p) - .33;
-    float d = hexagon(p);
-    float fill = smoothstep(.05, .15, d);
-    return vec3(fill);
-}
-
-float pattern(vec2 p, float t) {
-    // return mix(colA, colB, step(.5, t));
-    p = abs(p);
-    // t = 0.;
-    t = rangec(-.5, .5, t);
-    // t = circularIn(t);
-    float width = mix(.365, 1., 0.);
-    float d = dot(p, vec2(0,1)) - width;
-    float fill = smoothstep(.0, .01, d);
-    return fill * (1.-t);
-}
-
 void addPipe(inout float d, vec3 p, float scale, float tt) {
 
     float t = clamp(0., 1., tt);
 
-    // t = sineIn(t);
-    // t = pow(t, 2.);
-    // t = pow(smoothstep(0., 1., t), 2.);
     float boundry = 1.;
     float part;
     float separate = (
         rangec(0., boundry * .01, t) * .3 +
         rangec(boundry * .01, boundry, t) * .7
     );
-    // separate = pow(separate, .5);
-    float round = rangec(.0, 1., t);
-    // separate = rangec(0., boundry, t);
-    // round = 0.;
 
-    float side= 0.;
-    part = fBox2(side, p.yz, vec2(mix(guiLead * 2., .5, separate), .5));
+    float round = rangec(.0, 1., t);
+
+    part = fBox2(p.yz, vec2(mix(guiLead * 2., .5, separate), .5));
     part = mix(part, length(p.yz) - .5, round);
     part /= scale;
 
     d = mix(d, part, smoothstep(.0, .01, t));
 }
 
-void addColor(inout vec3 color, vec3 p, float tt, float tnext) {
-    vec2 uv = vec2(p.x * .8, atan(p.y, p.z) / PI);
-    vec3 col = vec3(mod(uv, 1.), 0.);
-    float fill = pattern(uv, tnext);
-
-    col = mix(color, colB, fill);
-    color = mix(color, col, step(.0, tt));
-}
-
-
 float sss;
 
 
-const int HELIX_ITERATIONS = 3;
+const int HELIX_ITERATIONS = 2;
 
 Model map(vec3 p) {
-
-    // float dd = length(p) - .1;
-    // dd = min(dd, length(p - vec3(.0,-.1,-.2)) - .2);
-    // dd = min(dd, length(p - vec3(.1,.2,-.1)) - .02);
-
-    // return Model(dd, vec3(0), 1);
-    
-    // float ww = length(p - cameraPosition) - .05;
-    // ww = 1e23;
-    // p = mod(p, .4) - .2;
-    // float dd = length(p) - .1;
-    // dd = min(dd, ww);
-    // return Model(
-    //     dd,
-    //     vec3(0),
-    //     1
-    // );
 
     float part, d, t1, t2, t3, t4;
     float lead = guiLead;
@@ -485,23 +294,6 @@ Model map(vec3 p) {
 
     p /= sss;
 
-    // d = length(p.yz) - .001;
-    // d = min(d, length(p.zx) - .002);
-    // d = min(d, length(p.xy) - .003);
-
-    // d = min(d, length(p - vec3(.01)) - .003);
-
-    // p += vec3(-.02,0,.03);
-    // p *= sphericalMatrix(2.9 * PI * 2., 1.77 * 2.);
-    // p.x -= .02;
-    // pMod1(p.x, .03);
-    // pR(p.xz, -.03);
-    // d = min(d, fTorus(p.zxy, .005, .015));
-
-    // d *= sss;
-    // return Model(d, vec3(0,1,0), 1);
-
-
     vec3 pp = p;
 
     d = 1e12;
@@ -509,8 +301,6 @@ Model map(vec3 p) {
     float t = mod(time, 1.);
 
     float s = mix(.5, 0., innerRatio);
-    // s *= s;
-    // s = 1.;
 
     float scaleB = 1./pow(1./s, t);
 
@@ -531,62 +321,30 @@ Model map(vec3 p) {
     d = min(d, length(p.yz) - .5);
     d /= scaleB;
 
-    // return Model(d, vec3(.8), 1);
-
     float offset = guiZipOffset / lead;
-    vec3 color = colA;
+    vec3 color;
 
     float step = -1.;
     float reverse = 1.;
     float invert = 1.;
 
     for (int i = 0; i <= HELIX_ITERATIONS; i++) {
-        scaleB *= pModHelix(p, lead, innerRatio);
+        scaleB *= pModHelixScale(p, lead, innerRatio);
         p.x *= -1.;
         t1 = unzip(p + vec3(offset,0,0) * invert, anim(t, step), true);
-        // t2 = unzip((p * 13.7 + vec3(offset,0,0)), anim(t, 0.), false);
         addPipe(d, p, scaleB, t1);
-        addColor(color, p, t1, t1);
         step += 1.;
         invert *= -1.;
     }
-
-    // d -= color.r * .0005;
-
-    // color = vec3(.8);
 
     d *= sss;
 
     return Model(d, color, 1);
 }
 
-
-Model mapDebug(vec3 p) {
-
-    vec3 n = normalize(vec3(1,0,1));
-    float d = abs(dot(p, n) - .5 * 10. + 5.) - .001;
-    Model model = map(p);
-
-    return model;
-
-    if (model.dist < d) {
-        return model;
-    }
-
-    return Model(d, vec3(0), 0);
-}
-
-
 // --------------------------------------------------------
 // Camera
 // --------------------------------------------------------
-
-vec3 camPos;
-vec3 camTar;
-vec3 camUp;
-float camDist = guiZoom * sss;
-
-
 
 // --------------------------------------------------------
 // Ray Marching
@@ -619,7 +377,8 @@ struct Hit {
     bool isBorder;
 };
 
-vec3 calcNormalA(vec3 pos){
+// Faster runtime
+vec3 _calcNormal(vec3 pos){
     vec3 eps = vec3(.0001,0,0);
     vec3 nor = vec3(
         map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
@@ -628,22 +387,8 @@ vec3 calcNormalA(vec3 pos){
     return normalize(nor);
 }
 
-
-const int NORMAL_STEPS_B = 3;
-
-vec3 calcNormalB(vec3 pos){
-    vec3 eps = vec3(.0001,0,0);
-    vec3 nor = vec3(0);
-    for(int i = 0; i < NORMAL_STEPS_B; i++){
-        nor += (map(pos+eps).dist - map(pos-eps).dist) * eps;
-        eps = eps.zxy;
-    }
-    return normalize(nor);
-}
-
-
+// Faster compilation
 const int NORMAL_STEPS = 6;
-
 vec3 calcNormal(vec3 pos){
     vec3 eps = vec3(.001,0,0);
     vec3 nor = vec3(0);
@@ -674,7 +419,7 @@ Hit raymarch(CastRay castRay){
         if (currentDist < INTERSECTION_PRECISION || ray.len > MAX_TRACE_DISTANCE) {
             break;
         }
-        model = mapDebug(ray.origin + ray.direction * ray.len);
+        model = map(ray.origin + ray.direction * ray.len);
         lastDist = currentDist;
         currentDist = model.dist;
         away = currentDist > lastDist;
@@ -702,81 +447,22 @@ Hit raymarch(CastRay castRay){
     return Hit(ray, model, pos, isBackground, normal, vec3(0), border);
 }
 
-float xray(CastRay castRay){
-
-    float currentDist = INTERSECTION_PRECISION * 2.0;
-    Model model;
-
-    Ray ray = Ray(castRay.origin, castRay.direction, 0.);
-
-    float col = 0.;
-    float a;
-    float stepSize = float(MAX_TRACE_DISTANCE) / float(NUM_OF_TRACE_STEPS);
-    vec3 pos;
-    float fog;
-
-    for( int i=0; i< NUM_OF_TRACE_STEPS ; i++ ){
-        
-        pos = ray.origin + ray.direction * ray.len;
-        model = mapDebug(pos);
-        currentDist = model.dist;
-        ray.len += stepSize;
-
-        a = rangec(.005, 0., abs(currentDist));
-        a = pow(a, 5.);
-        a = (a * 50.) * stepSize;
-
-        fog = length(camPos - pos);
-        fog = smoothstep(camDist, camDist * 2.5, fog);
-
-        col += a * (1. - fog);
-    }
-
-    
-    // fog = 0.;
-    // color = mix(color, background, fog);
-
-
-    return col;
-}
-
 
 // --------------------------------------------------------
 // Rendering
 // --------------------------------------------------------
 
-// LIGHTING
-
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
     float res = 1.0;
     float t = mint;
-    float ph = 1e10; // big, such that y = 0 on the first iteration
+    float ph = 1e10;
     
     for( int i=0; i<32; i++ )
     {
         float h = map( ro + rd*t ).dist;
-
-        // traditional technique
-        if( false )
-        {
-            res = min( res, 10.0*h/t );
-        }
-        // improved technique
-        else
-        {
-            // use this if you are getting artifact on the first iteration, or unroll the
-            // first iteration out of the loop
-            //float y = (i==0) ? 0.0 : h*h/(2.0*ph); 
-
-            float y = h*h/(2.0*ph);
-            float d = sqrt(h*h-y*y);
-            res = min( res, 10.0*d/max(0.0,t-y) );
-            ph = h;
-        }
-        
+        res = min( res, 10.0*h/t );
         t += h;
-        
         if( res<0.0001 || t>tmax ) break;
         
     }
@@ -800,49 +486,20 @@ float calcAO( in vec3 pos, in vec3 nor )
 }
 
 
+vec3 doLighting(vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
 
-vec3 doLighting2(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
-
-    // lighitng        
-    float occ = calcAO( pos, nor );
-    vec3  lig = normalize( vec3(-0.6, 0.7, 0.5) );
-    float amb = clamp( 0.5+0.5*nor.y, 0.0, 1.0 );
-    float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
-    float bac = clamp( dot( nor, normalize(vec3(-lig.x,0.0,-lig.z))), 0.0, 1.0 )*clamp( 1.0-pos.y,0.0,1.0);
-    float dom = smoothstep( -0.1, 0.1, ref.y );
-    float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
-    float spe = pow(clamp( dot( ref, lig ), 0.0, 1.0 ),16.0);
-    
-    dif *= softshadow( pos, lig, 0.02, 2.5 );
-    //dom *= softshadow( pos, ref, 0.02, 2.5 );
-
-    vec3 lin = vec3(0.0);
-    lin += 1.20*dif*vec3(.95,0.80,0.60);
-    lin += 1.20*spe*vec3(1.00,0.85,0.55)*dif;
-    lin += 0.80*amb*vec3(0.50,0.70,.80)*occ;
-    lin += 0.30*dom*vec3(0.50,0.70,1.00)*occ;
-    lin += 0.30*bac*vec3(0.25,0.25,0.25)*occ;
-    lin += 0.20*fre*vec3(1.00,1.00,1.00)*occ;
-    col = col*lin;
-
-    return col;
-}
-
-
-vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
-
+    vec3 col;
     vec3 up = normalize(vec3(1));
 
     // lighitng        
     float occ = mix(calcAO( pos, nor ), 1., .8);
     vec3  lig = normalize(vec3(0,.2,1));
-    // lig *= sphericalMatrix(guiNormalX * PI * 2., guiNormalY * PI * 2.);
     float amb = clamp(dot(nor, up) * .5 + .5, 0., 1.);
     float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
     float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
     vec3  hal = normalize( lig-rd );
     float spe = pow(clamp( dot( nor, hal ), 0.0, 1.0 ),16.0);
-                    
+
     vec3 cA = vec3(.7,.3,.9);
     vec3 cB = vec3(.4,.9,.8);
     vec3 cC = vec3(.7,0,.7);
@@ -861,17 +518,12 @@ vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
     lin += .4 * occ;
     col = col*lin;
 
-    // col = normalize(pos);
-    // col = vec3(amb);
     return col;
 }
 
 void render(inout vec3 color, Hit hit){
 
     vec3 background = vec3(.1)* vec3(.5,0,1);
-    // background = vec3(.2,.8,1.) * .9;
-    // background = vec3(1);
-    // background = vec3(.1);
     background = color;
 
     if (hit.isBackground) {
@@ -889,16 +541,9 @@ void render(inout vec3 color, Hit hit){
         return;
     }
 
-    // pR(hit.normal.xz, 2.75);
-    //hit.normal *= sphericalMatrix(guiNormalX * PI * 2., guiNormalY * PI * 2.);
     if ( ! hit.isBorder) {
         vec3 ref = reflect(hit.ray.direction, hit.normal);
-        vec3 albedo = hit.model.albedo;
-        // color = vec3(0);
-        // color += albedo * (dot(vec3(0,1,0), hit.normal) * .5 + .5);
-        // hit.color += albedo * (dot(vec3(1,0,0), hit.normal) * .5 + .5) * colB;
         color = doLighting(
-            albedo,
             hit.pos,
             hit.normal,
             ref,
@@ -906,166 +551,38 @@ void render(inout vec3 color, Hit hit){
         );
     }
 
-    float fog = length(camPos - hit.pos);
+    float fog = length(camPosition - hit.pos);
     fog = smoothstep(float(MAX_TRACE_DISTANCE) * .36, float(MAX_TRACE_DISTANCE), fog);
-    // color = max(hit.pos, vec3(0)) * .5;
-    // fog = 0.;
-    // fog = pow(fog, 2.);
     color = mix(color, background, fog);
-    // color = hit.normal * .5 + .5;
 }
-
-
-// --------------------------------------------------------
-// Camera
-// https://www.shadertoy.com/view/Xl2XWt
-// --------------------------------------------------------
-
-mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in vec3 up )
-{
-    vec3 ww = normalize( ta - ro );
-    vec3 uu = normalize( cross(ww,up));
-    vec3 vv = normalize( cross(uu,ww));
-    return mat3( uu, vv, ww );
-}
-
-
-
-// --------------------------------------------------------
-// Gamma
-// https://www.shadertoy.com/view/Xds3zN
-// --------------------------------------------------------
-
-const float GAMMA = 1.;
-
-vec3 gamma(vec3 color, float g) {
-    return pow(color, vec3(g));
-}
-
-vec3 linearToScreen(vec3 linearRGB) {
-    return gamma(linearRGB, 1.0 / GAMMA);
-}
-
-
-float plot(float height, vec2 p, float y){
-    float thick = .005;
-    y *= height;
-    return (
-        smoothstep( y - thick, y, p.y) - 
-        smoothstep( y, y + thick, p.y)
-    );
-}
-
-vec3 hlCol(vec3 color, float highlight) {
-    return mix(color, vec3(1), highlight);
-}
-
-float plotFade(float x) {
-    return smoothstep(1., .5, x);
-}
-
-void renderPaths(inout vec3 color, vec2 fragCoord) {
-    vec2 p = fragCoord.xy / iResolution.xy;
-    p.y -= .02;
-    float height = 1./4.;
-    float focus = .25;
-
-    if (p.y > height + .02) {
-        return;
-    }
-
-    // p *= 2.;
-    // p -= .5;
-
-    float x = p.x;
-
-    // x = mod(x - .5, 1.);
-    color = vec3(0);
-
-    // x *= focus;
-    // x += time;
-    // x -= .5 * focus;
-
-    float hp = time - x;
-    float hl = smoothstep(.1, .0, hp) - smoothstep(.0, -.005, hp);
-
-    
-    color += plot(height, p, anim(x, 0.)) * hlCol(vec3(1,1,1), hl);
-    color += plot(height, p, anim(x, 1.)) * hlCol(vec3(1,1,0), hl);
-    color += plot(height, p, anim(x, 2.)) * hlCol(vec3(0,1,1), hl);    
-    color += plot(height, p, anim(x, 3.)) * hlCol(vec3(1,0,1), hl);    
-    // color += plot(height, p, x) * hlCol(vec3(0,1,1), hl);
-}
-
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     sss = 1. + 10. * guiDebug;
 
-    mousee = iMouse.xy;
-
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
-    vec2 m = mousee.xy / iResolution.xy;
 
-
-    vec3 bgA = vec3(.6,.5,.8) * .55;
-    vec3 bgB = vec3(.7,.9,1.) * .5;
-
-    vec3 color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))) * .5);
-
-    color = mix(vec3(.4,.3,.5) * .9, vec3(.6), -.2);
-
-    // p.x -= guiOffsetX;
-    // p.y -= guiOffsetY;
+    vec3 color = mix(vec3(.4,.3,.5) * .9, vec3(.6), -.2);
 
     time = iGlobalTime;
     // time *= .3;
 
-    // vec3 c = vec3(1.);
-    // renderPaths(c, fragCoord);
-    // fragColor = vec4(c,1.0);
-    // return;
+    float camDist = length(camPosition);
 
-
-// debug = true;
-    if (p.x > (time - .5) * 3.) {
-        debug = true;
-    }
-
-    camPos = cameraPosition;
-    // camPos = vec3(0,0,1);
-    camDist = length(camPos);
-
-    // mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     mat4 camMat = cameraMatrix;
     float focalLength = guiFocal;
-    // focalLength = 3.;
-    // vec3 rd = normalize(camMat * vec3(p, focalLength));
     vec3 rd = normalize(
         (vec4(p, -focalLength, 1) * camMat).xyz
     );
 
-
-    // float x = xray(CastRay(camPos, rd));
-    // fragColor = vec4(vec3(x),1);
-    // return;
-
-    Hit hit = raymarch(CastRay(camPos, rd));
+    Hit hit = raymarch(CastRay(camPosition, rd));
 
     render(color, hit);
 
-    vec2 uv = fragCoord/iResolution.xy;
-    float vig = pow(
-        16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
-        0.05
-    );
-    // color *= vec3(.9, .95, 1.) * vig * 1.1;
     color *= vec3(.9, .95, 1.);
-    // if (p.x + p.y < 0.) {
     color = mix(color, vec3(pow(length(color * .6), 2.)), .1);
     color *= 1.05;
     color = pow(color, vec3(1.2,1.3,1.2));
 
-    color = linearToScreen(color);
     fragColor = vec4(color,1.0);
 }
