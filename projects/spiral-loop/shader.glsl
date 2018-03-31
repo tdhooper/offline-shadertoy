@@ -478,11 +478,19 @@ void addColor(inout vec3 color, vec3 p, float tt, float tnext) {
     color = mix(color, col, step(.0, tt));
 }
 
-float sss = 1. + 10. * guiDebug;
+
+float sss;
+
 
 const int HELIX_ITERATIONS = 3;
 
 Model map(vec3 p) {
+
+    // float dd = length(p) - .1;
+    // dd = min(dd, length(p - vec3(.0,-.1,-.2)) - .2);
+    // dd = min(dd, length(p - vec3(.1,.2,-.1)) - .02);
+
+    // return Model(dd, vec3(0), 1);
     
     // float ww = length(p - cameraPosition) - .05;
     // ww = 1e23;
@@ -620,9 +628,9 @@ void doCamera() {
 // --------------------------------------------------------
 
 const float MAX_TRACE_DISTANCE = 1.5; // max trace distance
-const float INTERSECTION_PRECISION = .001; // precision of the intersection
+const float INTERSECTION_PRECISION = .00001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 1000;
-const float FUDGE_FACTOR = .8; // Default is 1, reduce to fix overshoots
+const float FUDGE_FACTOR = .5; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
@@ -642,6 +650,7 @@ struct Hit {
     bool isBackground;
     vec3 normal;
     vec3 color;
+    bool isBorder;
 };
 
 vec3 calcNormalA(vec3 pos){
@@ -670,7 +679,7 @@ vec3 calcNormalB(vec3 pos){
 const int NORMAL_STEPS = 6;
 
 vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3(.00001,0,0);
+    vec3 eps = vec3(.001,0,0);
     vec3 nor = vec3(0);
     float invert = 1.;
     for (int i = 0; i < NORMAL_STEPS; i++){
@@ -685,7 +694,13 @@ vec3 calcNormal(vec3 pos){
 Hit raymarch(CastRay castRay){
 
     float currentDist = INTERSECTION_PRECISION * 2.0;
+    float borderDist = INTERSECTION_PRECISION * 2.0;
     Model model;
+
+    bool border = false;
+    bool away = false;
+
+    float lastDist = currentDist;
 
     Ray ray = Ray(castRay.origin, castRay.direction, 0.);
 
@@ -694,7 +709,16 @@ Hit raymarch(CastRay castRay){
             break;
         }
         model = mapDebug(ray.origin + ray.direction * ray.len);
+        lastDist = currentDist;
         currentDist = model.dist;
+        away = currentDist > lastDist;
+        borderDist = currentDist * -1. + .0015;
+        if (borderDist > .0 && borderDist < currentDist && away) {
+            currentDist = borderDist;
+            border = true;
+        } else {
+            border = false;
+        }
         ray.len += currentDist * FUDGE_FACTOR;
     }
 
@@ -709,7 +733,7 @@ Hit raymarch(CastRay castRay){
         normal = calcNormal(pos);
     }
 
-    return Hit(ray, model, pos, isBackground, normal, vec3(0));
+    return Hit(ray, model, pos, isBackground, normal, vec3(0), border);
 }
 
 float xray(CastRay castRay){
@@ -861,7 +885,7 @@ vec3 doLighting(vec3 col, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
     col = mix(col, vec3(.8,.5,1), rangec(.5, 1., dif) * .5);
     col += cC * rangec(.5, 1., dif) * .1;
 
-    dif *= softshadow( pos, lig, 0.02, 2.5 );
+    dif *= softshadow( pos, lig, 0.02, 2.5 ) * .9;
 
     vec3 lin = vec3(0);
     lin += .5 * dif;
@@ -889,6 +913,10 @@ void render(inout vec3 color, Hit hit){
         return;
     }
 
+    if (hit.isBorder) {
+        color = vec3(background * .33);
+    }
+
     if (hit.model.id == 0) {
         float dist = map(hit.pos).dist;
         color = distanceMeter(dist * 10., hit.ray.len, hit.ray.direction, 10.);
@@ -897,9 +925,7 @@ void render(inout vec3 color, Hit hit){
 
     // pR(hit.normal.xz, 2.75);
     //hit.normal *= sphericalMatrix(guiNormalX * PI * 2., guiNormalY * PI * 2.);
-    if (false) {
-        hit.color = hit.normal * -.5 + .5;
-    } else {
+    if ( ! hit.isBorder) {
         vec3 ref = reflect(hit.ray.direction, hit.normal);
         vec3 albedo = hit.model.albedo;
         // color = vec3(0);
@@ -913,6 +939,7 @@ void render(inout vec3 color, Hit hit){
             hit.ray.direction
         );
     }
+
     float fog = length(camPos - hit.pos);
     fog = smoothstep(float(MAX_TRACE_DISTANCE) * .36, float(MAX_TRACE_DISTANCE), fog);
     // color = max(hit.pos, vec3(0)) * .5;
@@ -1007,18 +1034,20 @@ void renderPaths(inout vec3 color, vec2 fragCoord) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+    sss = 1. + 10. * guiDebug;
+
     mousee = iMouse.xy;
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
     vec2 m = mousee.xy / iResolution.xy;
 
 
-    vec3 bgA = vec3(.6,.7,.9) * .5;
+    vec3 bgA = vec3(.6,.5,.8) * .55;
     vec3 bgB = vec3(.7,.9,1.) * .5;
 
-    vec3 color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))));
+    vec3 color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))) * .5);
 
-    color = vec3(.4,.3,.5);
+    color = mix(vec3(.4,.3,.5) * .9, vec3(.6), -.2);
 
     // p.x -= guiOffsetX;
     // p.y -= guiOffsetY;

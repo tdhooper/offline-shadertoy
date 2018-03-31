@@ -450,7 +450,7 @@ var captureRender = function(milliseconds) {
 
 // Default config used by the UI
 var captureConfig = {
-  fps: 35,
+  fps: 40,
   seconds: 1, // (duration)
   width: 640 * 4,
   height: 360 * 4,
