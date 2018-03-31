@@ -13,7 +13,7 @@ var pixelRatio = window.devicePixelRatio;
 var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 
-pixelRatio = 1.;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -52,8 +52,8 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/spiral-loop/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/spiral-loop/config.json', 'utf8'));
+var frag = glslify('./projects/spiral-loop-pub/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/spiral-loop-pub/config.json', 'utf8'));
 
 console.log(config);
 
