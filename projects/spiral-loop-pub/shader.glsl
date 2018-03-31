@@ -2,7 +2,7 @@ precision highp float;
 
 uniform vec2 iResolution;
 uniform vec2 iOffset;
-uniform float iGlobalTime;
+uniform float iTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
@@ -15,6 +15,8 @@ void main() {
 #ifdef GL_ES
 precision mediump float;
 #endif
+
+#define VIP_VERSION
 
 
 /* SHADERTOY FROM HERE */
@@ -308,8 +310,11 @@ Model map(vec3 p) {
     p.x *= -1.;
     scale *= pModHelixScale(p, lead, innerRatio);
     p.x *= -1.;
-    // scaleB *= pModHelixScale(p, lead, innerRatio);
-    // p.x *= -1.;
+
+    #ifdef VIP_VERSION
+        scale *= pModHelixScale(p, lead, innerRatio);
+        p.x *= -1.;
+    #endif
 
     d = min(d, length(p.yz) - .5);
     d /= scale;
@@ -530,7 +535,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec3 color = mix(vec3(.4,.3,.5) * .9, vec3(.6), -.2);
 
-    time = iGlobalTime;
+    #ifdef VIP_VERSION
+        vec3 bgA = vec3(.6,.5,.8) * .55;
+        vec3 bgB = vec3(.7,.9,1.) * .5;
+        color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))) * .5);
+    #endif
+
+    time = iTime;
     time *= .7;
     time = mod(time, 1.);
 
@@ -546,7 +557,17 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     render(color, hit);
 
-    color *= vec3(.9, .95, 1.);
+    #ifndef VIP_VERSION
+        color *= vec3(.9, .95, 1.);
+    #else
+        vec2 uv = fragCoord/iResolution.xy;
+        float vig = pow(
+            16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
+            0.075
+        );
+        color *= vec3(.9, .95, 1.) * vig * 1.1;
+    #endif
+
     color = mix(color, vec3(pow(length(color * .6), 2.)), .1);
     color *= 1.05;
     color = pow(color, vec3(1.2,1.3,1.2));
