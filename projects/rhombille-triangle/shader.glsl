@@ -222,7 +222,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     uv.y += .04;
 
     mat3 tr = scale(vec2(guiScale));
-    tr *= rotate2d(guiRotation * PI);
+    tr *= rotate2d(guiRotation * PI * 2.);
     tr *= translate(vec2(guiOffsetX, guiOffsetY) * guiScale * .1);
     mat3 itr = inverse(tr);
 

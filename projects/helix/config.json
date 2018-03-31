@@ -32,7 +32,7 @@
     "controls": {
         "zoom": [
             {
-                "midi": "pot8",
+                "controller": 18,
                 "step": 0.1
             },
             0.2,
@@ -41,7 +41,7 @@
         ],
         "rotate": [
             {
-                "midi": "pot7",
+                "controller": 17,
                 "step": 0.005
             },
             -2,
@@ -51,13 +51,13 @@
         "level1": {
             "enabled": [
                 {
-                    "midi": "toggle1"
+                    "note": "G#0"
                 },
                 true
             ],
             "lead": [
                 {
-                    "midi": "pot1",
+                    "controller": 11,
                     "step": 0.0025
                 },
                 0,
@@ -66,7 +66,7 @@
             ],
             "radius": [
                 {
-                    "midi": "pot2",
+                    "controller": 12,
                     "step": 0.002
                 },
                 0,
@@ -77,13 +77,13 @@
         "level2": {
             "enabled": [
                 {
-                    "midi": "toggle2"
+                    "note": "A#0"
                 },
                 true
             ],
             "lead": [
                 {
-                    "midi": "pot3",
+                    "controller": 13,
                     "step": 0.0025
                 },
                 0,
@@ -92,7 +92,7 @@
             ],
             "radius": [
                 {
-                    "midi": "pot4",
+                    "controller": 14,
                     "step": 0.002
                 },
                 0,
@@ -103,13 +103,13 @@
         "level3": {
             "enabled": [
                 {
-                    "midi": "toggle3"
+                    "note": "C1"
                 },
                 true
             ],
             "lead": [
                 {
-                    "midi": "pot5",
+                    "controller": 15,
                     "step": 0.0025
                 },
                 0,
@@ -118,59 +118,13 @@
             ],
             "radius": [
                 {
-                    "midi": "pot6",
+                    "controller": 16,
                     "step": 0.002
                 },
                 0,
                 1,
                 0.7179999999999997
             ]
-        }
-    },
-    "midiSlots": {
-        "pot1": {
-            "channel": 11,
-            "controller": 11
-        },
-        "pot2": {
-            "channel": 11,
-            "controller": 12
-        },
-        "pot3": {
-            "channel": 11,
-            "controller": 13
-        },
-        "pot4": {
-            "channel": 11,
-            "controller": 14
-        },
-        "pot5": {
-            "channel": 11,
-            "controller": 15
-        },
-        "pot6": {
-            "channel": 11,
-            "controller": 16
-        },
-        "pot7": {
-            "channel": 11,
-            "controller": 17
-        },
-        "pot8": {
-            "channel": 11,
-            "controller": 18
-        },
-        "toggle1": {
-            "channel": 11,
-            "note": "G#0"
-        },
-        "toggle2": {
-            "channel": 11,
-            "note": "A#0"
-        },
-        "toggle3": {
-            "channel": 11,
-            "note": "C1"
         }
     }
 }

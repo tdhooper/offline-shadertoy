@@ -1,15 +1,47 @@
 {
     "id": "rhombilletriangle1",
-    "controls": {
-        "rotation": [{"midi": "pot1", "step": 0.01}, 0, 1, 0.5],
-        "scale": [{"midi": "pot2", "step": 0.2}, 1, 30, 8],
-        "offsetX": [{"midi": "pot3", "step": 0.01}, -10, 10, 0.75],
-        "offsetY": [{"midi": "pot4", "step": 0.01}, -10, 10, 0]
+    "timer": {
+        "running": true,
+        "elapsed": 0
     },
-    "midiSlots": {
-        "pot1": {"channel": 11, "controller": 11},
-        "pot2": {"channel": 11, "controller": 12},
-        "pot3": {"channel": 11, "controller": 13},
-        "pot4": {"channel": 11, "controller": 14}
+    "showControls": false,
+    "controls": {
+        "rotation": [
+            {
+                "controller": 11,
+                "step": 0.005,
+                "loop": true
+            },
+            0,
+            1,
+            0.7200000000000002
+        ],
+        "scale": [
+            {
+                "controller": 12,
+                "step": 0.2
+            },
+            1,
+            30,
+            8
+        ],
+        "offsetX": [
+            {
+                "controller": 13,
+                "step": 0.01
+            },
+            -10,
+            10,
+            0.75
+        ],
+        "offsetY": [
+            {
+                "controller": 14,
+                "step": 0.01
+            },
+            -10,
+            10,
+            0
+        ]
     }
 }

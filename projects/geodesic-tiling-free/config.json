@@ -1,19 +1,94 @@
 {
     "id": "geodesictilingfree1",
-    "controls": {
-        "subdivisions": [{"midi": "pot0", "step": 0.01, "mirror": true}, 0, 1, 0],
-        "height": [{"midi": "pot1", "step": 0.01, "mirror": true}, 0, 1, 0],
-        "gap": [{"midi": "pot2", "step": 0.01, "mirror": true}, 0, 1, 0],
-        "roundCorner": [{"midi": "pot3", "step": 0.1, "mirror": true}, 0, 1, 0],
-        "roundTop": [{"midi": "pot4", "step": 0.05, "mirror": true}, 0, 1, 0],
-        "thickness": [{"midi": "pot5", "step": 0.05, "mirror": true}, 0, 1, 0]
+    "timer": {
+        "running": true,
+        "elapsed": 8025.000000001455
     },
-    "midiSlots": {
-        "pot0": {"channel": 11, "controller": 11},
-        "pot1": {"channel": 11, "controller": 12},
-        "pot2": {"channel": 11, "controller": 13},
-        "pot3": {"channel": 11, "controller": 14},
-        "pot4": {"channel": 11, "controller": 15},
-        "pot5": {"channel": 11, "controller": 16}
+    "mouse": [
+        298,
+        293,
+        false,
+        0
+    ],
+    "cameraMatrix": {
+        "0": 0.7258626818656921,
+        "1": -0.4499901235103607,
+        "2": 0.5202233791351318,
+        "3": 0,
+        "4": 0.5209737420082092,
+        "5": 0.8534971475601196,
+        "6": 0.011360307224094868,
+        "7": 0,
+        "8": -0.4491211771965027,
+        "9": 0.262776643037796,
+        "10": 0.8539546728134155,
+        "11": 0,
+        "12": 0,
+        "13": 0,
+        "14": -1,
+        "15": 1
+    },
+    "showControls": true,
+    "controls": {
+        "subdivisions": [
+            {
+                "controller": 11,
+                "step": 0.01,
+                "mirror": true
+            },
+            0,
+            1,
+            0.3200000000000002
+        ],
+        "height": [
+            {
+                "controller": 12,
+                "step": 0.01,
+                "mirror": true
+            },
+            0,
+            1,
+            0.4600000000000002
+        ],
+        "gap": [
+            {
+                "controller": 13,
+                "step": 0.01,
+                "mirror": true
+            },
+            0,
+            1,
+            0.11999999999999998
+        ],
+        "roundCorner": [
+            {
+                "controller": 14,
+                "step": 0.1,
+                "mirror": true
+            },
+            0,
+            1,
+            0
+        ],
+        "roundTop": [
+            {
+                "controller": 15,
+                "step": 0.05,
+                "mirror": true
+            },
+            0,
+            1,
+            0
+        ],
+        "thickness": [
+            {
+                "controller": 16,
+                "step": 0.05,
+                "mirror": true
+            },
+            0,
+            1,
+            0.19999999999999996
+        ]
     }
 }

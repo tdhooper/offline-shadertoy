@@ -47,13 +47,14 @@ var vert = glslify('./quad.vert');
 // rhombille-triangle
 // helix
 // spiral-loop
+// spiral-loop-pub
 // spiral
 // icosahedron-twist
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/spiral-loop-pub/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/spiral-loop-pub/config.json', 'utf8'));
+var frag = glslify('./projects/geodesic-tiling-free/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/geodesic-tiling-free/config.json', 'utf8'));
 
 console.log(config);
 
@@ -178,7 +179,7 @@ var lastStateJson;
 var lastTime = performance.now();
 
 loadConfig(config);
-loadState(stateStore.restore('state-' + configId));
+// loadState(stateStore.restore('state-' + configId));
 
 Object.keys(gui.state).forEach(function(key) {
     uniforms[key] = function(context, props) {
@@ -241,6 +242,8 @@ function render(offset, resolution) {
     };
 
     var stateJson = JSON.stringify(state);
+
+    // console.log(state)
 
     if (stateJson !== lastStateJson) {
         if ( ! fpsTimeout) {
