@@ -65,7 +65,8 @@ var configId;
 var guiControls = new Controls({
     'hi': {
         'type': 'toggle',
-        'value': true
+        'value': true,
+        'note': 'G#0'
     }
 });
 
@@ -249,7 +250,7 @@ function render(offset, resolution) {
         // gui: gui.state
     };
     guiControls.addUniforms(state, 'gui');
-    console.log(state);
+    // console.log(state);
 
     var stateJson = JSON.stringify(state);
 
