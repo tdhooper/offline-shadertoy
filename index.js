@@ -53,31 +53,13 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/base/shader.glsl');
-// var config = JSON.parse(fs.readFileSync('./projects/rhombille-triangle/config.json', 'utf8'));
-
-// console.log(config);
-
-var config = {};
+var frag = glslify('./projects/geodesic-tiling/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/geodesic-tiling/config.json', 'utf8'));
+// var config = {};
 
 var configId;
 
-var guiControls = new Controls({
-    'hi': {
-        'type': 'toggle',
-        'value': true,
-        'note': 'G#0'
-    },
-    'foo': {
-        'type': 'range',
-        'value': 3,
-        'min': 2,
-        'max': 6,
-        'step': .5,
-        'loop': true,
-        'controller': 11
-    }
-});
+var guiControls = new Controls(config.controls);
 
 
 var texture = regl.texture();
@@ -127,9 +109,10 @@ function getConfig() {
         id: configId,
         timer: timer.serialize(),
         mouse: mouse,
-        cameraMatrix: camera.view()
+        cameraMatrix: camera.view(),
+        controls: {}
     };
-    // Object.assign(config, gui.exportConfig());
+    guiControls.addConfig(config.controls);
     return config;
 }
 
@@ -205,6 +188,8 @@ Object.keys(u).forEach(function(key) {
         return props[key];
     };
 });
+
+console.log(u)
 
 
 const drawTriangle = regl({
