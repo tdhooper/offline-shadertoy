@@ -53,8 +53,8 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/geodesic-tiling-free/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/geodesic-tiling-free/config.json', 'utf8'));
+var frag = glslify('./projects/helix-tentacle/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/helix-tentacle/config.json', 'utf8'));
 
 console.log(config);
 
@@ -179,7 +179,7 @@ var lastStateJson;
 var lastTime = performance.now();
 
 loadConfig(config);
-// loadState(stateStore.restore('state-' + configId));
+loadState(stateStore.restore('state-' + configId));
 
 Object.keys(gui.state).forEach(function(key) {
     uniforms[key] = function(context, props) {
@@ -222,7 +222,7 @@ function render(offset, resolution) {
     var realTime = performance.now();
     var elapsed = realTime - lastTime;
     lastTime = realTime;
-    camera.control(elapsed * .1, [
+    camera.control(elapsed * 1.7, [
       pressed('W'), pressed('S'),
       pressed('A'), pressed('D'),
       pressed('R'), pressed('F'),

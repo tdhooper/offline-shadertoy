@@ -16,7 +16,7 @@ void main() {
 precision mediump float;
 #endif
 
-#define VIP_VERSION
+// #define VIP_VERSION
 
 
 /* SHADERTOY FROM HERE */
