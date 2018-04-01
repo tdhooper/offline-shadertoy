@@ -67,6 +67,14 @@ var guiControls = new Controls({
         'type': 'toggle',
         'value': true,
         'note': 'G#0'
+    },
+    'foo': {
+        'type': 'range',
+        'value': 3,
+        'min': 2,
+        'max': 6,
+        'step': .5,
+        'controller': 11
     }
 });
 

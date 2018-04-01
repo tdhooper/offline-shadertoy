@@ -7,6 +7,7 @@ uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
 uniform bool guiHi;
+uniform float guiFoo;
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -108,9 +109,9 @@ Model opU( Model m1, Model m2 ){
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
-    float rad = 1.;
+    float rad = guiFoo;
     if (guiHi) {
-        rad = 2.;
+        p.x *= 2.;
     }
     float d = length(p) - rad;
     Model model = Model(d);
