@@ -137,9 +137,10 @@ function getState() {
     var state = {
         timer: timer.serialize(),
         mouse: mouse,
-        cameraMatrix: camera.view()
+        cameraMatrix: camera.view(),
+        controls: {}
     };
-    // Object.assign(state, gui.exportState());
+    guiControls.addState(state.controls);
     return state;
 }
 
@@ -174,7 +175,7 @@ function loadState(state) {
         window.timer = timer; 
     }
     mouse = state.mouse || mouse;
-    // gui.loadState(state);
+    guiControls.loadState(state.controls);
     if (state.cameraMatrix) {
         camera = createCamera({
             view: state.cameraMatrix
@@ -195,7 +196,7 @@ var lastStateJson;
 var lastTime = performance.now();
 
 loadConfig(config);
-// loadState(stateStore.restore('state-' + configId));
+loadState(stateStore.restore('state-' + configId));
 
 var u = {};
 guiControls.addUniforms(u, 'gui');
