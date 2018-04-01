@@ -74,6 +74,7 @@ var guiControls = new Controls({
         'min': 2,
         'max': 6,
         'step': .5,
+        'loop': true,
         'controller': 11
     }
 });
