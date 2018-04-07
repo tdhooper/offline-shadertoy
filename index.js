@@ -26,7 +26,7 @@ var scrubber = document.createElement('input');
 scrubber.classList.add('scrubber');
 scrubber.setAttribute('type', 'range');
 scrubber.min = 0;
-scrubber.max = 2000; // milliseconds
+scrubber.max = 1000; // milliseconds
 scrubber.step = 10;
 controls.appendChild(scrubber);
 
@@ -53,12 +53,12 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/spiral-loop-pub/shader.glsl');
-// var config = JSON.parse(fs.readFileSync('./projects/spiral-loop-pub/config.json', 'utf8'));
+var frag = glslify('./projects/spiral-loop2/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/spiral-loop2/config.json', 'utf8'));
 
 // console.log(config);
 
-var config = {};
+// var config = {};
 
 var configId;
 
@@ -179,7 +179,7 @@ var lastStateJson;
 var lastTime = performance.now();
 
 loadConfig(config);
-// loadState(stateStore.restore('state-' + configId));
+loadState(stateStore.restore('state-' + configId));
 
 Object.keys(gui.state).forEach(function(key) {
     uniforms[key] = function(context, props) {
@@ -222,7 +222,7 @@ function render(offset, resolution) {
     var realTime = performance.now();
     var elapsed = realTime - lastTime;
     lastTime = realTime;
-    camera.control(elapsed * 1.7, [
+    camera.control(elapsed * .5, [
       pressed('W'), pressed('S'),
       pressed('A'), pressed('D'),
       pressed('R'), pressed('F'),
@@ -453,10 +453,10 @@ var captureRender = function(milliseconds) {
 
 // Default config used by the UI
 var captureConfig = {
-  fps: 40,
+  fps: 60,
   seconds: 1, // (duration)
-  width: 640 * 4,
-  height: 360 * 4,
+  width: 1200,
+  height: 1200,
   prefix: 'hlx'
 };
 
