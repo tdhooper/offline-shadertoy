@@ -53,12 +53,12 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/helix-tentacle/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/helix-tentacle/config.json', 'utf8'));
+var frag = glslify('./projects/spiral-loop-pub/shader.glsl');
+// var config = JSON.parse(fs.readFileSync('./projects/spiral-loop-pub/config.json', 'utf8'));
 
-console.log(config);
+// console.log(config);
 
-// var config = {};
+var config = {};
 
 var configId;
 
@@ -179,7 +179,7 @@ var lastStateJson;
 var lastTime = performance.now();
 
 loadConfig(config);
-loadState(stateStore.restore('state-' + configId));
+// loadState(stateStore.restore('state-' + configId));
 
 Object.keys(gui.state).forEach(function(key) {
     uniforms[key] = function(context, props) {

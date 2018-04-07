@@ -15,8 +15,7 @@ void main() {
 #ifdef GL_ES
 precision mediump float;
 #endif
-
-// #define VIP_VERSION
+//#define ANOTHER_LEVEL
 
 
 /* SHADERTOY FROM HERE */
@@ -147,6 +146,7 @@ vec3 closestPoint(vec3 pos, vec3 p1, vec3 p2) {
 
 // --------------------------------------------------------
 // Helix
+// https://www.shadertoy.com/view/MstcWs
 // --------------------------------------------------------
 
 // Closest point on a helix for one revolution
@@ -258,7 +258,7 @@ float unzip(vec3 p, float t) {
 
 void addPipe(inout float d, vec3 p, float scale, float tt) {
 
-    float t = clamp(0., 1., tt);
+    float t = clamp(tt, 0., 1.);
 
     float boundry = 1.;
     float part;
@@ -311,7 +311,7 @@ Model map(vec3 p) {
     scale *= pModHelixScale(p, lead, innerRatio);
     p.x *= -1.;
 
-    #ifdef VIP_VERSION
+    #ifdef ANOTHER_LEVEL
         scale *= pModHelixScale(p, lead, innerRatio);
         p.x *= -1.;
     #endif
@@ -390,7 +390,7 @@ Hit raymarch(CastRay castRay){
     float outlineDist = INTERSECTION_PRECISION * 2.0;
     Model model;
 
-    float outline = .0027;
+    float outline = .0023;
     bool isOutline = false;
     bool miss = false;
 
@@ -535,14 +535,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec3 color = mix(vec3(.4,.3,.5) * .9, vec3(.6), -.2);
 
-    #ifdef VIP_VERSION
-        vec3 bgA = vec3(.6,.5,.8) * .55;
-        vec3 bgB = vec3(.7,.9,1.) * .5;
-        color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))) * .5);
-    #endif
+    vec3 bgA = vec3(.6,.5,.8) * .55;
+    vec3 bgB = vec3(.7,.9,1.) * .5;
+    color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))) * .5);
 
     time = iTime;
-    time *= .7;
+    time *= .6;
     time = mod(time, 1.);
 
     float camDist = length(camPosition);
@@ -557,16 +555,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     render(color, hit);
 
-    #ifndef VIP_VERSION
-        color *= vec3(.9, .95, 1.);
-    #else
-        vec2 uv = fragCoord/iResolution.xy;
-        float vig = pow(
-            16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
-            0.075
-        );
-        color *= vec3(.9, .95, 1.) * vig * 1.1;
-    #endif
+    vec2 uv = fragCoord/iResolution.xy;
+    float vig = pow(
+        16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
+        0.075
+    );
+    color *= vec3(.9, .95, 1.) * vig * 1.1;
 
     color = mix(color, vec3(pow(length(color * .6), 2.)), .1);
     color *= 1.05;
