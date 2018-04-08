@@ -1,5 +1,5 @@
 {
-    "id": "spiralloop1",
+    "id": "spiralloop2",
     "timer": {
         "running": false,
         "elapsed": 0
@@ -28,98 +28,133 @@
         "14": 0.13233166933059692,
         "15": 1
     },
-    "showControls": true,
     "controls": {
-        "lead": [
-            0.1,
-            3,
-            0.6
-        ],
-        "innerRatio": [
-            0,
-            0.99,
-            0.4407892623709694
-        ],
-        "mix": [
-            0,
-            1,
-            1
-        ],
-        "normals": [
-            false
-        ],
-        "offsetX": [
-            -1,
-            2,
-            1
-        ],
-        "offsetY": [
-            -1,
-            1,
-            0.4
-        ],
-        "zoom": [
-            0,
-            0.5,
-            0.1
-        ],
-        "focal": [
-            0,
-            10,
-            3
-        ],
-        "rotateX": [
-            0,
-            1,
-            0.6204676984110781
-        ],
-        "rotateY": [
-            0,
-            1,
-            0.9
-        ],
-        "rotateModel": [
-            0,
-            1,
-            0.4560833039600971
-        ],
-        "rotateModelX": [
-            0,
-            1,
-            0
-        ],
-        "flip": [
-            false
-        ],
-        "debug": [
-            0,
-            1,
-            0.6749066960348409
-        ],
-        "normalX": [
-            0,
-            1,
-            0.5583730427427409
-        ],
-        "normalY": [
-            0,
-            1,
-            0
-        ],
-        "zipOffset": [
-            -300,
-            300,
-            30
-        ],
-        "zipSize": [
-            0,
-            200,
-            60
-        ],
-        "zipSpeed": [
-            0,
-            15,
-            3.3
-        ]
+        "lead": {
+            "type": "range",
+            "min": 0.1,
+            "max": 3,
+            "step": 0.002265625,
+            "value": 0.6
+        },
+        "innerRatio": {
+            "type": "range",
+            "min": 0,
+            "max": 0.99,
+            "step": 0.0007734375,
+            "value": 0.4407892623709694
+        },
+        "mix": {
+            "type": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.00078125,
+            "value": 1
+        },
+        "normals": {
+            "type": "toggle",
+            "value": false
+        },
+        "offsetX": {
+            "type": "range",
+            "min": -1,
+            "max": 2,
+            "step": 0.00234375,
+            "value": 1
+        },
+        "offsetY": {
+            "type": "range",
+            "min": -1,
+            "max": 1,
+            "step": 0.0015625,
+            "value": 0.4
+        },
+        "zoom": {
+            "type": "range",
+            "min": 0,
+            "max": 0.5,
+            "step": 0.000390625,
+            "value": 0.1
+        },
+        "focal": {
+            "type": "range",
+            "min": 0,
+            "max": 10,
+            "step": 0.0078125,
+            "value": 3
+        },
+        "rotateX": {
+            "type": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.00078125,
+            "value": 0.6204676984110781
+        },
+        "rotateY": {
+            "type": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.00078125,
+            "value": 0.9
+        },
+        "rotateModel": {
+            "type": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.00078125,
+            "value": 0.4560833039600971
+        },
+        "rotateModelX": {
+            "type": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.00078125,
+            "value": 0
+        },
+        "flip": {
+            "type": "toggle",
+            "value": false
+        },
+        "debug": {
+            "type": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.00078125,
+            "value": 0.6749066960348409
+        },
+        "normalX": {
+            "type": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.00078125,
+            "value": 0.5583730427427409
+        },
+        "normalY": {
+            "type": "range",
+            "min": 0,
+            "max": 1,
+            "step": 0.00078125,
+            "value": 0
+        },
+        "zipOffset": {
+            "type": "range",
+            "min": -300,
+            "max": 300,
+            "step": 0.46875,
+            "value": 30
+        },
+        "zipSize": {
+            "type": "range",
+            "min": 0,
+            "max": 200,
+            "step": 0.15625,
+            "value": 60
+        },
+        "zipSpeed": {
+            "type": "range",
+            "min": 0,
+            "max": 15,
+            "step": 0.01171875,
+            "value": 3.3
+        }
     }
 }
