@@ -12,6 +12,9 @@ uniform float guiRoundCorner;
 uniform float guiHeight;
 uniform float guiThickness;
 uniform float guiGap;
+uniform float guiWaveFrequency;
+uniform float guiWaveAmplitude;
+uniform float guiWaveSpeed;
 
 
 void mainImage(out vec4 a, in vec2 b);
@@ -376,20 +379,20 @@ float sineInOut(float t) {
 HexSpec getSpec(vec3 hexCenter, float subdivisions) {
     HexSpec spec = newHexSpec(subdivisions);
 
-    float blend = acos(dot(hexCenter, pab)) * 10.;
-    blend = cos(blend + time * PI) * .5 + .5;
-
-    spec.roundTop = .02 / subdivisions;
-    spec.roundCorner = .09 / subdivisions;
-    spec.height = mix(1.75, 2., blend);
-    spec.thickness = spec.roundTop * 4.;
-    spec.gap = mix(.01, .4, blend) / subdivisions;
-
     spec.height = mix(.5, 4., guiHeight);
     spec.gap = mix(.0, .8, guiGap) / subdivisions;
     spec.roundTop = mix(0., 1., guiRoundTop) / subdivisions;
     spec.thickness = mix(spec.roundTop + .01, guiHeight * 2., pow(guiThickness, 2.));
     spec.roundCorner = mix(0., .3, guiRoundCorner) / subdivisions;
+
+    float blend = acos(dot(hexCenter, pca));
+    blend = cos(blend * 50. * guiWaveFrequency + time * guiWaveSpeed * 40.) * .5 + .5;
+
+    spec.height = mix(
+        spec.height + (spec.height * guiWaveAmplitude * .5),
+        spec.height - (spec.height * guiWaveAmplitude * .5),
+        blend
+    );
 
     return spec;
 }
@@ -526,7 +529,7 @@ vec3 doLighting(Model model, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
 const float MAX_TRACE_DISTANCE = 8.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
-const float FUDGE_FACTOR = .9; // Default is 1, reduce to fix overshoots
+const float FUDGE_FACTOR = .5; // Default is 1, reduce to fix overshoots
 
 struct CastRay {
     vec3 origin;
