@@ -399,6 +399,9 @@ Hit raymarch(CastRay castRay){
     Ray ray = Ray(castRay.origin, castRay.direction, 0.);
 
     for( int i=0; i< NUM_OF_TRACE_STEPS ; i++ ){
+        //time += (sin(pow(mod(iTime * .6, 2.) * .5, 2.) * PI * 2.) * .5 + .5) * -.005 * float(i) * .2 + .001;
+        time -= .01 + float(i) * .0021;
+        time = mod(time, 1.);
         if (currentDist < INTERSECTION_PRECISION || ray.len > MAX_TRACE_DISTANCE) {
             break;
         }
@@ -407,10 +410,10 @@ Hit raymarch(CastRay castRay){
         currentDist = model.dist;
         miss = currentDist > lastDist;
         outlineDist = currentDist * -1. + outline;
-        isOutline = outlineDist > .0 && outlineDist < currentDist && miss;
-        if (isOutline) {
-            currentDist = outlineDist;
-        }
+        // isOutline = outlineDist > .0 && outlineDist < currentDist && miss;
+        // if (isOutline) {
+        //     currentDist = outlineDist;
+        // }
         ray.len += currentDist * FUDGE_FACTOR;
     }
 
@@ -540,7 +543,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))) * .5);
 
     time = iTime;
-    time *= .6;
+    // time *= .6;
+    // time += .5;
+    // time = .5;
+    // time = 190./1000.;
     time = mod(time, 1.);
 
     float camDist = length(camPosition);

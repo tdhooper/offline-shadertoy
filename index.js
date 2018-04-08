@@ -13,7 +13,7 @@ var pixelRatio = window.devicePixelRatio;
 var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 
-pixelRatio = .5;
+pixelRatio = 1.;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -27,7 +27,7 @@ scrubber.classList.add('scrubber');
 scrubber.setAttribute('type', 'range');
 scrubber.min = 0;
 scrubber.max = 1000; // milliseconds
-scrubber.step = 10;
+scrubber.step = 0.5;
 controls.appendChild(scrubber);
 
 
@@ -53,8 +53,8 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/spiral-loop2/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/spiral-loop2/config.json', 'utf8'));
+var frag = glslify('./projects/spiral-loop-pub/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/spiral-loop-pub/config.json', 'utf8'));
 
 // console.log(config);
 
@@ -453,10 +453,10 @@ var captureRender = function(milliseconds) {
 
 // Default config used by the UI
 var captureConfig = {
-  fps: 60,
-  seconds: 4, // (duration)
-  width: 1200,
-  height: 1200,
+  fps: 120,
+  seconds: 1, // (duration)
+  width: 640 * 2,
+  height: 360 * 2,
   prefix: 'hlx'
 };
 
