@@ -53,8 +53,8 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/rhombille-triangle/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/rhombille-triangle/config.json', 'utf8'));
+var frag = glslify('./projects/helix/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/helix/config.json', 'utf8'));
 // var config = {};
 
 var configId;
