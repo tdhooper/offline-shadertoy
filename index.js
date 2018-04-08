@@ -53,8 +53,8 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/icosahedron-twist/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/icosahedron-twist/config.json', 'utf8'));
+var frag = glslify('./projects/geodesic-tiling/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/geodesic-tiling/config.json', 'utf8'));
 // var config = {};
 
 var configId;
@@ -188,8 +188,6 @@ Object.keys(u).forEach(function(key) {
         return props[key];
     };
 });
-
-console.log(u)
 
 
 const drawTriangle = regl({
