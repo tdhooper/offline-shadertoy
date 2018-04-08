@@ -711,6 +711,8 @@ Hit raymarch(CastRay castRay){
     Ray ray = Ray(castRay.origin, castRay.direction, 0.);
 
     for( int i=0; i< NUM_OF_TRACE_STEPS ; i++ ){
+        time += sin(mod(iGlobalTime * .25, 1.) * PI * 2.) * .005 * float(i) * .2;
+        // time += mod(iGlobalTime * .25 + .5, 1.) * -.005 * (float(i)* .3);
         if (currentDist < INTERSECTION_PRECISION || ray.len > MAX_TRACE_DISTANCE) {
             break;
         }
@@ -1070,7 +1072,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 color = mix(bgA, bgB, dot(pp, normalize(vec2(.2,-.6))) * .5);
 
     color *= 1.;
-    // pR(color.xy, -.5);
+    // pR(color.xy, .25);
 
     // color = vec3(0);
 
@@ -1080,7 +1082,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // p.y -= guiOffsetY;
 
     time = iGlobalTime;
-    // time *= .25;
+    time *= .25;
+    time += .5;
     time = mod(time, 1.);
 
     // vec3 c = vec3(1.);

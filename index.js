@@ -13,7 +13,7 @@ var pixelRatio = window.devicePixelRatio;
 var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 
-pixelRatio = 1.;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -454,7 +454,7 @@ var captureRender = function(milliseconds) {
 // Default config used by the UI
 var captureConfig = {
   fps: 60,
-  seconds: 1, // (duration)
+  seconds: 4, // (duration)
   width: 1200,
   height: 1200,
   prefix: 'hlx'
