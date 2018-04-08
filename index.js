@@ -53,8 +53,8 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/spiral/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/spiral/config.json', 'utf8'));
+var frag = glslify('./projects/icosahedron-twist/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/icosahedron-twist/config.json', 'utf8'));
 // var config = {};
 
 var configId;
