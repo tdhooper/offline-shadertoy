@@ -13,7 +13,7 @@ var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 var Controls = require('./lib/controls');
 
-pixelRatio = 1.;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -53,8 +53,8 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/geodesic-tiling-free/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/geodesic-tiling-free/config.json', 'utf8'));
+var frag = glslify('./projects/rhombille-triangle/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/rhombille-triangle/config.json', 'utf8'));
 // var config = {};
 
 var configId;
