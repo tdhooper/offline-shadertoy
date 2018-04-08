@@ -1,33 +1,106 @@
 {
-    "id": "spiral1",
+    "id": "spiral2",
+    "timer": {
+        "running": false,
+        "elapsed": 0
+    },
     "mouse": [
         315,
         204,
         false,
         0
     ],
-    "showControls": true,
+    "cameraMatrix": {
+        "0": 1,
+        "1": 0,
+        "2": 0,
+        "3": 0,
+        "4": 0,
+        "5": 1,
+        "6": 0,
+        "7": 0,
+        "8": 0,
+        "9": 0,
+        "10": 1,
+        "11": 0,
+        "12": 0,
+        "13": 0,
+        "14": -1,
+        "15": 1
+    },
     "controls": {
         "level1": {
-            "enabled": [true],
-            "spacing": [{"midi": "pot1", "step": 1}, 0, 50, 10],
-            "offset": [{"midi": "pot2", "step": 0.1}, 0, 5, 2]
+            "enabled": {
+                "type": "toggle",
+                "value": true
+            },
+            "spacing": {
+                "type": "range",
+                "controller": 11,
+                "min": 0,
+                "max": 50,
+                "step": 1,
+                "value": 10
+            },
+            "offset": {
+                "type": "range",
+                "controller": 12,
+                "min": 0,
+                "max": 5,
+                "step": 0.1,
+                "value": 2
+            }
         },
         "level2": {
-            "enabled": [false],
-            "spacing": [0, 10, 1.6988734151155993],
-            "offset": [0, 2, 1.7867461779664062]
+            "enabled": {
+                "type": "toggle",
+                "value": false
+            },
+            "spacing": {
+                "type": "range",
+                "min": 0,
+                "max": 10,
+                "step": 0.0078125,
+                "value": 1.6988734151155993
+            },
+            "offset": {
+                "type": "range",
+                "min": 0,
+                "max": 2,
+                "step": 0.0015625,
+                "value": 1.7867461779664062
+            }
         },
         "level3": {
-            "enabled": [false],
-            "spacing": [0, 10, 0.9269714983085116],
-            "offset": [0, 1, 2.8894632019765316]
+            "enabled": {
+                "type": "toggle",
+                "value": false
+            },
+            "spacing": {
+                "type": "range",
+                "min": 0,
+                "max": 10,
+                "step": 0.0078125,
+                "value": 0.9269714983085116
+            },
+            "offset": {
+                "type": "range",
+                "min": 0,
+                "max": 1,
+                "step": 0.00078125,
+                "value": 2.8894632019765316
+            }
         },
-        "thickness": [0, 2, 0.6461369836917247],
-        "normals": [true]
-    },
-    "midiSlots": {
-        "pot1": {"channel": 11, "controller": 11},
-        "pot2": {"channel": 11, "controller": 12}
+        "thickness": {
+            "type": "range",
+            "min": 0,
+            "max": 2,
+            "step": 0.0015625,
+            "value": 0.6461369836917247
+        },
+        "normals": {
+            "type": "toggle",
+            "value": true
+        }
     }
 }

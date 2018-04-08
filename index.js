@@ -7,13 +7,13 @@ var stateStore = require('./lib/state-store');
 var FileSaver = require('file-saver');
 var pad = require('pad-number');
 var fs = require('fs');
-var GUI = require('./lib/gui');
 var WebCaptureClient = require('web-frames-capture');
 var pixelRatio = window.devicePixelRatio;
 var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
+var Controls = require('./lib/controls');
 
-pixelRatio = 1.;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -47,22 +47,21 @@ var vert = glslify('./quad.vert');
 // rhombille-triangle
 // helix
 // spiral-loop
+// spiral-loop-2
 // spiral-loop-pub
 // spiral
 // icosahedron-twist
 // geodesic-tiling
 // geodesic-tiling-free
 
-var frag = glslify('./projects/spiral-loop2/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/spiral-loop2/config.json', 'utf8'));
-
-// console.log(config);
-
+var frag = glslify('./projects/geodesic-tiling-free/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/geodesic-tiling-free/config.json', 'utf8'));
 // var config = {};
 
 var configId;
 
-var gui = new GUI();
+var guiControls;
+
 
 var texture = regl.texture();
 
@@ -111,9 +110,10 @@ function getConfig() {
         id: configId,
         timer: timer.serialize(),
         mouse: mouse,
-        cameraMatrix: camera.view()
+        cameraMatrix: camera.view(),
+        controls: {}
     };
-    Object.assign(config, gui.exportConfig());
+    guiControls.addConfig(config.controls);
     return config;
 }
 
@@ -121,9 +121,10 @@ function getState() {
     var state = {
         timer: timer.serialize(),
         mouse: mouse,
-        cameraMatrix: camera.view()
+        cameraMatrix: camera.view(),
+        controls: {}
     };
-    Object.assign(state, gui.exportState());
+    guiControls.addState(state.controls);
     return state;
 }
 
@@ -141,7 +142,7 @@ function loadConfig(config) {
     }
     configId = config.id || 'generic';
     mouse = config.mouse || mouse;
-    gui.loadConfig(config);
+    guiControls = new Controls(config.controls);
     if (config.cameraMatrix) {
         camera = createCamera({
             view: config.cameraMatrix
@@ -158,7 +159,7 @@ function loadState(state) {
         window.timer = timer; 
     }
     mouse = state.mouse || mouse;
-    gui.loadState(state);
+    guiControls.loadState(state.controls);
     if (state.cameraMatrix) {
         camera = createCamera({
             view: state.cameraMatrix
@@ -181,9 +182,11 @@ var lastTime = performance.now();
 loadConfig(config);
 loadState(stateStore.restore('state-' + configId));
 
-Object.keys(gui.state).forEach(function(key) {
+var u = {};
+guiControls.addUniforms(u, 'gui');
+Object.keys(u).forEach(function(key) {
     uniforms[key] = function(context, props) {
-        return props.gui[key];
+        return props[key];
     };
 });
 
@@ -238,12 +241,10 @@ function render(offset, resolution) {
         resolution: resolution,
         cameraMatrix: camera.view(),
         cameraPosition: camera.position,
-        gui: gui.state
     };
+    guiControls.addUniforms(state, 'gui');
 
     var stateJson = JSON.stringify(state);
-
-    // console.log(state)
 
     if (stateJson !== lastStateJson) {
         if ( ! fpsTimeout) {

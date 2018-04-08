@@ -1,47 +1,43 @@
 {
-    "id": "rhombilletriangle1",
+    "id": "rhombilletriangle3",
     "timer": {
         "running": true,
         "elapsed": 0
     },
     "showControls": false,
     "controls": {
-        "rotation": [
-            {
-                "controller": 11,
-                "step": 0.005,
-                "loop": true
-            },
-            0,
-            1,
-            0.7200000000000002
-        ],
-        "scale": [
-            {
-                "controller": 12,
-                "step": 0.2
-            },
-            1,
-            30,
-            8
-        ],
-        "offsetX": [
-            {
-                "controller": 13,
-                "step": 0.01
-            },
-            -10,
-            10,
-            0.75
-        ],
-        "offsetY": [
-            {
-                "controller": 14,
-                "step": 0.01
-            },
-            -10,
-            10,
-            0
-        ]
+        "rotation": {
+            "type": "range",
+            "controller": 11,
+            "step": 0.005,
+            "loop": true,
+            "min": 0,
+            "max": 1,
+            "value": 0.7200000000000002
+        },
+        "scale": {
+            "type": "range",
+            "controller": 12,
+            "step": 0.2,
+            "min": 0,
+            "max": 30,
+            "value": 8
+        },
+        "offsetX": {
+            "type": "range",
+            "controller": 13,
+            "step": 0.01,
+            "min": -10,
+            "max": 10,
+            "value": 0.75
+        },
+        "offsetY": {
+            "type": "range",
+            "controller": 14,
+            "step": 0.01,
+            "min": -10,
+            "max": 10,
+            "value": 0
+        }
     }
 }

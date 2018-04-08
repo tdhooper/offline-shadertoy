@@ -1,5 +1,5 @@
 {
-    "id": "helix1",
+    "id": "helix2",
     "timer": {
         "running": false,
         "elapsed": 490
@@ -30,101 +30,90 @@
     },
     "showControls": true,
     "controls": {
-        "zoom": [
-            {
-                "controller": 18,
-                "step": 0.1
-            },
-            0.2,
-            6,
-            2.6000000000000014
-        ],
-        "rotate": [
-            {
-                "controller": 17,
-                "step": 0.005
-            },
-            -2,
-            2,
-            0.010000000000003319
-        ],
+        "zoom": {
+            "type": "range",
+            "controller": 18,
+            "step": 0.1,
+            "min": 0.2,
+            "max": 6,
+            "value": 2.6
+        },
+        "rotate": {
+            "type": "range",
+            "controller": 17,
+            "step": 0.005,
+            "min": -2,
+            "max": 2,
+            "value": 0.010000000000003319
+        },
         "level1": {
-            "enabled": [
-                {
-                    "note": "G#0"
-                },
-                true
-            ],
-            "lead": [
-                {
-                    "controller": 11,
-                    "step": 0.0025
-                },
-                0,
-                1,
-                0.32749999999999907
-            ],
-            "radius": [
-                {
-                    "controller": 12,
-                    "step": 0.002
-                },
-                0,
-                1,
-                0.30200000000000016
-            ]
+            "enabled": {
+                "type": "toggle",
+                "note": "G#0",
+                "value": true
+            },
+            "lead": {
+                "type": "range",
+                "controller": 11,
+                "step": 0.0025,
+                "min": 0,
+                "max": 1,
+                "value": 0.32749999999999907
+            },
+            "radius": {
+                "type": "range",
+                "controller": 12,
+                "step": 0.002,
+                "min": 0,
+                "max": 1,
+                "value": 0.30200000000000016
+            }
         },
         "level2": {
-            "enabled": [
-                {
-                    "note": "A#0"
-                },
-                true
-            ],
-            "lead": [
-                {
-                    "controller": 13,
-                    "step": 0.0025
-                },
-                0,
-                1,
-                0.2575000000000016
-            ],
-            "radius": [
-                {
-                    "controller": 14,
-                    "step": 0.002
-                },
-                0,
-                1,
-                0.5060000000000003
-            ]
+            "enabled": {
+                "type": "toggle",
+                "note": "A#0",
+                "value": true
+            },
+            "lead": {
+                "type": "range",
+                "controller": 13,
+                "step": 0.0025,
+                "min": 0,
+                "max": 1,
+                "value": 0.2575000000000016
+            },
+            "radius": {
+                "type": "range",
+                "controller": 14,
+                "step": 0.002,
+                "min": 0,
+                "max": 1,
+                "value": 0.5060000000000003
+            }
         },
         "level3": {
-            "enabled": [
-                {
-                    "note": "C1"
-                },
-                true
-            ],
-            "lead": [
-                {
-                    "controller": 15,
-                    "step": 0.0025
-                },
-                0,
-                1,
-                0.24999999999999994
-            ],
-            "radius": [
-                {
-                    "controller": 16,
-                    "step": 0.002
-                },
-                0,
-                1,
-                0.7179999999999997
-            ]
+            "enabled": {
+                "type": "toggle",
+                "note": "C1",
+                "value": true
+            },
+            "lead": {
+                "type": "range",
+                "controller": 15,
+                "step": 0.0025,
+                "min": 0,
+                "max": 1,
+                "value": 0.24999999999999994
+            },
+            "radius": {
+                "type": "range",
+                "controller": 16,
+                "step": 0.002,
+                "min": 0,
+                "max": 1,
+                "value": 0.7179999999999997
+            }
         }
     }
 }

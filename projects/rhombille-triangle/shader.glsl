@@ -10,6 +10,11 @@ uniform float guiScale;
 uniform float guiOffsetX;
 uniform float guiOffsetY;
 
+// float guiRotation = .5;
+// float guiScale = .5;
+// float guiOffsetX = .5;
+// float guiOffsetY = .5;
+
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
