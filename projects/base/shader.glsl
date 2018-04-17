@@ -92,6 +92,36 @@ mat3 cameraRotation() {
 // Modelling
 // --------------------------------------------------------
 
+
+float vmax(vec3 v) {
+    return max(max(v.x, v.y), v.z);
+}
+
+// Box: correct distance to corners
+float fBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
+
+// Same, but mirror every second cell so all boundaries match
+vec2 pModMirror2(inout vec2 p, vec2 size) {
+    vec2 halfsize = size*0.5;
+    vec2 c = floor((p + halfsize)/size);
+    p = mod(p + halfsize, size) - halfsize;
+    p *= mod(c,vec2(2))*2. - vec2(1);
+    return c;
+}
+
+// Same, but mirror every second cell so they match at the boundaries
+float pModMirror1(inout float p, float size) {
+    float halfsize = size*0.5;
+    float c = floor((p + halfsize)/size);
+    p = mod(p + halfsize,size) - halfsize;
+    p *= mod(c, 2.0)*2. - 1.;
+    return c;
+}
+
+
 struct Model {
     float dist;
 };
@@ -107,7 +137,11 @@ Model opU( Model m1, Model m2 ){
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
-    float d = length(p) - 1.;
+
+    pModMirror2(p.xy, vec2(4.));
+    pModMirror1(p.z, 4.);
+    float d = length(p + vec3(.25)) - .75;
+    d = min(d, fBox(p - vec3(.25), vec3(.5)));
     Model model = Model(d);
     return model;
 }
@@ -125,7 +159,7 @@ vec3 camUp;
 void doCamera() {
     camUp = vec3(0,-1,0);
     camTar = vec3(0.);
-    camPos = vec3(0,0,-5.);
+    camPos = vec3(0,0,-3.);
     camPos *= cameraRotation();
 }
 
@@ -159,6 +193,8 @@ struct Hit {
     bool isBackground;
     vec3 normal;
     vec3 color;
+    bool isOutline;
+    float outlineDist;
 };
 
 vec3 calcNormal( in vec3 pos ){
@@ -170,18 +206,40 @@ vec3 calcNormal( in vec3 pos ){
     return normalize(nor);
 }
 
+float outlineSize = 0.08;
+
 Hit raymarch(CastRay castRay){
 
     float currentDist = INTERSECTION_PRECISION * 2.0;
+    float lastDist = currentDist;
     Model model;
+    bool isOutline = false;
+    float outlineDist;
+    float hitLen;
+    Model hitModel;
+    bool isHit = false;
 
     Ray ray = Ray(castRay.origin, castRay.direction, 0.);
 
     for( int i=0; i< NUM_OF_TRACE_STEPS ; i++ ){
-        if (currentDist < INTERSECTION_PRECISION || ray.len > MAX_TRACE_DISTANCE) {
+        if (ray.len > MAX_TRACE_DISTANCE) {
             break;
         }
+        if (currentDist < INTERSECTION_PRECISION && ! isHit) {
+            isHit = true;
+            hitLen = ray.len;
+            hitModel = model;
+            //currentDist += INTERSECTION_PRECISION;
+        }
+        if (lastDist < currentDist && currentDist < outlineSize && ! isOutline) {
+            isOutline = true;
+            outlineDist = lastDist;
+        }
         model = map(ray.origin + ray.direction * ray.len);
+        lastDist = currentDist;
+        if (isHit) {
+           model.dist += .1;
+        }
         currentDist = model.dist;
         ray.len += currentDist * FUDGE_FACTOR;
     }
@@ -193,11 +251,21 @@ Hit raymarch(CastRay castRay){
     if (ray.len > MAX_TRACE_DISTANCE) {
         isBackground = true;
     } else {
-        pos = ray.origin + ray.direction * ray.len;
+        pos = ray.origin + ray.direction * hitLen;
+        model = hitModel;
         normal = calcNormal(pos);
     }
 
-    return Hit(ray, model, pos, isBackground, normal, vec3(0));
+    return Hit(
+        ray,
+        model,
+        pos,
+        isBackground,
+        normal,
+        vec3(0),
+        isOutline,
+        outlineDist
+    );
 }
 
 
@@ -207,13 +275,25 @@ Hit raymarch(CastRay castRay){
 
 void shadeSurface(inout Hit hit){
 
-    vec3 background = vec3(.1)* vec3(.5,0,1);
+    vec3 background = vec3(1,1,0);
 
     if (hit.isBackground) {
         hit.color = background;
-        return;
+    } else {
+        hit.color = hit.normal * .5 + .5;
     }
-    hit.color = hit.normal * .5 + .5;
+
+    if (hit.isOutline) {
+        hit.color = mix(
+            hit.color,
+            vec3(0),
+            smoothstep(
+                outlineSize,
+                outlineSize * .5,
+                hit.outlineDist
+            )
+        );
+    }
 }
 
 
