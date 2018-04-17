@@ -170,6 +170,7 @@ void doCamera() {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
+const float ANTI_ALIAS = 0.1;
 const float MAX_TRACE_DISTANCE = 30.; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
@@ -190,11 +191,7 @@ struct Hit {
     Ray ray;
     Model model;
     vec3 pos;
-    bool isBackground;
-    vec3 normal;
-    vec3 color;
-    bool isOutline;
-    float outlineDist;
+    bool isNone;
 };
 
 vec3 calcNormal( in vec3 pos ){
@@ -206,102 +203,126 @@ vec3 calcNormal( in vec3 pos ){
     return normalize(nor);
 }
 
-float outlineSize = 0.08;
+struct Hits {
+    Hit a;
+    Hit b;
+};
 
-Hit raymarch(CastRay castRay){
+Hits raymarch(CastRay castRay){
 
     float currentDist = INTERSECTION_PRECISION * 2.0;
     float lastDist = currentDist;
+    float adjustModel = ANTI_ALIAS;
+
     Model model;
-    bool isOutline = false;
-    float outlineDist;
-    float hitLen;
-    Model hitModel;
-    bool isHit = false;
 
     Ray ray = Ray(castRay.origin, castRay.direction, 0.);
+    float safeRayLen = ray.len;
 
-    for( int i=0; i< NUM_OF_TRACE_STEPS ; i++ ){
-        if (ray.len > MAX_TRACE_DISTANCE) {
-            break;
-        }
-        if (currentDist < INTERSECTION_PRECISION && ! isHit) {
-            isHit = true;
-            hitLen = ray.len;
-            hitModel = model;
-            //currentDist += INTERSECTION_PRECISION;
-        }
-        if (lastDist < currentDist && currentDist < outlineSize && ! isOutline) {
-            isOutline = true;
-            outlineDist = lastDist;
-        }
-        model = map(ray.origin + ray.direction * ray.len);
-        lastDist = currentDist;
-        if (isHit) {
-           model.dist += .1;
-        }
-        currentDist = model.dist;
-        ray.len += currentDist * FUDGE_FACTOR;
-    }
-
-    bool isBackground = false;
     vec3 pos = vec3(0);
-    vec3 normal = vec3(0);
 
-    if (ray.len > MAX_TRACE_DISTANCE) {
-        isBackground = true;
-    } else {
-        pos = ray.origin + ray.direction * hitLen;
-        model = hitModel;
-        normal = calcNormal(pos);
-    }
-
-    return Hit(
+    Hit hitA = Hit(
         ray,
         model,
         pos,
-        isBackground,
-        normal,
-        vec3(0),
-        isOutline,
-        outlineDist
+        true
     );
+
+    for (int i = 0; i < NUM_OF_TRACE_STEPS; i++) {
+        if (ray.len > MAX_TRACE_DISTANCE) {
+            break;
+        }
+        if (currentDist < INTERSECTION_PRECISION) {
+            if ( ! hitA.isNone) {
+                break;
+            }
+            hitA = Hit(
+                ray,
+                model,
+                pos,
+                false
+            );
+            adjustModel = 0.;
+            ray.len = safeRayLen;
+        }
+        if (lastDist < currentDist && currentDist < ANTI_ALIAS && hitA.isNone) {
+            hitA = Hit(
+                ray,
+                model,
+                pos,
+                false
+            );
+            adjustModel = 0.;
+            ray.len = safeRayLen;
+        }
+        if (currentDist > ANTI_ALIAS) {
+            safeRayLen = ray.len;
+        }
+        pos = ray.origin + ray.direction * ray.len;
+        model = map(pos);
+        lastDist = currentDist;
+        currentDist = model.dist + adjustModel;
+        ray.len += currentDist * FUDGE_FACTOR;
+    }
+
+    Hit hitB = Hit(
+        ray,
+        model,
+        ray.origin + ray.direction * ray.len,
+        false
+    );
+
+    return Hits(hitA, hitB);
 }
+
 
 
 // --------------------------------------------------------
 // Rendering
 // --------------------------------------------------------
 
-void shadeSurface(inout Hit hit){
+vec3 shadeHit(inout Hit hit){
 
     vec3 background = vec3(1,1,0);
 
-    if (hit.isBackground) {
-        hit.color = background;
+    if (hit.ray.len > MAX_TRACE_DISTANCE) {
+        return background;
     } else {
-        hit.color = hit.normal * .5 + .5;
-    }
-
-    if (hit.isOutline) {
-        hit.color = mix(
-            hit.color,
-            vec3(0),
-            smoothstep(
-                outlineSize,
-                outlineSize * .5,
-                hit.outlineDist
-            )
-        );
+        return calcNormal(hit.pos) * .5 + .5;
     }
 }
 
+vec3 render(Hits hits){
 
-vec3 render(Hit hit){
+    Hit hitA = hits.a;
+    Hit hitB = hits.b;
 
-    shadeSurface(hit);
+    if (hitA.isNone) {
+        return shadeHit(hitB);
+    } else {
+        vec3 colorA = shadeHit(hitA);
+        vec3 colorB = shadeHit(hitB);
+        return mix(
+            colorA,
+            colorB,
+            0.
+        );
+    }
 
-    return hit.color;
+    // if (hit.isOutline) {
+    //     hit.color = mix(
+    //         hit.color,
+    //         vec3(0),
+    //         smoothstep(
+    //             outlineSize,
+    //             outlineSize * .5,
+    //             hit.outlineDist
+    //         )
+    //     );
+    // }
+
+
+    // return color;
 }
 
 
@@ -352,9 +373,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     float focalLength = 2.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
-    Hit hit = raymarch(CastRay(camPos, rd));
-
-    vec3 color = render(hit);
+    Hits hits = raymarch(CastRay(camPos, rd));
+    vec3 color = render(hits);
     color = linearToScreen(color);
     fragColor = vec4(color,1.0);
 }

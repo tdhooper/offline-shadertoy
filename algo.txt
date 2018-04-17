@@ -1,0 +1,45 @@
+* Reduce geometry by WIDTH
+* March
+    * If distance > WIDTH, store OLD_RAYLEN
+    * When moving away and distance < WIDTH
+        * Store closest as HIT1
+    * When hit OR moving away and distance within WIDTH
+        * Reset geometry
+        * Back up to OLD_RAYLEN (doesntwork, wont get to background)
+        * March
+            Return HIT1, and HIT2
+
+HIT1 and HIT2 give
+
+* none, bg
+    render bg
+
+* none, model1
+    render model1
+
+* model1, bg
+* model1, model1
+* model1, model2
+    blend both based on model1 distance
+
+
+
+* Reduce geometry by WIDTH
+* March
+    * If STEP 0 and distance > WIDTH
+        * store SAFE_RAYLEN
+    * If STEP 0 and moving away and distance < WIDTH
+        * set STEP 1
+    * If STEP 0 and hit
+        * reset geometry
+        * back up to SAFE_RAYLEN
+        * set STEP 2
+    * If STEP 1 and moving away and distance > WIDTH
+        * reset geometry
+    * If STEP 1 and hit
+        * store HIT1
+        * back up to SAFE_RAYLEN
+        * set STEP 2
+    * If STEP 2 and hit
+        * store HIT2
+        * break
