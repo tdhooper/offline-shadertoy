@@ -228,34 +228,37 @@ Hits raymarch(CastRay castRay){
         true
     );
 
+    int step = 0;
+    // 0 first pass shrunk model
+    // 1 find background hit
+    // 2 find foreground hit
+
     for (int i = 0; i < NUM_OF_TRACE_STEPS; i++) {
         if (ray.len > MAX_TRACE_DISTANCE) {
             break;
         }
         if (currentDist < INTERSECTION_PRECISION) {
-            if ( ! hitA.isNone) {
+            if (step == 0) {
+                adjustModel = 0.;
+                ray.len = safeRayLen;
+                step = 2;
+            }
+            if (step == 1) {
+                hitA = Hit(ray, model, pos, false);
+                ray.len = safeRayLen;
+                step = 2;
+            }
+            if (step == 2) {
                 break;
             }
-            hitA = Hit(
-                ray,
-                model,
-                pos,
-                false
-            );
-            adjustModel = 0.;
-            ray.len = safeRayLen;
         }
-        if (lastDist < currentDist && currentDist < ANTI_ALIAS && hitA.isNone) {
-            hitA = Hit(
-                ray,
-                model,
-                pos,
-                false
-            );
-            adjustModel = 0.;
-            ray.len = safeRayLen;
+        if (step == 0 && lastDist < currentDist && currentDist < ANTI_ALIAS) {
+            step = 1;
         }
-        if (currentDist > ANTI_ALIAS) {
+        if (step == 1 && lastDist < currentDist && currentDist > ANTI_ALIAS) {
+            adjustModel = 0.;
+        }
+        if (step == 0 && currentDist > ANTI_ALIAS) {
             safeRayLen = ray.len;
         }
         pos = ray.origin + ray.direction * ray.len;
