@@ -26,7 +26,7 @@ var scrubber = document.createElement('input');
 scrubber.classList.add('scrubber');
 scrubber.setAttribute('type', 'range');
 scrubber.min = 0;
-scrubber.max = 1000; // milliseconds
+scrubber.max = 10000; // milliseconds
 scrubber.step = 10;
 controls.appendChild(scrubber);
 
@@ -53,9 +53,10 @@ var vert = glslify('./quad.vert');
 // icosahedron-twist
 // geodesic-tiling
 // geodesic-tiling-free
+// helix-distance
 
-var frag = glslify('./projects/geodesic-tiling-free/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/geodesic-tiling-free/config.json', 'utf8'));
+var frag = glslify('./projects/helix-distance/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/helix-distance/config.json', 'utf8'));
 // var config = {};
 
 var configId;
