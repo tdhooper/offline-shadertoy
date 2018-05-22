@@ -6,17 +6,6 @@ uniform float iTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
-uniform float guiSubdivisions;
-uniform float guiRoundTop;
-uniform float guiRoundCorner;
-uniform float guiHeight;
-uniform float guiThickness;
-uniform float guiGap;
-uniform float guiWaveFrequency;
-uniform float guiWaveAmplitude;
-uniform float guiWaveSpeed;
-
-
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
@@ -137,6 +126,8 @@ struct TriPoints {
     vec2 ca;
 };
 
+
+// need to get hexagon center
 TriPoints closestTriPoints(vec2 p) {    
     vec2 pTri = cart2hex * p;
     vec2 pi = floor(pTri);
@@ -285,53 +276,6 @@ mat3 cameraRotation() {
 
 
 // --------------------------------------------------------
-// Animation 
-// --------------------------------------------------------
-
-float time;
-
-struct HexSpec {
-    float roundTop;
-    float roundCorner;
-    float height;
-    float thickness;
-    float gap;    
-};
-
-HexSpec newHexSpec(float subdivisions) {
-    return HexSpec(
-        .05 / subdivisions,
-        .1 / subdivisions,
-        2.,
-        2.,
-        .005
-    );
-}
-
-
-HexSpec getSpec(vec3 hexCenter, float subdivisions) {
-    HexSpec spec = newHexSpec(subdivisions);
-
-    spec.height = mix(.5, 4., guiHeight);
-    spec.gap = mix(.0, .8, guiGap) / subdivisions;
-    spec.roundTop = mix(0., 1., guiRoundTop) / subdivisions;
-    spec.thickness = mix(spec.roundTop + .01, guiHeight * 2., pow(guiThickness, 2.));
-    spec.roundCorner = mix(0., .3, guiRoundCorner) / subdivisions;
-
-    float blend = acos(dot(hexCenter, pca));
-    blend = cos(blend * 50. * guiWaveFrequency + time * guiWaveSpeed * 40.) * .5 + .5;
-
-    spec.height = mix(
-        spec.height + (spec.height * guiWaveAmplitude * .5),
-        spec.height - (spec.height * guiWaveAmplitude * .5),
-        blend
-    );
-
-    return spec;
-}
-
-
-// --------------------------------------------------------
 // Modelling 
 // --------------------------------------------------------
 
@@ -349,32 +293,23 @@ Model hexModel(
     vec3 p,
     vec3 hexCenter,
     vec3 edgeA,
-    vec3 edgeB,
-    HexSpec spec
+    vec3 edgeB
 ) {
     float d;
 
-    float edgeADist = dot(p, edgeA) + spec.gap;
-    float edgeBDist = dot(p, edgeB) - spec.gap;
-    float edgeDist = smax(edgeADist, -edgeBDist, spec.roundCorner);
+    float edgeADist = dot(p, edgeA) + .01;
+    float edgeBDist = dot(p, edgeB) - .01;
+    float edgeDist = max(edgeADist, -edgeBDist);
 
-    float outerDist = length(p) - spec.height;
-    d = smax(edgeDist, outerDist, spec.roundTop);
 
-    float innerDist = length(p) - spec.height + spec.thickness;
-    d = smax(d, -innerDist, spec.roundTop);
+    float innerDist = length(p) - 3.;
+
+    // edgeDist = dot(p, edgeB) + .1;
+    d = max(edgeDist, innerDist);
     
-    vec3 color;
+    vec3 color = vec3(.5);
 
-    float faceBlend = (spec.height - length(p)) / spec.thickness;
-    faceBlend = clamp(faceBlend, 0., 1.);
-    color = mix(FACE_COLOR, BACK_COLOR, step(.5, faceBlend));
-    
-    vec3 edgeColor = spectrum(dot(hexCenter, pca) * 5. + length(p) + .8);    
-    float edgeBlend = smoothstep(-.04, -.005, edgeDist);
-    color = mix(color, edgeColor, edgeBlend); 
-
-    return Model(d, color, edgeBlend);
+    return Model(d, color, .0);
 }
 
 // checks to see which intersection is closer
@@ -386,11 +321,18 @@ Model opU( Model m1, Model m2 ){
     }
 }
 
+vec3 cl(vec3 p, vec3 a, vec3 b) {
+    if (length(p - a) < length(p - b)) {
+        return a;
+    }
+    return b;
+}
+
 Model geodesicModel(vec3 p) {
 
     pModIcosahedron(p);
     
-    float subdivisions = mix(.5, 20., pow(guiSubdivisions, 2.));
+    float subdivisions = 3.;
     TriPoints3D points = geodesicTriPoints(p, subdivisions);
         
     vec3 edgeAB = normalize(cross(points.center, points.ab));
@@ -398,29 +340,99 @@ Model geodesicModel(vec3 p) {
     vec3 edgeCA = normalize(cross(points.center, points.ca));
     
     Model model, part;
-    HexSpec spec;
 
-    spec = getSpec(points.b, subdivisions);
-    part = hexModel(p, points.b, edgeAB, edgeBC, spec);
+    part = hexModel(p, points.b, edgeAB, edgeBC);
     model = part;
 
-    spec = getSpec(points.c, subdivisions);
-    part = hexModel(p, points.c, edgeBC, edgeCA, spec);
+    part = hexModel(p, points.c, edgeBC, edgeCA);
     model = opU(model, part);
     
-    spec = getSpec(points.a, subdivisions);
-    part = hexModel(p, points.a, edgeCA, edgeAB, spec);
+    part = hexModel(p, points.a, edgeCA, edgeAB);
     model = opU(model, part);
     
+
+    vec3 pn = normalize(p);
+
+    float lab = length(points.center - points.ab);
+    float lbc = length(points.center - points.bc);
+    float lca = length(points.center - points.ca);
+    float m = min(lab, min(lbc, lca));
+    float d = length(points.center - p);
+    d = length(p - points.ca);
+
+    vec3 ed = cl(pn, cl(pn, points.ab, points.bc), points.ca);
+    vec3 edc = cl(points.center, cl(points.center, points.ab, points.bc), points.ca);
+
+    float r = min(
+        min(
+            length(points.center - points.ab),
+            length(points.center - points.bc)
+        ),
+        length(points.center - points.ca)
+    );
+
+    float roundDist, boundryDist;
+
+    // boundryDist = min(
+    //     min(
+    //         abs(dot(p, edgeAB)),
+    //         abs(dot(p, edgeBC))
+    //     ),
+    //     abs(dot(p, edgeCA))
+    // );
+
+    vec3 hexCenter = cl(pn, cl(pn, points.a, points.b), points.c);
+
+    vec3 ab = cross(hexCenter, points.ab);
+    vec3 bc = cross(hexCenter, points.bc);
+    vec3 ca = cross(hexCenter, points.ca);
+
+    // boundryDist = min(
+    //     dot(pn, bc), -dot(pn, ca)
+    // ) * 10.;
+
+    // boundryDist = (dot(pn, -bc)) * 10.;
+    boundryDist = min(
+        abs(dot(pn, cross(points.a, points.b))),
+        min(
+            abs(dot(pn, cross(points.b, points.c))),
+            abs(dot(pn, cross(points.c, points.a)))
+        )
+    ) / min(
+        abs(dot(points.center, cross(points.a, points.b))),
+        min(
+            abs(dot(points.center, cross(points.b, points.c))),
+            abs(dot(points.center, cross(points.c, points.a)))
+        )
+    );
+
+    // boundryDist = abs(dot(pn, cross(hexCenter, ed))) * 50.;
+
+    // boundryDist = dot(p, normalize(cross(points.center, points.bc)));
+
+    // boundryDist = dot(p, edgeBC);
+
+    // d = length(pn - points.center)/length(points.center - ed);
+    // roundDist = length(pn - points.center)/length(points.center - edc);
+    // d = length(pn - points.center) * 5.;
+    // d = length(pn - ed) * 10.;
+    roundDist = length(pn - points.center) / r;
+    // d = r * 100.;
+    // d = 1. - d;
+
+    d = boundryDist;
+    // d= min(d, 1.);
+
+    // d = length(pn - points.c) * 10.;
+
+    model.albedo = spectrum(d * 1.);
+
     return model;
 }
 
 Model map( vec3 p ){
     mat3 m = modelRotation();
     p *= m;  
-    #ifndef LOOP
-        pR(p.xz, time * PI/16.);
-    #endif
     Model model = geodesicModel(p);
     return model;
 }
@@ -601,19 +613,6 @@ vec3 linearToScreen(vec3 linearRGB) {
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    time = iTime;
-
-    #ifdef LOOP
-        #if LOOP == 1
-            time = mod(time, 2.);   
-        #endif
-        #if LOOP == 2
-            time = mod(time, 4.);   
-        #endif
-        #if LOOP == 3
-            time = mod(time, 2.);
-        #endif
-    #endif
     
     initIcosahedron();
     

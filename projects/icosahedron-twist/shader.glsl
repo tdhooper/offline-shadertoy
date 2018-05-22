@@ -26,7 +26,7 @@ precision mediump float;
 // OPTIONS
 // --------------------------------------------------------
 
-//#define DEBUG
+#define DEBUG
 #define CONTROL
 
 
@@ -265,10 +265,18 @@ vec4 icosahedronAxisDistance(vec3 p) {
     pModIcosahedron(pn);
     pModIcosahedron(iv);
 
+    // disance from plane that separates nearest and
+    // next nearest icosahedron vertex.
+    // results in sharp corners on face
+    // 0 is close to plane
+    // 1 is level with nearest vertex
     float boundryDist = dot(pn, vec3(1, 0, 0));
     float boundryMax = dot(iv, vec3(1, 0, 0));
     boundryDist /= boundryMax;
 
+    // distance from nearest icosahedron vertex
+    // 0 is close to vertex
+    // 1 is close to boundry plane
     float roundDist = length(iv - pn);
     float roundMax = length(iv - vec3(0, 0, 1.));
     roundDist /= roundMax;
@@ -277,7 +285,11 @@ vec4 icosahedronAxisDistance(vec3 p) {
     float blend = 1. - boundryDist;
     blend = pow(blend, 6.);
     
+    // Use round near vertex, and only fade in boundry
+    // at boundry
     float dist = mix(roundDist, boundryDist, blend);
+
+    dist = roundDist;
 
     return vec4(originalIv, dist);
 }
@@ -292,6 +304,8 @@ void pTwistIcosahedron(inout vec3 p, float amount) {
 }
 
 float model(vec3 p) {
+    p *= sphericalMatrix(iMouse.yx / iResolution.yx * 6.);
+
     # ifndef DEBUG
         float wobble = sin(PI/2. * t);
         float wobbleX2 = sin(PI/2. * t*2.);
@@ -304,8 +318,6 @@ float model(vec3 p) {
             pR(p.xy, iGlobalTime * .5);
             a = guiTwist * 10.;
         #endif
-
-        // p *= sphericalMatrix(iMouse.yx / iResolution.yx * 3.);
 
         pTwistIcosahedron(p, a);
     # endif
@@ -324,6 +336,7 @@ vec3 debugSpectrum(float n) {
 
 vec3 material(vec3 p, vec3 norm, vec3 ref) {
     # ifdef DEBUG
+        p *= sphericalMatrix(iMouse.yx / iResolution.yx * 6.);
         vec4 a = icosahedronAxisDistance(p);
         float dist = a.a;
         return debugSpectrum(dist);

@@ -53,10 +53,11 @@ var vert = glslify('./quad.vert');
 // icosahedron-twist
 // geodesic-tiling
 // geodesic-tiling-free
+// geodesic-twist
 // helix-distance
 
-var frag = glslify('./projects/helix-distance/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/helix-distance/config.json', 'utf8'));
+var frag = glslify('./projects/geodesic-twist/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/geodesic-twist/config.json', 'utf8'));
 // var config = {};
 
 var configId;
