@@ -1,0 +1,112 @@
+{
+    "id": "geodesictilingfree4",
+    "timer": {
+        "running": true,
+        "elapsed": 737266.8999999878
+    },
+    "mouse": [
+        217,
+        221,
+        false,
+        0
+    ],
+    "cameraMatrix": {
+        "0": 0.4430297017097473,
+        "1": -0.4475054442882538,
+        "2": -0.776829183101654,
+        "3": 0,
+        "4": 0.8950555920600891,
+        "5": 0.2700729966163635,
+        "6": 0.35487473011016846,
+        "7": 0,
+        "8": 0.0509922057390213,
+        "9": -0.8525252938270569,
+        "10": 0.5201926231384277,
+        "11": 0,
+        "12": -0.005017390009015799,
+        "13": 0.009516492486000061,
+        "14": -0.9970700144767761,
+        "15": 1
+    },
+    "controls": {
+        "subdivisions": {
+            "type": "range",
+            "controller": 11,
+            "step": 0.01,
+            "mirror": true,
+            "min": 0,
+            "max": 1,
+            "value": 0.26
+        },
+        "height": {
+            "type": "range",
+            "controller": 12,
+            "step": 0.01,
+            "mirror": true,
+            "min": 0,
+            "max": 1,
+            "value": 0.23
+        },
+        "gap": {
+            "type": "range",
+            "controller": 13,
+            "step": 0.01,
+            "mirror": true,
+            "min": 0,
+            "max": 1,
+            "value": 0.07
+        },
+        "roundCorner": {
+            "type": "range",
+            "controller": 14,
+            "step": 0.01,
+            "mirror": true,
+            "min": 0,
+            "max": 1,
+            "value": 0.31
+        },
+        "roundTop": {
+            "type": "range",
+            "step": 0.01,
+            "mirror": true,
+            "min": 0,
+            "max": 1,
+            "value": 0
+        },
+        "thickness": {
+            "type": "range",
+            "controller": 15,
+            "step": 0.01,
+            "mirror": true,
+            "min": 0,
+            "max": 1,
+            "value": 0.26
+        },
+        "wave": {
+            "frequency": {
+                "type": "range",
+                "controller": 16,
+                "step": 0.01,
+                "min": 0,
+                "max": 1,
+                "value": 0.06
+            },
+            "amplitude": {
+                "type": "range",
+                "controller": 17,
+                "step": 0.01,
+                "min": 0,
+                "max": 1,
+                "value": 0.34
+            },
+            "speed": {
+                "type": "range",
+                "controller": 18,
+                "step": 0.01,
+                "min": 0,
+                "max": 1,
+                "value": 0.23
+            }
+        }
+    }
+}
