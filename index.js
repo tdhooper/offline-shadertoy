@@ -55,9 +55,10 @@ var vert = glslify('./quad.vert');
 // geodesic-tiling-free
 // geodesic-twist
 // helix-distance
+// inverted-helix
 
-var frag = glslify('./projects/geodesic-twist/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/geodesic-twist/config.json', 'utf8'));
+var frag = glslify('./projects/inverted-helix/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/inverted-helix/config.json', 'utf8'));
 // var config = {};
 
 var configId;
