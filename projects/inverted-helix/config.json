@@ -1,8 +1,8 @@
 {
-    "id": "invertex-helix",
+    "id": "invertex-helix2",
     "timer": {
         "running": false,
-        "elapsed": 44769.599999999045
+        "elapsed": 0
     },
     "mouse": [
         412,
@@ -35,7 +35,7 @@
             "step": 0.1,
             "min": 0.2,
             "max": 6,
-            "value": 0.8
+            "value": 0.6000000000000001
         },
         "offset": {
             "type": "range",
@@ -43,7 +43,7 @@
             "step": 0.005,
             "min": -1,
             "max": 1,
-            "value": 0.13
+            "value": 0.185
         },
         "level1": {
             "enabled": {
@@ -57,7 +57,7 @@
                 "step": 0.0025,
                 "min": 0,
                 "max": 1,
-                "value": 0.22
+                "value": 0.2475
             },
             "radius": {
                 "type": "range",
@@ -65,7 +65,7 @@
                 "step": 0.002,
                 "min": 0,
                 "max": 1,
-                "value": 0.482
+                "value": 0.09
             }
         },
         "level2": {
@@ -80,7 +80,7 @@
                 "step": 0.0025,
                 "min": 0,
                 "max": 1,
-                "value": 0.24
+                "value": 0.23500000000000001
             },
             "radius": {
                 "type": "range",
@@ -88,14 +88,14 @@
                 "step": 0.002,
                 "min": 0,
                 "max": 1,
-                "value": 0.264
+                "value": 0.228
             }
         },
         "level3": {
             "enabled": {
                 "type": "toggle",
                 "note": "C1",
-                "value": false
+                "value": true
             },
             "lead": {
                 "type": "range",
@@ -103,7 +103,7 @@
                 "step": 0.0025,
                 "min": 0,
                 "max": 1,
-                "value": 0.26
+                "value": 0.25
             },
             "radius": {
                 "type": "range",
@@ -111,7 +111,7 @@
                 "step": 0.002,
                 "min": 0,
                 "max": 1,
-                "value": 0
+                "value": 0.074
             }
         }
     }
