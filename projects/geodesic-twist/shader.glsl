@@ -185,10 +185,37 @@ vec3 intersection(vec3 n, vec3 planeNormal, float planeOffset) {
 float faceRadius = 0.3819660112501051;
 
 // 2D coordinates on the icosahedron face
-vec2 icosahedronFaceCoordinates(vec3 p) {
+vec2 icosahedronFaceCoordinates2(vec3 p) {
     vec3 pn = normalize(p);
     vec3 i = intersection(pn, facePlane, -1.);
     return vec2(dot(i, uPlane), dot(i, vPlane));
+}
+
+// 2D coordinates on the icosahedron face
+vec2 icosahedronFaceCoordinates(vec3 p) {
+    return icosahedronFaceCoordinates2(p);
+    vec3 pn = normalize(p);
+    vec3 i = intersection(pn, facePlane, -1.);
+    // return vec2(dot(i, uPlane), dot(i, vPlane));
+
+    // project p to vPlane
+
+    // normalize
+    // x = distance from uPlane
+    // y = distance from cross(uPlane, vPlane)
+    vec2 uProj = vec2(
+        dot(pn, vPlane),
+        dot(pn, cross(uPlane, vPlane))
+    );
+    float uAngle = atan(uProj.x, uProj.y);
+
+    vec2 vProj = vec2(
+        dot(pn, uPlane),
+        dot(pn, cross(uPlane, vPlane))
+    );
+    float vAngle = atan(vProj.x, vProj.y);
+
+    return vec2(vAngle, uAngle);
 }
 
 // Project 2D icosahedron face coordinates onto a sphere
@@ -328,7 +355,7 @@ vec3 cl(vec3 p, vec3 a, vec3 b) {
     return b;
 }
 
-Model geodesicModel(vec3 p) {
+Model geodesicModelB(vec3 p) {
 
     pModIcosahedron(p);
     
@@ -426,6 +453,126 @@ Model geodesicModel(vec3 p) {
     // d = length(pn - points.c) * 10.;
 
     model.albedo = spectrum(d * 1.);
+
+    return model;
+}
+
+Model geodesicModel(vec3 p) {
+
+    p *= -1.;
+
+    pModIcosahedron(p);
+    
+    float subdivisions = 3.;
+    TriPoints3D points = geodesicTriPoints(p, subdivisions);
+
+    Model model;
+
+    float d = 1e12;
+
+    float edgeDist = 1e12;
+    edgeDist = min(edgeDist, abs(dot(p, normalize(cross(points.a, points.b)))) - .01);
+    edgeDist = min(edgeDist, abs(dot(p, normalize(cross(points.b, points.c)))) - .01);
+    edgeDist = min(edgeDist, abs(dot(p, normalize(cross(points.c, points.a)))) - .01);
+    float sphere = length(p) - 3.;
+    d = max(sphere, -edgeDist);
+
+    model.dist = d;
+
+    vec3 pn = normalize(p);
+
+    float lab = length(points.center - points.ab);
+    float lbc = length(points.center - points.bc);
+    float lca = length(points.center - points.ca);
+    float m = min(lab, min(lbc, lca));
+    float de = length(points.center - p);
+    de = length(p - points.ca);
+
+    vec3 ed = cl(pn, cl(pn, points.ab, points.bc), points.ca);
+    vec3 edc = cl(points.center, cl(points.center, points.ab, points.bc), points.ca);
+
+    float r = min(
+        min(
+            length(points.center - points.ab),
+            length(points.center - points.bc)
+        ),
+        length(points.center - points.ca)
+    );
+
+    float roundDist, boundryDist;
+
+    // boundryDist = min(
+    //     min(
+    //         abs(dot(p, edgeAB)),
+    //         abs(dot(p, edgeBC))
+    //     ),
+    //     abs(dot(p, edgeCA))
+    // );
+
+    vec3 hexCenter = cl(pn, cl(pn, points.a, points.b), points.c);
+
+    vec3 ab = cross(hexCenter, points.ab);
+    vec3 bc = cross(hexCenter, points.bc);
+    vec3 ca = cross(hexCenter, points.ca);
+
+    // boundryDist = min(
+    //     dot(pn, bc), -dot(pn, ca)
+    // ) * 10.;
+
+    // boundryDist = (dot(pn, -bc)) * 10.;
+    boundryDist = min(
+        abs(dot(pn, cross(points.a, points.b))),
+        min(
+            abs(dot(pn, cross(points.b, points.c))),
+            abs(dot(pn, cross(points.c, points.a)))
+        )
+    ) / min(
+        abs(dot(points.center, cross(points.a, points.b))),
+        min(
+            abs(dot(points.center, cross(points.b, points.c))),
+            abs(dot(points.center, cross(points.c, points.a)))
+        )
+    );
+
+    // boundryDist = abs(dot(pn, cross(hexCenter, ed))) * 50.;
+
+    // boundryDist = dot(p, normalize(cross(points.center, points.bc)));
+
+    // boundryDist = dot(p, edgeBC);
+
+    // d = length(pn - points.center)/length(points.center - ed);
+    // roundDist = length(pn - points.center)/length(points.center - edc);
+    // d = length(pn - points.center) * 5.;
+    // d = length(pn - ed) * 10.;
+    roundDist = length(pn - points.center) / r;
+    // d = r * 100.;
+    // d = 1. - d;
+
+    float rr = min(
+        min(
+            length(hexCenter - points.ab),
+            length(hexCenter - points.bc)
+        ),
+        length(hexCenter - points.ca)
+    );
+    roundDist = length(pn - hexCenter) / rr;
+
+    vec3 boundryN = cross(points.center, ed);
+    boundryDist = abs(dot(p, boundryN));
+    boundryDist /= abs(dot(hexCenter, boundryN));
+
+    de = boundryDist;
+    de = min(de, 1.);
+
+    // d = length(pn - points.c) * 10.;
+
+    model.albedo = spectrum(de * 1.);
+
+    // model.dist = min(model.dist, max(length(p) - 3., abs(dot(p, uPlane)) - .01));
+    // model.dist = min(model.dist, max(length(p) - 3., abs(dot(p, vPlane)) - .01));
+
+    // vec2 uv = icosahedronFaceCoordinates(p);
+    // model.albedo = vec3(mod(uv * 5., 1.), 0);
 
     return model;
 }
