@@ -401,6 +401,9 @@ vec2 fShape2(vec3 p) {
 
     float parts = 24.;
 
+    float hlf = 0.;
+    float part;
+
     tOffset = (10. / parts) * side;
 
     ta = -1. / parts;
@@ -410,8 +413,6 @@ vec2 fShape2(vec3 p) {
     b = knot(TAU * tb) * 1.2;
     c = knot(TAU * tc);
     bezPart = sdBezier(a, b, c, p);
-    bezPart.w *= tFlip;
-    bezPart.w = mix(ta, tc, bezPart.w) + tOffset;
     bez = bezPart;
 
     tOffset = (6. / parts) * side;
@@ -423,10 +424,9 @@ vec2 fShape2(vec3 p) {
     b = knot(TAU * tb) * 1.15 + vec3(0,0,-.05);
     c = knot(TAU * tc);
     bezPart = sdBezier(a, b, c, p);
-    bezPart.w *= tFlip;
-    bezPart.w = mix(ta, tc, bezPart.w) + tOffset;
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
+        hlf = 1.;
     }
 
     ta = 9. / parts;
@@ -436,11 +436,10 @@ vec2 fShape2(vec3 p) {
     b = knot(TAU * tb) * 1.185 + vec3(.015,.00,-.045);
     c = knot(TAU * tc);
     bezPart = sdBezier(a, b, c, p);
-    bezPart.w *= tFlip;
-    bezPart.w = mix(ta, tc, bezPart.w) - 8. / parts + tOffset;
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
         outer = 1.;
+        hlf = 0.;
     }
 
     tOffset = (2. / parts) * side;
@@ -452,11 +451,10 @@ vec2 fShape2(vec3 p) {
     b = knot(TAU * tb) * 1.1;
     c = knot(TAU * tc);
     bezPart = sdBezier(a, b, c, p);
-    bezPart.w *= tFlip;
-    bezPart.w = mix(ta, tc, bezPart.w) - 8. / parts + tOffset;
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
         outer = 1.;
+        hlf = 1.;
     }
 
     d = length(p - bez.xyz);
@@ -485,30 +483,41 @@ vec2 fShape2(vec3 p) {
     // 0, 8, 4
     // 11, 7, 3
 
-    float part;
+    
+    part = 2. * side;
+    part += cell * (1. - side * 2.);
+    part *= 4.;
+    part *= 1. + 1. * outer;
+    part += 5. * outer;
+    part += side;
+    part *= -1. + outer * 2.;
+    part = mod(part, 12.);
 
-    if (outer > 0.) {
-        if (side > 0.) {
-            cell = 2.- cell;
-        }
-        part = mod(5. + cell * 8. + side, 12.);
+    float t = 0.;
+
+    if (hlf == 0.) {
+        t = bez.w * .5;
     } else {
-        if (side > 0.) {
-            cell = 2.- cell;
-        }
-        part = mod(12. - cell * 4. - side, 12.);
+        t = .5 + bez.w * .5;
     }
 
+    if (side > 0.) {
+        t = 1. - t;
+    }
 
-    bez.w = part / 12.;
+    t = mix(-.1 / parts, 4. / parts, t);
+    t += part / 12.;
+    // t *= 5.;
 
-    // bez.w = cell / 3.;
+    // t = bez.w;
+
+    // bez.w = .5;
 
 
     // vec3 plane = normalize(cross(a - b, c - b));
 
     // d = min(d, abs(dot(p, plane) - dot(a, plane)) - .01);
-    return vec2(d, bez.w);
+    return vec2(d, t);
 }
 
 float focalLength;
