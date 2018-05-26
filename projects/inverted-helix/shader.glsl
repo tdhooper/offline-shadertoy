@@ -172,31 +172,49 @@ mat3 rotationMatrix(vec3 axis, float angle)
 // Helix
 // --------------------------------------------------------
 
-// Closest point on a helix for one revolution
-vec3 closestHelixSection(vec3 p, float lead, float radius) {
+vec2 closestPointOnRepeatedLine(vec2 line, vec2 point){
+
+    // Angle of the line
+    float a = atan(line.x, line.y);
+
+    // Rotate space so we can easily repeat along
+    // one dimension
+    pR(point, -a);
+
+    // Repeat to create parallel lines at the corners
+    // of the vec2(lead, radius) polar bounding area
+    float repeatSize = sin(a) * line.y;
+    float cell = pMod1(point.x, repeatSize);
+
+    // Rotate space back to where it was
+    pR(point, a);
+
+    // Closest point on a line
+    line = normalize(line);
+    float d = dot(point, line);
+    vec2 closest = line * d;
+
+    // Part 2 of the repeat, move the line along it's
+    // perpendicular by the repeat cell
+    vec2 perpendicular = vec2(line.y, -line.x);
+    closest += cell * repeatSize * perpendicular;
+
+    return closest;
+}
+
+// Closest point on a helix
+vec3 closestHelix(vec3 p, float lead, float radius) {
 
     p = cartToPolar(p);
     p.y *= radius;
 
     vec2 line = vec2(lead, radius * PI * 2.);
-    vec2 closest = closestPointOnLine(line, p.xy);
+    vec2 closest = closestPointOnRepeatedLine(line, p.xy);
 
     closest.y /= radius;
     vec3 closestCart = polarToCart(vec3(closest, radius));
 
     return closestCart;
-}
-
-// Closest point on a helix for infinite revolutions
-vec3 closestHelix(vec3 p, float lead, float radius) {
-    float c = pMod1(p.x, lead);
-    vec3 offset = vec3(lead, 0, 0);
-    vec3 A = closestHelixSection(p, lead, radius);
-    vec3 B = closestHelixSection(p + offset, lead, radius) - offset;
-    vec3 C = closestHelixSection(p - offset, lead, radius) + offset;
-    vec3 closest = closestPoint(p, A, closestPoint(p, B, C));
-    closest += offset * c;
-    return closest;
 }
 
 // Cartesian to helix coordinates
@@ -273,7 +291,11 @@ Model map(vec3 p) {
     d = fBox2(p.yz, vec2(.5));
     d /= scale;
 
+    d = abs(d) - .001;
+
+
     d *= s;
+
 
     vec2 uv = cartToPolar(p).xy;
     return Model(d, uv, 0);
