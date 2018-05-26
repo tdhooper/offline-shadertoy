@@ -171,7 +171,7 @@ mat3 rotationMatrix(vec3 axis, float angle)
     );
 }
 
-vec2 sdBezier(vec3 A, vec3 B, vec3 C, vec3 pos)
+vec4 sdBezier(vec3 A, vec3 B, vec3 C, vec3 pos)
 {    
     vec3 a = B - A;
     vec3 b = A - 2.0*B + C;
@@ -183,7 +183,7 @@ vec2 sdBezier(vec3 A, vec3 B, vec3 C, vec3 pos)
     float ky = kk * (2.0*dot(a,a)+dot(d,b)) / 3.0;
     float kz = kk * dot(d,a);      
 
-    vec2 res;
+    vec4 res;
 
     float p = ky - kx*kx;
     float p3 = p*p*p;
@@ -199,8 +199,8 @@ vec2 sdBezier(vec3 A, vec3 B, vec3 C, vec3 pos)
         t = clamp( t, 0.0, 1.0 );
 
         // 1 root
-        vec3 qos = d + (c + b*t)*t;
-        res = vec2( length(qos),t);
+        vec3 qos = A + (c + b*t)*t;
+        res = vec4(qos, t);
     }
     else
     {
@@ -212,23 +212,39 @@ vec2 sdBezier(vec3 A, vec3 B, vec3 C, vec3 pos)
         t = clamp( t, 0.0, 1.0 );
 
         // 3 roots
-        vec3 qos = d + (c + b*t.x)*t.x;
-        float dis = dot(qos,qos);
-        
-        res = vec2(dis,t.x);
+        vec3 qos = A + (c + b * t.x) * t.x;
+        float dis = dot(qos - pos, qos);
+        res = vec4(qos, t.x);
 
-        qos = d + (c + b*t.y)*t.y;
-        dis = dot(qos,qos);
-        if( dis<res.x ) res = vec2(dis,t.y );
+        qos = A + (c + b * t.y) * t.y;
+        float dis2 = dot(qos - pos, qos);
+        if( dis2 < dis ) {
+            res = vec4(qos, t.y);
+            dis = dis2;
+        }
 
-        qos = d + (c + b*t.z)*t.z;
-        dis = dot(qos,qos);
-        if( dis<res.x ) res = vec2(dis,t.z );
-
-        res.x = sqrt( res.x );
+        qos = A + (c + b * t.z) * t.z;
+        dis2 = dot(qos - pos,qos);
+        if (dis2 < dis) {
+            res = vec4(qos, t.z);
+        }
     }
     
     return res;
+}
+
+
+// --------------------------------------------------------
+// Spectrum colour palette
+// IQ https://www.shadertoy.com/view/ll2GD3
+// --------------------------------------------------------
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
 }
 
 
@@ -345,8 +361,8 @@ float fShape(vec3 p) {
     return d;
 }
 
-vec2 opU(vec2 a, vec2 b) {
-    if (a.x < b.x) {
+vec4 unionBezier(vec3 p, vec4 a, vec4 b) {
+    if (length(p - a.xyz) < length(p - b.xyz)) {
         return a;
     }
     return b;
@@ -354,31 +370,32 @@ vec2 opU(vec2 a, vec2 b) {
 
 vec2 fShape2(vec3 p) {
 
-    vec2 duv;
+    vec4 bez, bezPart;
     vec3 pp = p;
 
-    if (p.z > 0.) {
-        p.z *= -1.;
-        p.y *= -1.;
-        pR(p.xy, TAU / -6.);
-    }
+    // if (p.z > 0.) {
+    //     p.z *= -1.;
+    //     p.y *= -1.;
+    //     pR(p.xy, TAU / -6.);
+    // }
+    // pR(p.xy, TAU / -6.);
+    // pModPolar(p.xy, 3.);
+    // pR(p.xy, TAU / 6.);
+
+
     float d = 1e12;
-
     vec3 a, b, c;
-
-    pR(p.xy, TAU / -6.);
-    pModPolar(p.xy, 3.);
-    pR(p.xy, TAU / 6.);
 
     a = knot(TAU * (-1./24.));
     b = knot(TAU * (0./24.)) * 1.2;
     c = knot(TAU * (1./24.));
-    duv = sdBezier(a, b, c, p);
+    bez = sdBezier(a, b, c, p);
 
     a = knot(TAU * (1./24.));
     b = knot(TAU * (1.9/24.)) * 1.15 + vec3(0,0,-.05);
     c = knot(TAU * (3./24.));
-    duv = opU(duv, sdBezier(a, b, c, p));
+    bezPart = sdBezier(a, b, c, p);
+    bez = unionBezier(p, bez, bezPart);
 
     // d = min(d, length(p - a) - .1);
     // d = min(d, length(p - b) - .1);
@@ -387,14 +404,16 @@ vec2 fShape2(vec3 p) {
     a = knot(TAU * (9./24.));
     b = knot(TAU * (9.8/24.)) * 1.185 + vec3(.015,.00,-.045);
     c = knot(TAU * (11./24.));
-    duv = opU(duv, sdBezier(a, b, c, p));
+    bezPart = sdBezier(a, b, c, p);
+    bez = unionBezier(p, bez, bezPart);
 
     a = knot(TAU * (11./24.));
     b = knot(TAU * (12./24.)) * 1.1;
     c = knot(TAU * (13./24.));
-    duv = opU(duv, sdBezier(a, b, c, p));
+    bezPart = sdBezier(a, b, c, p);
+    bez = unionBezier(p, bez, bezPart);
 
-    d = duv.x;
+    d = length(p - bez.xyz);
     d -= .33;
     // d -= .01;
 
@@ -403,25 +422,25 @@ vec2 fShape2(vec3 p) {
 
     p = pp;
 
-    // plane = vec3(0,0,1);
-    // dp = abs(dot(p, plane)) - .001;
-    // dp = max(dp, length(p) - 2.);
-    // d = min(d, dp);
+    plane = vec3(0,0,1);
+    dp = abs(dot(p, plane)) - .001;
+    dp = max(dp, length(p) - 2.);
+    d = min(d, dp);
 
-    // // d = min(d, length(p - b) - .03);
+    // d = min(d, length(p - b) - .03);
 
-    // pModPolar(p.xy, 3.);
-    // plane = vec3(0,1,0);
-    // dp = abs(dot(p, plane)) - .001;
-    // dp = max(dp, length(p) - 1.);
-    // d = min(d, dp);
+    pModPolar(p.xy, 3.);
+    plane = vec3(0,1,0);
+    dp = abs(dot(p, plane)) - .001;
+    dp = max(dp, length(p) - 1.);
+    d = min(d, dp);
 
 
 
     // vec3 plane = normalize(cross(a - b, c - b));
 
     // d = min(d, abs(dot(p, plane) - dot(a, plane)) - .01);
-    return vec2(d, duv.y);
+    return vec2(d, bez.w);
 }
 
 float focalLength;
@@ -461,15 +480,16 @@ vec3 render(Hit hit){
     col = bg;
     if ( ! hit.isBackground) {
         vec2 uv = hit.model.uv;
-        uv *= vec2(4., 8.);
-        uv = cos(uv * PI * 2.);
-        uv = smoothstep(.5, .55, uv);
-        col = vec3(1.-uv.yx, 1.);
+        // uv *= vec2(4., 8.);
+        // uv = cos(uv * PI * 2.);
+        // uv = smoothstep(.5, .55, uv);
+        col = spectrum(uv.x);
+
         vec3 light = normalize(vec3(.5,1,0));
         vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
         col *= diffuse;
         vec3 ref = reflect(hit.rayDirection, hit.normal);
-        col = normalize(hit.normal) * .5 + .5;
+        // col = normalize(hit.normal) * .5 + .5;
         // col = vec3(col.b);
         col = mix(col, bg, clamp(0., 1., smoothstep(length(camPos * .25), length(camPos * 2.5), length(camPos - hit.pos))));
     }
@@ -564,7 +584,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     Hit hit = raymarch(camPos, rayDirection);
 
     vec3 color = render(hit);
-    // color = pow(color, vec3(1. / 2.2)); // Gamma
+    color = pow(color, vec3(1. / 2.2)); // Gamma
     fragColor = vec4(color,1);
 }
 
