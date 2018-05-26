@@ -56,9 +56,10 @@ var vert = glslify('./quad.vert');
 // geodesic-twist
 // helix-distance
 // inverted-helix
+// clifford-torus
 
-var frag = glslify('./projects/inverted-helix/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/inverted-helix/config.json', 'utf8'));
+var frag = glslify('./projects/clifford-torus/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/clifford-torus/config.json', 'utf8'));
 // var config = {};
 
 var configId;
