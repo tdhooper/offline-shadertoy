@@ -115,6 +115,8 @@ function getConfig() {
         timer: timer.serialize(),
         mouse: mouse,
         cameraMatrix: camera.view(),
+        positionSpeed: camera.positionSpeed,
+        rotationSpeed: camera.rotationSpeed,
         controls: {}
     };
     guiControls.addConfig(config.controls);
@@ -126,6 +128,8 @@ function getState() {
         timer: timer.serialize(),
         mouse: mouse,
         cameraMatrix: camera.view(),
+        positionSpeed: camera.positionSpeed,
+        rotationSpeed: camera.rotationSpeed,
         controls: {}
     };
     guiControls.addState(state.controls);
@@ -149,7 +153,9 @@ function loadConfig(config) {
     guiControls = new Controls(config.controls);
     if (config.cameraMatrix) {
         camera = createCamera({
-            view: config.cameraMatrix
+            view: config.cameraMatrix,
+            positionSpeed: config.positionSpeed,
+            rotationSpeed: config.rotationSpeed
         });
     }
 }
@@ -166,7 +172,9 @@ function loadState(state) {
     guiControls.loadState(state.controls);
     if (state.cameraMatrix) {
         camera = createCamera({
-            view: state.cameraMatrix
+            view: state.cameraMatrix,
+            positionSpeed: state.positionSpeed,
+            rotationSpeed: state.rotationSpeed
         });
     }
 }
@@ -229,7 +237,7 @@ function render(offset, resolution) {
     var realTime = performance.now();
     var elapsed = realTime - lastTime;
     lastTime = realTime;
-    camera.control(elapsed * .5, [
+    camera.control(elapsed, [
       pressed('W'), pressed('S'),
       pressed('A'), pressed('D'),
       pressed('R'), pressed('F'),
