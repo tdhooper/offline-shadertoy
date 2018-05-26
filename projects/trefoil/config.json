@@ -1,0 +1,86 @@
+{
+    "id": "trefoil12",
+    "timer": {
+        "running": true,
+        "elapsed": 338577.6999999967
+    },
+    "mouse": [
+        301,
+        218,
+        false,
+        0
+    ],
+    "cameraMatrix": {
+        "0": 0.9838539361953735,
+        "1": -0.09891298413276672,
+        "2": -0.14915695786476135,
+        "3": 0,
+        "4": -0.0030116792768239975,
+        "5": 0.8241330981254578,
+        "6": -0.5663894414901733,
+        "7": 0,
+        "8": 0.1789483278989792,
+        "9": 0.5576937198638916,
+        "10": 0.8105286359786987,
+        "11": 0,
+        "12": 0.07759765535593033,
+        "13": -0.9069151282310486,
+        "14": 2.2458176612854004,
+        "15": 1
+    },
+    "positionSpeed": 1,
+    "rotationSpeed": 3,
+    "controls": {
+        "closed": true,
+        "focalLength": {
+            "type": "range",
+            "controller": 18,
+            "step": 0.01,
+            "min": 0,
+            "max": 10,
+            "value": 1
+        },
+        "smallRadius": {
+            "type": "range",
+            "controller": 11,
+            "step": 0.001,
+            "min": 0,
+            "max": 2,
+            "value": 0.108
+        },
+        "largeRadius": {
+            "type": "range",
+            "controller": 12,
+            "step": 0.001,
+            "min": 0,
+            "max": 4,
+            "value": 0.66
+        },
+        "offset": {
+            "x": {
+                "type": "range",
+                "controller": 13,
+                "step": 0.001,
+                "min": -1,
+                "max": 1,
+                "value": -0.222
+            },
+            "y": {
+                "type": "range",
+                "controller": 14,
+                "step": 0.001,
+                "min": -1,
+                "max": 1,
+                "value": 0
+            },
+            "z": {
+                "type": "range",
+                "controller": 15,
+                "step": 0.001,
+                "min": -1,
+                "max": 1,
+                "value": 0
+            }
+        }
+    }
+}

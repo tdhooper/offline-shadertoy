@@ -58,9 +58,10 @@ var vert = glslify('./quad.vert');
 // inverted-helix
 // clifford-torus
 // inverted-torus
+// trefoil
 
-var frag = glslify('./projects/inverted-torus/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/inverted-torus/config.json', 'utf8'));
+var frag = glslify('./projects/trefoil/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/trefoil/config.json', 'utf8'));
 // var config = {};
 
 var configId;
