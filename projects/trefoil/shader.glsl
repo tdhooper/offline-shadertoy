@@ -368,73 +368,141 @@ vec4 unionBezier(vec3 p, vec4 a, vec4 b) {
     return b;
 }
 
+float switchBezier(vec3 p, vec4 a, vec4 b) {
+    return length(p - a.xyz) - length(p - b.xyz);
+}
+
 vec2 fShape2(vec3 p) {
 
     vec4 bez, bezPart;
     vec3 pp = p;
+    float side = 0.;
+    float tFlip = 1.;
 
-    // if (p.z > 0.) {
-    //     p.z *= -1.;
-    //     p.y *= -1.;
-    //     pR(p.xy, TAU / -6.);
-    // }
-    // pR(p.xy, TAU / -6.);
-    // pModPolar(p.xy, 3.);
-    // pR(p.xy, TAU / 6.);
+    float cell = 0.;
 
+    if (p.z > 0.) {
+        p.z *= -1.;
+        p.y *= -1.;
+        pR(p.xy, TAU / -6.);
+        side = 1.;
+        tFlip = -1.;
+    }
+    pR(p.xy, TAU / -6.);
+    cell = pModPolar(p.xy, 3.);
+    pR(p.xy, TAU / 6.);
+
+    float tOffset = 0.;
+    float outer = 0.;
 
     float d = 1e12;
+    float ta, tb, tc;
     vec3 a, b, c;
 
-    a = knot(TAU * (-1./24.));
-    b = knot(TAU * (0./24.)) * 1.2;
-    c = knot(TAU * (1./24.));
-    bez = sdBezier(a, b, c, p);
+    float parts = 24.;
 
-    a = knot(TAU * (1./24.));
-    b = knot(TAU * (1.9/24.)) * 1.15 + vec3(0,0,-.05);
-    c = knot(TAU * (3./24.));
+    tOffset = (10. / parts) * side;
+
+    ta = -1. / parts;
+    tb = 0. / parts;
+    tc = 1. / parts;
+    a = knot(TAU * ta);
+    b = knot(TAU * tb) * 1.2;
+    c = knot(TAU * tc);
     bezPart = sdBezier(a, b, c, p);
-    bez = unionBezier(p, bez, bezPart);
+    bezPart.w *= tFlip;
+    bezPart.w = mix(ta, tc, bezPart.w) + tOffset;
+    bez = bezPart;
 
-    // d = min(d, length(p - a) - .1);
-    // d = min(d, length(p - b) - .1);
-    // d = min(d, length(p - c) - .1);
+    tOffset = (6. / parts) * side;
 
-    a = knot(TAU * (9./24.));
-    b = knot(TAU * (9.8/24.)) * 1.185 + vec3(.015,.00,-.045);
-    c = knot(TAU * (11./24.));
+    ta = 1. / parts;
+    tb = 1.9 / parts;
+    tc = 3. / parts;
+    a = knot(TAU * ta);
+    b = knot(TAU * tb) * 1.15 + vec3(0,0,-.05);
+    c = knot(TAU * tc);
     bezPart = sdBezier(a, b, c, p);
-    bez = unionBezier(p, bez, bezPart);
+    bezPart.w *= tFlip;
+    bezPart.w = mix(ta, tc, bezPart.w) + tOffset;
+    if (switchBezier(p, bez, bezPart) > 0.) {
+        bez = bezPart;
+    }
 
-    a = knot(TAU * (11./24.));
-    b = knot(TAU * (12./24.)) * 1.1;
-    c = knot(TAU * (13./24.));
+    ta = 9. / parts;
+    tb = 9.8 / parts;
+    tc = 11. / parts;
+    a = knot(TAU * ta);
+    b = knot(TAU * tb) * 1.185 + vec3(.015,.00,-.045);
+    c = knot(TAU * tc);
     bezPart = sdBezier(a, b, c, p);
-    bez = unionBezier(p, bez, bezPart);
+    bezPart.w *= tFlip;
+    bezPart.w = mix(ta, tc, bezPart.w) - 8. / parts + tOffset;
+    if (switchBezier(p, bez, bezPart) > 0.) {
+        bez = bezPart;
+        outer = 1.;
+    }
+
+    tOffset = (2. / parts) * side;
+
+    ta = 11. / parts;
+    tb = 12. / parts;
+    tc = 13. / parts;
+    a = knot(TAU * ta);
+    b = knot(TAU * tb) * 1.1;
+    c = knot(TAU * tc);
+    bezPart = sdBezier(a, b, c, p);
+    bezPart.w *= tFlip;
+    bezPart.w = mix(ta, tc, bezPart.w) - 8. / parts + tOffset;
+    if (switchBezier(p, bez, bezPart) > 0.) {
+        bez = bezPart;
+        outer = 1.;
+    }
 
     d = length(p - bez.xyz);
-    d -= .33;
-    // d -= .01;
+    // d -= .33;
+    d -= .1;
 
     vec3 plane;
     float dp;
 
-    p = pp;
+    // p = pp;
 
-    plane = vec3(0,0,1);
-    dp = abs(dot(p, plane)) - .001;
-    dp = max(dp, length(p) - 2.);
-    d = min(d, dp);
+    // plane = vec3(0,0,1);
+    // dp = abs(dot(p, plane)) - .001;
+    // dp = max(dp, length(p) - .5);
+    // d = min(d, dp);
 
-    // d = min(d, length(p - b) - .03);
+    // // d = min(d, length(p - b) - .03);
 
-    pModPolar(p.xy, 3.);
-    plane = vec3(0,1,0);
-    dp = abs(dot(p, plane)) - .001;
-    dp = max(dp, length(p) - 1.);
-    d = min(d, dp);
+    // pModPolar(p.xy, 3.);
+    // plane = vec3(0,1,0);
+    // dp = abs(dot(p, plane)) - .01;
+    // dp = max(dp, length(p) - .5);
+    // d = min(d, dp);
 
+    // part += side * 3.;
+    // 0, 8, 4
+    // 11, 7, 3
+
+    float part;
+
+    if (outer > 0.) {
+        if (side > 0.) {
+            cell = 2.- cell;
+        }
+        part = mod(5. + cell * 8. + side, 12.);
+    } else {
+        if (side > 0.) {
+            cell = 2.- cell;
+        }
+        part = mod(12. - cell * 4. - side, 12.);
+    }
+
+
+    bez.w = part / 12.;
+
+    // bez.w = cell / 3.;
 
 
     // vec3 plane = normalize(cross(a - b, c - b));
