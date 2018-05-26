@@ -1,0 +1,124 @@
+{
+    "id": "invertex-torus3",
+    "timer": {
+        "running": false,
+        "elapsed": 0
+    },
+    "mouse": [
+        294,
+        224,
+        false,
+        0
+    ],
+    "cameraMatrix": {
+        "0": -0.9657381176948547,
+        "1": -0.802781343460083,
+        "2": -0.05022825673222542,
+        "3": 0,
+        "4": 0.2757840156555176,
+        "5": -0.494763046503067,
+        "6": 1.0582573413848877,
+        "7": 0,
+        "8": -0.7555950880050659,
+        "9": 0.7426355481147766,
+        "10": 0.29321596026420593,
+        "11": 0,
+        "12": -0.6038153171539307,
+        "13": 6.075798034667969,
+        "14": 1.4967255592346191,
+        "15": 1
+    },
+    "positionSpeed": 5,
+    "rotationSpeed": 1,
+    "controls": {
+        "closed": true,
+        "zoom": {
+            "type": "range",
+            "controller": 18,
+            "step": 0.1,
+            "min": 0.2,
+            "max": 6,
+            "value": 0.6000000000000001
+        },
+        "offset": {
+            "type": "range",
+            "controller": 17,
+            "step": 0.005,
+            "min": -1,
+            "max": 1,
+            "value": 0.185
+        },
+        "level1": {
+            "closed": true,
+            "enabled": {
+                "type": "toggle",
+                "note": "G#0",
+                "value": true
+            },
+            "lead": {
+                "type": "range",
+                "controller": 11,
+                "step": 0.0025,
+                "min": 0,
+                "max": 1,
+                "value": 0.2475
+            },
+            "radius": {
+                "type": "range",
+                "controller": 12,
+                "step": 0.002,
+                "min": 0,
+                "max": 1,
+                "value": 0.09
+            }
+        },
+        "level2": {
+            "closed": true,
+            "enabled": {
+                "type": "toggle",
+                "note": "A#0",
+                "value": true
+            },
+            "lead": {
+                "type": "range",
+                "controller": 13,
+                "step": 0.0025,
+                "min": 0,
+                "max": 1,
+                "value": 0.23500000000000001
+            },
+            "radius": {
+                "type": "range",
+                "controller": 14,
+                "step": 0.002,
+                "min": 0,
+                "max": 1,
+                "value": 0.228
+            }
+        },
+        "level3": {
+            "closed": true,
+            "enabled": {
+                "type": "toggle",
+                "note": "C1",
+                "value": true
+            },
+            "lead": {
+                "type": "range",
+                "controller": 15,
+                "step": 0.0025,
+                "min": 0,
+                "max": 1,
+                "value": 0.25
+            },
+            "radius": {
+                "type": "range",
+                "controller": 16,
+                "step": 0.002,
+                "min": 0,
+                "max": 1,
+                "value": 0.074
+            }
+        }
+    }
+}
