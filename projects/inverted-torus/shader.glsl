@@ -8,24 +8,14 @@ uniform sampler2D iChannel0;
 uniform mat4 cameraMatrix;
 uniform vec3 cameraPosition;
 
-uniform float guiZoom;
-uniform float guiOffset;
-
-uniform bool guiLevel1Enabled;
-uniform bool guiLevel2Enabled;
-uniform bool guiLevel3Enabled;
-
-uniform float guiLevel1Lead;
-uniform float guiLevel2Lead;
-uniform float guiLevel3Lead;
-
-uniform float guiLevel1Radius;
-uniform float guiLevel2Radius;
-uniform float guiLevel3Radius;
-
-uniform float guiThickness;
-uniform bool guiNormals;
-
+uniform float guiSmallRadius;
+uniform float guiLargeRadius;
+uniform float guiOffsetX;
+uniform float guiOffsetY;
+uniform float guiOffsetZ;
+uniform float guiRotateX;
+uniform float guiRotateY;
+uniform float guiRotateZ;
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -183,7 +173,7 @@ vec2 closestPointOnRepeatedLine(vec2 line, vec2 point){
 
     // Repeat to create parallel lines at the corners
     // of the vec2(lead, radius) polar bounding area
-    float repeatSize = sin(a) * line.y;
+    float repeatSize = (sin(a) * line.y) / 10.;
     float cell = pMod1(point.x, repeatSize);
 
     // Rotate space back to where it was
@@ -242,6 +232,22 @@ float fTorus(vec3 p, float smallRadius, float largeRadius) {
     return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
 }
 
+float fShape(vec3 p) {
+    float d;
+    p = p.yzx;
+    p = cartToPolar(p);
+    p.z -= guiLargeRadius;
+    
+    p = p.yxz;
+    p.x += iTime * .4;
+    p /= guiSmallRadius * 2.;
+    pModHelixScale(p, 8.5, .6);
+    d = length(p.yz) - .5;
+    d = fBox2(p.yz, vec2(.5));
+    d *= guiSmallRadius * 2.;
+    return d;
+}
+
 Model map(vec3 p) {
     float d;
 
@@ -249,11 +255,12 @@ Model map(vec3 p) {
     // s = 1.;
     p /= s;
 
-    p.x += .25;
+    p += vec3(guiOffsetX, guiOffsetY, guiOffsetZ) * 3.;
 
-    d = fTorus(p, .25, .5);
+    d = fTorus(p, guiSmallRadius, guiLargeRadius);
+    d = fShape(p);
 
-    d = abs(d) - .001;
+    // d = abs(d) - .001;
 
     d *= s;
 
@@ -306,7 +313,7 @@ vec3 render(Hit hit){
 const float MAX_TRACE_DISTANCE = 20.;
 const float INTERSECTION_PRECISION = .001;
 const int NUM_OF_TRACE_STEPS = 300;
-const float FUDGE_FACTOR = .75;
+const float FUDGE_FACTOR = .9;
 
 
 vec3 calcNormal(vec3 pos){
