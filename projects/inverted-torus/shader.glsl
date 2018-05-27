@@ -248,17 +248,43 @@ float fShape(vec3 p) {
     return d;
 }
 
+
+float vmax(vec3 v) {
+    return max(max(v.x, v.y), v.z);
+}
+
+
+// Box: correct distance to corners
+float fBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
 Model map(vec3 p) {
     float d;
 
     float s = dot(p,p);
     // s = 1.;
+    // s *= 2.;
     p /= s;
 
-    p += vec3(guiOffsetX, guiOffsetY, guiOffsetZ) * 3.;
+
+
+    // p += vec3(guiOffsetX, guiOffsetY, guiOffsetZ) * 3.;
 
     d = fTorus(p, guiSmallRadius, guiLargeRadius);
     d = fShape(p);
+
+    d = fBox(p, vec3(.2));
+    p += vec3(.1, .2,.2);
+    d = min(d, fBox(p, vec3(.5,.3,.1)));
+    p -= vec3(.2, .3,.1);
+    d = min(d, fBox(p, vec3(.2,.6,.2)));
+    p += vec3(.1, -.1, .3);
+    d = min(d, fBox(p, vec3(.5,.4,.6)));
+    p -= vec3(.2, .2, -.5);
+    d = max(d, -fBox(p, vec3(.5,.3,.2)));
+    p += vec3(-.3, .2, -.4);
+    d = min(d, fBox(p, vec3(.3,.2,.3)));
 
     // d = abs(d) - .001;
 

@@ -575,6 +575,18 @@ Curve TrefoilCurve(vec3 p) {
 vec2 fShape2(vec3 p) {
     float d = 1e12;
 
+    float s = 1.;
+
+
+    if (length(p) > 2.) {
+        s = dot(p,p);
+        s /= 3.;
+        pR(p.xy, PI * .5);
+    }
+
+    p /= s;
+
+
     Curve curve = TrefoilCurve(p);
 
     d = min(d, length(p - curve.position) - .03);
@@ -588,11 +600,11 @@ vec2 fShape2(vec3 p) {
     float z = dot(p - curve.position, curve.binormal);
     p = vec3(x, y, z);
 
-    d = length(p.yz) - .1;
+    // d = length(p.yz) - .4;
 
     p.x += iTime * .1;
-    pMod1(p.x, 1./3.);
-    d = fBox(p, vec3(.1,.2,.2));
+    pMod1(p.x, 1./2.5);
+    d = fBox(p, vec3(.15,.33,.33));
 
     // d = fBox2(p.yz, vec2(.3));
 
@@ -612,6 +624,7 @@ vec2 fShape2(vec3 p) {
     // dp = max(dp, length(p) - .5);
     // d = min(d, dp);
 
+    d *= s;
 
     return vec2(d, curve.t);
 }
@@ -664,7 +677,7 @@ vec3 render(Hit hit){
         vec3 ref = reflect(hit.rayDirection, hit.normal);
         // col = normalize(hit.normal) * .5 + .5;
         // col = vec3(col.b);
-        col = mix(col, bg, clamp(0., 1., smoothstep(length(camPos * .25), length(camPos * 2.5), length(camPos - hit.pos))));
+        // col = mix(col, bg, clamp(0., 1., smoothstep(length(camPos * .25), length(camPos * 2.5), length(camPos - hit.pos))));
     }
     // if (hit.isBackground || hit.pos.z > 0.) {
     //     vec3 debugPlanePos = intersectPlane(

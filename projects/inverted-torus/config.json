@@ -1,5 +1,5 @@
 {
-    "id": "invertex-torus11",
+    "id": "invertex-torus12s",
     "timer": {
         "running": false,
         "elapsed": 5514.4999999993015
@@ -28,7 +28,7 @@
         "14": -0.9026427865028381,
         "15": 1
     },
-    "positionSpeed": 1,
+    "positionSpeed": 4,
     "rotationSpeed": 5,
     "controls": {
         "closed": true,
