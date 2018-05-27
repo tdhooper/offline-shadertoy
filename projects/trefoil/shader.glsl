@@ -171,6 +171,10 @@ mat3 rotationMatrix(vec3 axis, float angle)
     );
 }
 
+vec3 bezierTangent(vec3 A, vec3 B, vec3 C, float t) {
+    return 2. * (1. - t) * (B - A) + 2. * t * (C - B);
+}
+
 vec4 sdBezier(vec3 A, vec3 B, vec3 C, vec3 pos)
 {    
     vec3 a = B - A;
@@ -331,8 +335,8 @@ float fTrefoil(vec3 p) {
     // p = p.zxy * -1.;
     // return length(p) - 1.;
     float d = 1e12;
-    const int steps = 80;
-    float radius = 0.125 / 8.;
+    const int steps = 15;
+    float radius = .33;
     float ratio = 1.;
     for (int i = 0; i < steps; i++) {
         float a = float(i) * (PI * 2.) / float(steps);
@@ -404,7 +408,8 @@ vec2 fShape2(vec3 p) {
     float hlf = 0.;
     float part;
 
-    tOffset = (10. / parts) * side;
+    vec3 tangent;
+    vec3 binormal, binormalA, binormalB;
 
     ta = -1. / parts;
     tb = 0. / parts;
@@ -412,10 +417,10 @@ vec2 fShape2(vec3 p) {
     a = knot(TAU * ta);
     b = knot(TAU * tb) * 1.2;
     c = knot(TAU * tc);
+    binormalA = normalize(cross(a - b, c - b));
     bezPart = sdBezier(a, b, c, p);
     bez = bezPart;
-
-    tOffset = (6. / parts) * side;
+    tangent = bezierTangent(a, b, c, bez.w);
 
     ta = 1. / parts;
     tb = 1.9 / parts;
@@ -423,9 +428,13 @@ vec2 fShape2(vec3 p) {
     a = knot(TAU * ta);
     b = knot(TAU * tb) * 1.15 + vec3(0,0,-.05);
     c = knot(TAU * tc);
+    binormalB = normalize(cross(a - b, c - b));
+    binormal = mix(binormalA, binormalB, bez.w * .5);
     bezPart = sdBezier(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
+        tangent = bezierTangent(a, b, c, bez.w);
+        binormal = mix(binormalA, binormalB, .5 + bez.w * .5);
         hlf = 1.;
     }
 
@@ -435,14 +444,17 @@ vec2 fShape2(vec3 p) {
     a = knot(TAU * ta);
     b = knot(TAU * tb) * 1.185 + vec3(.015,.00,-.045);
     c = knot(TAU * tc);
+    binormalA = normalize(cross(a - b, c - b));
     bezPart = sdBezier(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
+        tangent = bezierTangent(a, b, c, bez.w);
+        binormal = mix(binormalA, binormalB, bez.w * .5);
         outer = 1.;
         hlf = 0.;
     }
 
-    tOffset = (2. / parts) * side;
+    // tOffset = (2. / parts) * side;
 
     ta = 11. / parts;
     tb = 12. / parts;
@@ -450,16 +462,36 @@ vec2 fShape2(vec3 p) {
     a = knot(TAU * ta);
     b = knot(TAU * tb) * 1.1;
     c = knot(TAU * tc);
+    binormalB = normalize(cross(a - b, c - b));
     bezPart = sdBezier(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
+        tangent = bezierTangent(a, b, c, bez.w);
+        binormal = mix(binormalA, binormalB, .5 + bez.w * .5);
         outer = 1.;
         hlf = 1.;
     }
 
-    d = length(p - bez.xyz);
+    d = min(d, length(p - bez.xyz) - .03);
     // d -= .33;
-    d -= .1;
+
+    // if (outer > 0.) {
+    //     binormal *= -1.;
+    // }
+
+    vec3 normal = cross(tangent, binormal);
+    binormal = cross(tangent, normal);
+
+    normal *= -1.;
+
+    if (side > 0.) {
+        binormal *= -1.;
+    }
+
+    // d = min(d, fCapsule(p, bez.xyz, bez.xyz + tangent * .5, .005));
+    d = min(d, fCapsule(p, bez.xyz, bez.xyz + binormal * .25, .005));
+    d = min(d, fCapsule(p, bez.xyz, bez.xyz + normal * .5, .005));
+
 
     vec3 plane;
     float dp;
@@ -509,6 +541,9 @@ vec2 fShape2(vec3 p) {
     t += part / 12.;
     // t *= 5.;
 
+    // t += iTime * .1;
+    // t *= 10.;
+
     // t = bez.w;
 
     // bez.w = .5;
@@ -553,7 +588,7 @@ vec3 camPos;
 
 vec3 render(Hit hit){
     vec3 col;
-    vec3 bg = vec3(.9,.3, .9) * .2;
+    vec3 bg = vec3(.9,.3, .9) * .02;
     col = bg;
     if ( ! hit.isBackground) {
         vec2 uv = hit.model.uv;
@@ -653,7 +688,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     mat4 camMat = cameraMatrix;
 
     focalLength = pow(guiFocalLength, 3.);
-    focalLength = 1.5;
+    focalLength = 2.5;
     vec3 rayDirection = normalize(
         (vec4(p, -focalLength, 1) * camMat).xyz
     );
