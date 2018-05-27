@@ -394,17 +394,21 @@ Curve TrefoilCurve(vec3 p) {
     float cell = 0.;
 
         // pR(p.xy, iTime);
+        // pR(p.xy, iTime);
+
+    float repetitions = 3.;
+    float angle = TAU / repetitions;
 
     if (p.z > 0.) {
         p.z *= -1.;
         p.y *= -1.;
-        pR(p.xy, TAU / -6.);
+        pR(p.xy, angle / -2.);
         side = 1.;
         tFlip = -1.;
     }
-    pR(p.xy, TAU / -6.);
-    cell = pModPolar(p.xy, 3.);
-    pR(p.xy, TAU / 6.);
+    pR(p.xy, angle / -2.);
+    cell = pModPolar(p.xy, repetitions);
+    pR(p.xy, angle / 2.);
 
     // float flip = sign(p.z);
     // side = flip * .5 + .5;
@@ -413,19 +417,38 @@ Curve TrefoilCurve(vec3 p) {
     // rot = 0.;
 
     // vec3 pp = p;
-    float repetitions = 3.;
-    float angle = TAU / repetitions;
     // cell = floor((atan(p.y, p.x) + angle / 2. - rot) / angle);
 
     float an = cell * angle;
 
-    an += angle * 2.5 * side;
     mat3 m = mat3(
         cos(an), -sin(an), 0,
-        sin(an), cos(an) * tFlip, 0,
-        0, 0, tFlip
+        sin(an), cos(an), 0,
+        0, 0, 1
     );
+
+    mat3 m2 = mat3(
+        cos(angle / -2.), -sin(angle / -2.), 0,
+        sin(angle / -2.), cos(angle / -2.), 0,
+        0,0,-1
+    );
+    mat3 m3 = mat3(1,0,0,0,-1,0,0,0,1);
+
+    if (side > 0.) {
+        m = m * m2 * m3;
+    }
+
     // mat3 m = mat3(1,0,0,0,1,0,0,0,1);
+
+    // vec3 position = bez.xyz;
+    // position.z *= tFlip;
+    // pR(position.xy, cell * -angle);
+    // if (side > 0.) {
+    //     pR(position.xy, TAU / 6.);
+    // }
+    // position.y *= tFlip;
+
+
 
     float tOffset = 0.;
     float outer = 0.;
@@ -570,17 +593,17 @@ Curve TrefoilCurve(vec3 p) {
     t += part / 12.;
 
     vec3 position = bez.xyz;
-    position.z *= tFlip;
-    pR(position.xy, cell * -angle);
-    if (side > 0.) {
-        pR(position.xy, TAU / 6.);
-    }
-    position.y *= tFlip;
+    // position.z *= tFlip;
+    // pR(position.xy, cell * -angle);
+    // if (side > 0.) {
+    //     pR(position.xy, TAU / 6.);
+    // }
+    // position.y *= tFlip;
 
     // pR(position.xy, -iTime);
 
     return Curve(
-        position,
+        position * m,
         tangent * m,
         normal * m,
         binormal * m,
