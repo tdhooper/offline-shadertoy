@@ -393,34 +393,37 @@ Curve TrefoilCurve(vec3 p) {
 
     float cell = 0.;
 
-    // if (p.z > 0.) {
-    //     p.z *= -1.;
-    //     p.y *= -1.;
-    //     pR(p.xy, TAU / -6.);
-    //     side = 1.;
-    //     tFlip = -1.;
-    // }
-    // pR(p.xy, TAU / -6.);
-    // cell = pModPolar(p.xy, 3.);
-    // pR(p.xy, TAU / 6.);
+        // pR(p.xy, iTime);
 
-    float flip = sign(p.z);
-    side = flip * .5 + .5;
+    if (p.z > 0.) {
+        p.z *= -1.;
+        p.y *= -1.;
+        pR(p.xy, TAU / -6.);
+        side = 1.;
+        tFlip = -1.;
+    }
+    pR(p.xy, TAU / -6.);
+    cell = pModPolar(p.xy, 3.);
+    pR(p.xy, TAU / 6.);
 
-    float rot = side * TAU / -6.;
-    rot = 0.;
+    // float flip = sign(p.z);
+    // side = flip * .5 + .5;
 
-    vec3 pp = p;
+    // float rot = side * TAU / -6.;
+    // rot = 0.;
+
+    // vec3 pp = p;
     float repetitions = 3.;
     float angle = TAU / repetitions;
-    cell = floor((atan(p.y, p.x) + angle / 2. - rot) / angle);
+    // cell = floor((atan(p.y, p.x) + angle / 2. - rot) / angle);
 
-    float an = cell * angle + rot - side * angle * .5;
+    float an = cell * angle;
 
+    an += angle * 2.5 * side;
     mat3 m = mat3(
-        cos(an) * -flip, -sin(an), 0,
-        sin(an), cos(an) * -flip, 0,
-        0, 0, -flip
+        cos(an), -sin(an), 0,
+        sin(an), cos(an) * tFlip, 0,
+        0, 0, tFlip
     );
     // mat3 m = mat3(1,0,0,0,1,0,0,0,1);
 
@@ -445,9 +448,6 @@ Curve TrefoilCurve(vec3 p) {
     a = knot(TAU * ta);
     b = knot(TAU * tb) * 1.2;
     c = knot(TAU * tc);
-    a *= m;
-    b *= m;
-    c *= m;
     binormalA = normalize(cross(a - b, c - b));
     bezPart = sdBezier(a, b, c, p);
     bez = bezPart;
@@ -460,9 +460,6 @@ Curve TrefoilCurve(vec3 p) {
     a = knot(TAU * ta);
     b = knot(TAU * tb) * 1.15 + vec3(0,0,-.05);
     c = knot(TAU * tc);
-    a *= m;
-    b *= m;
-    c *= m;
     binormalB = normalize(cross(a - b, c - b));
     binormal = mix(binormalA, binormalB, bez.w * .5);
     bezPart = sdBezier(a, b, c, p);
@@ -473,39 +470,39 @@ Curve TrefoilCurve(vec3 p) {
         hlf = 1.;
     }
 
-    // ta = 9. / parts;
-    // tb = 9.8 / parts;
-    // tc = 11. / parts;
-    // a = knot(TAU * ta);
-    // b = knot(TAU * tb) * 1.185 + vec3(.015,.00,-.045);
-    // c = knot(TAU * tc);
-    // binormalA = normalize(cross(a - b, c - b));
-    // bezPart = sdBezier(a, b, c, p);
-    // if (switchBezier(p, bez, bezPart) > 0.) {
-    //     bez = bezPart;
-    //     tangent = bezierTangent(a, b, c, bez.w);
-    //     binormal = mix(binormalA, binormalB, bez.w * .5);
-    //     outer = 1.;
-    //     hlf = 0.;
-    // }
+    ta = 9. / parts;
+    tb = 9.8 / parts;
+    tc = 11. / parts;
+    a = knot(TAU * ta);
+    b = knot(TAU * tb) * 1.185 + vec3(.015,.00,-.045);
+    c = knot(TAU * tc);
+    binormalA = normalize(cross(a - b, c - b));
+    bezPart = sdBezier(a, b, c, p);
+    if (switchBezier(p, bez, bezPart) > 0.) {
+        bez = bezPart;
+        tangent = bezierTangent(a, b, c, bez.w);
+        binormal = mix(binormalA, binormalB, bez.w * .5);
+        outer = 1.;
+        hlf = 0.;
+    }
 
-    // // tOffset = (2. / parts) * side;
+    // tOffset = (2. / parts) * side;
 
-    // ta = 11. / parts;
-    // tb = 12. / parts;
-    // tc = 13. / parts;
-    // a = knot(TAU * ta);
-    // b = knot(TAU * tb) * 1.1;
-    // c = knot(TAU * tc);
-    // binormalB = normalize(cross(a - b, c - b));
-    // bezPart = sdBezier(a, b, c, p);
-    // if (switchBezier(p, bez, bezPart) > 0.) {
-    //     bez = bezPart;
-    //     tangent = bezierTangent(a, b, c, bez.w);
-    //     binormal = mix(binormalA, binormalB, .5 + bez.w * .5);
-    //     outer = 1.;
-    //     hlf = 1.;
-    // }
+    ta = 11. / parts;
+    tb = 12. / parts;
+    tc = 13. / parts;
+    a = knot(TAU * ta);
+    b = knot(TAU * tb) * 1.1;
+    c = knot(TAU * tc);
+    binormalB = normalize(cross(a - b, c - b));
+    bezPart = sdBezier(a, b, c, p);
+    if (switchBezier(p, bez, bezPart) > 0.) {
+        bez = bezPart;
+        tangent = bezierTangent(a, b, c, bez.w);
+        binormal = mix(binormalA, binormalB, .5 + bez.w * .5);
+        outer = 1.;
+        hlf = 1.;
+    }
 
     // d -= .33;
 
@@ -572,11 +569,21 @@ Curve TrefoilCurve(vec3 p) {
     t = mix(-.1 / parts, 4. / parts, t);
     t += part / 12.;
 
+    vec3 position = bez.xyz;
+    position.z *= tFlip;
+    pR(position.xy, cell * -angle);
+    if (side > 0.) {
+        pR(position.xy, TAU / 6.);
+    }
+    position.y *= tFlip;
+
+    // pR(position.xy, -iTime);
+
     return Curve(
-        bez.xyz,
-        tangent,
-        normal,
-        binormal,
+        position,
+        tangent * m,
+        normal * m,
+        binormal * m,
         t
     );
 
@@ -605,6 +612,23 @@ vec2 fShape2(vec3 p) {
     // d = min(d, fCapsule(p, bez.xyz, bez.xyz + tangent * .5, .005));
     // d = min(d, fCapsule(p, curve.position, curve.position + curve.binormal * .25, .005));
     // d = min(d, fCapsule(p, curve.position, curve.position + curve.normal * .5, .005));
+
+    vec3 plane;
+    float dp;
+
+    plane = vec3(0,0,1);
+    dp = abs(dot(p, plane)) - .001;
+    dp = max(dp, length(p) - .5);
+    d = min(d, dp);
+
+    // // d = min(d, length(p - b) - .03);
+
+    // pModPolar(p.xy, 3.);
+    // plane = vec3(0,1,0);
+    // dp = abs(dot(p, plane)) - .01;
+    // dp = max(dp, length(p) - .5);
+    // d = min(d, dp);
+
 
     return vec2(d, curve.t);
 }
