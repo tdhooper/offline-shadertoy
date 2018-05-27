@@ -394,6 +394,28 @@ struct Curve {
     float t;
 };
 
+// 10
+vec3 a0 = vec3(-0.5618649622354001, -0.2565734616095244, 0.3351153581051602);
+vec3 b0 = vec3(-0.21914644353383828, -0.42286177623252263, 0.3055899366115256);
+vec3 c0 = vec3(0.006615078539977636, -0.42427698205216835, -0.004372624560944283);
+// 9
+vec3 a1 = vec3(0.006615078539977636, -0.42427698205216835, -0.0043726245609442445);
+vec3 b1 = vec3(0.23237660061379353, -0.425692187871814, -0.31433518573341407);
+vec3 c1 = vec3(0.5793610033262575, -0.2535782833816838, -0.3451449466818278);
+// 8
+vec3 a2 = vec3(0.5793610033262575, -0.2535782833816838, -0.3451449466818278);
+vec3 b2 = vec3(0.9263454060387216, -0.08146437889155367, -0.3759547076302416);
+vec3 c2 = vec3(0.9626087298822945, 0.24925522093943453, -0.1879773536363696);
+// 3
+vec3 a3 = vec3(-0.5022103300074314, -0.36998788991880677, -0.3485061681648184);
+vec3 b3 = vec3(-0.5321009548089536, -0.7570815989848981, -0.3794785223599749);
+vec3 c3 = vec3(-0.26837620745988655, -0.9560605909726129, -0.1897392612513851);
+// 2
+vec3 a4 = vec3(-0.26837620745988655, -0.9560605909726129, -0.18973926125138502);
+vec3 b4 = vec3(-0.0046514601108192275, -1.155039582960328, -1.4279517013271457e-10);
+vec3 c4 = vec3(0.2616149855990165, -0.9557723559285551, 0.18612531021700318);
+
+
 Curve TrefoilCurve(vec3 p) {
 
     vec4 bez, bezPart;
@@ -406,6 +428,7 @@ Curve TrefoilCurve(vec3 p) {
     float repetitions = 3.;
     float angle = TAU / repetitions;
 
+
     if (p.z > 0.) {
         p.z *= -1.;
         p.y *= -1.;
@@ -416,6 +439,9 @@ Curve TrefoilCurve(vec3 p) {
     pR(p.xy, angle / -2.);
     cell = pModPolar(p.xy, repetitions);
     pR(p.xy, angle / 2.);
+
+
+
 
     // float flip = sign(p.z);
     // side = flip * .5 + .5;
@@ -461,25 +487,17 @@ Curve TrefoilCurve(vec3 p) {
     vec3 tangent;
     vec3 binormal, binormalA, binormalB;
 
-
-    ta = -1. / parts;
-    tb = 0. / parts;
-    tc = 1. / parts;
-    a = knot(TAU * ta);
-    b = knot(TAU * tb) * 1.2;
-    c = knot(TAU * tc);
+    a = a0;
+    b = b0;
+    c = c0;
     binormalA = normalize(cross(a - b, c - b));
     bezPart = sdBezier(a, b, c, p);
     bez = bezPart;
     tangent = bezierTangent(a, b, c, bez.w);
 
-
-    ta = 1. / parts;
-    tb = 1.9 / parts;
-    tc = 3. / parts;
-    a = knot(TAU * ta);
-    b = knot(TAU * tb) * 1.15 + vec3(0,0,-.05);
-    c = knot(TAU * tc);
+    a = a1;
+    b = b1;
+    c = c1;
     binormalB = normalize(cross(a - b, c - b));
     binormal = mix(binormalA, binormalB, bez.w * .5);
     bezPart = sdBezier(a, b, c, p);
@@ -490,29 +508,39 @@ Curve TrefoilCurve(vec3 p) {
         hlf = 1.;
     }
 
-    ta = 9. / parts;
-    tb = 9.8 / parts;
-    tc = 11. / parts;
-    a = knot(TAU * ta);
-    b = knot(TAU * tb) * 1.185 + vec3(.015,.00,-.045);
-    c = knot(TAU * tc);
-    binormalA = normalize(cross(a - b, c - b));
+    a = a2;
+    b = b2;
+    c = c2;
+    binormalB = normalize(cross(a - b, c - b));
+    binormal = mix(binormalA, binormalB, bez.w * .5);
     bezPart = sdBezier(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
         tangent = bezierTangent(a, b, c, bez.w);
-        binormal = mix(binormalA, binormalB, bez.w * .5);
+        binormal = mix(binormalA, binormalB, .5 + bez.w * .5);
+        hlf = 1.;
+    }
+
+
+    a = a3;
+    b = b3;
+    c = c3;
+    binormalB = normalize(cross(a - b, c - b));
+    binormal = mix(binormalA, binormalB, bez.w * .5);
+    bezPart = sdBezier(a, b, c, p);
+    if (switchBezier(p, bez, bezPart) > 0.) {
+        bez = bezPart;
+        tangent = bezierTangent(a, b, c, bez.w);
+        binormal = mix(binormalA, binormalB, .5 + bez.w * .5);
         outer = 1.;
         hlf = 0.;
     }
 
-    ta = 11. / parts;
-    tb = 12. / parts;
-    tc = 13. / parts;
-    a = knot(TAU * ta);
-    b = knot(TAU * tb) * 1.1;
-    c = knot(TAU * tc);
+    a = a4;
+    b = b4;
+    c = c4;
     binormalB = normalize(cross(a - b, c - b));
+    binormal = mix(binormalA, binormalB, bez.w * .5);
     bezPart = sdBezier(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
@@ -521,6 +549,39 @@ Curve TrefoilCurve(vec3 p) {
         outer = 1.;
         hlf = 1.;
     }
+
+
+    // ta = 9. / parts;
+    // tb = 9.8 / parts;
+    // tc = 11. / parts;
+    // a = knot(TAU * ta);
+    // b = knot(TAU * tb) * 1.185 + vec3(.015,.00,-.045);
+    // c = knot(TAU * tc);
+    // binormalA = normalize(cross(a - b, c - b));
+    // bezPart = sdBezier(a, b, c, p);
+    // if (switchBezier(p, bez, bezPart) > 0.) {
+    //     bez = bezPart;
+    //     tangent = bezierTangent(a, b, c, bez.w);
+    //     binormal = mix(binormalA, binormalB, bez.w * .5);
+    //     outer = 1.;
+    //     hlf = 0.;
+    // }
+
+    // ta = 11. / parts;
+    // tb = 12. / parts;
+    // tc = 13. / parts;
+    // a = knot(TAU * ta);
+    // b = knot(TAU * tb) * 1.1;
+    // c = knot(TAU * tc);
+    // binormalB = normalize(cross(a - b, c - b));
+    // bezPart = sdBezier(a, b, c, p);
+    // if (switchBezier(p, bez, bezPart) > 0.) {
+    //     bez = bezPart;
+    //     tangent = bezierTangent(a, b, c, bez.w);
+    //     binormal = mix(binormalA, binormalB, .5 + bez.w * .5);
+    //     outer = 1.;
+    //     hlf = 1.;
+    // }
 
 
     vec3 normal = cross(tangent, binormal);
@@ -591,7 +652,7 @@ vec2 fShape2(vec3 p) {
 
     Curve curve = TrefoilCurve(p);
 
-    d = min(d, length(p - curve.position) - .1);
+    d = min(d, length(p - curve.position) - .2);
 
     // d = min(d, fCapsule(p, bez.xyz, bez.xyz + tangent * .5, .005));
     // d = min(d, fCapsule(p, curve.position, curve.position + curve.binormal * .25, .005));
@@ -610,6 +671,8 @@ vec2 fShape2(vec3 p) {
 
     // d = fBox2(p.yz, vec2(.3));
 
+    // d = min(d, length(p - vec3(0,1,0)) - .2);
+
     vec3 plane;
     float dp;
 
@@ -626,6 +689,7 @@ vec2 fShape2(vec3 p) {
     dp = abs(dot(p, plane)) - .001;
     dp = max(dp, length(p) - 1.);
     d = min(d, dp);
+
 
     d *= s;
 
