@@ -114,6 +114,16 @@ float vmax(vec2 v) {
     return max(v.x, v.y);
 }
 
+float vmax(vec3 v) {
+    return max(max(v.x, v.y), v.z);
+}
+
+float fBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
+
+
 float fBox2(vec2 p, vec2 b) {
     vec2 d = abs(p) - b;
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
@@ -510,6 +520,7 @@ Curve TrefoilCurve(vec3 p) {
         hlf = 1.;
     }
 
+
     vec3 normal = cross(tangent, binormal);
     binormal = cross(tangent, normal);
 
@@ -518,6 +529,10 @@ Curve TrefoilCurve(vec3 p) {
     if (side > 0.) {
         binormal *= -1.;
     }
+
+    tangent = normalize(tangent);
+    binormal = normalize(binormal);
+    normal = normalize(normal);
 
     vec3 plane;
     float dp;
@@ -565,16 +580,29 @@ vec2 fShape2(vec3 p) {
     d = min(d, length(p - curve.position) - .03);
 
     // d = min(d, fCapsule(p, bez.xyz, bez.xyz + tangent * .5, .005));
-    // d = min(d, fCapsule(p, curve.position, curve.position + curve.binormal * .25, .005));
-    // d = min(d, fCapsule(p, curve.position, curve.position + curve.normal * .5, .005));
+    d = min(d, fCapsule(p, curve.position, curve.position + curve.binormal * .25, .005));
+    d = min(d, fCapsule(p, curve.position, curve.position + curve.normal * .5, .005));
 
-    vec3 plane;
-    float dp;
+    float x = curve.t;
+    float y = dot(p - curve.position, curve.normal);
+    float z = dot(p - curve.position, curve.binormal);
+    p = vec3(x, y, z);
 
-    plane = vec3(0,0,1);
-    dp = abs(dot(p, plane)) - .001;
-    dp = max(dp, length(p) - .5);
-    d = min(d, dp);
+    d = length(p.yz) - .1;
+
+    p.x += iTime * .1;
+    pMod1(p.x, 1./3.);
+    d = fBox(p, vec3(.1,.2,.2));
+
+    // d = fBox2(p.yz, vec2(.3));
+
+    // vec3 plane;
+    // float dp;
+
+    // plane = vec3(0,0,1);
+    // dp = abs(dot(p, plane)) - .001;
+    // dp = max(dp, length(p) - .5);
+    // d = min(d, dp);
 
     // // d = min(d, length(p - b) - .03);
 
@@ -603,7 +631,7 @@ Model map(vec3 p) {
 
     d = duv.x;
     // d = min(d, fShape(p));
-    d = min(d, fTrefoil(p));
+    // d = min(d, fTrefoil(p));
     // d = min(d, length(p) - 1.);
     // d = abs(d) - .001;
 
