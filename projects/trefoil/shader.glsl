@@ -393,9 +393,6 @@ Curve TrefoilCurve(vec3 p) {
 
     float cell = 0.;
 
-        // pR(p.xy, iTime);
-        // pR(p.xy, iTime);
-
     float repetitions = 3.;
     float angle = TAU / repetitions;
 
@@ -437,18 +434,6 @@ Curve TrefoilCurve(vec3 p) {
     if (side > 0.) {
         m = m * m2 * m3;
     }
-
-    // mat3 m = mat3(1,0,0,0,1,0,0,0,1);
-
-    // vec3 position = bez.xyz;
-    // position.z *= tFlip;
-    // pR(position.xy, cell * -angle);
-    // if (side > 0.) {
-    //     pR(position.xy, TAU / 6.);
-    // }
-    // position.y *= tFlip;
-
-
 
     float tOffset = 0.;
     float outer = 0.;
@@ -509,8 +494,6 @@ Curve TrefoilCurve(vec3 p) {
         hlf = 0.;
     }
 
-    // tOffset = (2. / parts) * side;
-
     ta = 11. / parts;
     tb = 12. / parts;
     tc = 13. / parts;
@@ -527,12 +510,6 @@ Curve TrefoilCurve(vec3 p) {
         hlf = 1.;
     }
 
-    // d -= .33;
-
-    // if (outer > 0.) {
-    //     binormal *= -1.;
-    // }
-
     vec3 normal = cross(tangent, binormal);
     binormal = cross(tangent, normal);
 
@@ -542,31 +519,8 @@ Curve TrefoilCurve(vec3 p) {
         binormal *= -1.;
     }
 
-
-
-
     vec3 plane;
     float dp;
-
-    // p = pp;
-
-    // plane = vec3(0,0,1);
-    // dp = abs(dot(p, plane)) - .001;
-    // dp = max(dp, length(p) - .5);
-    // d = min(d, dp);
-
-    // // d = min(d, length(p - b) - .03);
-
-    // pModPolar(p.xy, 3.);
-    // plane = vec3(0,1,0);
-    // dp = abs(dot(p, plane)) - .01;
-    // dp = max(dp, length(p) - .5);
-    // d = min(d, dp);
-
-    // part += side * 3.;
-    // 0, 8, 4
-    // 11, 7, 3
-
     
     part = 2. * side;
     part += cell * (1. - side * 2.);
@@ -593,14 +547,6 @@ Curve TrefoilCurve(vec3 p) {
     t += part / 12.;
 
     vec3 position = bez.xyz;
-    // position.z *= tFlip;
-    // pR(position.xy, cell * -angle);
-    // if (side > 0.) {
-    //     pR(position.xy, TAU / 6.);
-    // }
-    // position.y *= tFlip;
-
-    // pR(position.xy, -iTime);
 
     return Curve(
         position * m,
@@ -609,20 +555,6 @@ Curve TrefoilCurve(vec3 p) {
         binormal * m,
         t
     );
-
-    // t *= 5.;
-
-    // t += iTime * .1;
-    // t *= 10.;
-
-    // t = bez.w;
-
-    // bez.w = .5;
-
-
-    // vec3 plane = normalize(cross(a - b, c - b));
-
-    // d = min(d, abs(dot(p, plane) - dot(a, plane)) - .01);
 }
 
 vec2 fShape2(vec3 p) {
