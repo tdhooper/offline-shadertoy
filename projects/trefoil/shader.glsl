@@ -759,12 +759,12 @@ vec2 fShape2(vec3 p) {
 
     // if (length(p) > 2.) {
     //     s = dot(p,p);
-    //     s /= 3.;
+    //     s /= 5.;
     //     pR(p.xy, PI * .5);
     // }
 
     p /= s;
-    vec3 pp = p;
+    vec3 pc = p;
 
     Curve curve = TrefoilCurve(p);
 
@@ -779,11 +779,38 @@ vec2 fShape2(vec3 p) {
     float z = dot(p - curve.position, curve.binormal);
     p = vec3(x, y, z);
 
-    // d = length(p.yz) - .2;
+    vec3 pp = p;
+
+    p.x -= 0.0666;
+
+    pR(p.yz, -PI + PI * mod(p.x * 3., 1.));
+
+    // pMod1(p.x, 1.);
+
+
+    d = length(p.yz) - .33;
+    d = max(d, -(length(p.yz) - .28));
+
+
+    pMod1(p.x, 1./3.);
+    // pR(p.yz, c * Math.PI )
+    float gaps = fBox2(p.yz + vec2(0,.4), vec2(.4));
+    gaps = max(gaps, -fBox(p, vec3(.015,1.,1.)));
+    
+    d = max(d, -gaps);
+    // d = max(d, -fBox2(p.yz + vec2(0,.4), vec2(.4)));
+
+
+
+    // p.x *= 10.;
+
+    // d = min(d, length(p - vec3(1./3.*10.,0,0)) - .3);
+    // d = min(d, length(p - vec3(2./3.*10.,0,0)) - .3);
+    // d = min(d, length(p - vec3(3./3.*10.,0,0)) - .3);
 
     // p.x += iTime * .1;
-    // pMod1(p.x, 1./2.5);
-    // d = fBox(p, vec3(.15,.33,.33));
+    // pMod1(p.x, 1./2.);
+    // d = fBox(p, vec3(.1,.33,.33));
 
     // pR(p.yz, iTime * .5);
     // pR(p.yz, p.x * PI * 2. * -5.);
