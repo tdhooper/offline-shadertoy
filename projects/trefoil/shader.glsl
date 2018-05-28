@@ -189,6 +189,20 @@ mat3 rotationMatrix(vec3 axis, float angle)
     );
 }
 
+// The "Round" variant uses a quarter-circle to join the two objects smoothly:
+float fOpUnionRound(float a, float b, float r) {
+    vec2 u = max(vec2(r - a,r - b), vec2(0));
+    return max(r, min (a, b)) - length(u);
+}
+
+float fOpIntersectionRound(float a, float b, float r) {
+    vec2 u = max(vec2(r + a,r + b), vec2(0));
+    return min(-r, max (a, b)) + length(u);
+}
+
+
+
+
 vec3 bezierTangent(vec3 A, vec3 B, vec3 C, float t) {
     return 2. * (1. - t) * (B - A) + 2. * t * (C - B);
 }
@@ -483,6 +497,9 @@ vec3 cTan8 = vec3(-0.7867551988977671, 0.5875449230132569, -0.1892279589507877);
 vec3 aNor8 = vec3(0.8660198557765797, 0.5000096092349068, 0.000008571384490341227);
 vec3 cNor8 = vec3(0.6133085148535106, 0.709419711040007, -0.34724103904362313);
 
+float sepa;
+float sepR = guiOffsetX;
+
 CurvePart bezierInner(vec3 p) {
     vec4 bez, bezPart;
     vec3 a, b, c,
@@ -533,6 +550,8 @@ CurvePart bezierInner(vec3 p) {
         offset = 2.;
     }
 
+    sepa = length(p - bez.xyz) - sepR;
+
     return CurvePart(
         bez,
         tan,
@@ -576,6 +595,9 @@ CurvePart bezierOuter(vec3 p) {
         offset = 1.;
     }
 
+    float sepd = length(p - bez.xyz) - sepR;
+
+
     a = a5;
     b = b5;
     c = c5;
@@ -606,6 +628,8 @@ CurvePart bezierOuter(vec3 p) {
         offset = 3.;
     }
 
+    float sepc = 1e12;
+
     a = a7;
     b = b7;
     c = c7;
@@ -614,6 +638,9 @@ CurvePart bezierOuter(vec3 p) {
     aNor = aNor7;
     cNor = cNor7;
     bezPart = sdBezier(a, b, c, p);
+
+    sepc = min(sepc, length(p - bezPart.xyz) - sepR);
+
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
         tan = mix(aTan, cTan, bez.w);
@@ -629,12 +656,20 @@ CurvePart bezierOuter(vec3 p) {
     aNor = aNor8;
     cNor = cNor8;
     bezPart = sdBezier(a, b, c, p);
+
+    sepc = min(sepc, length(p - bezPart.xyz) - sepR);
+
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
         tan = mix(aTan, cTan, bez.w);
         nor = mix(aNor, cNor, bez.w);
         offset = 5.;
     }
+
+    float sepb = length(p - bez.xyz) - sepR;
+    sepa = max(sepa, sepb);
+    sepc = max(sepc, sepd);
+    sepa = min(sepa, sepc);
 
     return CurvePart(
         bez,
@@ -751,6 +786,7 @@ Curve TrefoilCurve(vec3 p) {
     );
 }
 
+
 vec2 fShape2(vec3 p) {
     float d = 1e12;
 
@@ -768,7 +804,11 @@ vec2 fShape2(vec3 p) {
 
     Curve curve = TrefoilCurve(p);
 
-    d = min(d, length(p - curve.position) - .33);
+    d = max(sepa, -(length(p - curve.position) - .33));
+    // d = sepa;
+    // d = min(d, length(p - curve.position) - .33);
+
+    // d = fOpUnionRound(d, d, 1.);
 
     // d = min(d, fCapsule(p, bez.xyz, bez.xyz + tangent * .5, .005));
     // d = min(d, fCapsule(p, curve.position, curve.position + curve.binormal * .25, .005));
@@ -781,35 +821,38 @@ vec2 fShape2(vec3 p) {
     p.x -= 0.0666;
     vec3 pp = p;
 
+    // d = sepa;
+    // d = min(d, sepa);
+
     float f = mod(p.x * 3., 1.);
     f -= .5;
     pR(p.yz, mod(p.x * 3., 1.) * PI + PI + f * 0.);
 
     pp = p;
 
-    d = length(p.yz) - .33;
-    d = max(d, -(length(p.yz) - .28));
+    // d = length(p.yz) - .33;
+    // d = max(d, -(length(p.yz) - .28));
 
-    f = cos(mod(p.x * 3., 1.) * PI * 2.) * .5 + .5;
-    pMod1(p.x, 1./3.);
-    // pR(p.yz, c * Math.PI )
-    float gaps = fBox2(
-        p.yz + vec2(0,.4),
-        vec2(mix(.6, .3, f))
-    );
-    gaps = max(gaps, -fBox(p, vec3(.015,1.,1.)));
-    d = max(d, -gaps);
+    // f = cos(mod(p.x * 3., 1.) * PI * 2.) * .5 + .5;
+    // pMod1(p.x, 1./3.);
+    // // pR(p.yz, c * Math.PI )
+    // float gaps = fBox2(
+    //     p.yz + vec2(0,.4),
+    //     vec2(mix(.6, .3, f))
+    // );
+    // gaps = max(gaps, -fBox(p, vec3(.015,1.,1.)));
+    // d = max(d, -gaps);
 
     p = pp;
 
-    p.x += iTime * .1;
-    // pR(p.yz, PI * .25);
-    pMod1(p.x, 1./2.);
-    d = min(d, fBox(p, vec3(.1,.2,.2)));
+    // p.x += iTime * .1;
+    // // pR(p.yz, PI * .25);
+    // pMod1(p.x, 1./2.);
+    // d = min(d, fBox(p, vec3(.1,.2,.2)));
 
-    // pR(p.yz, iTime * .5);
-    // pR(p.yz, p.x * PI * 2. * -5.);
-    // d = fBox2(p.yz, vec2(.3));
+    pR(p.yz, iTime * .5);
+    pR(p.yz, p.x * PI * 2. * -5.);
+    d = min(d, fBox2(p.yz, vec2(.25)));
 
     // d = min(d, length(p - vec3(0,0,1)) - .2);
 
