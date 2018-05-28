@@ -783,9 +783,9 @@ vec2 fShape2(vec3 p) {
 
     float f = mod(p.x * 3., 1.);
     f -= .5;
-    pR(p.yz, mod(p.x * 3., 1.) * PI + PI + f * -1.);
+    pR(p.yz, mod(p.x * 3., 1.) * PI + PI + f * 0.);
 
-    // pp = p;
+    pp = p;
 
     d = length(p.yz) - .33;
     d = max(d, -(length(p.yz) - .28));
@@ -795,7 +795,7 @@ vec2 fShape2(vec3 p) {
     // pR(p.yz, c * Math.PI )
     float gaps = fBox2(
         p.yz + vec2(0,.4),
-        vec2(mix(.6, .4, f))
+        vec2(mix(.6, .3, f))
     );
     gaps = max(gaps, -fBox(p, vec3(.015,1.,1.)));
     d = max(d, -gaps);
@@ -803,9 +803,9 @@ vec2 fShape2(vec3 p) {
     p = pp;
 
     p.x += iTime * .1;
-    pR(p.yz, PI * .25);
+    // pR(p.yz, PI * .25);
     pMod1(p.x, 1./2.);
-    d = min(d, fBox(p, vec3(.1,.1,.2)));
+    d = min(d, fBox(p, vec3(.1,.2,.2)));
 
     // pR(p.yz, iTime * .5);
     // pR(p.yz, p.x * PI * 2. * -5.);
