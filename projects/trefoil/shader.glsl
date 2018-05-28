@@ -405,7 +405,7 @@ struct Curve {
 struct CurvePart {
     vec4 bez;
     vec3 tangent;
-    vec3 binormal;
+    vec3 normal;
     float offset;
 };
 
@@ -413,116 +413,140 @@ struct CurvePart {
 vec3 a0 = vec3(-0.5688193614206194, -0.27125220610155176, 0.34417948404281845);
 vec3 b0 = vec3(-0.2170708286144771, -0.4355152293781504, 0.3099771541114166);
 vec3 c0 = vec3(-0.0005772404467066505, -0.4380828098360563, 0.0001052268963219194);
+vec3 aTan0 = vec3(0.9027456682354625, -0.38851529768109366, -0.18467842849093027);
+vec3 cTan0 = vec3(0.5730427111776952, -0.006522137995768274, -0.8194995502635012);
+vec3 aNor0 = vec3(-0.3048380580682766, -0.8806769006756039, 0.36260440561247426);
+vec3 cNor0 = vec3(-0.0037375431349512527, -0.999978730631789, 0.005345002839122068);
 // 0
 vec3 a1 = vec3(-0.0005772404467066505, -0.4380828098360563, 0.0001052268963219194);
 vec3 b1 = vec3(0.2159163477210638, -0.4406503902939622, -0.30976670031877274);
 vec3 c1 = vec3(0.5651573123369518, -0.2649719117943094, -0.34457246346111464);
+vec3 aTan1 = vec3(0.5730427111776952, -0.006522137995768274, -0.8194995502635012);
+vec3 cTan1 = vec3(0.8923287326266692, 0.4116526377327681, -0.1851797472093988);
+vec3 aNor1 = vec3(-0.0037375431349512527, -0.999978730631789, 0.005345002839122068);
+vec3 cNor1 = vec3(0.3240189691108336, -0.8697782927550126, -0.37215242725062037);
 // 1
 vec3 a2 = vec3(0.5651573123369518, -0.26497191179430934, -0.34457246346111464);
 vec3 b2 = vec3(0.9143982769528396, -0.08929343329465649, -0.3793782266034565);
 vec3 c2 = vec3(0.9538103927792535, 0.24179952218972844, -0.18968911330172825);
+vec3 aTan2 = vec3(0.8923287326266692, 0.4116526377327681, -0.1851797472093988);
+vec3 cTan2 = vec3(0.14808647266137795, 0.8660130590989353, 0.4775895498069601);
+vec3 aNor2 = vec3(0.3240189691108336, -0.8697782927550126, -0.37215242725062037);
+vec3 cNor2 = vec3(0.9593773451703498, -0.008535708207331263, -0.28199689937885986);
 // 6
 vec3 a3 = vec3(-0.5070278295318625, -0.3796507131073526, -0.3329586973176924);
 vec3 b3 = vec3(-0.5357069888681014, -0.7593014262147052, -0.36144698570702893);
 vec3 c3 = vec3(-0.26823020005408893, -0.9639750412238254, -0.18072349285351447);
+vec3 aTan3 = vec3(-0.08527407405790813, -0.9907234371465848, -0.10580833323525905);
+vec3 cTan3 = vec3(0.6716118887249927, -0.5869589961911095, 0.45212454889507303);
+vec3 aNor3 = vec3(-0.9272310195551845, 0.1177749042332709, -0.3554879861647904);
+vec3 cNor3 = vec3(-0.5264889468651152, -0.8074436171549493, -0.2661657264649119);
 // 7
 vec3 a4 = vec3(-0.2682302000540889, -0.9639750412238254, -0.18072349285351447);
 vec3 b4 = vec3(-0.0007534112400763572, -1.1686486562329454, 0);
 vec3 c4 = vec3(0.26836646832902905, -0.9709446572543269, 0.18582563424737383);
-
+vec3 aTan4 = vec3(0.6716118887249927, -0.5869589961911095, 0.45212454889507303);
+vec3 cTan4 = vec3(0.6766927236811872, 0.5708793847592285, 0.464955573978699);
+vec3 aNor4 = vec3(-0.5264889468651152, -0.8074436171549493, -0.2661657264649119);
+vec3 cNor4 = vec3(0.5038046941590355, -0.8195402422917686, 0.2730102954243135);
 
 CurvePart bezierInner(vec3 p) {
     vec4 bez, bezPart;
-    vec3 a, b, c, tangent, bi;
-    float offset, tt;
+    vec3 a, b, c,
+        aTan, cTan, aNor, cNor,
+        tan, nor;
+    float offset;
 
     a = a0;
     b = b0;
     c = c0;
-    vec3 biA = normalize(cross(a - b, c - b));
+    aTan = aTan0;
+    cTan = cTan0;
+    aNor = aNor0;
+    cNor = cNor0;
     bezPart = sdBezier(a, b, c, p);
     bez = bezPart;
-    tt = bez.w;
-    tangent = bezierTangent(a, b, c, bez.w);
+    tan = mix(aTan, cTan, bez.w);
+    nor = mix(aNor, cNor, bez.w);
     offset = 0.;
 
     a = a1;
     b = b1;
     c = c1;
-    vec3 biB = normalize(cross(a - b, c - b));
+    aTan = aTan1;
+    cTan = cTan1;
+    aNor = aNor1;
+    cNor = cNor1;
     bezPart = sdBezier(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
-        tt = bez.w + 1.;
-        tangent = bezierTangent(a, b, c, bez.w);
+        tan = mix(aTan, cTan, bez.w);
+        nor = mix(aNor, cNor, bez.w);
         offset = 1.;
     }
 
     a = a2;
     b = b2;
     c = c2;
-    vec3 biC = normalize(cross(a - b, c - b));
+    aTan = aTan2;
+    cTan = cTan2;
+    aNor = aNor2;
+    cNor = cNor2;
     bezPart = sdBezier(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
-        tt = bez.w + 2.;
-        tangent = bezierTangent(a, b, c, bez.w);
+        tan = mix(aTan, cTan, bez.w);
+        nor = mix(aNor, cNor, bez.w);
         offset = 2.;
     }
 
-    // ?/a ..a.. a/b ..b.. b/c ..c.. c/?
-    //  0         1         2        3
-
-    bi = mix(
-        mix(biA, biB, smoothstep(.5, 1.5, tt)),
-        biC,
-        smoothstep(1.5, 2.5, tt)
-    );
-
     return CurvePart(
         bez,
-        tangent,
-        bi,
+        tan,
+        nor,
         offset
     );
 }
 
 CurvePart bezierOuter(vec3 p) {
     vec4 bez, bezPart;
-    vec3 a, b, c, tangent, bi;
-    float offset, tt;
+    vec3 a, b, c,
+        aTan, cTan, aNor, cNor,
+        tan, nor;
+    float offset;
 
     a = a3;
     b = b3;
     c = c3;
-    vec3 biA = normalize(cross(a - b, c - b));
+    aTan = aTan3;
+    cTan = cTan3;
+    aNor = aNor3;
+    cNor = cNor3;
     bezPart = sdBezier(a, b, c, p);
     bez = bezPart;
-    tt = bez.w;
-    tangent = bezierTangent(a, b, c, bez.w);
+    tan = mix(aTan, cTan, bez.w);
+    nor = mix(aNor, cNor, bez.w);
     offset = 0.;
 
     a = a4;
     b = b4;
     c = c4;
-    vec3 biB = normalize(cross(a - b, c - b));
+    aTan = aTan4;
+    cTan = cTan4;
+    aNor = aNor4;
+    cNor = cNor4;
     bezPart = sdBezier(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
-        tt = bez.w + 1.;
-        tangent = bezierTangent(a, b, c, bez.w);
+        tan = mix(aTan, cTan, bez.w);
+        nor = mix(aNor, cNor, bez.w);
         offset = 1.;
     }
 
-    // ?/a ..a.. a/b ..b.. b/?
-    //  0         1         2
-
-    bi = mix(biA, biB, smoothstep(.5, 1.5, tt));
-
     return CurvePart(
         bez,
-        tangent,
-        bi,
+        tan,
+        nor,
         offset
     );
 }
@@ -540,16 +564,16 @@ Curve TrefoilCurve(vec3 p) {
     float angle = TAU / repetitions;
 
 
-    // if (p.z > 0.) {
-    //     p.z *= -1.;
-    //     p.y *= -1.;
-    //     pR(p.xy, angle / -2.);
-    //     side = 1.;
-    //     tFlip = -1.;
-    // }
-    // pR(p.xy, angle / -2.);
-    // cell = pModPolar(p.xy, repetitions);
-    // pR(p.xy, angle / 2.);
+    if (p.z > 0.) {
+        p.z *= -1.;
+        p.y *= -1.;
+        pR(p.xy, angle / -2.);
+        side = 1.;
+        tFlip = -1.;
+    }
+    pR(p.xy, angle / -2.);
+    cell = pModPolar(p.xy, repetitions);
+    pR(p.xy, angle / 2.);
 
 
     float outer = 0.;
@@ -597,8 +621,9 @@ Curve TrefoilCurve(vec3 p) {
 
     float sectionCurveOffset;
 
-    vec3 normal = cross(curve.tangent, curve.binormal);
-    vec3 binormal = cross(curve.tangent, normal);
+    vec3 tangent = curve.tangent;
+    vec3 normal = curve.normal;
+    vec3 binormal = cross(tangent, normal);
 
     normal *= -1.;
 
@@ -606,7 +631,7 @@ Curve TrefoilCurve(vec3 p) {
         binormal *= -1.;
     }
 
-    curve.tangent = normalize(curve.tangent);
+    tangent = normalize(tangent);
     binormal = normalize(binormal);
     normal = normalize(normal);
 
@@ -747,29 +772,31 @@ vec2 fShape2(vec3 p) {
     // pMod1(p.x, 1./2.5);
     // d = fBox(p, vec3(.15,.33,.33));
 
-    // d = fBox2(p.yz, vec2(.1));
+    pR(p.yz, iTime * .5);
+    pR(p.yz, p.x * PI * 2. * -5.);
+    d = fBox2(p.yz, vec2(.3));
 
     // d = min(d, length(p - vec3(0,0,1)) - .2);
 
     p = pp;
 
-    vec3 plane;
-    float dp;
+    // vec3 plane;
+    // float dp;
 
-    plane = vec3(0,0,1);
-    dp = abs(dot(p, plane)) - .001;
-    dp = max(dp, length(p) - 1.);
-    d = min(d, dp);
+    // plane = vec3(0,0,1);
+    // dp = abs(dot(p, plane)) - .001;
+    // dp = max(dp, length(p) - 1.);
+    // d = min(d, dp);
 
-    // // d = min(d, length(p - b) - .03);
+    // // // d = min(d, length(p - b) - .03);
     
-    pR(p.xy, TAU / 3.);
-    // pR(p.xy, TAU / 6.);
-    pModPolar(p.xy, 3.);
-    plane = vec3(0,1,0);
-    dp = abs(dot(p, plane)) - .001;
-    dp = max(dp, length(p) - 1.);
-    d = min(d, dp);
+    // pR(p.xy, TAU / 3.);
+    // // pR(p.xy, TAU / 6.);
+    // pModPolar(p.xy, 3.);
+    // plane = vec3(0,1,0);
+    // dp = abs(dot(p, plane)) - .001;
+    // dp = max(dp, length(p) - 1.);
+    // d = min(d, dp);
 
 
     d *= s;
