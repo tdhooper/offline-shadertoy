@@ -803,19 +803,64 @@ vec2 fShape2(vec3 p) {
 
     // if (length(p) > 2.) {
     //     s = dot(p,p);
-    //     s /= 5.;
-    //     pR(p.xy, PI * .5);
+    //     s /= 3.;
+    //     p.xz *= -1.;
+    //     // pR(p.xz, PI);
     // }
 
     p /= s;
-
     Curve curve;
     curve = pModTrefoil(p);
+    // pR(p.yz, p.x / 10. * PI * 2.);
+    pR(p.yz, iTime * .5);
 
+    float radius = .28;
+    float outer = length(p.yz) - radius;
+
+    p.z -= .1;
+    p.y = abs(p.y);
+    vec3 pp = p;
+
+    float trackSize = .01;
+    float track = fBox2(p.yz, vec2(1.,trackSize));
+
+    p.y -= radius;
+    float platform = fBox2(p.yz, vec2(.075,.1));
+    p = pp;
 
     p.x += iTime;
     pMod1(p.x, 1./2. * 10.);
-    d = min(d, fBox(p, vec3(1.,.2,.2)));
+    float trainSize = .2;
+    p.z += trainSize + trackSize;
+    float train = min(d, fBox(p, vec3(1., vec2(trainSize))));
+    p = pp;
+
+    float stairSize = .1;
+    float stairWidth = .2;
+    p.x += iTime * -.5;
+    pMod1(p.x, stairSize * 2.);
+    p.x -= .02;
+    pR(p.xz, PI * -.2);
+    p.z += .05;
+    float stairs = fBox(p, vec3(stairSize, stairWidth, stairSize));
+    p = pp;
+
+    p.y -= radius;
+    float handrail = fBox2(p.yz, vec2(.12,.12));
+    p = pp;
+
+    float trainSide = min(track, platform);
+    trainSide = min(trainSide, train);
+    trainSide = max(trainSide, dot(p, vec3(0,0,1)));
+
+    float stairSide = stairs;
+    stairSide = min(stairSide, handrail);
+    stairSide = max(stairSide, dot(p, vec3(0,0,-1)));
+
+
+    d = min(trainSide, stairSide);
+    d = max(d, outer);
+
 
     d *= s;
     return vec2(d, curve.t);
