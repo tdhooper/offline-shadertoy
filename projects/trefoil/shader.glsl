@@ -779,22 +779,16 @@ vec2 fShape2(vec3 p) {
     float z = dot(p - curve.position, curve.binormal);
     p = vec3(x, y, z);
     p.x -= 0.0666;
-
     vec3 pp = p;
 
     float f = mod(p.x * 3., 1.);
     f -= .5;
     pR(p.yz, mod(p.x * 3., 1.) * PI + PI + f * -1.);
 
-
-    // p = pp;
-
-    // pMod1(p.x, 1.);
-
+    // pp = p;
 
     d = length(p.yz) - .33;
     d = max(d, -(length(p.yz) - .28));
-
 
     f = cos(mod(p.x * 3., 1.) * PI * 2.) * .5 + .5;
     pMod1(p.x, 1./3.);
@@ -804,21 +798,14 @@ vec2 fShape2(vec3 p) {
         vec2(mix(.6, .4, f))
     );
     gaps = max(gaps, -fBox(p, vec3(.015,1.,1.)));
-    
     d = max(d, -gaps);
-    // d = max(d, -fBox2(p.yz + vec2(0,.4), vec2(.4)));
 
+    p = pp;
 
-
-    // p.x *= 10.;
-
-    // d = min(d, length(p - vec3(1./3.*10.,0,0)) - .3);
-    // d = min(d, length(p - vec3(2./3.*10.,0,0)) - .3);
-    // d = min(d, length(p - vec3(3./3.*10.,0,0)) - .3);
-
-    // p.x += iTime * .1;
-    // pMod1(p.x, 1./2.);
-    // d = fBox(p, vec3(.1,.33,.33));
+    p.x += iTime * .1;
+    pR(p.yz, PI * .25);
+    pMod1(p.x, 1./2.);
+    d = min(d, fBox(p, vec3(.1,.1,.2)));
 
     // pR(p.yz, iTime * .5);
     // pR(p.yz, p.x * PI * 2. * -5.);
