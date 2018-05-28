@@ -409,6 +409,7 @@ struct CurvePart {
     float offset;
 };
 
+
 // 14
 vec3 a0 = vec3(-0.5669088543444947, -0.23671635305770958, 0.3195550470325173);
 vec3 b0 = vec3(-0.21879767215820162, -0.40033356387104035, 0.281874024845266);
@@ -433,22 +434,55 @@ vec3 aTan2 = vec3(0.902206440741908, 0.38757768574494417, -0.18922757673344437);
 vec3 cTan2 = vec3(0.14311311393143017, 0.8728591195545045, 0.4665143020652047);
 vec3 aNor2 = vec3(0.307704565929649, -0.8858362318233614, -0.3472924855147808);
 vec3 cNor2 = vec3(0.9651563914319037, -0.018749617671540965, -0.2610011339349261);
+// 5
+vec3 a3 = vec3(-0.34669903629988125, 0.20016678193552043, 0);
+vec3 b3 = vec3(-0.4560978723789819, 0.010682439557619071, -0.281874024845266);
+vec3 c3 = vec3(-0.48845680241143064, -0.3725992929638091, -0.3195550470325173);
+vec3 aTan3 = vec3(-0.3067472913765029, -0.531301816894778, -0.7896989797368913);
+vec3 cTan3 = vec3(-0.11545113752095092, -0.9751225133799538, -0.1892276902165235);
+vec3 aNor3 = vec3(-0.8660198797752173, 0.500009567669747, -0.000008534097960699594);
+vec3 cNor3 = vec3(-0.9210193666153568, 0.17643446721607253, -0.3472667635948305);
 // 6
-vec3 a3 = vec3(-0.48845680241143064, -0.3725992929638091, -0.3195550470325173);
-vec3 b3 = vec3(-0.5208157324438795, -0.7558810254852374, -0.3572360692197686);
-vec3 c3 = vec3(-0.2604078662219397, -0.940158405422784, -0.1786180346098843);
-vec3 aTan3 = vec3(-0.11545113752095092, -0.9751225133799538, -0.1892276902165235);
-vec3 cTan3 = vec3(0.6843619980972525, -0.5603684330860392, 0.4665146029451097);
-vec3 aNor3 = vec3(-0.9210193666153568, 0.17643446721607253, -0.3472667635948305);
-vec3 cNor3 = vec3(-0.49883011384191744, -0.8264741169516885, -0.26097710921340667);
+vec3 a4 = vec3(-0.48845680241143064, -0.3725992929638091, -0.3195550470325173);
+vec3 b4 = vec3(-0.5208157324438795, -0.7558810254852374, -0.3572360692197686);
+vec3 c4 = vec3(-0.2604078662219397, -0.940158405422784, -0.1786180346098843);
+vec3 aTan4 = vec3(-0.11545113752095092, -0.9751225133799538, -0.1892276902165235);
+vec3 cTan4 = vec3(0.6843619980972525, -0.5603684330860392, 0.4665146029451097);
+vec3 aNor4 = vec3(-0.9210193666153568, 0.17643446721607253, -0.3472667635948305);
+vec3 cNor4 = vec3(-0.49883011384191744, -0.8264741169516885, -0.26097710921340667);
 // 7
-vec3 a4 = vec3(-0.2604078662219397, -0.940158405422784, -0.1786180346098843);
-vec3 b4 = vec3(1.377036685388269e-16, -1.1244357853603304, 0);
-vec3 c4 = vec3(0.26040786622193884, -0.9401584054227843, 0.1786180346098843);
-vec3 aTan4 = vec3(0.6843619980972525, -0.5603684330860392, 0.4665146029451097);
-vec3 cTan4 = vec3(0.684361998097279, 0.5603684330859919, 0.4665146029451278);
-vec3 aNor4 = vec3(-0.49883011384191744, -0.8264741169516885, -0.26097710921340667);
-vec3 cNor4 = vec3(0.4988300815201652, -0.8264741202403052, 0.2609771605784677);
+vec3 a5 = vec3(-0.2604078662219397, -0.940158405422784, -0.1786180346098843);
+vec3 b5 = vec3(1.377036685388269e-16, -1.1244357853603304, 0);
+vec3 c5 = vec3(0.26040786622193884, -0.9401584054227843, 0.1786180346098843);
+vec3 aTan5 = vec3(0.6843619980972525, -0.5603684330860392, 0.4665146029451097);
+vec3 cTan5 = vec3(0.684361998097279, 0.5603684330859919, 0.4665146029451278);
+vec3 aNor5 = vec3(-0.49883011384191744, -0.8264741169516885, -0.26097710921340667);
+vec3 cNor5 = vec3(0.4988300815201652, -0.8264741202403052, 0.2609771605784677);
+// 8
+vec3 a6 = vec3(0.26040786622193884, -0.9401584054227843, 0.1786180346098843);
+vec3 b6 = vec3(0.5208157324438776, -0.7558810254852383, 0.3572360692197686);
+vec3 c6 = vec3(0.4884568024114297, -0.37259929296381017, 0.3195550470325173);
+vec3 aTan6 = vec3(0.684361998097279, 0.5603684330859919, 0.4665146029451278);
+vec3 cTan6 = vec3(-0.1154511375209849, 0.9751225133799435, -0.18922769021655528);
+vec3 aNor6 = vec3(0.4988300815201652, -0.8264741202403052, 0.2609771605784677);
+vec3 cNor6 = vec3(0.9210193440053495, 0.17643447537181506, 0.34726681941733095);
+// 9
+vec3 a7 = vec3(0.4884568024114297, -0.37259929296381006, 0.3195550470325173);
+vec3 b7 = vec3(0.4560978723789819, 0.010682439557618061, 0.281874024845266);
+vec3 c7 = vec3(0.34669903629988125, 0.2001667819355199, 0);
+vec3 aTan7 = vec3(-0.1154511375209849, 0.9751225133799435, -0.18922769021655528);
+vec3 cTan7 = vec3(-0.30674729137653417, 0.5313018168947605, -0.7896989797368906);
+vec3 aNor7 = vec3(0.9210193440053495, 0.17643447537181506, 0.34726681941733095);
+vec3 cNor7 = vec3(0.8660198557765797, 0.5000096092349068, 0.000008571384490341227);
+// 10
+vec3 a8 = vec3(0.34669903629988125, 0.2001667819355199, 0);
+vec3 b8 = vec3(0.23730020022078058, 0.38965112431342175, -0.281874024845266);
+vec3 c8 = vec3(-0.07845205193306419, 0.6093156460215194, -0.3195550470325173);
+vec3 aTan8 = vec3(-0.30674729137653417, 0.5313018168947605, -0.7896989797368906);
+vec3 cTan8 = vec3(-0.7867551988977671, 0.5875449230132569, -0.1892279589507877);
+vec3 aNor8 = vec3(0.8660198557765797, 0.5000096092349068, 0.000008571384490341227);
+vec3 cNor8 = vec3(0.6133085148535106, 0.709419711040007, -0.34724103904362313);
+
 CurvePart bezierInner(vec3 p) {
     vec4 bez, bezPart;
     vec3 a, b, c,
@@ -542,13 +576,75 @@ CurvePart bezierOuter(vec3 p) {
         offset = 1.;
     }
 
+    a = a5;
+    b = b5;
+    c = c5;
+    aTan = aTan5;
+    cTan = cTan5;
+    aNor = aNor5;
+    cNor = cNor5;
+    bezPart = sdBezier(a, b, c, p);
+    if (switchBezier(p, bez, bezPart) > 0.) {
+        bez = bezPart;
+        tan = mix(aTan, cTan, bez.w);
+        nor = mix(aNor, cNor, bez.w);
+        offset = 2.;
+    }
+
+    a = a6;
+    b = b6;
+    c = c6;
+    aTan = aTan6;
+    cTan = cTan6;
+    aNor = aNor6;
+    cNor = cNor6;
+    bezPart = sdBezier(a, b, c, p);
+    if (switchBezier(p, bez, bezPart) > 0.) {
+        bez = bezPart;
+        tan = mix(aTan, cTan, bez.w);
+        nor = mix(aNor, cNor, bez.w);
+        offset = 3.;
+    }
+
+    a = a7;
+    b = b7;
+    c = c7;
+    aTan = aTan7;
+    cTan = cTan7;
+    aNor = aNor7;
+    cNor = cNor7;
+    bezPart = sdBezier(a, b, c, p);
+    if (switchBezier(p, bez, bezPart) > 0.) {
+        bez = bezPart;
+        tan = mix(aTan, cTan, bez.w);
+        nor = mix(aNor, cNor, bez.w);
+        offset = 4.;
+    }
+
+    a = a8;
+    b = b8;
+    c = c8;
+    aTan = aTan8;
+    cTan = cTan8;
+    aNor = aNor8;
+    cNor = cNor8;
+    bezPart = sdBezier(a, b, c, p);
+    if (switchBezier(p, bez, bezPart) > 0.) {
+        bez = bezPart;
+        tan = mix(aTan, cTan, bez.w);
+        nor = mix(aNor, cNor, bez.w);
+        offset = 5.;
+    }
+
     return CurvePart(
         bez,
         tan,
         nor,
-        offset
+        offset + 6.
     );
 }
+
+
 
 Curve TrefoilCurve(vec3 p) {
 
@@ -584,6 +680,10 @@ Curve TrefoilCurve(vec3 p) {
         outer = 1.;
         curve = outerCurve;
     }
+
+    // curve = cornerCurve;
+
+    // curve = cornerCurve;
 
     // float flip = sign(p.z);
     // side = flip * .5 + .5;
@@ -634,97 +734,11 @@ Curve TrefoilCurve(vec3 p) {
     binormal = normalize(binormal);
     normal = normalize(normal);
 
-    vec3 plane;
-    float dp;
-    
-    float part;
-
-    // part = 2. * side;
-    // part += cell * (1. - side * 2.);
-    // part *= 4.;
-    // part *= 1. + 1. * outer;
-    // part += 5. * outer;
-    // part += side;
-    // part *= -1. + outer * 2.;
-    // part = mod(part, 12.);
-
-    float t= 0.;
-
-    // if (hlf == 0.) {
-    //     t = bez.w * .5;
-    // } else {
-    //     t = .5 + bez.w * .5;
-    // }
-
-    if (side > 0.) {
-        t = 1. - t;
-    }
-    // t = 0.;
-
-    // t += part / 12.;
-
-    // we want curve index
-    // each curve has an index offset
-        // where 0 is the first curve
-        // entering the cell
-        // curves before entering get -1
-    // find starting index from 
-        // inner / outer
-        // side
-        // cell
-        // outer curve parts in cell
-        // inner curve parts in cell
-
-    float innerParts = 1.;
-    float outerParts = 2.;
-    float innerOffset;
-    float outerOffset;
-
-    cell = mod(cell, 3.);
-
-    if (side == 0.) {
-        if (cell == 0.) {
-            innerOffset = 0.;
-            outerOffset = 7.;
-        }
-        if (cell == 1.) {
-            innerOffset = 10.;
-            outerOffset = 2.;
-        }
-        if (cell == 2.) {
-            innerOffset = 5.;
-            outerOffset = 12.;
-        }
-    }
-    if (side == 1.) {
-        if (cell == 0.) {
-            innerOffset = 6.;
-            outerOffset = 14.;
-        }
-        if (cell == 1.) {
-            innerOffset = 11.;
-            outerOffset = 4.;
-        }
-        if (cell == 2.) {
-            innerOffset = 1.;
-            outerOffset = 9.;
-        }
-    }
-
-    float offset;
-
-    if (outer == 1.) {
-        offset = outerOffset;
-    } else {
-        offset = innerOffset;
-    }
-
-    if (side > 0.) {
-        t = (1. + offset - curve.bez.w - curve.offset) / 15.;
-    } else {
-        t = (offset + curve.bez.w + curve.offset) / 15.;
-    }
-
+    float flip = -1. + side * 2.;
+    cell = mod(cell * flip, 3.);
+    float offset = cell * 5. + side * 7.;
+    float t = (offset - (curve.bez.w + curve.offset) * flip);
+    t = mod(t / 15., 1.);
 
     vec3 position = curve.bez.xyz;
 
@@ -754,7 +768,7 @@ vec2 fShape2(vec3 p) {
 
     Curve curve = TrefoilCurve(p);
 
-    d = min(d, length(p - curve.position) - .2);
+    d = min(d, length(p - curve.position) - .33);
 
     // d = min(d, fCapsule(p, bez.xyz, bez.xyz + tangent * .5, .005));
     // d = min(d, fCapsule(p, curve.position, curve.position + curve.binormal * .25, .005));
