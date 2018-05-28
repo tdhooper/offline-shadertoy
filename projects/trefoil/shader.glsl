@@ -778,12 +778,16 @@ vec2 fShape2(vec3 p) {
     float y = dot(p - curve.position, curve.normal);
     float z = dot(p - curve.position, curve.binormal);
     p = vec3(x, y, z);
+    p.x -= 0.0666;
 
     vec3 pp = p;
 
-    p.x -= 0.0666;
+    float f = mod(p.x * 3., 1.);
+    f -= .5;
+    pR(p.yz, mod(p.x * 3., 1.) * PI + PI + f * -1.);
 
-    pR(p.yz, -PI + PI * mod(p.x * 3., 1.));
+
+    // p = pp;
 
     // pMod1(p.x, 1.);
 
@@ -792,9 +796,13 @@ vec2 fShape2(vec3 p) {
     d = max(d, -(length(p.yz) - .28));
 
 
+    f = cos(mod(p.x * 3., 1.) * PI * 2.) * .5 + .5;
     pMod1(p.x, 1./3.);
     // pR(p.yz, c * Math.PI )
-    float gaps = fBox2(p.yz + vec2(0,.4), vec2(.4));
+    float gaps = fBox2(
+        p.yz + vec2(0,.4),
+        vec2(mix(.6, .4, f))
+    );
     gaps = max(gaps, -fBox(p, vec3(.015,1.,1.)));
     
     d = max(d, -gaps);
