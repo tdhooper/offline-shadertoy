@@ -786,12 +786,20 @@ Curve TrefoilCurve(vec3 p) {
     );
 }
 
+Curve pModTrefoil(inout vec3 p) {
+    Curve curve = TrefoilCurve(p);
+    float x = curve.t;
+    float y = dot(p - curve.position, curve.normal);
+    float z = dot(p - curve.position, curve.binormal);
+    p = vec3(x, y, z);
+    p.x -= 0.0666;
+    p.x *= 10.;
+    return curve;
+}
 
 vec2 fShape2(vec3 p) {
     float d = 1e12;
-
     float s = 1.;
-
 
     // if (length(p) > 2.) {
     //     s = dot(p,p);
@@ -800,85 +808,16 @@ vec2 fShape2(vec3 p) {
     // }
 
     p /= s;
-    vec3 pc = p;
 
-    Curve curve = TrefoilCurve(p);
+    Curve curve;
+    curve = pModTrefoil(p);
 
-    d = max(sepa, -(length(p - curve.position) - .33));
-    // d = sepa;
-    // d = min(d, length(p - curve.position) - .33);
 
-    // d = fOpUnionRound(d, d, 1.);
-
-    // d = min(d, fCapsule(p, bez.xyz, bez.xyz + tangent * .5, .005));
-    // d = min(d, fCapsule(p, curve.position, curve.position + curve.binormal * .25, .005));
-    // d = min(d, fCapsule(p, curve.position, curve.position + curve.normal * .5, .005));
-
-    float x = curve.t;
-    float y = dot(p - curve.position, curve.normal);
-    float z = dot(p - curve.position, curve.binormal);
-    p = vec3(x, y, z);
-    p.x -= 0.0666;
-    vec3 pp = p;
-
-    // d = sepa;
-    // d = min(d, sepa);
-
-    float f = mod(p.x * 3., 1.);
-    f -= .5;
-    pR(p.yz, mod(p.x * 3., 1.) * PI + PI + f * 0.);
-
-    pp = p;
-
-    // d = length(p.yz) - .33;
-    // d = max(d, -(length(p.yz) - .28));
-
-    // f = cos(mod(p.x * 3., 1.) * PI * 2.) * .5 + .5;
-    // pMod1(p.x, 1./3.);
-    // // pR(p.yz, c * Math.PI )
-    // float gaps = fBox2(
-    //     p.yz + vec2(0,.4),
-    //     vec2(mix(.6, .3, f))
-    // );
-    // gaps = max(gaps, -fBox(p, vec3(.015,1.,1.)));
-    // d = max(d, -gaps);
-
-    p = pp;
-
-    // p.x += iTime * .1;
-    // // pR(p.yz, PI * .25);
-    // pMod1(p.x, 1./2.);
-    // d = min(d, fBox(p, vec3(.1,.2,.2)));
-
-    pR(p.yz, iTime * .5);
-    pR(p.yz, p.x * PI * 2. * -5.);
-    d = min(d, fBox2(p.yz, vec2(.25)));
-
-    // d = min(d, length(p - vec3(0,0,1)) - .2);
-
-    p = pp;
-
-    // vec3 plane;
-    // float dp;
-
-    // plane = vec3(0,0,1);
-    // dp = abs(dot(p, plane)) - .001;
-    // dp = max(dp, length(p) - 1.);
-    // d = min(d, dp);
-
-    // // // d = min(d, length(p - b) - .03);
-    
-    // pR(p.xy, TAU / 3.);
-    // // pR(p.xy, TAU / 6.);
-    // pModPolar(p.xy, 3.);
-    // plane = vec3(0,1,0);
-    // dp = abs(dot(p, plane)) - .001;
-    // dp = max(dp, length(p) - 1.);
-    // d = min(d, dp);
-
+    p.x += iTime;
+    pMod1(p.x, 1./2. * 10.);
+    d = min(d, fBox(p, vec3(1.,.2,.2)));
 
     d *= s;
-
     return vec2(d, curve.t);
 }
 
