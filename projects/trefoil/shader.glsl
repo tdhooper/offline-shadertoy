@@ -498,7 +498,7 @@ vec3 aNor8 = vec3(0.8660198557765797, 0.5000096092349068, 0.00000857138449034122
 vec3 cNor8 = vec3(0.6133085148535106, 0.709419711040007, -0.34724103904362313);
 
 float sepa;
-float sepR = guiOffsetX;
+float sepR = 0.465;
 
 CurvePart bezierInner(vec3 p) {
     vec4 bez, bezPart;
@@ -861,6 +861,9 @@ vec2 fShape2(vec3 p) {
     d = min(trainSide, stairSide);
     d = max(d, outer);
 
+    sepa = max(sepa, -outer+.1);
+    d = min(d, sepa);
+    // d = sepa;
 
     d *= s;
     return vec2(d, curve.t);
