@@ -26,7 +26,7 @@ var scrubber = document.createElement('input');
 scrubber.classList.add('scrubber');
 scrubber.setAttribute('type', 'range');
 scrubber.min = 0;
-scrubber.max = 10000; // milliseconds
+scrubber.max = 5000; // milliseconds
 scrubber.step = 10;
 controls.appendChild(scrubber);
 

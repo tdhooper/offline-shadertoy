@@ -383,6 +383,8 @@ float fTorus(vec3 p, float smallRadius, float largeRadius) {
     return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
 }
 
+float time;
+
 float fShape(vec3 p) {
     float d;
     p = p.yzx;
@@ -390,7 +392,7 @@ float fShape(vec3 p) {
     p.z -= .5;
     
     p = p.yxz;
-    // p.x += iTime;
+    // p.x += time;
     pModHelix(p, PI * 4./3., .25);
     d = length(p.yz) - .125 / 4.;
     // d = fBox2(p.yz, vec2(.25));
@@ -808,11 +810,13 @@ vec2 fShape2(vec3 p) {
     //     // pR(p.xz, PI);
     // }
 
+    pR(p.xy, time * PI * 2.);
+
     p /= s;
     Curve curve;
     curve = pModTrefoil(p);
-    // pR(p.yz, p.x / 10. * PI * 2.);
-    pR(p.yz, iTime * .5);
+    // pR(p.yz, p.x / 10. * PI * -2.);
+    pR(p.yz, time * PI * 2.);
 
     float radius = .28;
     float outer = length(p.yz) - radius;
@@ -828,7 +832,7 @@ vec2 fShape2(vec3 p) {
     float platform = fBox2(p.yz, vec2(.075,.1));
     p = pp;
 
-    p.x += iTime;
+    p.x += time * 5.;
     pMod1(p.x, 1./2. * 10.);
     float trainSize = .2;
     p.z += trainSize + trackSize;
@@ -837,7 +841,7 @@ vec2 fShape2(vec3 p) {
 
     float stairSize = .1;
     float stairWidth = .2;
-    p.x += iTime * -.5;
+    p.x += time * -.5;
     pMod1(p.x, stairSize * 2.);
     p.x -= .02;
     pR(p.xz, PI * -.2);
@@ -861,12 +865,12 @@ vec2 fShape2(vec3 p) {
     d = min(trainSide, stairSide);
     d = max(d, outer);
 
-    sepa = max(sepa, -outer+.1);
-    d = min(d, sepa);
+    // sepa = max(sepa, -outer+.1);
+    // d = min(d, sepa);
     // d = sepa;
 
     d *= s;
-    return vec2(d, curve.t);
+    return vec2(d, .4);
 }
 
 float focalLength;
@@ -990,10 +994,13 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
+    time = iTime / 5.;
+    time = mod(time, 1.);
+
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
     // vec3 camPos = vec3(0,0,guiZoom);
-    // pR(camPos.xz, iTime);
+    // pR(camPos.xz, time);
     // vec3 camTar = vec3(0);
     // vec3 camUp = vec3(0,1,0);
     // mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
