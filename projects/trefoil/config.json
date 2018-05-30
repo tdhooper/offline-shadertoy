@@ -1,5 +1,5 @@
 {
-    "id": "trefoil19",
+    "id": "trefoil22",
     "timer": {
         "running": false,
         "elapsed": 0
@@ -32,6 +32,10 @@
     "rotationSpeed": 3,
     "controls": {
         "closed": true,
+        "animation2": {
+            "type": "toggle",
+            "value": false
+        },
         "focalLength": {
             "type": "range",
             "controller": 18,

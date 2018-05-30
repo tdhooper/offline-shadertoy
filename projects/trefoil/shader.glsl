@@ -17,6 +17,7 @@ uniform float guiOffsetZ;
 // uniform float guiRotateX;
 // uniform float guiRotateY;
 // uniform float guiRotateZ;
+uniform bool guiAnimation2;
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -805,12 +806,16 @@ vec2 fShape2(vec3 p) {
 
     // if (length(p) > 2.) {
     //     s = dot(p,p);
-    //     s /= 3.;
-    //     p.xz *= -1.;
+    //     s /= 5.;
+    //     // p.xz *= -1.;
     //     // pR(p.xz, PI);
     // }
 
-    pR(p.xy, time * PI * 2.);
+    if (guiAnimation2) {
+        pR(p.xy, time * PI * 2. * 1./3.);
+    } else {
+        pR(p.xy, time * PI * 2.);
+    }
 
     p /= s;
     Curve curve;
@@ -832,7 +837,11 @@ vec2 fShape2(vec3 p) {
     float platform = fBox2(p.yz, vec2(.075,.1));
     p = pp;
 
-    p.x += time * 5.;
+    if (guiAnimation2) {
+        p.x += time * 1.666;
+    } else {
+        p.x += time * 5.;
+    }
     pMod1(p.x, 1./2. * 10.);
     float trainSize = .2;
     p.z += trainSize + trackSize;
@@ -841,7 +850,11 @@ vec2 fShape2(vec3 p) {
 
     float stairSize = .1;
     float stairWidth = .2;
-    p.x += time * -.5;
+    if (guiAnimation2) {
+        p.x += time * stairSize * 2. * -15. * .5;
+    } else {
+        p.x += time * stairSize * 2. * -15.;
+    }
     pMod1(p.x, stairSize * 2.);
     p.x -= .02;
     pR(p.xz, PI * -.2);
@@ -870,7 +883,7 @@ vec2 fShape2(vec3 p) {
     // d = sepa;
 
     d *= s;
-    return vec2(d, .4);
+    return vec2(d, time * .2);
 }
 
 float focalLength;
@@ -995,6 +1008,9 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = iTime / 5.;
+    if (guiAnimation2) {
+        time *= 2.;
+    }
     time = mod(time, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
