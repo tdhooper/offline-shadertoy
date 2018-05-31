@@ -812,7 +812,7 @@ vec2 fShape2(vec3 p) {
     // }
 
     if (guiAnimation2) {
-        pR(p.xy, time * PI * 2. * 1./3.);
+        pR(p.xy, time * -PI * 2. * 1./3.);
     } else {
         pR(p.xy, time * PI * 2.);
     }
@@ -823,27 +823,29 @@ vec2 fShape2(vec3 p) {
     // pR(p.yz, p.x / 10. * PI * -2.);
     pR(p.yz, time * PI * 2.);
 
+    float curveLen = 10.;
+
     float radius = .28;
     float outer = length(p.yz) - radius;
 
-    p.z -= .1;
+    p.z -= .05;
     p.y = abs(p.y);
     vec3 pp = p;
 
-    float trackSize = .01;
+    float trackSize = .001;
     float track = fBox2(p.yz, vec2(1.,trackSize));
 
     p.y -= radius;
-    float platform = fBox2(p.yz, vec2(.075,.1));
+    float platform = fBox2(p.yz, vec2(.075,.075));
     p = pp;
 
     if (guiAnimation2) {
-        p.x += time * 1.666;
+        p.x += time * (curveLen * 5. / 6.);
     } else {
-        p.x += time * 5.;
+        p.x += time * curveLen;
     }
-    pMod1(p.x, 1./2. * 10.);
-    float trainSize = .2;
+    pMod1(p.x, curveLen * .5);
+    float trainSize = .175;
     p.z += trainSize + trackSize;
     float train = min(d, fBox(p, vec3(1., vec2(trainSize))));
     p = pp;
@@ -1009,7 +1011,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = iTime / 5.;
     if (guiAnimation2) {
-        time *= 2.;
+        time *= 1.5;
     }
     time = mod(time, 1.);
 
