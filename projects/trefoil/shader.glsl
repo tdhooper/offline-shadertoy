@@ -657,8 +657,8 @@ Curve TrefoilCurve(vec3 p) {
 Curve pModTrefoil(inout vec3 p) {
     Curve curve = TrefoilCurve(p);
     float x = curve.t;
-    float y = dot(p - curve.position, curve.normal);
-    float z = dot(p - curve.position, curve.binormal);
+    float y = dot(p - curve.position, curve.binormal);
+    float z = dot(p - curve.position, curve.normal);
     p = vec3(x, y, z);
     p.x -= 0.0666;
     p.x *= 10.;
@@ -691,7 +691,7 @@ Model mTrain(vec3 p, float width) {
     p.x = abs(p.x);
     d = min(d, fBox(p, vec3(length, vec2(width))));
     p.x -= length;
-    d = max(d, -fBox(p, vec3(.01, width * .35, height * .8)));
+    d = max(d, -fBox(p, vec3(.01, height * .8, width * .35)));
     Model train = Model(d, TRAIN_MAT);
     return train;
 }
@@ -702,13 +702,13 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
 
     float trackSize = .001;
     Model track = Model(
-        fBox2(p.yz, vec2(1.,trackSize)),
+        fBox2(p.yz, vec2(trackSize, 1.)),
         TRACK_MAT
     );
 
-    p.y -= radius;
+    p.z -= radius;
     Model platform = Model(
-        fBox2(p.yz, vec2(.075,.075)),
+        fBox2(p.yz, vec2(.075)),
         PLATFORM_MAT
     );
     p = pp;
@@ -720,7 +720,7 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     }
     pMod1(p.x, curveLen * .5);
     float trainSize = .175;
-    p.z += trainSize + trackSize;
+    p.y += trainSize + trackSize;
     Model train = mTrain(p, trainSize);
     p = pp;
 
@@ -743,17 +743,17 @@ Model mStairSide(vec3 p, float radius) {
     }
     pMod1(p.x, stairSize * 2.);
     p.x -= .02;
-    pR(p.xz, PI * -.2);
-    p.z += .05;
+    pR(p.xy, PI * -.2);
+    p.y += .05;
     Model steps = Model(
-        fBox(p, vec3(stairSize, stairWidth, stairSize)),
+        fBox(p, vec3(stairSize, stairSize, stairWidth)),
         STEPS_MAT
     );
     p = pp;
 
-    p.y -= radius;
+    p.z -= radius;
     Model handrail = Model(
-        fBox2(p.yz, vec2(.12,.12)),
+        fBox2(p.yz, vec2(.12)),
         HANDRAIL_MAT
     );
     p = pp;
@@ -794,14 +794,14 @@ Model fShape2(vec3 p) {
     float radius = .28;
     float outer = length(p.yz) - radius;
 
-    p.z -= .05;
-    p.y = abs(p.y);
+    p.y -= .05;
+    p.z = abs(p.z);
     vec3 pp = p;
 
     Model train = mTrainSide(p, curveLen, radius);
     Model stair = mStairSide(p, radius);
 
-    float divide = dot(p, vec3(0,0,1));
+    float divide = dot(p, vec3(0,1,0));
     train.dist = max(train.dist, divide);
     stair.dist = max(stair.dist, -divide);
 
