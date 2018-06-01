@@ -51,6 +51,7 @@ struct Hit {
     vec3 rayDirection;
 };
 
+float time;
 
 // --------------------------------------------------------
 // Utilities
@@ -143,37 +144,6 @@ vec3 intersectPlane(vec3 rayOrigin, vec3 rayDirection, vec3 normal, float offset
     return rayOrigin + rayDirection * dist;
 }
 
-// Cartesian to polar coordinates
-vec3 cartToPolar(vec3 p) {
-    float x = p.x; // distance from the plane it lies on
-    float a = atan(p.y, p.z); // angle around center
-    float r = length(p.zy); // distance from center
-    return vec3(x, a, r);
-}
-
-// Polar to cartesian coordinates
-vec3 polarToCart(vec3 p) {
-    return vec3(
-        p.x,
-        sin(p.y) * p.z,
-        cos(p.y) * p.z
-    );
-}
-
-vec2 closestPointOnLine(vec2 line, vec2 point){
-    line = normalize(line);
-    float d = dot(point, line);
-    return line * d;
-}
-
-// Closest of two points
-vec3 closestPoint(vec3 pos, vec3 p1, vec3 p2) {
-    if (length(pos - p1) < length(pos - p2)) {
-        return p1;
-    } else {
-        return p2;
-    }
-}
 
 // http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
 mat3 rotationMatrix(vec3 axis, float angle)
@@ -203,10 +173,11 @@ float fOpIntersectionRound(float a, float b, float r) {
 
 
 
-
-vec3 bezierTangent(vec3 A, vec3 B, vec3 C, float t) {
-    return 2. * (1. - t) * (B - A) + 2. * t * (C - B);
-}
+// --------------------------------------------------------
+// Bezier
+// IQ
+// Modified to return closest point
+// --------------------------------------------------------
 
 vec4 sdBezier(vec3 A, vec3 B, vec3 C, vec3 pos)
 {    
@@ -293,119 +264,8 @@ vec3 spectrum(float n) {
 
 
 // --------------------------------------------------------
-// Helix
+// Trefoil
 // --------------------------------------------------------
-
-vec2 closestPointOnRepeatedLine(vec2 line, vec2 point){
-
-    // Angle of the line
-    float a = atan(line.x, line.y);
-
-    // Rotate space so we can easily repeat along
-    // one dimension
-    pR(point, -a);
-
-    // Repeat to create parallel lines at the corners
-    // of the vec2(lead, radius) polar bounding area
-    float repeatSize = (sin(a) * line.y) / 2.;
-    float cell = pMod1(point.x, repeatSize);
-
-    // Rotate space back to where it was
-    pR(point, a);
-
-    // Closest point on a line
-    line = normalize(line);
-    float d = dot(point, line);
-    vec2 closest = line * d;
-
-    // Part 2 of the repeat, move the line along it's
-    // perpendicular by the repeat cell
-    vec2 perpendicular = vec2(line.y, -line.x);
-    closest += cell * repeatSize * perpendicular;
-
-    return closest;
-}
-
-// Closest point on a helix
-vec3 closestHelix(vec3 p, float lead, float radius) {
-
-    p = cartToPolar(p);
-    p.y *= radius;
-
-    vec2 line = vec2(lead, radius * PI * 2.);
-    vec2 closest = closestPointOnRepeatedLine(line, p.xy);
-
-    closest.y /= radius;
-    vec3 closestCart = polarToCart(vec3(closest, radius));
-
-    return closestCart;
-}
-
-// Cartesian to helix coordinates
-void pModHelix(inout vec3 p, float lead, float radius) {
-    vec3 closest = closestHelix(p, lead, radius);
-    float helixAngle = atan((2. * PI * radius) / lead);
-    vec3 normal = normalize(closest - vec3(closest.x,0,0));
-    vec3 tangent = vec3(1,0,0) * rotationMatrix(normal, helixAngle);
-    float x = (closest.x / lead) * radius * PI * 2.;
-    float y = dot(p - closest, cross(tangent, normal));
-    float z = dot(p - closest, normal);
-    p = vec3(x, y, z);
-}
-
-float pModHelixScale(inout vec3 p, float lead, float innerRatio) {
-    float radius = mix(.25, .5, innerRatio);
-    pModHelix(p, lead, radius);
-    float scale = mix(.5, 0., innerRatio);
-    p /= scale;
-    return 1. / scale;
-}
-
-vec3 knot(float a)
-{
-    // http://en.wikipedia.org/wiki/Trefoil_knot
-    return vec3(
-        sin(a) + 2. * sin(2. * a),
-        cos(a) - 2. * cos(2. * a),
-        -sin(3. * a)
-    ) / 3.;
-}
-
-float fTrefoil(vec3 p) {
-    // p = p.zxy * -1.;
-    // return length(p) - 1.;
-    float d = 1e12;
-    const int steps = 40;
-    float radius = .03;
-    float ratio = 1.;
-    for (int i = 0; i < steps; i++) {
-        float a = float(i) * (PI * 2.) / float(steps);
-        vec3 b = ratio * knot(a + iTime * .1);
-        d = min(d, length(p - b) - radius);
-    }
-    return d;
-}
-
-// Torus in the XZ-plane
-float fTorus(vec3 p, float smallRadius, float largeRadius) {
-    return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
-}
-
-float time;
-
-float fShape(vec3 p) {
-    float d;
-    p = p.yzx;
-    p = cartToPolar(p);
-    p.z -= .5;
-    
-    p = p.yxz;
-    // p.x += time;
-    pModHelix(p, PI * 4./3., .25);
-    d = length(p.yz) - .125 / 4.;
-    // d = fBox2(p.yz, vec2(.25));
-    return d;
-}
 
 vec4 unionBezier(vec3 p, vec4 a, vec4 b) {
     if (length(p - a.xyz) < length(p - b.xyz)) {
@@ -689,8 +549,6 @@ CurvePart bezierOuter(vec3 p) {
     );
 }
 
-
-
 Curve TrefoilCurve(vec3 p) {
 
     vec4 bez, bezPart;
@@ -808,12 +666,18 @@ Curve pModTrefoil(inout vec3 p) {
 }
 
 
+// --------------------------------------------------------
 // Materials
+// --------------------------------------------------------
 
 vec3 DEFAULT_MAT = vec3(.9);
 vec3 TRAIN_MAT = vec3(.5,.8,.8);
 vec3 STAIR_MAT = vec3(.8,.8,.5);
 
+
+// --------------------------------------------------------
+// Model
+// --------------------------------------------------------
 
 Model mTrain(vec3 p, float curveLen, float radius) {
     vec3 pp = p;
