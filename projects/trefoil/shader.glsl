@@ -656,12 +656,12 @@ Curve TrefoilCurve(vec3 p) {
 
 Curve pModTrefoil(inout vec3 p) {
     Curve curve = TrefoilCurve(p);
-    float x = curve.t;
+    float x = dot(p - curve.position, curve.normal);
     float y = dot(p - curve.position, curve.binormal);
-    float z = dot(p - curve.position, curve.normal);
+    float z = curve.t;
     p = vec3(x, y, z);
-    p.x -= 0.0666;
-    p.x *= 10.;
+    p.z -= 0.0666;
+    p.z *= 10.;
     return curve;
 }
 
@@ -691,49 +691,49 @@ Model mTrain(vec3 p, float width) {
     float d = 1e12;
     float len = 1.;
     float height = width * .9;
-    p.x = abs(p.x);
+    p.z = abs(p.z);
     vec3 pp = p;
 
-    d = min(d, fBox2(p.yz, vec2(height, width)));
+    d = min(d, fBox2(p.xy, vec2(width, height)));
 
     // Slanted side
-    p.yz -= vec2(height * .3, width);
-    d = fOpIntersectionRound(d, dot(p.yz, normalize(vec2(-.15,1.))), width * .01);
+    p.xy -= vec2(width, height * .3);
+    d = fOpIntersectionRound(d, dot(p.xy, normalize(vec2(1.,-.15))), width * .01);
     p = pp;
 
     // Round top
     float topRadius = width * 1.2;
     p.y += height - topRadius;
-    d = fOpIntersectionRound(d, length(p.yz) - topRadius, width * .025);
+    d = fOpIntersectionRound(d, length(p.xy) - topRadius, width * .025);
     p = pp;
 
     // Grey
     float grey = d + .005;
     p.y -= height * .4;
-    grey = max(grey, -dot(p.yz, vec2(-1,0)));
-    p.z -= width * .4;
-    grey = max(grey, dot(p.yz, normalize(vec2(1,.3))));
+    grey = max(grey, -dot(p.xy, vec2(0,-1)));
+    p.x -= width * .4;
+    grey = max(grey, dot(p.xy, normalize(vec2(.3,1))));
     vec3 color = mix(TRAIN_RED, TRAIN_GREY, 1.-step(0., grey));
     p = pp;
 
     // Carridge
-    d = max(d, dot(p, vec3(1,0,0)) - len);
+    d = max(d, dot(p, vec3(0,0,1)) - len);
 
     // Front door
-    vec2 doorHW = vec2(height * 1.7, width * .275);
-    vec2 doorYZ = vec2(height, 0);
+    vec2 doorWH = vec2(width * .275, height * 1.7);
+    vec2 doorXY = vec2(0, height);
 
     // - Inset
-    p.yz -= doorYZ;
-    p.x -= len;
-    d = max(d, -fBox(p, vec3(.01, doorHW)));
+    p.xy -= doorXY;
+    p.z -= len;
+    d = max(d, -fBox(p, vec3(doorWH, .01)));
 
     // - Template
-    float door = fBox2(p.yz, doorHW);
+    float door = fBox2(p.xy, doorWH);
     p = pp;
 
     // Window
-    float window = max(door + .01, dot(p.yz, vec2(1,0)) - .01);
+    float window = max(door + .01, dot(p.xy, vec2(0,1)) - .01);
     p = pp;
 
     color = mix(color, TRAIN_WINDOW, 1.-step(0., window));
@@ -748,23 +748,23 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
 
     float trackSize = .001;
     Model track = Model(
-        fBox2(p.yz, vec2(trackSize, 1.)),
+        fBox2(p.xy, vec2(1.,trackSize)),
         TRACK_MAT
     );
 
-    p.z -= radius;
+    p.x -= radius;
     Model platform = Model(
-        fBox2(p.yz, vec2(.075)),
+        fBox2(p.xy, vec2(.075)),
         PLATFORM_MAT
     );
     p = pp;
 
     if (guiAnimation2) {
-        p.x += time * (curveLen * 5. / 6.);
+        p.z += time * (curveLen * 5. / 6.);
     } else {
-        p.x += time * curveLen;
+        p.z += time * curveLen;
     }
-    pMod1(p.x, curveLen * .5);
+    pMod1(p.z, curveLen * .5);
     float trainSize = .175;
     p.y += trainSize + trackSize;
     Model train = mTrain(p, trainSize);
@@ -783,23 +783,23 @@ Model mStairSide(vec3 p, float radius) {
     float stairSize = .1;
     float stairWidth = .2;
     if (guiAnimation2) {
-        p.x += time * stairSize * 2. * -15. * .5;
+        p.z += time * stairSize * 2. * -15. * .5;
     } else {
-        p.x += time * stairSize * 2. * -15.;
+        p.z += time * stairSize * 2. * -15.;
     }
-    pMod1(p.x, stairSize * 2.);
-    p.x -= .02;
-    pR(p.xy, PI * -.2);
+    pMod1(p.z, stairSize * 2.);
+    p.z -= .02;
+    pR(p.yz, PI * .2);
     p.y += .05;
     Model steps = Model(
-        fBox(p, vec3(stairSize, stairSize, stairWidth)),
+        fBox(p, vec3(stairWidth, stairSize, stairSize)),
         STEPS_MAT
     );
     p = pp;
 
-    p.z -= radius;
+    p.x -= radius;
     Model handrail = Model(
-        fBox2(p.yz, vec2(.12)),
+        fBox2(p.xy, vec2(.12)),
         HANDRAIL_MAT
     );
     p = pp;
@@ -831,17 +831,17 @@ Model fShape2(vec3 p) {
 
     if (guiTrefoil) {
         curve = pModTrefoil(p);
-        // pR(p.yz, p.x / 10. * PI * -2.);
-        pR(p.yz, time * PI * 2.);
+        // pR(p.xy, p.x / 10. * PI * 2.);
+        pR(p.xy, -time * PI * 2.);
     }
 
     float curveLen = 10.;
 
     float radius = .28;
-    float outer = length(p.yz) - radius;
+    float outer = length(p.xy) - radius;
 
     p.y -= .05;
-    p.z = abs(p.z);
+    p.x = abs(p.x);
     vec3 pp = p;
 
     Model train = mTrainSide(p, curveLen, radius);
@@ -870,7 +870,7 @@ Model map(vec3 p) {
     Model model = fShape2(p);
 
     if ( ! guiTrefoil) {
-        model.dist = max(model.dist, fBox2(p.xy, vec2(2.)));
+        model.dist = max(model.dist, fBox2(p.zy, vec2(2.)));
     }
 
     model.dist /= s;
