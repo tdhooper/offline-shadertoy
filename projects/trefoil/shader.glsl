@@ -38,8 +38,7 @@ precision mediump float;
 
 struct Model {
     float dist;
-    vec2 uv;
-    int id;
+    vec3 material;
 };
 
 struct Hit {
@@ -270,6 +269,13 @@ vec4 sdBezier(vec3 A, vec3 B, vec3 C, vec3 pos)
     return res;
 }
 
+
+Model opU(Model a, Model b) {
+    if (a.dist < b.dist) {
+        return a;
+    }
+    return b;
+}
 
 // --------------------------------------------------------
 // Spectrum colour palette
@@ -800,8 +806,72 @@ Curve pModTrefoil(inout vec3 p) {
     return curve;
 }
 
-vec2 fShape2(vec3 p) {
+
+// Materials
+
+vec3 DEFAULT_MAT = vec3(.8);
+
+
+Model mTrain(vec3 p, float curveLen, float radius) {
+    vec3 pp = p;
     float d = 1e12;
+
+    float trackSize = .001;
+    float track = fBox2(p.yz, vec2(1.,trackSize));
+
+    p.y -= radius;
+    float platform = fBox2(p.yz, vec2(.075,.075));
+    p = pp;
+
+    if (guiAnimation2) {
+        p.x += time * (curveLen * 5. / 6.);
+    } else {
+        p.x += time * curveLen;
+    }
+    pMod1(p.x, curveLen * .5);
+    float trainSize = .175;
+    p.z += trainSize + trackSize;
+    float train = min(d, fBox(p, vec3(1., vec2(trainSize))));
+    p = pp;
+
+    float trainSide = min(track, platform);
+    trainSide = min(trainSide, train);
+    trainSide = max(trainSide, dot(p, vec3(0,0,1)));
+
+    return Model(trainSide, DEFAULT_MAT);
+}
+
+Model mStair(vec3 p, float radius) {
+    vec3 pp = p;
+    float d = 1e12;
+
+    float stairSize = .1;
+    float stairWidth = .2;
+    if (guiAnimation2) {
+        p.x += time * stairSize * 2. * -15. * .5;
+    } else {
+        p.x += time * stairSize * 2. * -15.;
+    }
+    pMod1(p.x, stairSize * 2.);
+    p.x -= .02;
+    pR(p.xz, PI * -.2);
+    p.z += .05;
+    float stairs = fBox(p, vec3(stairSize, stairWidth, stairSize));
+    p = pp;
+
+    p.y -= radius;
+    float handrail = fBox2(p.yz, vec2(.12,.12));
+    p = pp;
+
+
+    float stairSide = stairs;
+    stairSide = min(stairSide, handrail);
+    stairSide = max(stairSide, dot(p, vec3(0,0,-1)));
+
+    return Model(stairSide, DEFAULT_MAT);
+}
+
+Model fShape2(vec3 p) {
     float s = 1.;
 
     // if (length(p) > 2.) {
@@ -832,60 +902,16 @@ vec2 fShape2(vec3 p) {
     p.y = abs(p.y);
     vec3 pp = p;
 
-    float trackSize = .001;
-    float track = fBox2(p.yz, vec2(1.,trackSize));
+    Model train = mTrain(p, curveLen, radius);
+    Model stair = mStair(p, radius);
+    
+    Model model = opU(train, stair);
 
-    p.y -= radius;
-    float platform = fBox2(p.yz, vec2(.075,.075));
-    p = pp;
+    model.dist = max(model.dist, outer);
 
-    if (guiAnimation2) {
-        p.x += time * (curveLen * 5. / 6.);
-    } else {
-        p.x += time * curveLen;
-    }
-    pMod1(p.x, curveLen * .5);
-    float trainSize = .175;
-    p.z += trainSize + trackSize;
-    float train = min(d, fBox(p, vec3(1., vec2(trainSize))));
-    p = pp;
+    model.dist *= s;
 
-    float stairSize = .1;
-    float stairWidth = .2;
-    if (guiAnimation2) {
-        p.x += time * stairSize * 2. * -15. * .5;
-    } else {
-        p.x += time * stairSize * 2. * -15.;
-    }
-    pMod1(p.x, stairSize * 2.);
-    p.x -= .02;
-    pR(p.xz, PI * -.2);
-    p.z += .05;
-    float stairs = fBox(p, vec3(stairSize, stairWidth, stairSize));
-    p = pp;
-
-    p.y -= radius;
-    float handrail = fBox2(p.yz, vec2(.12,.12));
-    p = pp;
-
-    float trainSide = min(track, platform);
-    trainSide = min(trainSide, train);
-    trainSide = max(trainSide, dot(p, vec3(0,0,1)));
-
-    float stairSide = stairs;
-    stairSide = min(stairSide, handrail);
-    stairSide = max(stairSide, dot(p, vec3(0,0,-1)));
-
-
-    d = min(trainSide, stairSide);
-    d = max(d, outer);
-
-    // sepa = max(sepa, -outer+.1);
-    // d = min(d, sepa);
-    // d = sepa;
-
-    d *= s;
-    return vec2(d, time * .2);
+    return model;
 }
 
 float focalLength;
@@ -894,22 +920,14 @@ Model map(vec3 p) {
     float d;
     float s = focalLength;
     p *= s;
-
-    // p += vec3(guiOffsetX, guiOffsetY, guiOffsetZ) * 3.;
-
-    d = fTorus(p, guiSmallRadius, guiLargeRadius);
     
-    vec2 duv = fShape2(p);
+    Model model = fShape2(p);
 
-    d = duv.x;
-    // d = min(d, fShape(p));
-    // d = min(d, fTrefoil(p));
-    // d = min(d, length(p) - 1.);
-    // d = abs(d) - .001;
+    model.dist = max(model.dist, fBox2(p.xy, vec2(2.)));
 
-    d /= s;
+    model.dist /= s;
 
-    return Model(d, duv.yy, 0);
+    return model;
 }
 
 
@@ -924,28 +942,12 @@ vec3 render(Hit hit){
     vec3 bg = vec3(.9,.3, .9) * .02;
     col = bg;
     if ( ! hit.isBackground) {
-        vec2 uv = hit.model.uv;
-        // uv *= vec2(4., 8.);
-        // uv = cos(uv * PI * 2.);
-        // uv = smoothstep(.5, .55, uv);
-        col = spectrum(uv.x);
-
+        vec3 albedo = hit.model.material;
         vec3 light = normalize(vec3(.5,1,0));
         vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
-        col *= diffuse;
+        col = albedo * diffuse;
         vec3 ref = reflect(hit.rayDirection, hit.normal);
-        // col = normalize(hit.normal) * .5 + .5;
-        // col = vec3(col.b);
-        // col = mix(col, bg, clamp(0., 1., smoothstep(length(camPos * .25), length(camPos * 2.5), length(camPos - hit.pos))));
     }
-    // if (hit.isBackground || hit.pos.z > 0.) {
-    //     vec3 debugPlanePos = intersectPlane(
-    //         hit.rayOrigin, hit.rayDirection, vec3(0,0,1), 0.
-    //     );
-    //     float dist = map(debugPlanePos).dist;
-    //     vec3 meter = vec3(mod(dist, 1./4.));
-    //     col = mix(col, meter, .5);
-    // }
     return col;
 }
 
