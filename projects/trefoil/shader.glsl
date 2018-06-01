@@ -839,7 +839,7 @@ vec3 render(Hit hit){
         vec3 light = normalize(vec3(.5,1,0));
         vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
         col = albedo;
-        // col *= diffuse;
+        col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     return col;
@@ -857,12 +857,27 @@ const int NUM_OF_TRACE_STEPS = 150;
 const float FUDGE_FACTOR = .5;
 
 
-vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3( 0.0001, 0.0, 0.0 );
+// Faster runtime
+vec3 _calcNormal(vec3 pos){
+    vec3 eps = vec3(.0001,0,0);
     vec3 nor = vec3(
         map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
         map(pos+eps.yxy).dist - map(pos-eps.yxy).dist,
         map(pos+eps.yyx).dist - map(pos-eps.yyx).dist );
+    return normalize(nor);
+}
+
+// Faster compilation
+const int NORMAL_STEPS = 6;
+vec3 calcNormal(vec3 pos){
+    vec3 eps = vec3(.001,0,0);
+    vec3 nor = vec3(0);
+    float invert = 1.;
+    for (int i = 0; i < NORMAL_STEPS; i++){
+        nor += map(pos + eps * invert).dist * eps * invert;
+        eps = eps.zxy;
+        invert *= -1.;
+    }
     return normalize(nor);
 }
 
