@@ -671,8 +671,13 @@ Curve pModTrefoil(inout vec3 p) {
 // --------------------------------------------------------
 
 vec3 DEFAULT_MAT = vec3(.9);
-vec3 TRAIN_MAT = vec3(.5,.8,.8);
-vec3 STAIR_MAT = vec3(.8,.8,.5);
+
+vec3 TRAIN_MAT = vec3(.9,.5,.5);
+vec3 PLATFORM_MAT = vec3(.5,.9,.5);
+vec3 TRACK_MAT = vec3(.9,.9,.2);
+
+vec3 STEPS_MAT = vec3(.5,.5,.9);
+vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
 
 
 // --------------------------------------------------------
@@ -684,10 +689,16 @@ Model mTrain(vec3 p, float curveLen, float radius) {
     float d = 1e12;
 
     float trackSize = .001;
-    float track = fBox2(p.yz, vec2(1.,trackSize));
+    Model track = Model(
+        fBox2(p.yz, vec2(1.,trackSize)),
+        TRACK_MAT
+    );
 
     p.y -= radius;
-    float platform = fBox2(p.yz, vec2(.075,.075));
+    Model platform = Model(
+        fBox2(p.yz, vec2(.075,.075)),
+        PLATFORM_MAT
+    );
     p = pp;
 
     if (guiAnimation2) {
@@ -698,14 +709,16 @@ Model mTrain(vec3 p, float curveLen, float radius) {
     pMod1(p.x, curveLen * .5);
     float trainSize = .175;
     p.z += trainSize + trackSize;
-    float train = min(d, fBox(p, vec3(1., vec2(trainSize))));
+    Model train = Model(
+        fBox(p, vec3(1., vec2(trainSize))),
+        TRAIN_MAT
+    );
     p = pp;
 
-    float trainSide = min(track, platform);
-    trainSide = min(trainSide, train);
-    trainSide = max(trainSide, dot(p, vec3(0,0,1)));
+    Model model = opU(track, platform);
+    model = opU(model, train);
 
-    return Model(trainSide, TRAIN_MAT);
+    return model;
 }
 
 Model mStair(vec3 p, float radius) {
@@ -723,19 +736,21 @@ Model mStair(vec3 p, float radius) {
     p.x -= .02;
     pR(p.xz, PI * -.2);
     p.z += .05;
-    float stairs = fBox(p, vec3(stairSize, stairWidth, stairSize));
+    Model steps = Model(
+        fBox(p, vec3(stairSize, stairWidth, stairSize)),
+        STEPS_MAT
+    );
     p = pp;
 
     p.y -= radius;
-    float handrail = fBox2(p.yz, vec2(.12,.12));
+    Model handrail = Model(
+        fBox2(p.yz, vec2(.12,.12)),
+        HANDRAIL_MAT
+    );
     p = pp;
 
-
-    float stairSide = stairs;
-    stairSide = min(stairSide, handrail);
-    stairSide = max(stairSide, dot(p, vec3(0,0,-1)));
-
-    return Model(stairSide, STAIR_MAT);
+    Model model = opU(steps, handrail);
+    return model;
 }
 
 Model fShape2(vec3 p) {
@@ -776,7 +791,11 @@ Model fShape2(vec3 p) {
 
     Model train = mTrain(p, curveLen, radius);
     Model stair = mStair(p, radius);
-    
+
+    float divide = dot(p, vec3(0,0,1));
+    train.dist = max(train.dist, divide);
+    stair.dist = max(stair.dist, -divide);
+
     Model model = opU(train, stair);
 
     model.dist = max(model.dist, outer);
@@ -813,14 +832,15 @@ vec3 camPos;
 
 vec3 render(Hit hit){
     vec3 col;
-    vec3 bg = vec3(.9,.3, .9) * .02;
+    vec3 bg = vec3(.75);
     col = bg;
     if ( ! hit.isBackground) {
         vec3 albedo = hit.model.material;
         vec3 light = normalize(vec3(.5,1,0));
         vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
-        col = albedo * diffuse;
-        vec3 ref = reflect(hit.rayDirection, hit.normal);
+        col = albedo;
+        // col *= diffuse;
+        // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     return col;
 }
