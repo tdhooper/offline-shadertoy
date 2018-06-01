@@ -684,7 +684,19 @@ vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
 // Model
 // --------------------------------------------------------
 
-Model mTrain(vec3 p, float curveLen, float radius) {
+Model mTrain(vec3 p, float width) {
+    float d = 1e12;
+    float length = 1.;
+    float height = width;
+    p.x = abs(p.x);
+    d = min(d, fBox(p, vec3(length, vec2(width))));
+    p.x -= length;
+    d = max(d, -fBox(p, vec3(.01, width * .35, height * .8)));
+    Model train = Model(d, TRAIN_MAT);
+    return train;
+}
+
+Model mTrainSide(vec3 p, float curveLen, float radius) {
     vec3 pp = p;
     float d = 1e12;
 
@@ -709,10 +721,7 @@ Model mTrain(vec3 p, float curveLen, float radius) {
     pMod1(p.x, curveLen * .5);
     float trainSize = .175;
     p.z += trainSize + trackSize;
-    Model train = Model(
-        fBox(p, vec3(1., vec2(trainSize))),
-        TRAIN_MAT
-    );
+    Model train = mTrain(p, trainSize);
     p = pp;
 
     Model model = opU(track, platform);
@@ -721,7 +730,7 @@ Model mTrain(vec3 p, float curveLen, float radius) {
     return model;
 }
 
-Model mStair(vec3 p, float radius) {
+Model mStairSide(vec3 p, float radius) {
     vec3 pp = p;
     float d = 1e12;
 
@@ -789,8 +798,8 @@ Model fShape2(vec3 p) {
     p.y = abs(p.y);
     vec3 pp = p;
 
-    Model train = mTrain(p, curveLen, radius);
-    Model stair = mStair(p, radius);
+    Model train = mTrainSide(p, curveLen, radius);
+    Model stair = mStairSide(p, radius);
 
     float divide = dot(p, vec3(0,0,1));
     train.dist = max(train.dist, divide);
