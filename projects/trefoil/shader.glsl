@@ -18,6 +18,7 @@ uniform float guiOffsetZ;
 // uniform float guiRotateY;
 // uniform float guiRotateZ;
 uniform bool guiAnimation2;
+uniform bool guiTrefoil;
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -809,7 +810,9 @@ Curve pModTrefoil(inout vec3 p) {
 
 // Materials
 
-vec3 DEFAULT_MAT = vec3(.8);
+vec3 DEFAULT_MAT = vec3(.9);
+vec3 TRAIN_MAT = vec3(.5,.8,.8);
+vec3 STAIR_MAT = vec3(.8,.8,.5);
 
 
 Model mTrain(vec3 p, float curveLen, float radius) {
@@ -838,7 +841,7 @@ Model mTrain(vec3 p, float curveLen, float radius) {
     trainSide = min(trainSide, train);
     trainSide = max(trainSide, dot(p, vec3(0,0,1)));
 
-    return Model(trainSide, DEFAULT_MAT);
+    return Model(trainSide, TRAIN_MAT);
 }
 
 Model mStair(vec3 p, float radius) {
@@ -868,7 +871,7 @@ Model mStair(vec3 p, float radius) {
     stairSide = min(stairSide, handrail);
     stairSide = max(stairSide, dot(p, vec3(0,0,-1)));
 
-    return Model(stairSide, DEFAULT_MAT);
+    return Model(stairSide, STAIR_MAT);
 }
 
 Model fShape2(vec3 p) {
@@ -881,17 +884,22 @@ Model fShape2(vec3 p) {
     //     // pR(p.xz, PI);
     // }
 
-    if (guiAnimation2) {
-        pR(p.xy, time * -PI * 2. * 1./3.);
-    } else {
-        pR(p.xy, time * PI * 2.);
+    if (guiTrefoil) {
+        if (guiAnimation2) {
+            pR(p.xy, time * -PI * 2. * 1./3.);
+        } else {
+            pR(p.xy, time * PI * 2.);
+        }
     }
 
     p /= s;
     Curve curve;
-    curve = pModTrefoil(p);
-    // pR(p.yz, p.x / 10. * PI * -2.);
-    pR(p.yz, time * PI * 2.);
+
+    if (guiTrefoil) {
+        curve = pModTrefoil(p);
+        // pR(p.yz, p.x / 10. * PI * -2.);
+        pR(p.yz, time * PI * 2.);
+    }
 
     float curveLen = 10.;
 
@@ -923,7 +931,9 @@ Model map(vec3 p) {
     
     Model model = fShape2(p);
 
-    model.dist = max(model.dist, fBox2(p.xy, vec2(2.)));
+    if ( ! guiTrefoil) {
+        model.dist = max(model.dist, fBox2(p.xy, vec2(2.)));
+    }
 
     model.dist /= s;
 

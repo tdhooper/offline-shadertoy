@@ -1,5 +1,5 @@
 {
-    "id": "trefoil24",
+    "id": "trefoil27",
     "timer": {
         "running": false,
         "elapsed": 0
@@ -35,6 +35,10 @@
         "animation2": {
             "type": "toggle",
             "value": false
+        },
+        "trefoil": {
+            "type": "toggle",
+            "value": true
         },
         "focalLength": {
             "type": "range",
