@@ -675,6 +675,8 @@ vec3 DEFAULT_MAT = vec3(.9);
 vec3 TRAIN_MAT = vec3(.9,.5,.5);
 vec3 PLATFORM_MAT = vec3(.5,.9,.5);
 vec3 TRACK_MAT = vec3(.9,.9,.2);
+vec3 TRAIN_RED = vec3(1,.0,.0);
+vec3 TRAIN_GREY = vec3(.4);
 
 vec3 STEPS_MAT = vec3(.5,.5,.9);
 vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
@@ -686,13 +688,38 @@ vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
 
 Model mTrain(vec3 p, float width) {
     float d = 1e12;
-    float length = 1.;
-    float height = width;
+    float len = 1.;
+    float height = width * .8;
     p.x = abs(p.x);
-    d = min(d, fBox(p, vec3(length, vec2(width))));
-    p.x -= length;
-    d = max(d, -fBox(p, vec3(.01, height * .8, width * .35)));
-    Model train = Model(d, TRAIN_MAT);
+    vec3 pp = p;
+
+    d = min(d, fBox2(p.yz, vec2(height, width)));
+
+    p.yz -= vec2(height * .3, width);
+    d = fOpIntersectionRound(d, dot(p.yz, normalize(vec2(-.15,1.))), width * .01);
+    p = pp;
+
+    float topRadius = width * 1.2;
+    p.y += height - topRadius;
+    d = fOpIntersectionRound(d, length(p.yz) - topRadius, width * .025);
+    p = pp;
+
+    float grey = d + .005;
+    p.y -= height * .4;
+    grey = max(grey, -dot(p.yz, vec2(-1,0)));
+    p.z -= width * .4;
+    grey = max(grey, dot(p.yz, normalize(vec2(1,.3))));
+    vec3 color = mix(TRAIN_RED, TRAIN_GREY, 1.-step(0., grey));
+    p = pp;
+
+    d = max(d, dot(p, vec3(1,0,0)) - len);
+
+    p.x -= len;
+    p.y -= height;
+    d = max(d, -fBox(p, vec3(.01, height * 1.6, width * .3)));
+
+
+    Model train = Model(d, color);
     return train;
 }
 
@@ -848,7 +875,7 @@ vec3 render(Hit hit){
         vec3 light = normalize(vec3(.5,1,0));
         vec3 diffuse = vec3(dot(hit.normal, light) * .5 + .5);
         col = albedo;
-        col *= diffuse;
+        // col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     return col;
