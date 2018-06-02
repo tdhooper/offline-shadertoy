@@ -678,6 +678,7 @@ vec3 TRACK_MAT = vec3(.9,.9,.2);
 vec3 TRAIN_RED = vec3(1,.0,.0);
 vec3 TRAIN_GREY = vec3(.4);
 vec3 TRAIN_WINDOW = vec3(.5,.9,1.);
+vec3 TRAIN_WINDOW_FRAME = vec3(.1);
 
 vec3 STEPS_MAT = vec3(.5,.5,.9);
 vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
@@ -698,11 +699,11 @@ Model mTrain(vec3 p, float width) {
 
     // Slanted side
     p.xy -= vec2(width, height * .3);
-    d = fOpIntersectionRound(d, dot(p.xy, normalize(vec2(1.,-.15))), width * .01);
+    d = fOpIntersectionRound(d, dot(p.xy, normalize(vec2(1.,-.175))), width * .01);
     p = pp;
 
     // Round top
-    float topRadius = width * 1.2;
+    float topRadius = width * 1.15;
     p.y += height - topRadius;
     d = fOpIntersectionRound(d, length(p.xy) - topRadius, width * .025);
     p = pp;
@@ -733,9 +734,20 @@ Model mTrain(vec3 p, float width) {
     p = pp;
 
     // Window
-    float window = max(door + .01, dot(p.xy, vec2(0,1)) - .01);
+    float windowBottom = .005;
+    float windowOffset = .015;
+    float window = max(door + windowOffset, dot(p.xy, vec2(0,1)) - windowBottom);
     p = pp;
 
+    float window2Offset = .02;
+    float window2 = max(-door + window2Offset, dot(p.xy, vec2(0,1)) - .02);
+    window2 = max(window2, dot(p.xy, vec2(0,-1)) - doorWH.y + doorXY.y + windowOffset);
+    window2 = max(window2, grey + .01);
+    p.xy -= vec2(doorWH.x + window2Offset, windowBottom);
+    window2 = max(window2, dot(p.xy, normalize(vec2(-.7,1))));
+
+    window = min(window, window2);
+    color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - .007));
     color = mix(color, TRAIN_WINDOW, 1.-step(0., window));
 
     Model train = Model(d, color);
