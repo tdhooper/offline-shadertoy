@@ -161,14 +161,22 @@ mat3 rotationMatrix(vec3 axis, float angle)
 }
 
 // The "Round" variant uses a quarter-circle to join the two objects smoothly:
-float fOpUnionRound(float a, float b, float r) {
+float smin(float a, float b, float r) {
     vec2 u = max(vec2(r - a,r - b), vec2(0));
     return max(r, min (a, b)) - length(u);
 }
 
-float fOpIntersectionRound(float a, float b, float r) {
+float smax(float a, float b, float r) {
     vec2 u = max(vec2(r + a,r + b), vec2(0));
     return min(-r, max (a, b)) + length(u);
+}
+
+float smin(float a, float b) {
+    return smin(a, b, .0);
+}
+
+float smax(float a, float b) {
+    return smax(a, b, .0);
 }
 
 
@@ -695,30 +703,30 @@ Model mTrain(vec3 p, float width) {
     p.z = abs(p.z);
     vec3 pp = p;
 
-    d = min(d, fBox2(p.xy, vec2(width, height)));
+    d = smin(d, fBox2(p.xy, vec2(width, height)));
 
     // Slanted side
     p.xy -= vec2(width, height * .3);
-    d = fOpIntersectionRound(d, dot(p.xy, normalize(vec2(1.,-.175))), width * .01);
+    d = smax(d, dot(p.xy, normalize(vec2(1.,-.175))), width * .01);
     p = pp;
 
     // Round top
-    float topRadius = width * 1.15;
+    float topRadius = width * 1.13;
     p.y += height - topRadius;
-    d = fOpIntersectionRound(d, length(p.xy) - topRadius, width * .025);
+    d = smax(d, length(p.xy) - topRadius, width * .05);
     p = pp;
 
     // Grey
     float grey = d + .005;
     p.y -= height * .4;
-    grey = max(grey, -dot(p.xy, vec2(0,-1)));
     p.x -= width * .4;
-    grey = max(grey, dot(p.xy, normalize(vec2(.3,1))));
+    grey = smax(grey, dot(p.xy, normalize(vec2(.3,1))), .02);
+    grey = max(grey, -dot(p.xy, vec2(0,-1)));
     vec3 color = mix(TRAIN_RED, TRAIN_GREY, 1.-step(0., grey));
     p = pp;
 
     // Carridge
-    d = max(d, dot(p, vec3(0,0,1)) - len);
+    d = smax(d, dot(p, vec3(0,0,1)) - len, .005);
 
     // Front door
     vec2 doorWH = vec2(width * .275, height * 1.7);
@@ -727,7 +735,7 @@ Model mTrain(vec3 p, float width) {
     // - Inset
     p.xy -= doorXY;
     p.z -= len;
-    d = max(d, -fBox(p, vec3(doorWH, .01)));
+    d = smax(d, -fBox(p, vec3(doorWH, .01)), .01);
 
     // - Template
     float door = fBox2(p.xy, doorWH);
@@ -742,9 +750,9 @@ Model mTrain(vec3 p, float width) {
     float window2Offset = .02;
     float window2 = max(-door + window2Offset, dot(p.xy, vec2(0,1)) - .02);
     window2 = max(window2, dot(p.xy, vec2(0,-1)) - doorWH.y + doorXY.y + windowOffset);
-    window2 = max(window2, grey + .01);
     p.xy -= vec2(doorWH.x + window2Offset, windowBottom);
     window2 = max(window2, dot(p.xy, normalize(vec2(-.7,1))));
+    window2 = smax(window2, grey + .01, .01);
 
     window = min(window, window2);
     color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - .007));
@@ -869,6 +877,8 @@ Model fShape2(vec3 p) {
 
     model.dist *= s;
 
+    // model.dist -= .03;
+
     return model;
 }
 
@@ -939,7 +949,7 @@ vec3 _calcNormal(vec3 pos){
 // Faster compilation
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3(.001,0,0);
+    vec3 eps = vec3(.0001,0,0);
     vec3 nor = vec3(0);
     float invert = 1.;
     for (int i = 0; i < NORMAL_STEPS; i++){
