@@ -33,6 +33,8 @@ precision mediump float;
 
 /* SHADERTOY FROM HERE */
 
+#pragma glslify: distanceMeter = require(./distance-meter.glsl)
+
 // --------------------------------------------------------
 // Structs
 // --------------------------------------------------------
@@ -48,6 +50,7 @@ struct Hit {
     bool isBackground;
     vec3 normal;
     vec3 rayOrigin;
+    float rayLength;
     vec3 rayDirection;
 };
 
@@ -679,6 +682,7 @@ Curve pModTrefoil(inout vec3 p) {
 // --------------------------------------------------------
 
 vec3 DEFAULT_MAT = vec3(.9);
+vec3 DISTANCE_METER_MAT = vec3(123.);
 
 vec3 TRAIN_MAT = vec3(.9,.5,.5);
 vec3 PLATFORM_MAT = vec3(.5,.9,.5);
@@ -705,7 +709,7 @@ Model mTrain(vec3 p, float width) {
     p.z = abs(p.z);
     vec3 pp = p;
 
-    d = smin(d, p.x - width, height);
+    d = p.x - width;
 
     // Slanted side
     p.xy -= vec2(width, height * .3);
@@ -914,6 +918,22 @@ Model map(vec3 p) {
 }
 
 
+Model mapDebug(vec3 p) {
+
+    vec3 n = normalize(vec3(1,0,1));
+    float d = abs(dot(p, n) - .5 * 10. + 5.) - .001;
+    Model model = map(p);
+
+    // return model;
+
+    if (model.dist < d) {
+        return model;
+    }
+
+    return Model(d, DISTANCE_METER_MAT);
+}
+
+
 // --------------------------------------------------------
 // Rendering
 // --------------------------------------------------------
@@ -928,11 +948,15 @@ vec3 render(Hit hit){
         vec3 albedo = hit.model.material;
         vec3 light = normalize(vec3(-.5,-1,0));
         float d = dot(hit.normal, light) * .5 + .5;
-        d = mix(.5, 1., step(.6, d));
+        // d = mix(.5, 1., step(.6, d));
         vec3 diffuse = vec3(d);
         col = albedo;
         col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
+    }
+    if (hit.model.material == DISTANCE_METER_MAT) {
+        float dist = map(hit.pos).dist;
+        col = distanceMeter(dist * 10., hit.rayLength, hit.rayDirection, 10.);
     }
     return col;
 }
@@ -983,7 +1007,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         if (currentDist < INTERSECTION_PRECISION || rayLength > MAX_TRACE_DISTANCE) {
             break;
         }
-        model = map(rayOrigin + rayDirection * rayLength);
+        model = mapDebug(rayOrigin + rayDirection * rayLength);
         currentDist = model.dist;
         rayLength += currentDist * (1. - FUDGE_FACTOR);
     }
@@ -999,7 +1023,15 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         normal = calcNormal(pos);
     }
 
-    return Hit(model, pos, isBackground, normal, rayOrigin, rayDirection);
+    return Hit(
+        model,
+        pos,
+        isBackground,
+        normal,
+        rayOrigin,
+        rayLength,
+        rayDirection
+    );
 }
 
 
