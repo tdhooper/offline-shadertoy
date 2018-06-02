@@ -687,6 +687,8 @@ vec3 TRAIN_RED = vec3(1,.0,.0);
 vec3 TRAIN_GREY = vec3(.4);
 vec3 TRAIN_WINDOW = vec3(.5,.9,1.);
 vec3 TRAIN_WINDOW_FRAME = vec3(.1);
+vec3 TRAIN_WHITE = vec3(1);
+vec3 TRAIN_BLUE = vec3(0,0,.7);
 
 vec3 STEPS_MAT = vec3(.5,.5,.9);
 vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
@@ -703,7 +705,7 @@ Model mTrain(vec3 p, float width) {
     p.z = abs(p.z);
     vec3 pp = p;
 
-    d = smin(d, fBox2(p.xy, vec2(width, height)));
+    d = smin(d, p.x - width, height);
 
     // Slanted side
     p.xy -= vec2(width, height * .3);
@@ -713,8 +715,17 @@ Model mTrain(vec3 p, float width) {
     // Round top
     float topRadius = width * 1.13;
     p.y += height - topRadius;
-    d = smax(d, length(p.xy) - topRadius, width * .05);
+    float roof = length(p.xy) - topRadius;
+    roof = min(roof, -p.y);
+    d = smax(d, roof, width * .05);
     p = pp;
+
+    // Blue
+    vec3 color = mix(TRAIN_WHITE, TRAIN_BLUE, step(0., p.y - height + .04));
+
+    // Red
+    float end = p.z - len + .1;
+    color = mix(color, TRAIN_RED, step(0., end));
 
     // Grey
     float grey = d + .005;
@@ -722,7 +733,7 @@ Model mTrain(vec3 p, float width) {
     p.x -= width * .4;
     grey = smax(grey, dot(p.xy, normalize(vec2(.3,1))), .02);
     grey = max(grey, -dot(p.xy, vec2(0,-1)));
-    vec3 color = mix(TRAIN_RED, TRAIN_GREY, 1.-step(0., grey));
+    color = mix(color, TRAIN_GREY, 1.-step(0., grey));
     p = pp;
 
     // Carridge
@@ -791,7 +802,9 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     p = pp;
 
     Model model = opU(track, platform);
+    model = track;
     model = opU(model, train);
+
 
     return model;
 }
