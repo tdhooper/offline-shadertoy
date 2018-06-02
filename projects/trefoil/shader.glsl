@@ -163,6 +163,20 @@ mat3 rotationMatrix(vec3 axis, float angle)
     );
 }
 
+// The "Chamfer" flavour makes a 45-degree chamfered edge (the diagonal of a square of size <r>):
+float cmin(float a, float b, float r) {
+    return min(min(a, b), (a - r + b)*sqrt(0.5));
+}
+
+// Intersection has to deal with what is normally the inside of the resulting object
+// when using union, which we normally don't care about too much. Thus, intersection
+// implementations sometimes differ from union implementations.
+float cmax(float a, float b, float r) {
+    return max(max(a, b), (a + r + b)*sqrt(0.5));
+}
+
+
+
 // The "Round" variant uses a quarter-circle to join the two objects smoothly:
 float smin(float a, float b, float r) {
     vec2 u = max(vec2(r - a,r - b), vec2(0));
@@ -173,6 +187,25 @@ float smax(float a, float b, float r) {
     vec2 u = max(vec2(r + a,r + b), vec2(0));
     return min(-r, max (a, b)) + length(u);
 }
+
+// float smax(float a, float b, float r) {
+//     float m = max(a, b);
+//     if ((-a < r) && (-b < r)) {
+//         return max(m, -(r - sqrt((r+a)*(r+a) + (r+b)*(r+b))));
+//     } else {
+//         return m;
+//     }
+// }
+
+// float smin(float a, float b, float r) {
+//     float m = min(a, b);
+//     if ((a < r) && (b < r) ) {
+//         return min(m, r - sqrt((r-a)*(r-a) + (r-b)*(r-b)));
+//     } else {
+//      return m;
+//     }
+// }
+
 
 float smin(float a, float b) {
     return smin(a, b, .0);
@@ -713,7 +746,8 @@ Model mTrain(vec3 p, float width) {
 
     // Slanted side
     p.xy -= vec2(width, height * .3);
-    d = smax(d, dot(p.xy, normalize(vec2(1.,-.175))), width * .01);
+    // d = smax(d, dot(p.xy, normalize(vec2(1.,-.175))), width * .01);
+    d = max(d, dot(p.xy, normalize(vec2(1.,-.175))));
     p = pp;
 
     // Round top
@@ -721,7 +755,8 @@ Model mTrain(vec3 p, float width) {
     p.y += height - topRadius;
     float roof = length(p.xy) - topRadius;
     roof = min(roof, -p.y);
-    d = smax(d, roof, width * .05);
+    // d = smax(d, roof, width * .05);
+    d = max(d, roof);
     p = pp;
 
     // Blue
@@ -809,7 +844,6 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     model = track;
     model = opU(model, train);
 
-
     return model;
 }
 
@@ -877,6 +911,11 @@ Model fShape2(vec3 p) {
     float radius = .28;
     float outer = length(p.xy) - radius;
 
+    float eps = .002;
+    if (outer > eps) {
+        return Model(outer + eps, vec3(.2));
+    }
+
     p.y -= .05;
     p.x = abs(p.x);
     vec3 pp = p;
@@ -905,7 +944,7 @@ Model map(vec3 p) {
     float d;
     float s = focalLength;
     p *= s;
-    
+
     Model model = fShape2(p);
 
     if ( ! guiTrefoil) {
@@ -920,11 +959,11 @@ Model map(vec3 p) {
 
 Model mapDebug(vec3 p) {
 
-    vec3 n = normalize(vec3(1,0,1));
-    float d = abs(dot(p, n) - .5 * 10. + 5.) - .001;
+    vec3 n = normalize(vec3(1,1,0));
+    float d = abs(dot(p, n) - .5 * 10. + 4.95) - .001;
     Model model = map(p);
 
-    // return model;
+    return model;
 
     if (model.dist < d) {
         return model;
@@ -948,7 +987,7 @@ vec3 render(Hit hit){
         vec3 albedo = hit.model.material;
         vec3 light = normalize(vec3(-.5,-1,0));
         float d = dot(hit.normal, light) * .5 + .5;
-        // d = mix(.5, 1., step(.6, d));
+        d = mix(.5, 1., step(.6, d));
         vec3 diffuse = vec3(d);
         col = albedo;
         col *= diffuse;
@@ -970,7 +1009,7 @@ vec3 render(Hit hit){
 const float MAX_TRACE_DISTANCE = 10.;
 const float INTERSECTION_PRECISION = .001;
 const int NUM_OF_TRACE_STEPS = 150;
-const float FUDGE_FACTOR = .5;
+const float FUDGE_FACTOR = .3;
 
 
 // Faster runtime
