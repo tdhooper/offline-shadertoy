@@ -723,6 +723,7 @@ vec3 PLATFORM_MAT = vec3(.5,.9,.5);
 vec3 TRACK_MAT = vec3(.9,.9,.2);
 vec3 TRAIN_RED = vec3(1,.0,.0);
 vec3 TRAIN_GREY = vec3(.4);
+vec3 TRAIN_ROOF = vec3(.6);
 vec3 TRAIN_WINDOW = vec3(.5,.9,1.);
 vec3 TRAIN_WINDOW_FRAME = vec3(.1);
 vec3 TRAIN_WHITE = vec3(1);
@@ -738,7 +739,7 @@ vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
 
 Model mTrain(vec3 p, float width) {
     float d = 1e12;
-    float len = 1.;
+    float len = 1.2;
     float height = width * .9;
     p.z = abs(p.z);
     vec3 pp = p;
@@ -754,21 +755,42 @@ Model mTrain(vec3 p, float width) {
     // Round top
     float topRadius = width * 1.13;
     p.y += height - topRadius;
-    float roof = length(p.xy) - topRadius;
-    roof = min(roof, -p.y);
-    // d = smax(d, roof, width * .05);
-    d = max(d, roof);
+    float top = length(p.xy) - topRadius;
+    top = min(top, -p.y);
+    // d = smax(d, top, width * .05);
+    d = max(d, top);
     p = pp;
 
     // Blue
     vec3 color = mix(TRAIN_WHITE, TRAIN_BLUE, step(0., p.y - height + .04));
+
+    float form = d;
+
+    float roof = p.y + height * .7;
+    color = mix(color, TRAIN_ROOF, 1.-step(0., roof));
+    roof = smax(form, roof, .01);
+    float thin = form + .01;
+    d = min(thin, roof);
+
+    // pMod1(p.z, len / 2.);
+    // p.y -= height;
+    // thin = max(-thin, fBox2(p.yz, vec2(thinTop,.2)));
+    // d = max(d, -thin);
+    // p = pp;
+
+    float front = -(p.z - len + .2);
+    front = max(form, front);
+    d = min(d, front);
+
+    // Carridge
+    d = smax(d, dot(p, vec3(0,0,1)) - len, .005);
 
     // Red
     float end = p.z - len + .1;
     color = mix(color, TRAIN_RED, step(0., end));
 
     // Grey
-    float grey = d + .008;
+    float grey = front + .005;
     p.y -= height * .4;
     p.x -= width * .4;
     grey = smax(grey, dot(p.xy, normalize(vec2(.3,1))), .02);
@@ -776,8 +798,6 @@ Model mTrain(vec3 p, float width) {
     color = mix(color, TRAIN_GREY, 1.-step(0., grey));
     p = pp;
 
-    // Carridge
-    d = smax(d, dot(p, vec3(0,0,1)) - len, .005);
 
     // Front door
     vec2 doorWH = vec2(width * .275, height * 1.7);
