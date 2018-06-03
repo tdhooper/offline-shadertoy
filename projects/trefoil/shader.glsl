@@ -42,6 +42,7 @@ precision mediump float;
 struct Model {
     float dist;
     vec3 material;
+    float underStep;
 };
 
 struct Hit {
@@ -767,7 +768,7 @@ Model mTrain(vec3 p, float width) {
     color = mix(color, TRAIN_RED, step(0., end));
 
     // Grey
-    float grey = d + .005;
+    float grey = d + .008;
     p.y -= height * .4;
     p.x -= width * .4;
     grey = smax(grey, dot(p.xy, normalize(vec2(.3,1))), .02);
@@ -808,7 +809,7 @@ Model mTrain(vec3 p, float width) {
     color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - .007));
     color = mix(color, TRAIN_WINDOW, 1.-step(0., window));
 
-    Model train = Model(d, color);
+    Model train = Model(d, color, 0.);
     return train;
 }
 
@@ -819,13 +820,15 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     float trackSize = .001;
     Model track = Model(
         fBox2(p.xy, vec2(1.,trackSize)),
-        TRACK_MAT
+        TRACK_MAT,
+        0.
     );
 
     p.x -= radius;
     Model platform = Model(
         fBox2(p.xy, vec2(.075)),
-        PLATFORM_MAT
+        PLATFORM_MAT,
+        0.
     );
     p = pp;
 
@@ -864,14 +867,14 @@ Model mStairSide(vec3 p, float radius) {
     p.y += .05;
     Model steps = Model(
         fBox(p, vec3(stairWidth, stairSize, stairSize)),
-        STEPS_MAT
+        STEPS_MAT, 0.
     );
     p = pp;
 
     p.x -= radius;
     Model handrail = Model(
         fBox2(p.xy, vec2(.12)),
-        HANDRAIL_MAT
+        HANDRAIL_MAT, 0.
     );
     p = pp;
 
@@ -880,7 +883,7 @@ Model mStairSide(vec3 p, float radius) {
 }
 
 Model fShape2(vec3 p) {
-    float s = 1.;
+    // float s = 1.;
 
     // if (length(p) > 2.) {
     //     s = dot(p,p);
@@ -897,7 +900,7 @@ Model fShape2(vec3 p) {
         }
     }
 
-    p /= s;
+    // p /= s;
     Curve curve;
 
     if (guiTrefoil) {
@@ -911,9 +914,9 @@ Model fShape2(vec3 p) {
     float radius = .28;
     float outer = length(p.xy) - radius;
 
-    float eps = .002;
+    float eps = .004;
     if (outer > eps) {
-        return Model(outer + eps, vec3(.2));
+        return Model(outer + eps, vec3(.2), 0.);
     }
 
     p.y -= .05;
@@ -931,7 +934,16 @@ Model fShape2(vec3 p) {
 
     model.dist = max(model.dist, outer);
 
-    model.dist *= s;
+    float guard = outer + .1;
+    if (guard > eps) {
+        model.dist = min(model.dist, guard + eps);
+        model.underStep = .5;
+    }
+
+    // model.dist = outer + .1;
+
+    // model.dist *= s;
+    
 
     // model.dist -= .03;
 
@@ -969,7 +981,7 @@ Model mapDebug(vec3 p) {
         return model;
     }
 
-    return Model(d, DISTANCE_METER_MAT);
+    return Model(d, DISTANCE_METER_MAT, 0.);
 }
 
 
@@ -1009,7 +1021,6 @@ vec3 render(Hit hit){
 const float MAX_TRACE_DISTANCE = 10.;
 const float INTERSECTION_PRECISION = .001;
 const int NUM_OF_TRACE_STEPS = 150;
-const float FUDGE_FACTOR = .3;
 
 
 // Faster runtime
@@ -1048,7 +1059,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         }
         model = mapDebug(rayOrigin + rayDirection * rayLength);
         currentDist = model.dist;
-        rayLength += currentDist * (1. - FUDGE_FACTOR);
+        rayLength += currentDist * (1. - model.underStep);
     }
 
     bool isBackground = false;
