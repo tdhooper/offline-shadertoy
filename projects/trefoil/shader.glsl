@@ -999,8 +999,8 @@ vec3 render(Hit hit){
         vec3 albedo = hit.model.material;
         vec3 light = normalize(vec3(-.5,-1,0));
         float d = dot(hit.normal, light) * .5 + .5;
-        d = mix(.5, 1., step(.6, d));
         vec3 diffuse = vec3(d);
+        diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
         col = albedo;
         col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
