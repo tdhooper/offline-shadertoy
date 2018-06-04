@@ -779,17 +779,18 @@ Model mTrain(vec3 p, float width) {
     // Side doors
     p.z -= len / 3.;
     float sideDoors = fBox2(p.yz, vec2(1., .17));
-    color = mix(color, TRAIN_RED, 1. - step(0., sideDoors));
     sideDoors = max(form, sideDoors);
     sideDoors = max(sideDoors, -roofPane);
+    color = mix(color, TRAIN_RED, step(0., d - sideDoors));
     d = min(d, sideDoors);
     p = pp;
 
     // return Model(d, color, 0.);
 
     // Roof
-    color = mix(color, TRAIN_ROOF, 1.-step(0., roofPane));
+    // color = mix(color, TRAIN_ROOF, 1.-step(0., roofPane));
     float roof = smax(form, roofPane, .01);
+    color = mix(color, TRAIN_ROOF, step(0., d - roof));
     d = min(d, roof);
 
     float front = -(p.z - len + .2);
