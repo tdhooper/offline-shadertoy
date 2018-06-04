@@ -788,6 +788,15 @@ Model mTrain(vec3 p, float width) {
     vec3 sideDoorColor = mix(TRAIN_RED, TRAIN_WINDOW_FRAME, step(0., sideDoorEdge));
     color = mix(color, sideDoorColor, step(0., d - sideDoors));
     d = min(d, sideDoors);
+
+    float windowFrameOffset = .007;
+
+    p.y += .04;
+    p.z += .025;
+    float sideDoorWindow = fBox2(p.yz, vec2(height * .33, sideDoorWidth * .3)) - .005;
+    color = mix(color, TRAIN_WINDOW_FRAME, 1. - step(0., sideDoorWindow - windowFrameOffset));
+    color = mix(color, TRAIN_WINDOW, 1. - step(0., sideDoorWindow));
+
     p = pp;
 
     // return Model(d, color, 0.);
@@ -844,7 +853,7 @@ Model mTrain(vec3 p, float width) {
     window2 = smax(window2, grey + .01, .01);
 
     window = min(window, window2);
-    color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - .007));
+    color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - windowFrameOffset));
     color = mix(color, TRAIN_WINDOW, 1.-step(0., window));
 
     Model train = Model(d, color, 0.);
@@ -1040,7 +1049,7 @@ vec3 render(Hit hit){
         vec3 diffuse = vec3(d);
         // diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
         col = albedo;
-        col *= diffuse;
+        // col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     if (hit.model.material == DISTANCE_METER_MAT) {
