@@ -699,14 +699,14 @@ Curve TrefoilCurve(vec3 p) {
     );
 }
 
-Curve pModTrefoil(inout vec3 p) {
+Curve pModTrefoil(inout vec3 p, float len) {
     Curve curve = TrefoilCurve(p);
     float x = dot(p - curve.position, curve.normal);
     float y = dot(p - curve.position, curve.binormal);
     float z = curve.t;
     p = vec3(x, y, z);
     p.z -= 0.0666;
-    p.z *= 10.;
+    p.z *= len;
     return curve;
 }
 
@@ -958,14 +958,14 @@ Model fShape2(vec3 p) {
 
     // p /= s;
     Curve curve;
+    float curveLen = 14.;
 
     if (guiTrefoil) {
-        curve = pModTrefoil(p);
-        // pR(p.xy, p.x / 10. * PI * 2.);
+        curve = pModTrefoil(p, curveLen);
+        // pR(p.xy, 2.5 + p.z / curveLen * PI * 2.);
         pR(p.xy, -time * PI * 2.);
     }
 
-    float curveLen = 10.;
 
     float radius = .28;
     float outer = length(p.xy) - radius;
