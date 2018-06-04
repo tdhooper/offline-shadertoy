@@ -740,35 +740,35 @@ vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
 Model mTrain(vec3 p, float width) {
     float d = 1e12;
     float len = 1.2;
-    float height = width * .9;
+    float height = width * .8;
     p.z = abs(p.z);
     vec3 pp = p;
 
     d = p.x - width;
 
     // Slanted side
-    p.xy -= vec2(width, height * .3);
+    p.xy -= vec2(width, height * .45);
     // d = smax(d, dot(p.xy, normalize(vec2(1.,-.175))), width * .01);
     d = max(d, dot(p.xy, normalize(vec2(1.,-.175))));
     p = pp;
 
     // Round top
-    float topRadius = width * 1.13;
+    float topRadius = width * 1.1;
     p.y += height - topRadius;
     float top = length(p.xy) - topRadius;
     top = min(top, -p.y);
     // d = smax(d, top, width * .05);
-    d = max(d, top);
+    d = smax(d, top, .005);
     p = pp;
 
     // Blue
-    vec3 color = mix(TRAIN_WHITE, TRAIN_BLUE, step(0., p.y - height + .04));
+    vec3 color = mix(TRAIN_WHITE, TRAIN_BLUE, step(0., p.y - height + .01));
 
     float form = d;
     float thin = form + .01;
     d = thin;
 
-    float roofPane = p.y + height * .7;
+    float roofPane = p.y + height * .8;
 
     // pMod1(p.z, len / 2.);
     // p.y -= height;
@@ -791,9 +791,9 @@ Model mTrain(vec3 p, float width) {
 
     float windowFrameOffset = .007;
 
-    p.y += .04;
+    p.y += .028;
     p.z += .025;
-    float sideDoorWindow = fBox2(p.yz, vec2(height * .33, sideDoorWidth * .3)) - .005;
+    float sideDoorWindow = fBox2(p.yz, vec2(height * .42, sideDoorWidth * .3)) - .005;
     color = mix(color, TRAIN_WINDOW_FRAME, 1. - step(0., sideDoorWindow - windowFrameOffset));
     color = mix(color, TRAIN_WINDOW, 1. - step(0., sideDoorWindow));
     p = pp;
@@ -828,8 +828,8 @@ Model mTrain(vec3 p, float width) {
 
     // Front grey
     float grey = front + .005;
-    p.y -= height * .4;
-    p.x -= width * .4;
+    p.y -= height * .6;
+    p.x -= width * .3;
     grey = smax(grey, dot(p.xy, normalize(vec2(.3,1))), .02);
     grey = max(grey, -dot(p.xy, vec2(0,-1)));
     color = mix(color, TRAIN_GREY, 1.-step(0., grey));
@@ -849,17 +849,17 @@ Model mTrain(vec3 p, float width) {
     p = pp;
 
     // Window
-    float windowBottom = .005;
-    float windowOffset = .015;
+    float windowBottom = .015;
+    float windowOffset = .0175;
     float window = max(door + windowOffset, dot(p.xy, vec2(0,1)) - windowBottom);
     p = pp;
 
-    float window2Offset = .02;
-    float window2 = max(-door + window2Offset, dot(p.xy, vec2(0,1)) - .02);
+    float window2Offset = .015;
+    float window2 = max(-door + window2Offset, dot(p.xy, vec2(0,1)) - .035);
     window2 = max(window2, dot(p.xy, vec2(0,-1)) - doorWH.y + doorXY.y + windowOffset);
     p.xy -= vec2(doorWH.x + window2Offset, windowBottom);
     window2 = max(window2, dot(p.xy, normalize(vec2(-.7,1))));
-    window2 = smax(window2, grey + .01, .01);
+    window2 = smax(window2, grey + .015, .01);
 
     window = min(window, window2);
     color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - windowFrameOffset));
