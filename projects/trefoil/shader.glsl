@@ -765,18 +765,32 @@ Model mTrain(vec3 p, float width) {
     vec3 color = mix(TRAIN_WHITE, TRAIN_BLUE, step(0., p.y - height + .04));
 
     float form = d;
-
-    float roof = p.y + height * .7;
-    color = mix(color, TRAIN_ROOF, 1.-step(0., roof));
-    roof = smax(form, roof, .01);
     float thin = form + .01;
-    d = min(thin, roof);
+    d = thin;
+
+    float roofPane = p.y + height * .7;
 
     // pMod1(p.z, len / 2.);
     // p.y -= height;
     // thin = max(-thin, fBox2(p.yz, vec2(thinTop,.2)));
     // d = max(d, -thin);
     // p = pp;
+
+    // Side doors
+    p.z -= len / 3.;
+    float sideDoors = fBox2(p.yz, vec2(1., .17));
+    color = mix(color, TRAIN_RED, 1. - step(0., sideDoors));
+    sideDoors = max(form, sideDoors);
+    sideDoors = max(sideDoors, -roofPane);
+    d = min(d, sideDoors);
+    p = pp;
+
+    // return Model(d, color, 0.);
+
+    // Roof
+    color = mix(color, TRAIN_ROOF, 1.-step(0., roofPane));
+    float roof = smax(form, roofPane, .01);
+    d = min(d, roof);
 
     float front = -(p.z - len + .2);
     front = max(form, front);
@@ -785,11 +799,11 @@ Model mTrain(vec3 p, float width) {
     // Carridge
     d = smax(d, dot(p, vec3(0,0,1)) - len, .005);
 
-    // Red
+    // Front red
     float end = p.z - len + .1;
     color = mix(color, TRAIN_RED, step(0., end));
 
-    // Grey
+    // Front grey
     float grey = front + .005;
     p.y -= height * .4;
     p.x -= width * .4;
@@ -797,7 +811,6 @@ Model mTrain(vec3 p, float width) {
     grey = max(grey, -dot(p.xy, vec2(0,-1)));
     color = mix(color, TRAIN_GREY, 1.-step(0., grey));
     p = pp;
-
 
     // Front door
     vec2 doorWH = vec2(width * .275, height * 1.7);
@@ -1020,7 +1033,7 @@ vec3 render(Hit hit){
         vec3 light = normalize(vec3(-.5,-1,0));
         float d = dot(hit.normal, light) * .5 + .5;
         vec3 diffuse = vec3(d);
-        diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
+        // diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
         col = albedo;
         col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
