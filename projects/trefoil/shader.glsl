@@ -899,6 +899,8 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     Model train = mTrain(p, trainSize);
     p = pp;
 
+    return train;
+
     Model model = opU(track, platform);
     model = track;
     model = opU(model, train);
@@ -966,18 +968,57 @@ Model fShape2(vec3 p) {
         pR(p.xy, -time * PI * 2.);
     }
 
+    vec3 pp = p;
 
-    float radius = .28;
+
+    float radius = .30;
     float outer = length(p.xy) - radius;
+    float d;
 
-    float eps = .004;
+
+    float eps = .02;
     if (outer > eps) {
-        return Model(outer + eps, vec3(.2), 0.);
+        d = outer;
+    } else {
+        d = -outer + eps * 2.;
     }
+
+    // return Model(d, vec3(.9), 0.5);
+
+    p.z += time * curveLen * 2.;
+    pMod1(p.z, curveLen);
+    d = min(d, fBox(p, vec3(.12, .12, 1.)));
+    p = pp;
+
+    p.z += time * curveLen * 2.;
+    p.z += curveLen * 2./3.;
+    pMod1(p.z, curveLen);
+    d = min(d, fBox(p, vec3(.12, .12, 1.)));
+    p = pp;
+
+    p.z -= time * curveLen;
+    p.z -= curveLen * 1./3.;
+    pMod1(p.z, curveLen);
+    float t = abs(length(p.xy) - .25) - .02;
+    t = max(t, fBox(p, vec3(.5, .5, 1.5)));
+    d = min(d, t);
+    p = pp;
+
+
+    return Model(d, vec3(.9), 0.);
+
+
+    // float radius = .28;
+    // float outer = length(p.xy) - radius;
+
+    // float eps = .004;
+    // if (outer > eps) {
+    //     // return Model(outer + eps, vec3(.2), 0.);
+    // }
 
     p.y -= .05;
     p.x = abs(p.x);
-    vec3 pp = p;
+    // vec3 pp = p;
 
     Model train = mTrainSide(p, curveLen, radius);
     Model stair = mStairSide(p, radius);
@@ -985,6 +1026,8 @@ Model fShape2(vec3 p) {
     float divide = dot(p, vec3(0,1,0));
     train.dist = max(train.dist, divide);
     stair.dist = max(stair.dist, -divide);
+
+    return train;
 
     Model model = opU(train, stair);
 
@@ -1058,7 +1101,7 @@ vec3 render(Hit hit){
         vec3 diffuse = vec3(d);
         // diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
         col = albedo;
-        // col *= diffuse;
+        col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     if (hit.model.material == DISTANCE_METER_MAT) {
