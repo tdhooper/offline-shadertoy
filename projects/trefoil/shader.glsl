@@ -985,22 +985,23 @@ Model fShape2(vec3 p) {
 
     // return Model(d, vec3(.9), 0.5);
 
-    p.z += time * curveLen * 2.;
+    p.z -= time * curveLen * 1.;
     pMod1(p.z, curveLen);
-    d = min(d, fBox(p, vec3(.12, .12, 1.)));
+    d = min(d, fBox(p, vec3(.1, .1, .8)));
     p = pp;
 
-    p.z += time * curveLen * 2.;
+    p.z -= time * curveLen * 1.;
     p.z += curveLen * 2./3.;
     pMod1(p.z, curveLen);
-    d = min(d, fBox(p, vec3(.12, .12, 1.)));
+    d = min(d, fBox(p, vec3(.1, .1, .8)));
     p = pp;
 
-    p.z -= time * curveLen;
+    p.z += time * curveLen;
     p.z -= curveLen * 1./3.;
     pMod1(p.z, curveLen);
-    float t = abs(length(p.xy) - .25) - .02;
-    t = max(t, fBox(p, vec3(.5, .5, 1.5)));
+    float t = abs(length(p.xy) - .2) - .04;
+    t = max(t, fBox(p, vec3(.5, .5, 3.)));
+    t = max(t, -fBox(p, vec3(.5, .5, 1.)));
     d = min(d, t);
     p = pp;
 
