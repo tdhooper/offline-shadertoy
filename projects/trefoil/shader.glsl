@@ -786,6 +786,7 @@ Model mTrain(vec3 p, float width) {
     sideDoors = smax(sideDoors, -roofPane, .01);
     float sideDoorEdge = sideDoorMask + .01;
     vec3 sideDoorColor = mix(TRAIN_RED, TRAIN_WINDOW_FRAME, step(0., sideDoorEdge));
+    sideDoorColor = TRAIN_RED;
     color = mix(color, sideDoorColor, step(0., d - sideDoors));
     d = min(d, sideDoors);
 
@@ -794,14 +795,14 @@ Model mTrain(vec3 p, float width) {
     p.y += .028;
     p.z += .025;
     float sideDoorWindow = fBox2(p.yz, vec2(height * .42, sideDoorWidth * .3)) - .005;
-    color = mix(color, TRAIN_WINDOW_FRAME, 1. - step(0., sideDoorWindow - windowFrameOffset));
+    // color = mix(color, TRAIN_WINDOW_FRAME, 1. - step(0., sideDoorWindow - windowFrameOffset));
     color = mix(color, TRAIN_WINDOW, 1. - step(0., sideDoorWindow));
     p = pp;
 
     p.y = abs(p.y);
     float sideWindow = p.y - .04;
     sideWindow = smax(sideWindow, -sideDoorMask + windowFrameOffset * 2., .01);
-    color = mix(color, TRAIN_WINDOW_FRAME, 1. - step(0., sideWindow - windowFrameOffset));
+    // color = mix(color, TRAIN_WINDOW_FRAME, 1. - step(0., sideWindow - windowFrameOffset));
     pMod1(p.z, len / 1.5);
     p.z = abs(p.z);
     sideWindow = smax(sideWindow, -(p.z - windowFrameOffset * 2.), .01);
@@ -862,7 +863,7 @@ Model mTrain(vec3 p, float width) {
     window2 = smax(window2, grey + .015, .01);
 
     window = min(window, window2);
-    color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - windowFrameOffset));
+    // color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - windowFrameOffset));
     color = mix(color, TRAIN_WINDOW, 1.-step(0., window));
 
     Model train = Model(d, color, 0.);
