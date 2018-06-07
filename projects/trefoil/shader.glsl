@@ -969,11 +969,12 @@ Model fShape2(vec3 p) {
 
     float radius = .28;
     float outer = length(p.xy) - radius;
-
-    float eps = .004;
+    float eps = .02;
+    float d = -outer + eps * 2.;
     if (outer > eps) {
-        return Model(outer + eps, vec3(.2), 0.);
+        return Model(outer, vec3(.2), 0.);
     }
+
 
     p.y -= .05;
     p.x = abs(p.x);
@@ -990,11 +991,7 @@ Model fShape2(vec3 p) {
 
     model.dist = max(model.dist, outer);
 
-    float guard = outer + .1;
-    if (guard > eps) {
-        model.dist = min(model.dist, guard + eps);
-        model.underStep = .5;
-    }
+    model.dist = min(model.dist, d);
 
     // model.dist = outer + .1;
 
