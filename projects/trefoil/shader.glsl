@@ -765,7 +765,8 @@ Model mTrain(vec3 p, float width) {
     vec3 color = mix(TRAIN_WHITE, TRAIN_BLUE, step(0., p.y - height + .01));
 
     float form = d;
-    float thin = form + .01;
+    float thinOffset = .025;
+    float thin = form + thinOffset;
     d = thin;
 
     float roofPane = p.y + height * .8;
@@ -780,9 +781,9 @@ Model mTrain(vec3 p, float width) {
     float sideDoorWidth = .17 / 2.;
     p.z -= len / 3.;
     p.z = abs(p.z);
-    p.z -= sideDoorWidth;
+    p.z -= sideDoorWidth - .001;
     float sideDoorMask = fBox2(p.yz, vec2(1., sideDoorWidth));
-    float sideDoors = smax(form, sideDoorMask, .01);
+    float sideDoors = smax(form, sideDoorMask, thinOffset * 1.5);
     sideDoors = smax(sideDoors, -roofPane, .01);
     float sideDoorEdge = sideDoorMask + .01;
     vec3 sideDoorColor = mix(TRAIN_RED, TRAIN_WINDOW_FRAME, step(0., sideDoorEdge));
