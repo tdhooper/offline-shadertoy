@@ -871,16 +871,50 @@ Model mTrain(vec3 p, float width) {
     return train;
 }
 
+bool pastThreshold = false;
+bool pastThreshold2 = false;
+float lastSide;
+float lastSide2;
+bool hasLastSide = false;
+
+// need to reset when moving away
+
+/*
+
+   _____
+  |     |
+  |     |
+
+*/
+
+
 Model mTrainSide(vec3 p, float curveLen, float radius) {
     vec3 pp = p;
     float d = 1e12;
 
     float trackSize = .001;
-    Model track = Model(
-        fBox2(p.xy, vec2(1.,trackSize)),
-        TRACK_MAT,
-        0.
-    );
+    d = -p.y - trackSize;
+
+    float threshold = fBox2(p.xy + vec2(0,.011), vec2(radius, .01));
+    float side = sign(threshold);
+
+    if (hasLastSide && side != lastSide && side < 0.) {
+        pastThreshold = true;
+    }
+
+    lastSide = side;
+    hasLastSide = true;
+
+    if (pastThreshold) {
+        float cut = fBox2(p.xy, vec2(radius / 2.));
+        d = max(d, -cut);
+    } else {
+        d = max(d, p.y);
+    }
+
+    Model track = Model(d, TRACK_MAT, 0.);
+
+    return track;
 
     p.x -= radius;
     Model platform = Model(
@@ -937,6 +971,8 @@ Model mStairSide(vec3 p, float radius) {
     p = pp;
 
     Model model = opU(steps, handrail);
+    model.dist = max(model.dist, -p.y);
+
     return model;
 }
 
@@ -985,11 +1021,12 @@ Model fShape2(vec3 p) {
     Model train = mTrainSide(p, curveLen, radius);
     Model stair = mStairSide(p, radius);
 
-    float divide = dot(p, vec3(0,1,0));
-    train.dist = max(train.dist, divide);
-    stair.dist = max(stair.dist, -divide);
+    // float divide = dot(p, vec3(0,1,0));
+    // train.dist = max(train.dist, divide);
+    // stair.dist = max(stair.dist, -divide);
 
     Model model = opU(train, stair);
+    model = train;
 
     model.dist = max(model.dist, outer);
 
@@ -1057,7 +1094,7 @@ vec3 render(Hit hit){
         vec3 diffuse = vec3(d);
         // diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
         col = albedo;
-        // col *= diffuse;
+        col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     if (hit.model.material == DISTANCE_METER_MAT) {
@@ -1176,6 +1213,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 color = render(hit);
     color = pow(color, vec3(1. / 2.2)); // Gamma
+
+    // if (pastThreshold) {
+    //     color = vec3(1,0,0);
+    // }
+
+    // if (lastSide > 0.) {
+    //     color += vec3(0,1,0);
+    // }
+
     fragColor = vec4(color,1);
 }
 
