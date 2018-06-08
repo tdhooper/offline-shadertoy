@@ -875,14 +875,33 @@ bool pastThreshold = false;
 float lastSide;
 bool hasLastSide = false;
 
+
+/*
+
+  flatten
+
+   ____________
+  |            |
+  |  cut hole  |
+  |____________|
+__________________
+
+
+  flatten
+
+*/
+
+
 Model mTrainSide(vec3 p, float curveLen, float radius) {
     vec3 pp = p;
     float d = 1e12;
 
+    float trainSize = .175;
+
     float trackSize = .001;
     d = -p.y - trackSize;
 
-    float threshold = fBox2(p.xy + vec2(0,.011), vec2(radius, .01));
+    float threshold = fBox2(p.xy + vec2(0,.003), vec2(radius, .002));
     float side = sign(threshold);
 
     if (hasLastSide && side != lastSide && side < 0.) {
@@ -893,15 +912,11 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     hasLastSide = true;
 
     if (pastThreshold) {
-        float cut = fBox2(p.xy, vec2(radius / 2.));
+        float cut = fBox2(p.xy, vec2(trainSize, .1));
         d = max(d, -cut);
-    } else {
-        d = max(d, p.y);
     }
 
     Model track = Model(d, TRACK_MAT, 0.);
-
-    return track;
 
     p.x -= radius;
     Model platform = Model(
@@ -917,7 +932,6 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
         p.z += time * curveLen;
     }
     pMod1(p.z, curveLen * .5);
-    float trainSize = .175;
     p.y += trainSize + trackSize;
     Model train = mTrain(p, trainSize);
     p = pp;
@@ -925,6 +939,10 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     Model model = opU(track, platform);
     model = track;
     model = opU(model, train);
+
+    if ( ! pastThreshold) {
+        model.dist = max(model.dist, p.y);
+    }
 
     return model;
 }
@@ -1005,15 +1023,12 @@ Model fShape2(vec3 p) {
     p.x = abs(p.x);
     vec3 pp = p;
 
-    Model train = mTrainSide(p, curveLen, radius);
-    Model stair = mStairSide(p, radius);
+    Model model = mTrainSide(p, curveLen, radius);
 
-    // float divide = dot(p, vec3(0,1,0));
-    // train.dist = max(train.dist, divide);
-    // stair.dist = max(stair.dist, -divide);
-
-    Model model = opU(train, stair);
-    model = train;
+    if ( ! pastThreshold) {
+        Model stair = mStairSide(p, radius);
+        model = opU(model, stair);
+    }
 
     model.dist = max(model.dist, outer);
 
