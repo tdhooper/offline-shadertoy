@@ -872,21 +872,8 @@ Model mTrain(vec3 p, float width) {
 }
 
 bool pastThreshold = false;
-bool pastThreshold2 = false;
 float lastSide;
-float lastSide2;
 bool hasLastSide = false;
-
-// need to reset when moving away
-
-/*
-
-   _____
-  |     |
-  |     |
-
-*/
-
 
 Model mTrainSide(vec3 p, float curveLen, float radius) {
     vec3 pp = p;
@@ -1213,14 +1200,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec3 color = render(hit);
     color = pow(color, vec3(1. / 2.2)); // Gamma
-
-    // if (pastThreshold) {
-    //     color = vec3(1,0,0);
-    // }
-
-    // if (lastSide > 0.) {
-    //     color += vec3(0,1,0);
-    // }
 
     fragColor = vec4(color,1);
 }
