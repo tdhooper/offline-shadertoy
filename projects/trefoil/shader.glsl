@@ -872,25 +872,7 @@ Model mTrain(vec3 p, float width) {
 }
 
 bool pastThreshold = false;
-float lastSide;
-bool hasLastSide = false;
-
-
-/*
-
-  flatten
-
-   ____________
-  |            |
-  |  cut hole  |
-  |____________|
-__________________
-
-
-  flatten
-
-*/
-
+float lastSide = 1.;
 
 Model mTrainSide(vec3 p, float curveLen, float radius) {
     vec3 pp = p;
@@ -903,13 +885,10 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
 
     float threshold = fBox2(p.xy + vec2(0,.003), vec2(radius, .002));
     float side = sign(threshold);
-
-    if (hasLastSide && side != lastSide && side < 0.) {
+    if (side != lastSide) {
         pastThreshold = true;
     }
-
     lastSide = side;
-    hasLastSide = true;
 
     if (pastThreshold) {
         float cut = fBox2(p.xy, vec2(trainSize, .1));
