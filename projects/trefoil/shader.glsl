@@ -721,6 +721,7 @@ vec3 DISTANCE_METER_MAT = vec3(123.);
 vec3 TRAIN_MAT = vec3(.9,.5,.5);
 vec3 CHANNEL_MAT = vec3(.1);
 vec3 SLEEPER_MAT = vec3(.15);
+vec3 RAIL_MAT = vec3(.2);
 vec3 PLATFORM_MAT = vec3(.5);
 vec3 MIND_THE_GAP_MAT = vec3(1.,1.,0.);
 
@@ -921,15 +922,28 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     p = pp;
 
 
-    // Track
+    // Sleepers
 
     float sleeperSize = curveLen / 80.;
+    float sleeperHeight = .02;
     pMod1(p.z, sleeperSize);
     p.y -= channelDepth;
-    float sleepers = fBox(p, vec3(channelWidth * .66, .02, sleeperSize / 4.));
+    float sleepers = fBox(p, vec3(channelWidth * .66, sleeperHeight, sleeperSize / 4.));
     color = mix(color, SLEEPER_MAT, step(0., d - sleepers));
     d = min(d, sleepers);
     p = pp;
+
+
+    // Rails
+    float railHeight = .01;
+    p.x = abs(p.x);
+    p.x -= channelWidth * .4;
+    p.y -= channelDepth - sleeperHeight - railHeight;
+    float rail = fBox2(p.xy, vec2(railHeight));
+    color = mix(color, RAIL_MAT, step(0., d - rail));
+    d = min(d, rail);
+    p = pp;
+
 
 
     Model track = Model(d, color, 0.);
