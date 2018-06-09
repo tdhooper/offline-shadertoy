@@ -719,7 +719,8 @@ vec3 DEFAULT_MAT = vec3(.9);
 vec3 DISTANCE_METER_MAT = vec3(123.);
 
 vec3 TRAIN_MAT = vec3(.9,.5,.5);
-vec3 TRACK_MAT = vec3(.3);
+vec3 CHANNEL_MAT = vec3(.1);
+vec3 SLEEPER_MAT = vec3(.15);
 vec3 PLATFORM_MAT = vec3(.5);
 vec3 MIND_THE_GAP_MAT = vec3(1.,1.,0.);
 
@@ -879,12 +880,13 @@ float lastSide = 1.;
 Model mTrainSide(vec3 p, float curveLen, float radius) {
     vec3 pp = p;
     float d = 1e12;
-    vec3 color = TRACK_MAT;
+    vec3 color = CHANNEL_MAT;
 
     float trainSize = .175;
 
-    float trackSize = .001;
-    d = -p.y - trackSize;
+    // Channel
+
+    d = -p.y - .001;
 
     float threshold = fBox2(p.xy + vec2(0,.003), vec2(radius, .002));
     float side = sign(threshold);
@@ -894,26 +896,41 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     lastSide = side;
 
     float gap = .03;
-    float trackWidth = trainSize + gap;
+    float channelWidth = trainSize + gap;
+    float channelDepth = .13;
 
     if (pastThreshold) {
-        float cut = fBox2(p.xy, vec2(trackWidth, .13));
+        float cut = fBox2(p.xy, vec2(channelWidth, channelDepth));
         d = max(d, -cut);
     }
 
+    // Platform
+
     p.x = abs(p.x);
     p.x -= radius;
-    float platform = fBox2(p.xy, vec2(radius - trackWidth,.005)) - .005;
+    float platform = fBox2(p.xy, vec2(radius - channelWidth,.005)) - .005;
     color = mix(color, PLATFORM_MAT, step(0., d - platform));
     d = min(d, platform);
     p = pp;
 
     p.x = abs(p.x);
-    p.x -= mix(radius, trackWidth, .5);
+    p.x -= mix(radius, channelWidth, .5);
     pMod1(p.z, curveLen / 10.);
     float mindTheGap = fBox2(p.xz, vec2(0., .1)) - .015;
     color = mix(color, MIND_THE_GAP_MAT, 1. - step(0., mindTheGap));
     p = pp;
+
+
+    // Track
+
+    float sleeperSize = curveLen / 80.;
+    pMod1(p.z, sleeperSize);
+    p.y -= channelDepth;
+    float sleepers = fBox(p, vec3(channelWidth * .66, .02, sleeperSize / 4.));
+    color = mix(color, SLEEPER_MAT, step(0., d - sleepers));
+    d = min(d, sleepers);
+    p = pp;
+
 
     Model track = Model(d, color, 0.);
 
@@ -931,7 +948,7 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
         p.z += time * curveLen;
     }
     pMod1(p.z, curveLen / 2.);
-    p.y += trainSize + trackSize;
+    p.y += trainSize;
     Model train = mTrain(p, trainSize);
     p = pp;
 
@@ -1004,6 +1021,8 @@ Model fShape2(vec3 p) {
         curve = pModTrefoil(p, curveLen);
         // pR(p.xy, 2.5 + p.z / curveLen * PI * 2.);
         pR(p.xy, -time * PI * 2.);
+    } else {
+        p = p.xzy * vec3(1,-1,1);
     }
 
 
