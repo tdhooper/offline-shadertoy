@@ -719,8 +719,10 @@ vec3 DEFAULT_MAT = vec3(.9);
 vec3 DISTANCE_METER_MAT = vec3(123.);
 
 vec3 TRAIN_MAT = vec3(.9,.5,.5);
-vec3 PLATFORM_MAT = vec3(.5,.9,.5);
-vec3 TRACK_MAT = vec3(.9,.9,.2);
+vec3 TRACK_MAT = vec3(.3);
+vec3 PLATFORM_MAT = vec3(.5);
+vec3 MIND_THE_GAP_MAT = vec3(1.,1.,0.);
+
 vec3 TRAIN_RED = vec3(1,.0,.0);
 vec3 TRAIN_GREY = vec3(.4);
 vec3 TRAIN_ROOF = vec3(.6);
@@ -877,6 +879,7 @@ float lastSide = 1.;
 Model mTrainSide(vec3 p, float curveLen, float radius) {
     vec3 pp = p;
     float d = 1e12;
+    vec3 color = TRACK_MAT;
 
     float trainSize = .175;
 
@@ -890,34 +893,49 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     }
     lastSide = side;
 
+    float gap = .03;
+    float trackWidth = trainSize + gap;
+
     if (pastThreshold) {
-        float cut = fBox2(p.xy, vec2(trainSize, .1));
+        float cut = fBox2(p.xy, vec2(trackWidth, .13));
         d = max(d, -cut);
     }
 
-    Model track = Model(d, TRACK_MAT, 0.);
-
+    p.x = abs(p.x);
     p.x -= radius;
-    Model platform = Model(
-        fBox2(p.xy, vec2(.075)),
-        PLATFORM_MAT,
-        0.
-    );
+    float platform = fBox2(p.xy, vec2(radius - trackWidth,.005)) - .005;
+    color = mix(color, PLATFORM_MAT, step(0., d - platform));
+    d = min(d, platform);
     p = pp;
+
+    p.x = abs(p.x);
+    p.x -= mix(radius, trackWidth, .5);
+    pMod1(p.z, curveLen / 10.);
+    float mindTheGap = fBox2(p.xz, vec2(0., .1)) - .015;
+    color = mix(color, MIND_THE_GAP_MAT, 1. - step(0., mindTheGap));
+    p = pp;
+
+    Model track = Model(d, color, 0.);
+
+    // p.x -= radius;
+    // Model platform = Model(
+    //     fBox2(p.xy, vec2(.075)),
+    //     color,
+    //     0.
+    // );
+    // p = pp;
 
     if (guiAnimation2) {
         p.z += time * (curveLen * 5. / 6.);
     } else {
         p.z += time * curveLen;
     }
-    pMod1(p.z, curveLen * .5);
+    pMod1(p.z, curveLen / 2.);
     p.y += trainSize + trackSize;
     Model train = mTrain(p, trainSize);
     p = pp;
 
-    Model model = opU(track, platform);
-    model = track;
-    model = opU(model, train);
+    Model model = opU(track, train);
 
     if ( ! pastThreshold) {
         model.dist = max(model.dist, p.y);
@@ -1075,7 +1093,7 @@ vec3 render(Hit hit){
         vec3 diffuse = vec3(d);
         // diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
         col = albedo;
-        col *= diffuse;
+        // col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     if (hit.model.material == DISTANCE_METER_MAT) {
