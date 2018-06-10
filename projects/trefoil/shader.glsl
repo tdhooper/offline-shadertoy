@@ -933,7 +933,7 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     p.x = abs(p.x);
     p.x -= mix(radius, channelWidth, .5);
     pMod1(p.z, curveLen / 10.);
-    float mindTheGap = fBox2(p.xz, vec2(0., .1)) - .015;
+    float mindTheGap = fBox2(p.xz, vec2(0., .125)) - .015;
     color = mix(color, MIND_THE_GAP_MAT, 1. - step(0., mindTheGap));
     p = pp;
 
