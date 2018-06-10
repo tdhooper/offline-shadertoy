@@ -13,7 +13,7 @@ var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 var Controls = require('./lib/controls');
 
-pixelRatio = 1.;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);

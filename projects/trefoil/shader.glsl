@@ -719,9 +719,9 @@ vec3 DEFAULT_MAT = vec3(.9);
 vec3 DISTANCE_METER_MAT = vec3(123.);
 
 vec3 TRAIN_MAT = vec3(.9,.5,.5);
-vec3 CHANNEL_MAT = vec3(.1);
-vec3 SLEEPER_MAT = vec3(.15);
-vec3 RAIL_MAT = vec3(.2);
+vec3 CHANNEL_MAT = vec3(.15);
+vec3 SLEEPER_MAT = vec3(.2);
+vec3 RAIL_MAT = vec3(.25);
 vec3 PLATFORM_MAT = vec3(.5);
 vec3 MIND_THE_GAP_MAT = vec3(1.,1.,0.);
 
@@ -732,6 +732,7 @@ vec3 TRAIN_WINDOW = vec3(.5,.9,1.);
 vec3 TRAIN_WINDOW_FRAME = vec3(.1);
 vec3 TRAIN_WHITE = vec3(1);
 vec3 TRAIN_BLUE = vec3(0,0,.7);
+vec3 TRAIN_UNDERCARRIDGE = vec3(.1);
 
 vec3 STEPS_MAT = vec3(.5,.5,.9);
 vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
@@ -825,9 +826,6 @@ Model mTrain(vec3 p, float width) {
     front = max(form, front);
     d = min(d, front);
 
-    // Carridge
-    d = smax(d, dot(p, vec3(0,0,1)) - len, .005);
-
     // Front red
     float end = p.z - len + .1;
     color = mix(color, TRAIN_RED, step(0., end));
@@ -866,10 +864,28 @@ Model mTrain(vec3 p, float width) {
     p.xy -= vec2(doorWH.x + window2Offset, windowBottom);
     window2 = max(window2, dot(p.xy, normalize(vec2(-.7,1))));
     window2 = smax(window2, grey + .015, .01);
+    p = pp;
 
     window = min(window, window2);
     // color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - windowFrameOffset));
     color = mix(color, TRAIN_WINDOW, 1.-step(0., window));
+
+
+    // Undercarridge
+
+    float baseHeight = .03;
+    p.y -= height;
+    d = smax(d, p.y, baseHeight / 2.);
+
+    // p.x = abs(p.x);
+    // p.x -= width;
+    p.y -= baseHeight / 2.;
+    float undercarridge = fBox2(p.xy, vec2(width - baseHeight * .75, baseHeight / 2.));
+    color = mix(color, TRAIN_UNDERCARRIDGE, step(0., d - undercarridge));
+    d = min(d, undercarridge);
+
+    // Carridge
+    d = smax(d, dot(p, vec3(0,0,1)) - len, .005);
 
     Model train = Model(d, color, 0.);
     return train;
@@ -896,9 +912,9 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     }
     lastSide = side;
 
-    float gap = .03;
+    float gap = .01;
     float channelWidth = trainSize + gap;
-    float channelDepth = .13;
+    float channelDepth = .09;
 
     if (pastThreshold) {
         float cut = fBox2(p.xy, vec2(channelWidth, channelDepth));
