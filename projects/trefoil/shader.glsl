@@ -1009,7 +1009,7 @@ Model mStairSide(vec3 p, float curveLen, float radius) {
     float d = p.y;
     // return Model(d, vec3(.5), 0.);
 
-    float stairSize = curveLen / 50.;
+    float stairSize = curveLen / 60.;
     if (guiAnimation2) {
         p.z += time * stairSize * 2. * -15. * .5;
     } else {
@@ -1029,11 +1029,11 @@ Model mStairSide(vec3 p, float curveLen, float radius) {
     pp = p;
     pR(p.yz, (30./180.) * PI);
     float steps = length(p.yz) - stairRadius;
-    steps = smax(steps, p.y, .001);
+    steps = smax(steps, p.y, .02);
     vec3 stepColor = STEP_TOP_MAT;
 
     float warning = -fBox2(p.xz, vec2(stairWidth - .01, stairRadius - .02));
-    warning = -(abs(p.z) - stairRadius + .02);
+    warning = -(abs(p.z) - stairRadius + .025);
     stepColor = mix(stepColor, STEP_YELLOW_MAT, 1.-step(0., warning));
 
     p.y += .01;
@@ -1053,8 +1053,12 @@ Model mStairSide(vec3 p, float curveLen, float radius) {
     p = pp;
 
     p.x -= radius;
-    float handrail = fBox2(p.xy, vec2(handrailWidth, .14));
-    color = mix(color, HANDRAIL_MAT, step(0., d - handrail));
+    float handrailHeight = .14;
+    float handrail = fBox2(p.xy, vec2(handrailWidth, handrailHeight));
+    vec3 handrailColor = mix(STAIR_BASE_MAT, HANDRAIL_MAT, smoothstep(0., handrailHeight * 2., p.y));
+    // handrailColor = STEP_MAT;
+    handrailColor = mix(handrailColor, HANDRAIL_MAT, step(0., p.x + handrailWidth * .75));
+    color = mix(color, handrailColor, step(0., d - handrail));
     d = min(d, handrail);
     p = pp;
 
@@ -1177,7 +1181,7 @@ vec3 render(Hit hit){
         vec3 light = normalize(vec3(-.5,-1,0));
         float d = dot(hit.normal, light) * .5 + .5;
         vec3 diffuse = vec3(d);
-        // diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
+        diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
         col = albedo;
         // col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
@@ -1275,6 +1279,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (guiAnimation2) {
         time *= 1.5;
     }
+    time *= .75;
     time = mod(time, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
