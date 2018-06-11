@@ -1012,17 +1012,31 @@ Model mStairSide(vec3 p, float radius) {
 
     pMod1(p.z, stairSize);
 
+    float stairRadius = stairSize * .9;
+
     // Step
     p.z -= stairSize / 2.;
     pp = p;
     pR(p.yz, (30./180.) * PI);
-    float steps = length(p.yz) - stairSize * .9;
+    float steps = length(p.yz) - stairRadius;
     steps = smax(steps, p.y, .001);
+
+    // Top grooves
+    float groove = .0025;
+    p.x -= groove / 2.;
+    pMod1(p.x, groove);
+    steps = max(steps, -fBox2(p.xy, vec2(groove* .25, groove)));
+
+    p = pp;
+    pMod1(p.x, groove * 3.);
+    float frontGroove = -(length(p.yz) - stairRadius + groove);
+    frontGroove = max(frontGroove, abs(p.x) - groove * .5);
+    steps = max(steps, -frontGroove);
 
     // Dummy
     p = pp;
     p.z -= stairSize;
-    steps = min(steps, length(p.yz) - stairSize * .9);
+    steps = min(steps, length(p.yz) - stairRadius);
 
     // Limit width
     steps = max(steps, p.x - stairWidth);
@@ -1175,7 +1189,7 @@ vec3 render(Hit hit){
 // --------------------------------------------------------
 
 const float MAX_TRACE_DISTANCE = 10.;
-const float INTERSECTION_PRECISION = .001;
+const float INTERSECTION_PRECISION = .0001;
 const int NUM_OF_TRACE_STEPS = 150;
 
 
