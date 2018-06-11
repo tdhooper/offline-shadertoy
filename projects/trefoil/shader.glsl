@@ -1006,23 +1006,19 @@ Model mStairSide(vec3 p, float radius) {
     p.z -= .02;
     pR(p.yz, PI * .2);
     p.y += .05;
-    Model steps = Model(
-        fBox(p, vec3(stairWidth, stairSize, stairSize)),
-        STEPS_MAT, 0.
-    );
+    float steps = fBox(p, vec3(stairWidth, stairSize, stairSize));
+    d = steps;
+    vec3 color = STEPS_MAT;
     p = pp;
 
     p.x -= radius;
-    Model handrail = Model(
-        fBox2(p.xy, vec2(.12)),
-        HANDRAIL_MAT, 0.
-    );
+    float handrail = fBox2(p.xy, vec2(.12));
+    color = mix(color, HANDRAIL_MAT, step(0., d - handrail));
+    d = min(d, handrail);
     p = pp;
 
-    Model model = opU(steps, handrail);
-    model.dist = max(model.dist, -p.y);
-
-    return model;
+    d = max(d, -p.y);
+    return Model(d, color, 0.);
 }
 
 Model fShape2(vec3 p) {
@@ -1142,7 +1138,7 @@ vec3 render(Hit hit){
         vec3 diffuse = vec3(d);
         // diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
         col = albedo;
-        // col *= diffuse;
+        col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     if (hit.model.material == DISTANCE_METER_MAT) {
