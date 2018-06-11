@@ -1071,9 +1071,10 @@ bool AO_PASS = false;
 Model fShape2(vec3 p) {
     // float s = 1.;
 
-    // if (length(p) > 2.) {
+    // if (length(p) > 3.) {
     //     s = dot(p,p);
     //     s /= 5.;
+    //     p /= s;
     //     // p.xz *= -1.;
     //     // pR(p.xz, PI);
     // }
@@ -1329,6 +1330,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     Hit hit = raymarch(camPos, rayDirection);
 
     vec3 color = render(hit);
+
+    vec2 uv = fragCoord/iResolution.xy;
+    float vig = pow(
+        16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
+        0.4
+    );
+    color *= vig;
+
+
     color = pow(color, vec3(1. / 2.2)); // Gamma
 
     fragColor = vec4(color,1);
