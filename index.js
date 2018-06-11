@@ -13,7 +13,7 @@ var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 var Controls = require('./lib/controls');
 
-pixelRatio = 1.;
+pixelRatio = .5;
 
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
@@ -40,19 +40,7 @@ setDimensions();
 var regl = Regl({
     canvas: canvas,
     pixelRatio: pixelRatio,
-    extensions: ['oes_standard_derivatives'],
-      onDone: function (err, regl) {
-        if (err) {
-          console.log(err)
-          return
-        }
-
-        // now we can use regl as usual
-
-        if (regl.hasExtension('oes_standard_derivatives')) {
-          console.log('hihi');
-        }
-      }
+    extensions: ['oes_standard_derivatives']
 });
 
 var vert = glslify('./quad.vert');

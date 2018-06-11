@@ -717,7 +717,7 @@ Curve pModTrefoil(inout vec3 p, float len) {
 // Materials
 // --------------------------------------------------------
 
-vec3 DEFAULT_MAT = vec3(.9);
+vec3 DEFAULT_MAT = vec3(1.9);
 vec3 DISTANCE_METER_MAT = vec3(123.);
 
 vec3 TRAIN_MAT = vec3(.9,.5,.5);
@@ -736,10 +736,12 @@ vec3 TRAIN_WHITE = vec3(1);
 vec3 TRAIN_BLUE = vec3(0,0,.7);
 vec3 TRAIN_UNDERCARRIDGE = vec3(.1);
 
-vec3 STEPS_MAT = vec3(.5,.5,.9);
+vec3 STAIR_BASE_MAT = vec3(.1);
+vec3 STEP_MAT = vec3(.3);
 vec3 STEP_TOP_MAT = vec3(.5);
 vec3 STEP_STRIPE_MAT = vec3(.3);
-vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
+vec3 STEP_YELLOW_MAT = MIND_THE_GAP_MAT;
+vec3 HANDRAIL_MAT = vec3(.7);
 
 
 // --------------------------------------------------------
@@ -1002,21 +1004,25 @@ float fStep(vec3 p, float stairSize) {
     return d;
 }
 
-Model mStairSide(vec3 p, float radius) {
+Model mStairSide(vec3 p, float curveLen, float radius) {
     vec3 pp = p;
-    float d = 1e12;
+    float d = p.y;
+    // return Model(d, vec3(.5), 0.);
 
-    float stairSize = .2;
-    float stairWidth = .2;
+    float stairSize = curveLen / 50.;
     if (guiAnimation2) {
         p.z += time * stairSize * 2. * -15. * .5;
     } else {
-        p.z += time * stairSize * 2. * -15.;
+        p.z += time * stairSize * 2. * -7.;
     }
 
     pMod1(p.z, stairSize);
 
     float stairRadius = stairSize * .9;
+    float handrailWidth = .1;
+    float stairWidth = radius - handrailWidth;
+
+    vec3 color = STAIR_BASE_MAT;
 
     // Step
     p.z -= stairSize / 2.;
@@ -1024,18 +1030,16 @@ Model mStairSide(vec3 p, float radius) {
     pR(p.yz, (30./180.) * PI);
     float steps = length(p.yz) - stairRadius;
     steps = smax(steps, p.y, .001);
+    vec3 stepColor = STEP_TOP_MAT;
 
-    vec3 color = STEP_TOP_MAT;
+    float warning = -fBox2(p.xz, vec2(stairWidth - .01, stairRadius - .02));
+    warning = -(abs(p.z) - stairRadius + .02);
+    stepColor = mix(stepColor, STEP_YELLOW_MAT, 1.-step(0., warning));
 
-    // Top grooves
-    float groove = .0025;
-    pMod1(p.x, groove * 4.);
-    float stripe = step(0., abs(p.x) - groove);
-    // stripe = mix(stripe, .5, abs(fwidth(stripe)));
-    color = mix(color, STEP_STRIPE_MAT, stripe);
+    p.y += .01;
+    vec3 edgeColor = mix(STAIR_BASE_MAT, STEP_MAT, smoothstep(stairRadius * -.6, 0., p.y));
+    stepColor = mix(stepColor, edgeColor, 1.-step(0., p.y));
     p = pp;
-
-
 
     // Dummy
     p.z -= stairSize;
@@ -1044,11 +1048,12 @@ Model mStairSide(vec3 p, float radius) {
     // Limit width
     steps = max(steps, p.x - stairWidth);
 
-    d = steps;
+    color = mix(color, stepColor, step(0., d - steps));
+    d = min(d, steps);
     p = pp;
 
     p.x -= radius;
-    float handrail = fBox2(p.xy, vec2(.12));
+    float handrail = fBox2(p.xy, vec2(handrailWidth, .14));
     color = mix(color, HANDRAIL_MAT, step(0., d - handrail));
     d = min(d, handrail);
     p = pp;
@@ -1104,7 +1109,7 @@ Model fShape2(vec3 p) {
     Model model = mTrainSide(p, curveLen, radius);
 
     if ( ! pastThreshold) {
-        Model stair = mStairSide(p, radius);
+        Model stair = mStairSide(p, curveLen, radius);
         model = opU(model, stair);
     }
 
@@ -1165,7 +1170,7 @@ vec3 camPos;
 
 vec3 render(Hit hit){
     vec3 col;
-    vec3 bg = vec3(.75);
+    vec3 bg = vec3(.9);
     col = bg;
     if ( ! hit.isBackground) {
         vec3 albedo = hit.model.material;
@@ -1191,7 +1196,7 @@ vec3 render(Hit hit){
 // --------------------------------------------------------
 
 const float MAX_TRACE_DISTANCE = 10.;
-const float INTERSECTION_PRECISION = .0001;
+const float INTERSECTION_PRECISION = .001;
 const int NUM_OF_TRACE_STEPS = 150;
 
 
