@@ -991,22 +991,31 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     return model;
 }
 
+float fStep(vec3 p, float stairSize) {
+    pR(p.yz, (30./180.) * PI);
+    float d = length(p.yz) - stairSize * .9;
+    d = smax(d, p.y, .001);
+    return d;
+}
+
 Model mStairSide(vec3 p, float radius) {
     vec3 pp = p;
     float d = 1e12;
 
-    float stairSize = .1;
+    float stairSize = .2;
     float stairWidth = .2;
     if (guiAnimation2) {
         p.z += time * stairSize * 2. * -15. * .5;
     } else {
         p.z += time * stairSize * 2. * -15.;
     }
-    pMod1(p.z, stairSize * 2.);
-    p.z -= .02;
-    pR(p.yz, PI * .2);
-    p.y += .05;
-    float steps = fBox(p, vec3(stairWidth, stairSize, stairSize));
+    pMod1(p.z, stairSize);
+    p.z -= stairSize / 2.;
+    float steps = min(
+        fStep(p, stairSize),
+        fStep(p - vec3(0,0,stairSize), stairSize)
+    );
+    steps = max(steps, p.x - stairWidth);
     d = steps;
     vec3 color = STEPS_MAT;
     p = pp;
@@ -1018,7 +1027,7 @@ Model mStairSide(vec3 p, float radius) {
     p = pp;
 
     d = max(d, -p.y);
-    return Model(d, color, 0.);
+    return Model(d, color, .2);
 }
 
 Model fShape2(vec3 p) {
