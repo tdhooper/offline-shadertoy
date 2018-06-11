@@ -1009,13 +1009,24 @@ Model mStairSide(vec3 p, float radius) {
     } else {
         p.z += time * stairSize * 2. * -15.;
     }
+
     pMod1(p.z, stairSize);
+
+    // Step
     p.z -= stairSize / 2.;
-    float steps = min(
-        fStep(p, stairSize),
-        fStep(p - vec3(0,0,stairSize), stairSize)
-    );
+    pp = p;
+    pR(p.yz, (30./180.) * PI);
+    float steps = length(p.yz) - stairSize * .9;
+    steps = smax(steps, p.y, .001);
+
+    // Dummy
+    p = pp;
+    p.z -= stairSize;
+    steps = min(steps, length(p.yz) - stairSize * .9);
+
+    // Limit width
     steps = max(steps, p.x - stairWidth);
+
     d = steps;
     vec3 color = STEPS_MAT;
     p = pp;
