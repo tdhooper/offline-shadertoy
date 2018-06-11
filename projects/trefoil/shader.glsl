@@ -1,5 +1,7 @@
 precision highp float;
 
+#extension GL_OES_standard_derivatives : enable
+
 uniform vec2 iResolution;
 uniform vec2 iOffset;
 uniform float iTime;
@@ -735,6 +737,8 @@ vec3 TRAIN_BLUE = vec3(0,0,.7);
 vec3 TRAIN_UNDERCARRIDGE = vec3(.1);
 
 vec3 STEPS_MAT = vec3(.5,.5,.9);
+vec3 STEP_TOP_MAT = vec3(.5);
+vec3 STEP_STRIPE_MAT = vec3(.3);
 vec3 HANDRAIL_MAT = vec3(.9,.2,.9);
 
 
@@ -1021,20 +1025,19 @@ Model mStairSide(vec3 p, float radius) {
     float steps = length(p.yz) - stairRadius;
     steps = smax(steps, p.y, .001);
 
+    vec3 color = STEP_TOP_MAT;
+
     // Top grooves
     float groove = .0025;
-    p.x -= groove / 2.;
-    pMod1(p.x, groove);
-    steps = max(steps, -fBox2(p.xy, vec2(groove* .25, groove)));
-
+    pMod1(p.x, groove * 4.);
+    float stripe = step(0., abs(p.x) - groove);
+    // stripe = mix(stripe, .5, abs(fwidth(stripe)));
+    color = mix(color, STEP_STRIPE_MAT, stripe);
     p = pp;
-    pMod1(p.x, groove * 3.);
-    float frontGroove = -(length(p.yz) - stairRadius + groove);
-    frontGroove = max(frontGroove, abs(p.x) - groove * .5);
-    steps = max(steps, -frontGroove);
+
+
 
     // Dummy
-    p = pp;
     p.z -= stairSize;
     steps = min(steps, length(p.yz) - stairRadius);
 
@@ -1042,7 +1045,6 @@ Model mStairSide(vec3 p, float radius) {
     steps = max(steps, p.x - stairWidth);
 
     d = steps;
-    vec3 color = STEPS_MAT;
     p = pp;
 
     p.x -= radius;
@@ -1172,7 +1174,7 @@ vec3 render(Hit hit){
         vec3 diffuse = vec3(d);
         // diffuse = mix(vec3(.5,.5,.6), vec3(1), step(.6, d));
         col = albedo;
-        col *= diffuse;
+        // col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     if (hit.model.material == DISTANCE_METER_MAT) {

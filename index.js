@@ -39,7 +39,20 @@ setDimensions();
 
 var regl = Regl({
     canvas: canvas,
-    pixelRatio: pixelRatio
+    pixelRatio: pixelRatio,
+    extensions: ['oes_standard_derivatives'],
+      onDone: function (err, regl) {
+        if (err) {
+          console.log(err)
+          return
+        }
+
+        // now we can use regl as usual
+
+        if (regl.hasExtension('oes_standard_derivatives')) {
+          console.log('hihi');
+        }
+      }
 });
 
 var vert = glslify('./quad.vert');
