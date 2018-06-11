@@ -1066,6 +1066,8 @@ Model mStairSide(vec3 p, float curveLen, float radius) {
     return Model(d, color, .2);
 }
 
+bool AO_PASS = false;
+
 Model fShape2(vec3 p) {
     // float s = 1.;
 
@@ -1101,8 +1103,12 @@ Model fShape2(vec3 p) {
     float outer = length(p.xy) - radius;
     float eps = .02;
     float d = -outer + eps * 2.;
-    if (outer > eps) {
-        return Model(outer, vec3(.2), 0.);
+    if ( ! AO_PASS) {
+        if (outer > eps) {
+            return Model(outer, vec3(.2), 0.);
+        }
+    } else {
+        d = 1e12;
     }
 
 
@@ -1172,6 +1178,22 @@ Model mapDebug(vec3 p) {
 
 vec3 camPos;
 
+float calcAO( in vec3 pos, in vec3 nor )
+{
+    AO_PASS = true;
+    float occ = 0.0;
+    float sca = 1.0;
+    for( int i=0; i<5; i++ )
+    {
+        float hr = 0.01 + 0.12*float(i)/4.0;
+        vec3 aopos =  nor * hr + pos;
+        float dd = map( aopos ).dist;
+        occ += -(dd-hr)*sca;
+        sca *= 0.95;
+    }
+    return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
+}
+
 vec3 render(Hit hit){
     vec3 col;
     vec3 bg = vec3(.03);
@@ -1180,9 +1202,14 @@ vec3 render(Hit hit){
         vec3 albedo = hit.model.material;
         vec3 light = normalize(vec3(-.5,-1,0));
         float d = dot(hit.normal, light) * .5 + .5;
+        float ao = calcAO(hit.pos, hit.normal);
+        d = ao;
         vec3 diffuse = vec3(d);
-        diffuse = mix(vec3(.7,.7,.8), vec3(1), step(.6, d));
+        // d = step(.6, d);
+        // d = smoothstep(.2, .8, d);
+        diffuse = mix(vec3(.5,.5,.6) * .8, vec3(1), d);
         col = albedo;
+        // col *= vec3(ao);
         col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
