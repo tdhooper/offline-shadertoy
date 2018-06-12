@@ -778,12 +778,17 @@ Model mTrain(vec3 p, float width) {
     p = pp;
 
     // Blue
-    vec3 color = mix(TRAIN_WHITE, TRAIN_BLUE, step(0., p.y - height + .01));
+    float blueStripe = step(0., p.y - height + .03);
+    vec3 color = mix(TRAIN_WHITE, TRAIN_BLUE, blueStripe);
 
     float form = d;
     float thinOffset = .025;
     float thin = form + thinOffset;
     d = thin;
+
+    // Carridge
+    float carridgeCrop = max(-p.z - innerLength / 2., p.z - innerLength / 2. + frontDoorOffset);
+    d = smax(d, carridgeCrop, .01);
 
     float roofPane = p.y + height * .8;
 
@@ -806,18 +811,18 @@ Model mTrain(vec3 p, float width) {
     float sideDoorMask = fBox2(p.yz, vec2(1., sideDoorWidth));
     float sideDoors = smax(form, sideDoorMask, thinOffset * 1.5);
     sideDoors = smax(sideDoors, -roofPane, .01);
+    sideDoors = max(sideDoors, carridgeCrop);
     float sideDoorEdge = sideDoorMask + .01;
     vec3 sideDoorColor = mix(TRAIN_RED, TRAIN_WHITE, isFrontDoor);
+    sideDoorColor = mix(sideDoorColor, TRAIN_BLUE, blueStripe * isFrontDoor);
     float windowFrameOffset = .007;
     p.y += .028;
     p.z += .025;
     float sideDoorWindow = fBox2(p.yz, vec2(height * .42, sideDoorWidth * .3)) - .005;
     sideDoorColor = mix(sideDoorColor, TRAIN_WINDOW, 1. - step(0., sideDoorWindow));
     p = pp;
-    float doorsCrop = max(-p.z - innerLength / 2., p.z - innerLength / 2. + frontDoorOffset);
-    sideDoors = max(sideDoors, doorsCrop);
-    d = min(d, sideDoors);
     color = mix(color, sideDoorColor, step(0., d - sideDoors));
+    d = min(d, sideDoors);
     p = pp;
 
 
@@ -837,18 +842,25 @@ Model mTrain(vec3 p, float width) {
 
     // Roof
     float roof = smax(form, roofPane, .01);
+    roof = smax(roof, carridgeCrop, .01);
     color = mix(color, TRAIN_ROOF, step(0., d - roof));
     d = min(d, roof);
 
-/*
-    float front = -(p.z - len + .2);
-    front = max(form, front);
-    d = min(d, front);
 
+
+    // Front
+
+    float front = -(p.z - len + .2);
+    front = smax(form, p.z - len, .01);
+    front = smax(front, -(p.z - len + frontWidth), .01);
+    color = mix(color, TRAIN_RED, step(0., d - front));
+    d = min(d, front);
+    // d = front;
+
+/*
     // Front red
     float end = p.z - len + .1;
     color = mix(color, TRAIN_RED, step(0., end));
-
 
     // Front grey
     float grey = front + .005;
@@ -889,8 +901,8 @@ Model mTrain(vec3 p, float width) {
     window = min(window, window2);
     // color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - windowFrameOffset));
     color = mix(color, TRAIN_WINDOW, 1.-step(0., window));
-*/
 
+*/
     // Undercarridge
 
     float baseHeight = .03;
@@ -904,18 +916,6 @@ Model mTrain(vec3 p, float width) {
     color = mix(color, TRAIN_UNDERCARRIDGE, step(0., d - undercarridge));
     d = min(d, undercarridge);
     p = pp;
-
-    p.z -= len - frontWidth;
-    d = min(d, fBox(p, vec3(2., 2., .001)));
-    p = pp;
-
-    p.z += len - backWidth;
-    d = min(d, fBox(p, vec3(2., 2., .001)));
-    p = pp;
-
-    // Carridge
-    p.z = abs(p.z);
-    d = smax(d, dot(p, vec3(0,0,1)) - len, .005);
 
     Model train = Model(d, color, 0.);
     return train;
