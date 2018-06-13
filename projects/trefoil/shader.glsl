@@ -748,15 +748,15 @@ vec3 HANDRAIL_MAT = vec3(.7);
 // Model
 // --------------------------------------------------------
 
-Model mTrain(vec3 p, float width) {
-    // p.z *= -1.;
+Model mTrain(vec3 p, float width, float height) {
+    p.z *= -1.;
+
     float d = 1e12;
     float len = 1.2;
-    float height = width * .8;
     float isFront = sign(p.z);
     vec3 pp = p;
     float frontWidth = .12;
-    float backWidth = .07;
+    float backWidth = .08;
     float innerLength = (len * 2.) - backWidth * 2.;
     float frontDoorOffset = frontWidth - backWidth;
 
@@ -850,29 +850,45 @@ Model mTrain(vec3 p, float width) {
 
     // Front
 
-    float front = -(p.z - len + .2);
-    front = smax(form, p.z - len, .01);
-    front = smax(front, -(p.z - len + frontWidth), .01);
+    p.z = abs(p.z);
+    p.z -= len;
+    float frontRadius = width * 3.;
+    float endcap = length(p.xz + vec2(0,frontRadius)) - frontRadius;
+    p = pp;
+
+    p.z -= len;
+    float front = smax(form, endcap, .03);
+    front = smax(front, -(p.z + frontWidth), .01);
     color = mix(color, TRAIN_RED, step(0., d - front));
     d = min(d, front);
-    // d = front;
+    p = pp;
+    
+    // Back
 
-/*
-    // Front red
-    float end = p.z - len + .1;
-    color = mix(color, TRAIN_RED, step(0., end));
+    p.z += len;
+    float back = smax(form, endcap, .03);
+    back = smax(back, (p.z - backWidth), .01);
+    vec3 backColor = mix(TRAIN_WHITE, TRAIN_BLUE, blueStripe);
+    color = mix(color, backColor, step(0., d - back));
+    d = min(d, back);
+    p = pp;
+
+
 
     // Front grey
-    float grey = front + .005;
-    p.y -= height * .6;
+    p.z -= len - .05;
+    float grey = form + .01;
+    grey = max(grey, -p.z);
+    p.y -= height * .48;
     p.x -= width * .3;
     grey = smax(grey, dot(p.xy, normalize(vec2(.3,1))), .02);
     grey = max(grey, -dot(p.xy, vec2(0,-1)));
-    color = mix(color, TRAIN_GREY, 1.-step(0., grey));
+    color = mix(color, TRAIN_GREY, step(0., d - grey));
     p = pp;
 
+
     // Front door
-    vec2 doorWH = vec2(width * .275, height * 1.7);
+    vec2 doorWH = vec2(width * .22, height * 1.7);
     vec2 doorXY = vec2(0, height);
 
     // - Inset
@@ -885,34 +901,35 @@ Model mTrain(vec3 p, float width) {
     p = pp;
 
     // Window
-    float windowBottom = .015;
-    float windowOffset = .0175;
-    float window = max(door + windowOffset, dot(p.xy, vec2(0,1)) - windowBottom);
+    float windowBottom = -.01;
+    float windowOffset = .0125;
+    float window = max(door + windowOffset, p.y - windowBottom);
     p = pp;
 
-    float window2Offset = .015;
-    float window2 = max(-door + window2Offset, dot(p.xy, vec2(0,1)) - .035);
-    window2 = max(window2, dot(p.xy, vec2(0,-1)) - doorWH.y + doorXY.y + windowOffset);
-    p.xy -= vec2(doorWH.x + window2Offset, windowBottom);
+    float window2Offset = .02;
+    float window2 = max(-door + window2Offset, p.y - .02);
+    p.xy -= vec2(doorWH.x + window2Offset, windowBottom + .01);
     window2 = max(window2, dot(p.xy, normalize(vec2(-.7,1))));
-    window2 = smax(window2, grey + .015, .01);
+    window2 = max(window2, -p.y - doorWH.y + doorXY.y + windowOffset + .005);
+    window2 = smax(window2, grey + .02, .01);
     p = pp;
 
     window = min(window, window2);
     // color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - windowFrameOffset));
     color = mix(color, TRAIN_WINDOW, 1.-step(0., window));
 
-*/
     // Undercarridge
 
-    float baseHeight = .03;
+    float baseHeight = .025;
     p.y -= height;
-    d = smax(d, p.y, baseHeight / 2.);
+    d = smax(d, p.y, 0.);
 
     // p.x = abs(p.x);
     // p.x -= width;
     p.y -= baseHeight / 2.;
-    float undercarridge = fBox2(p.xy, vec2(width - baseHeight * .75, baseHeight / 2.));
+    float undercarridge = fBox2(p.xy, vec2(width - baseHeight, baseHeight / 2.));
+    p.z = abs(p.z);
+    undercarridge = max(undercarridge, endcap);
     color = mix(color, TRAIN_UNDERCARRIDGE, step(0., d - undercarridge));
     d = min(d, undercarridge);
     p = pp;
@@ -1008,8 +1025,9 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
         p.z += time * curveLen;
     }
     pMod1(p.z, curveLen / 2.);
-    p.y += trainSize;
-    Model train = mTrain(p, trainSize);
+    float trainHeight = trainSize * .8;
+    p.y += trainHeight;
+    Model train = mTrain(p, trainSize, trainHeight);
     p = pp;
 
     Model model = opU(track, train);
@@ -1235,7 +1253,7 @@ vec3 render(Hit hit){
         diffuse = mix(vec3(.5,.5,.6) * .8, vec3(1), d);
         col = albedo;
         // col *= vec3(ao);
-        col *= diffuse;
+        // col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     if (hit.model.material == DISTANCE_METER_MAT) {
@@ -1360,7 +1378,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
         0.4
     );
-    color *= vig;
+    // color *= vig;
 
 
     color = pow(color, vec3(1. / 2.2)); // Gamma

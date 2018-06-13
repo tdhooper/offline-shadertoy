@@ -1,5 +1,5 @@
 {
-    "id": "trefoil94c",
+    "id": "trefoil102c",
     "timer": {
         "running": false,
         "elapsed": 0
@@ -28,7 +28,7 @@
         "14": 0.731738269329071,
         "15": 1
     },
-    "positionSpeed": 1,
+    "positionSpeed": 0.5,
     "rotationSpeed": 3,
     "controls": {
         "closed": true,
