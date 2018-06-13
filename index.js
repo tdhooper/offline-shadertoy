@@ -240,12 +240,18 @@ function render(offset, resolution) {
     var realTime = performance.now();
     var elapsed = realTime - lastTime;
     lastTime = realTime;
-    camera.control(elapsed, [
-      pressed('W'), pressed('S'),
-      pressed('A'), pressed('D'),
-      pressed('R'), pressed('F'),
-      pressed('Q'), pressed('E')
-    ], mouse.slice(0,2), lastMouse.slice(0,2));
+    camera.control(
+        elapsed,
+        [
+          pressed('W'), pressed('S'),
+          pressed('A'), pressed('D'),
+          pressed('R'), pressed('F'),
+          pressed('Q'), pressed('E')
+        ],
+        mouse.slice(0,2),
+        lastMouse.slice(0,2),
+        pressed('<shift>')
+    );
 
     lastMouse = mouse;
 
