@@ -1250,10 +1250,10 @@ vec3 render(Hit hit){
         vec3 diffuse = vec3(d);
         // d = step(.6, d);
         // d = smoothstep(.2, .8, d);
-        diffuse = mix(vec3(.5,.5,.6) * .8, vec3(1), d);
+        diffuse = mix(vec3(.5,.5,.6) * 1., vec3(1), d);
         col = albedo;
         // col *= vec3(ao);
-        // col *= diffuse;
+        col *= diffuse;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     if (hit.model.material == DISTANCE_METER_MAT) {
