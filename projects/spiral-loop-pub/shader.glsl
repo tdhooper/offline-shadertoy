@@ -15,10 +15,9 @@ void main() {
 #ifdef GL_ES
 precision mediump float;
 #endif
+
 //#define ANOTHER_LEVEL
 
-
-/* SHADERTOY FROM HERE */
 
 float guiLead = 0.6;
 float guiInnerRatio = 0.4407892623709694;
@@ -129,51 +128,55 @@ vec3 polarToCart(vec3 p) {
     );
 }
 
-vec2 closestPointOnLine(vec2 line, vec2 point){
-    line = normalize(line);
-    float d = dot(point, line);
-    return line * d;
-}
-
-// Closest of two points
-vec3 closestPoint(vec3 pos, vec3 p1, vec3 p2) {
-    if (length(pos - p1) < length(pos - p2)) {
-        return p1;
-    } else {
-        return p2;
-    }
-}
 
 // --------------------------------------------------------
 // Helix
 // https://www.shadertoy.com/view/MstcWs
 // --------------------------------------------------------
 
-// Closest point on a helix for one revolution
-vec3 closestHelixSection(vec3 p, float lead, float radius) {
+vec2 closestPointOnRepeatedLine(vec2 line, vec2 point){
+
+    // Angle of the line
+    float a = atan(line.x, line.y);
+
+    // Rotate space so we can easily repeat along
+    // one dimension
+    pR(point, -a);
+
+    // Repeat to create parallel lines at the corners
+    // of the vec2(lead, radius) polar bounding area
+    float repeatSize = sin(a) * line.y;
+    float cell = pMod1(point.x, repeatSize);
+
+    // Rotate space back to where it was
+    pR(point, a);
+
+    // Closest point on a line
+    line = normalize(line);
+    float d = dot(point, line);
+    vec2 closest = line * d;
+
+    // Part 2 of the repeat, move the line along it's
+    // tangent by the repeat cell
+    vec2 tangent = vec2(line.y, -line.x);
+    closest += cell * repeatSize * tangent;
+
+    return closest;
+}
+
+// Closest point on a helix
+vec3 closestHelix(vec3 p, float lead, float radius) {
 
     p = cartToPolar(p);
     p.y *= radius;
 
     vec2 line = vec2(lead, radius * PI * 2.);
-    vec2 closest = closestPointOnLine(line, p.xy);
+    vec2 closest = closestPointOnRepeatedLine(line, p.xy);
 
     closest.y /= radius;
     vec3 closestCart = polarToCart(vec3(closest, radius));
 
     return closestCart;
-}
-
-// Closest point on a helix for infinite revolutions
-vec3 closestHelix(vec3 p, float lead, float radius) {
-    float c = pMod1(p.x, lead);
-    vec3 offset = vec3(lead, 0, 0);
-    vec3 A = closestHelixSection(p, lead, radius);
-    vec3 B = closestHelixSection(p + offset, lead, radius) - offset;
-    vec3 C = closestHelixSection(p - offset, lead, radius) + offset;
-    vec3 closest = closestPoint(p, A, closestPoint(p, B, C));
-    closest += offset * c;
-    return closest;
 }
 
 // Cartesian to helix coordinates
@@ -330,10 +333,11 @@ Model map(vec3 p) {
 
 
 // --------------------------------------------------------
-// Ray Marching
-// Adapted from: https://www.shadertoy.com/view/Xl2XWt
+// Rendering
 // --------------------------------------------------------
 
+const float OUTLINE = .003; // Outline thickness
+const float OUTLINE_BOUNDRY = .5; // Where to feather the inside/outside
 const float MAX_TRACE_DISTANCE = 1.5; // max trace distance
 const float INTERSECTION_PRECISION = .001; // precision of the intersection
 const int NUM_OF_TRACE_STEPS = 100;
@@ -350,18 +354,9 @@ struct Ray {
     float len;
 };
 
-struct Hit {
-    Ray ray;
-    Model model;
-    vec3 pos;
-    bool isBackground;
-    vec3 normal;
-    bool isOutline;
-};
-
 // Faster runtime
-vec3 _calcNormal(vec3 pos){
-    vec3 eps = vec3(.0001,0,0);
+vec3 calcNormal(vec3 pos){
+    vec3 eps = vec3(.001,0,0);
     vec3 nor = vec3(
         map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
         map(pos+eps.yxy).dist - map(pos-eps.yxy).dist,
@@ -371,7 +366,7 @@ vec3 _calcNormal(vec3 pos){
 
 // Faster compilation
 const int NORMAL_STEPS = 6;
-vec3 calcNormal(vec3 pos){
+vec3 _calcNormal(vec3 pos){
     vec3 eps = vec3(.001,0,0);
     vec3 nor = vec3(0);
     float invert = 1.;
@@ -383,56 +378,7 @@ vec3 calcNormal(vec3 pos){
     return normalize(nor);
 }
 
-
-Hit raymarch(CastRay castRay){
-
-    float currentDist = INTERSECTION_PRECISION * 2.0;
-    float outlineDist = INTERSECTION_PRECISION * 2.0;
-    Model model;
-
-    float outline = .0023;
-    bool isOutline = false;
-    bool miss = false;
-
-    float lastDist = currentDist;
-
-    Ray ray = Ray(castRay.origin, castRay.direction, 0.);
-
-    for( int i=0; i< NUM_OF_TRACE_STEPS ; i++ ){
-        if (currentDist < INTERSECTION_PRECISION || ray.len > MAX_TRACE_DISTANCE) {
-            break;
-        }
-        model = map(ray.origin + ray.direction * ray.len);
-        lastDist = currentDist;
-        currentDist = model.dist;
-        miss = currentDist > lastDist;
-        outlineDist = currentDist * -1. + outline;
-        isOutline = outlineDist > .0 && outlineDist < currentDist && miss;
-        if (isOutline) {
-            currentDist = outlineDist;
-        }
-        ray.len += currentDist * FUDGE_FACTOR;
-    }
-
-    bool isBackground = false;
-    vec3 pos = vec3(0);
-    vec3 normal = vec3(0);
-
-    if (ray.len > MAX_TRACE_DISTANCE) {
-        isBackground = true;
-    } else {
-        pos = ray.origin + ray.direction * ray.len;
-        normal = calcNormal(pos);
-    }
-
-    return Hit(ray, model, pos, isBackground, normal, isOutline);
-}
-
-
-// --------------------------------------------------------
-// Rendering
-// --------------------------------------------------------
-
+// https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
     float res = 1.0;
@@ -450,7 +396,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
     return clamp( res, 0.0, 1.0 );
 }
 
-
+// https://www.shadertoy.com/view/Xds3zN
 float calcAO( in vec3 pos, in vec3 nor )
 {
     float occ = 0.0;
@@ -467,7 +413,8 @@ float calcAO( in vec3 pos, in vec3 nor )
 }
 
 
-vec3 doLighting(vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
+// Adapted from https://www.shadertoy.com/view/Xds3zN
+vec3 doLighting(vec3 pos, vec3 nor, vec3 rd) {
 
     vec3 col;
     vec3 up = normalize(vec3(1));
@@ -502,47 +449,113 @@ vec3 doLighting(vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
     return col;
 }
 
-void render(inout vec3 color, Hit hit){
+vec3 background;
 
-    vec3 background = vec3(.1)* vec3(.5,0,1);
-    background = color;
-
-    if (hit.isBackground) {
-        color = background;
-        return;
-    }
-
-    if (hit.isOutline) {
-        color = vec3(background * .33);
-    } else {
-        vec3 ref = reflect(hit.ray.direction, hit.normal);
-        color = doLighting(
-            hit.pos,
-            hit.normal,
-            ref,
-            hit.ray.direction
-        );
-    }
-
-    float fog = length(camPosition - hit.pos);
+void applyFog(inout vec3 color, vec3 pos) {
+    float fog = length(camPosition - pos);
     fog = smoothstep(float(MAX_TRACE_DISTANCE) * .36, float(MAX_TRACE_DISTANCE), fog);
     color = mix(color, background, fog);
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{
-    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
+vec3 shadeSurface(vec3 pos, Ray ray) {
 
-    vec3 color = mix(vec3(.4,.3,.5) * .9, vec3(.6), -.2);
+    if (ray.len > MAX_TRACE_DISTANCE) {
+        return background;
+    }
+
+    vec3 normal = calcNormal(pos);
+
+    vec3 color = doLighting(
+        pos,
+        normal,
+        ray.direction
+    );
+
+    applyFog(color, pos);
+    
+    return color;
+}
+
+vec4 shadeOutline(vec3 pos, float t) {
+    float alpha = smoothstep(0., OUTLINE_BOUNDRY, t);
+    alpha -= smoothstep(OUTLINE_BOUNDRY, 1., t);
+    alpha *= .5;
+    vec3 color = vec3(0);
+    applyFog(color, pos);
+    return vec4(color, alpha);
+}
+
+
+// --------------------------------------------------------
+// Ray Marching
+// --------------------------------------------------------
+
+vec3 raymarch(CastRay castRay){
+
+    float currentDist = INTERSECTION_PRECISION * 2.0;
+    float lastDist = currentDist;
+    vec3 pos, lastPos = vec3(0);    
+    vec4 outline = vec4(0);
+    
+    Model model;
+    Ray ray = Ray(castRay.origin, castRay.direction, 0.);
+
+    for (int i = 0; i < NUM_OF_TRACE_STEPS; i++) {
+
+        lastPos = pos;
+        pos = ray.origin + ray.direction * ray.len;
+
+        if (ray.len > MAX_TRACE_DISTANCE) {
+            break;
+        }
+
+        if (currentDist < INTERSECTION_PRECISION) {
+            break;
+        }
+
+        if (currentDist > lastDist && currentDist < OUTLINE) {
+
+            float t = lastDist / OUTLINE;
+            
+            vec4 newOutline = shadeOutline(pos, t);
+            float contribution = 1. - outline.a;
+            outline.rgb = mix(outline.rgb, newOutline.rgb, contribution);
+            outline.a += newOutline.a * contribution;
+
+            if (t < OUTLINE_BOUNDRY) {
+                pos = lastPos;
+                break;
+            }
+        }
+
+        model = map(pos);
+        lastDist = currentDist;
+        currentDist = model.dist;
+        ray.len += currentDist * FUDGE_FACTOR;
+    }
+    
+    vec3 color = mix(
+        shadeSurface(pos, ray),
+        outline.rgb,
+        outline.a
+    );
+    
+    return color;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
     vec3 bgA = vec3(.6,.5,.8) * .55;
     vec3 bgB = vec3(.7,.9,1.) * .5;
-    color = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))) * .5);
+    background = mix(bgA, bgB, dot(p, normalize(vec2(.2,-.6))) * .5);
+    //background = mix(vec3(.4,.3,.5) * .9, vec3(.6), -.2);
 
     time = iTime;
     time *= .6;
+    time += .53;
     time = mod(time, 1.);
-
+    
     float camDist = length(camPosition);
 
     mat4 camMat = cameraMatrix;
@@ -550,11 +563,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 rd = normalize(
         (vec4(p, -focalLength, 1) * camMat).xyz
     );
-
-    Hit hit = raymarch(CastRay(camPosition, rd));
-
-    render(color, hit);
-
+    
+    vec3 color = raymarch(CastRay(camPosition, rd));    
+    
     vec2 uv = fragCoord/iResolution.xy;
     float vig = pow(
         16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
