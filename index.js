@@ -15,6 +15,10 @@ var Controls = require('./lib/controls');
 
 pixelRatio = .5;
 
+var overlay = document.createElement('div');
+overlay.classList.add('overlay');
+document.body.appendChild(overlay);
+
 var canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
 

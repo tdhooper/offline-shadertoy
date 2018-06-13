@@ -26,3 +26,17 @@ canvas {
 .dg {
     /*display: none;*/
 }
+
+.overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    background-image: url('https://upload.wikimedia.org/wikipedia/commons/6/66/Northern_line_train_front.PNG');
+    background-size: 50%;
+    background-position: 50%;
+    background-repeat: no-repeat;
+    opacity: .0;
+}
