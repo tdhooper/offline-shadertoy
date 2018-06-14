@@ -854,6 +854,7 @@ Model mTrain(vec3 p, float width, float height) {
     p.z -= len;
     float frontRadius = width * 3.;
     float endcap = length(p.xz + vec2(0,frontRadius)) - frontRadius;
+    endcap *= .5;
     p = pp;
 
     p.z -= len;
@@ -1201,8 +1202,8 @@ Model map(vec3 p) {
 
 Model mapDebug(vec3 p) {
 
-    vec3 n = normalize(vec3(1,1,0));
-    float d = abs(dot(p, n) - .5 * 10. + 4.95) - .001;
+    vec3 n = normalize(vec3(1,0,0));
+    float d = abs(dot(p, n) + .43) - .001;
     Model model = map(p);
 
     return model;
