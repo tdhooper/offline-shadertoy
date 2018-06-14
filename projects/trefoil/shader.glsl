@@ -753,7 +753,7 @@ Model mTrain(vec3 p, float width, float height) {
 
     float d = 1e12;
     float len = 1.2;
-    float isFront = sign(p.z);
+    float isFront = max(0., sign(p.z));
     vec3 pp = p;
     float frontWidth = .12;
     float backWidth = .08;
@@ -877,13 +877,16 @@ Model mTrain(vec3 p, float width, float height) {
 
 
     // Front grey
+    p.z = abs(p.z);
     p.z -= len - .05;
     float grey = form + .01;
     grey = max(grey, -p.z);
     p.y -= height * .48;
     p.x -= width * .3;
-    grey = smax(grey, dot(p.xy, normalize(vec2(.3,1))), .02);
-    grey = max(grey, -dot(p.xy, vec2(0,-1)));
+    if (isFront > 0.) {
+        grey = smax(grey, dot(p.xy, normalize(vec2(.3,1))), .02);
+        grey = max(grey, p.y);
+    }
     color = mix(color, TRAIN_GREY, step(0., d - grey));
     p = pp;
 
@@ -902,7 +905,7 @@ Model mTrain(vec3 p, float width, float height) {
     p = pp;
 
     // Window
-    float windowBottom = -.01;
+    float windowBottom = mix(.02, -.01, isFront);
     float windowOffset = .0125;
     float window = max(door + windowOffset, p.y - windowBottom);
     p = pp;
@@ -1379,7 +1382,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
         0.4
     );
-    // color *= vig;
+    color *= vig;
 
 
     color = pow(color, vec3(1. / 2.2)); // Gamma
