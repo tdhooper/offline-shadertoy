@@ -13,7 +13,7 @@ var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 var Controls = require('./lib/controls');
 
-pixelRatio = .5;
+pixelRatio = 1.;
 
 var overlay = document.createElement('div');
 overlay.classList.add('overlay');
@@ -30,7 +30,7 @@ var scrubber = document.createElement('input');
 scrubber.classList.add('scrubber');
 scrubber.setAttribute('type', 'range');
 scrubber.min = 0;
-scrubber.max = 10000; // milliseconds
+scrubber.max = 5000; // milliseconds
 scrubber.step = 10;
 controls.appendChild(scrubber);
 
@@ -199,7 +199,7 @@ var lastStateJson;
 var lastTime = performance.now();
 
 loadConfig(config);
-loadState(stateStore.restore('state-' + configId));
+// loadState(stateStore.restore('state-' + configId));
 
 var u = {};
 guiControls.addUniforms(u, 'gui');
@@ -226,7 +226,11 @@ const drawTriangle = regl({
     count: 3
 });
 
-function render(offset, resolution) {
+function render(renderConf) {
+    renderConf = renderConf || {};
+    var offset = renderConf.offset;
+    var resolution = renderConf.resolution;
+    var force = renderConf.force;
 
     var time = timer.elapsed();
     saveState();
@@ -271,7 +275,7 @@ function render(offset, resolution) {
 
     var stateJson = JSON.stringify(state);
 
-    if (stateJson !== lastStateJson) {
+    if (stateJson !== lastStateJson || force) {
         if ( ! fpsTimeout) {
             fpsTimeout = setTimeout(function() {
                 document.title = frameCount;
@@ -312,9 +316,11 @@ function toggle() {
     }
 }
 
-function stepTo(time) {
+function stepTo(time, force) {
     timer.set(time);
-    render();
+    render({
+        force: force
+    });
 }
 
 function exportConfig() {
@@ -438,7 +444,10 @@ function save(width, height) {
         canvas.style.height = chunk.size[1] + 'px';
 
         regl._refresh();
-        render(chunk.offset, resolution);
+        render({
+            offset: chunk.offset,
+            resolution: resolution
+        });
 
         canvas.toBlob(function(blob) {
             var digits = chunks.length.toString().length;
@@ -461,12 +470,13 @@ function save(width, height) {
 
 window.save = save;
 
-var captureSetup = function(config) {
+var captureSetup = function(config, done) {
     pause();
     canvas.width = config.width;
     canvas.height = config.height;
     canvas.style.width = config.width + 'px';
     canvas.style.height = config.height + 'px';
+    done();
 };
 
 var captureTeardown = function() {
@@ -474,16 +484,16 @@ var captureTeardown = function() {
 };
 
 var captureRender = function(milliseconds) {
-    stepTo(milliseconds);
+    stepTo(milliseconds, true);
 };
 
 // Default config used by the UI
 var captureConfig = {
-  fps: 60,
-  seconds: 1, // (duration)
+  fps: 1,
+  seconds: 5, // (duration)
   width: 1200,
   height: 1200,
-  prefix: 'hlx'
+  prefix: 'tre-'
 };
 
 var webCapture = new WebCaptureClient(

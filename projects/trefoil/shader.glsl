@@ -1363,7 +1363,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (guiAnimation2) {
         time *= 1.5;
     }
-    time *= .75;
+    // time *= .75;
     time = mod(time, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
