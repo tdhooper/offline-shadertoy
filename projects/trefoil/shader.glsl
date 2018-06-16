@@ -896,6 +896,7 @@ Model mTrain(vec3 p, float width, float height) {
     vec2 doorXY = vec2(0, height);
 
     // - Inset
+    p.z = abs(p.z);
     p.xy -= doorXY;
     p.z -= len;
     d = smax(d, -fBox(p, vec3(doorWH, .01)), .01);
@@ -914,9 +915,13 @@ Model mTrain(vec3 p, float width, float height) {
     float window2 = max(-door + window2Offset, p.y - .02);
     p.xy -= vec2(doorWH.x + window2Offset, windowBottom + .01);
     window2 = max(window2, dot(p.xy, normalize(vec2(-.7,1))));
-    window2 = max(window2, -p.y - doorWH.y + doorXY.y + windowOffset + .005);
-    window2 = smax(window2, grey + .02, .01);
+
     p = pp;
+    window2 = max(window2, -(p.y + doorWH.y - doorXY.y - windowOffset + .005));
+    window2 = smax(window2, grey + .02, .01);
+
+    p = pp;
+
 
     window = min(window, window2);
     // color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - windowFrameOffset));
@@ -1131,6 +1136,11 @@ Model fShape2(vec3 p) {
         } else {
             pR(p.xy, time * PI * 2.);
         }
+    } else {
+        float side = sign(p.x);
+        p.x = abs(p.x);
+        p.x -= .25;
+        p.y *= side;
     }
 
     // p /= s;
