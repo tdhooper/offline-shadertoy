@@ -483,13 +483,14 @@ var captureTeardown = function() {
     // Restore your scene as it was before captureSetup
 };
 
-var captureRender = function(milliseconds) {
+var captureRender = function(milliseconds, done) {
     stepTo(milliseconds, true);
+    done();
 };
 
 // Default config used by the UI
 var captureConfig = {
-  fps: 1,
+  fps: 20,
   seconds: 5, // (duration)
   width: 1200,
   height: 1200,

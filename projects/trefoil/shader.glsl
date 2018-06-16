@@ -1064,7 +1064,7 @@ Model mStairSide(vec3 p, float curveLen, float radius) {
     if (guiAnimation2) {
         p.z += time * stairSize * 2. * -15. * .5;
     } else {
-        p.z += time * stairSize * 2. * -7.;
+        p.z += time * stairSize * 2. * -3.;
     }
 
     pMod1(p.z, stairSize);
@@ -1392,7 +1392,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
         0.4
     );
-    color *= vig;
+    // color *= vig;
 
 
     color = pow(color, vec3(1. / 2.2)); // Gamma
