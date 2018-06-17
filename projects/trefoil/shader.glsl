@@ -988,7 +988,7 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
 
     p.x = abs(p.x);
     p.x -= mix(radius, channelWidth, .5);
-    pMod1(p.z, curveLen / 10.);
+    pMod1(p.z, curveLen * 2./3. / 10.);
     float mindTheGap = fBox2(p.xz, vec2(0., .125)) - .015;
     color = mix(color, MIND_THE_GAP_MAT, 1. - step(0., mindTheGap));
     p = pp;
@@ -1028,10 +1028,12 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     // );
     // p = pp;
 
+    p.z += curveLen * guiOffsetX;
+
     if (guiAnimation2) {
         p.z += time * (curveLen * 5. / 6.);
     } else {
-        p.z += time * curveLen;
+        p.z += time * (curveLen * 5. / 6.);
     }
     pMod1(p.z, curveLen / 2.);
     float trainHeight = trainSize * .8;
@@ -1040,6 +1042,7 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     p = pp;
 
     Model model = opU(track, train);
+    // model = track;
 
     if ( ! pastThreshold) {
         model.dist = max(model.dist, p.y);
@@ -1134,7 +1137,7 @@ Model fShape2(vec3 p) {
         if (guiAnimation2) {
             pR(p.xy, time * -PI * 2. * 1./3.);
         } else {
-            pR(p.xy, time * PI * 2.);
+            pR(p.xy, time * PI * 2. * 2./3.);
         }
     } else {
         float side = sign(p.x);
@@ -1197,6 +1200,9 @@ Model fShape2(vec3 p) {
 float focalLength;
 
 Model map(vec3 p) {
+
+    pR(p.xy, guiOffsetY * PI * 2.);
+
     float d;
     float s = focalLength;
     p *= s;
@@ -1284,7 +1290,7 @@ vec3 render(Hit hit){
 // --------------------------------------------------------
 
 const float MAX_TRACE_DISTANCE = 10.;
-const float INTERSECTION_PRECISION = .001;
+const float INTERSECTION_PRECISION = .0001;
 const int NUM_OF_TRACE_STEPS = 150;
 
 
@@ -1357,9 +1363,10 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
     return mat3(uu, vv, ww);
 }
 
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
-    time = iTime / 5.;
+    time = iTime / 3.;
     if (guiAnimation2) {
         time *= 1.5;
     }
@@ -1368,20 +1375,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    // vec3 camPos = vec3(0,0,guiZoom);
-    // pR(camPos.xz, time);
-    // vec3 camTar = vec3(0);
-    // vec3 camUp = vec3(0,1,0);
-    // mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
-
-    camPos = cameraPosition;
-    mat4 camMat = cameraMatrix;
-
+    camPos = vec3(-1.,0,.25) * .9;
+    vec3 camTar = vec3(0,-.0025,0);
+    vec3 camUp = vec3(0,0,1);
+    mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     focalLength = pow(guiFocalLength, 3.);
-    focalLength = 2.5;
-    vec3 rayDirection = normalize(
-        (vec4(p, -focalLength, 1) * camMat).xyz
-    );
+    vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
+
+    // camPos = cameraPosition;
+    // mat4 camMat = cameraMatrix;
+    // focalLength = pow(guiFocalLength, 3.);
+    // focalLength = 2.5;
+    // vec3 rayDirection = normalize(
+    //     (vec4(p, -focalLength, 1) * camMat).xyz
+    // );
 
     Hit hit = raymarch(camPos, rayDirection);
 

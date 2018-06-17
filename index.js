@@ -13,7 +13,7 @@ var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 var Controls = require('./lib/controls');
 
-pixelRatio = 1.;
+pixelRatio = .5;
 
 var overlay = document.createElement('div');
 overlay.classList.add('overlay');
@@ -30,7 +30,7 @@ var scrubber = document.createElement('input');
 scrubber.classList.add('scrubber');
 scrubber.setAttribute('type', 'range');
 scrubber.min = 0;
-scrubber.max = 5000; // milliseconds
+scrubber.max = 3000; // milliseconds
 scrubber.step = 10;
 controls.appendChild(scrubber);
 
@@ -199,7 +199,7 @@ var lastStateJson;
 var lastTime = performance.now();
 
 loadConfig(config);
-// loadState(stateStore.restore('state-' + configId));
+loadState(stateStore.restore('state-' + configId));
 
 var u = {};
 guiControls.addUniforms(u, 'gui');
