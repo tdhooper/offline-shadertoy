@@ -727,7 +727,7 @@ vec3 RAIL_MAT = vec3(.25);
 vec3 PLATFORM_MAT = vec3(.5);
 vec3 MIND_THE_GAP_MAT = vec3(1.,1.,0.);
 
-vec3 TRAIN_RED = vec3(1,.0,.0);
+vec3 TRAIN_RED = vec3(1,.025,.125);
 vec3 TRAIN_GREY = vec3(.4);
 vec3 TRAIN_ROOF = vec3(.6);
 vec3 TRAIN_WINDOW = vec3(.5,.9,1.);
@@ -1133,6 +1133,8 @@ Model fShape2(vec3 p) {
     //     // pR(p.xz, PI);
     // }
 
+    // bool guiTrefoil = false;
+
     if (guiTrefoil) {
         if (guiAnimation2) {
             pR(p.xy, time * -PI * 2. * 1./3.);
@@ -1209,6 +1211,8 @@ Model map(vec3 p) {
 
     Model model = fShape2(p);
 
+    // bool guiTrefoil = false;
+
     if ( ! guiTrefoil) {
         model.dist = max(model.dist, fBox2(p.zy, vec2(2.)));
     }
@@ -1272,6 +1276,7 @@ vec3 render(Hit hit, vec3 col) {
         col = albedo;
         // col *= vec3(ao);
         col *= diffuse;
+        col = mix(col, vec3(0,0,1), d * .05);
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     if (hit.model.material == DISTANCE_METER_MAT) {
@@ -1377,11 +1382,19 @@ float roundel(vec2 uv) {
 
 float backgroundMap(vec2 uv) {
     // return roundel(uv);
-    uv *= .78;
+    float s = .78;
+    uv *= s;
     uv = abs(uv);
     float d = uv.x - 1.25;
     d = max(d, uv.y - .25);
     d = min(d, length(uv) - 1.);
+    d /= s;
+    d = step(0., d);
+    // float r = sin(d * 20. - time * PI * 10.) * .1;
+    // d = min(d, abs(d - .2) - .1);
+    // d = (d + 1.5) * 5.;
+    // d = d * r;
+    // d = step(0.5, d);
     return d;
 }
 
@@ -1411,11 +1424,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     //     (vec4(p, -focalLength, 1) * camMat).xyz
     // );
 
-    Hit hit = raymarch(camPos, rayDirection);
+    vec3 bg = vec3(1.);
+    bg = mix(bg, TRAIN_WINDOW, 1.-backgroundMap(p));
+    // bg = vec3(backgroundMap(p));
 
-    vec3 bg = vec3(.03);
-    bg += step(0., backgroundMap(p)) * .01;
+    Hit hit = raymarch(camPos, rayDirection);
     vec3 color = render(hit, bg);
+    // vec3 color = bg;
 
     vec2 uv = fragCoord/iResolution.xy;
     float vig = pow(
@@ -1424,6 +1439,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     );
     // color *= vig;
 
+    // color *= mix(vec3(1), vec3(.7,1.2,2.5), color.r);
+
+    color = pow(color, vec3(1.,.9,.8));
 
     color = pow(color, vec3(1. / 2.2)); // Gamma
 
