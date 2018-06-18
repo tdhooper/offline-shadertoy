@@ -717,31 +717,161 @@ Curve pModTrefoil(inout vec3 p, float len) {
 // Materials
 // --------------------------------------------------------
 
-vec3 DEFAULT_MAT = vec3(1.9);
+float RED_CLR = 0.;
+float YELLOW_CLR = .1;
+float GREY_CLR = .3;
+float WINDOW_CLR = .4;
+
 vec3 DISTANCE_METER_MAT = vec3(123.);
 
-vec3 TRAIN_MAT = vec3(.9,.5,.5);
-vec3 CHANNEL_MAT = vec3(.15);
-vec3 SLEEPER_MAT = vec3(.2);
-vec3 RAIL_MAT = vec3(.25);
-vec3 PLATFORM_MAT = vec3(.5);
-vec3 MIND_THE_GAP_MAT = vec3(1.,1.,0.);
+vec3 CHANNEL_MAT = vec3(GREY_CLR, .15, 0);
+vec3 SLEEPER_MAT = vec3(GREY_CLR, .2, 0);
+vec3 RAIL_MAT = vec3(GREY_CLR, .25, 0);
+vec3 PLATFORM_MAT = vec3(GREY_CLR, .5, 0);
+vec3 MIND_THE_GAP_MAT = vec3(YELLOW_CLR, .5, 0);
 
-vec3 TRAIN_RED = vec3(1,.0,.0);
-vec3 TRAIN_GREY = vec3(.4);
-vec3 TRAIN_ROOF = vec3(.6);
-vec3 TRAIN_WINDOW = vec3(.5,.9,1.);
-vec3 TRAIN_WINDOW_FRAME = vec3(.1);
-vec3 TRAIN_WHITE = vec3(1);
-vec3 TRAIN_BLUE = vec3(0,0,.7);
-vec3 TRAIN_UNDERCARRIDGE = vec3(.1);
+vec3 TRAIN_RED = vec3(RED_CLR, .5, 0);
+vec3 TRAIN_GREY = vec3(GREY_CLR, .4, 0);
+vec3 TRAIN_ROOF = vec3(GREY_CLR, .6, 0);
+vec3 TRAIN_WINDOW = vec3(WINDOW_CLR, .5, 0);
+vec3 TRAIN_WHITE = vec3(GREY_CLR, 1, 0);
+vec3 TRAIN_BLUE = vec3(GREY_CLR, .4, 0);
+vec3 TRAIN_UNDERCARRIDGE = vec3(GREY_CLR, .1, 0);
 
-vec3 STAIR_BASE_MAT = vec3(.1);
-vec3 STEP_MAT = vec3(.3);
-vec3 STEP_TOP_MAT = vec3(.5);
-vec3 STEP_STRIPE_MAT = vec3(.3);
+vec3 STAIR_BASE_MAT = vec3(GREY_CLR, .1, 0);
+vec3 STEP_MAT = vec3(GREY_CLR, .3, 0);
+vec3 STEP_TOP_MAT = vec3(GREY_CLR, .5, 0);
+vec3 STEP_STRIPE_MAT = vec3(GREY_CLR, .3, 0);
 vec3 STEP_YELLOW_MAT = MIND_THE_GAP_MAT;
-vec3 HANDRAIL_MAT = vec3(.7);
+vec3 HANDRAIL_MAT = vec3(GREY_CLR, .7, 0);
+
+vec3 BACKGROUND_MAT = vec3(GREY_CLR, .0, 0);
+
+// inverse gamma
+vec3 ig(vec3 color) {
+    // return color / 255.;
+    return pow(color / 255., vec3(2.2));
+}
+
+vec3 blend(vec3 a, vec3 b, vec3 c, vec3 d, vec3 e, float t) {
+    float u = 1./4.;
+    return mix(
+        mix(
+            mix(a, b, rangec(u*0., u*1., t)),
+            mix(b, c, rangec(u*1., u*2., t)),
+            step(u*1., t)
+        ),
+        mix(
+            mix(c, d, rangec(u*2., u*3., t)),
+            mix(d, e, rangec(u*3., u*4., t)),
+            step(u*3., t)
+        ),
+        step(u*2., t)
+    );
+}
+
+vec3 blend(vec3 a, vec3 b, vec3 c, float t) {
+    float u = 1./2.;
+    return mix(
+        mix(a, b, rangec(u*0., u*1., t)),
+        mix(b, c, rangec(u*1., u*2., t)),
+        step(u*1., t)
+    );
+}
+
+vec3 _getColor(vec3 material) {
+
+    if (material.x == RED_CLR) {
+        return blend(
+            vec3(.05,.0,.2),
+            vec3(.9,.0,.2),
+            vec3(1.,.2,.6),
+            material.y
+        );
+        return mix(
+            ig(vec3(104,41,56)),
+            ig(vec3(245,97,131)),
+            material.y
+        );
+    }
+    if (material.x == YELLOW_CLR) {
+        return blend(
+            vec3(.2,.2,.1),
+            vec3(1,1,0),
+            vec3(1),
+            material.y
+        );
+        return mix(
+            ig(vec3(108,105,46)),
+            ig(vec3(249,241,105)),
+            material.y
+        );
+    }
+    // if (material.x == GREY_CLR) {
+        return blend(
+            vec3(0,.02,.03),
+            vec3(.3,.55,.7),
+            vec3(.8,1,1),
+            material.y
+        );
+        // return vec3(material.y);
+        return blend(
+            ig(vec3(25,52,65)),
+            ig(mix(vec3(145,170,157), vec3(62,90,97), .5)),
+            ig(vec3(145,170,157)),
+            ig(vec3(209,219,189)),
+            ig(vec3(252,255,245)),
+            pow(material.y, .75)
+        );
+    // }
+    // if (material.x == WINDOW_CLR) {
+    //     return blend(
+    //         vec3(.2,.2,.1),
+    //         vec3(1,1,.8),
+    //         vec3(1),
+    //         material.y
+    //     );
+    // }
+    // return vec3(0);
+}
+
+vec3 x_getColor(vec3 material) {
+
+    if (material.x == RED_CLR) {
+        return blend(
+            vec3(0),
+            vec3(1,0,0),
+            vec3(1),
+            material.y
+        );
+    }
+    if (material.x == YELLOW_CLR) {
+        return blend(
+            vec3(0),
+            vec3(1,1,0),
+            vec3(1),
+            material.y
+        );
+    }
+    if (material.x == GREY_CLR) {
+        return vec3(material.y);
+    }
+    if (material.x == WINDOW_CLR) {
+        return blend(
+            vec3(0),
+            vec3(.5,.9,1.),
+            vec3(1),
+            material.y
+        );
+    }
+    return vec3(0);
+}
+
+vec3 getColor(vec3 material) {
+    vec3 c = mix(x_getColor(material), _getColor(material), .3);
+    c = pow(c * 1.1, vec3(.75,.8,.75));
+    return c;
+}
 
 
 // --------------------------------------------------------
@@ -831,7 +961,6 @@ Model mTrain(vec3 p, float width, float height) {
     p.y = abs(p.y);
     float sideWindow = p.y - .04;
     sideWindow = smax(sideWindow, -sideDoorMask + windowFrameOffset * 2., .01);
-    // color = mix(color, TRAIN_WINDOW_FRAME, 1. - step(0., sideWindow - windowFrameOffset));
     pMod1(p.z, spacing);
     p.z = abs(p.z);
     sideWindow = smax(sideWindow, -(p.z - windowFrameOffset * 2.), .01);
@@ -924,7 +1053,6 @@ Model mTrain(vec3 p, float width, float height) {
 
 
     window = min(window, window2);
-    // color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - windowFrameOffset));
     color = mix(color, TRAIN_WINDOW, 1.-step(0., window));
 
     // Undercarridge
@@ -1257,12 +1385,12 @@ float calcAO( in vec3 pos, in vec3 nor )
     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
 }
 
-vec3 render(Hit hit){
+
+vec3 render(Hit hit, vec3 material) {
     vec3 col;
-    vec3 bg = vec3(.03);
-    col = bg;
+
     if ( ! hit.isBackground) {
-        vec3 albedo = hit.model.material;
+        material = hit.model.material;
         vec3 light = normalize(vec3(-.5,-1,0));
         float d = dot(hit.normal, light) * .5 + .5;
         float ao = calcAO(hit.pos, hit.normal);
@@ -1271,11 +1399,11 @@ vec3 render(Hit hit){
         // d = step(.6, d);
         // d = smoothstep(.2, .8, d);
         diffuse = mix(vec3(.5,.5,.6) * 1., vec3(1), d);
-        col = albedo;
         // col *= vec3(ao);
-        col *= diffuse;
+        material.y *= d;
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
+    col = getColor(material);
     if (hit.model.material == DISTANCE_METER_MAT) {
         float dist = map(hit.pos).dist;
         col = distanceMeter(dist * 10., hit.rayLength, hit.rayDirection, 10.);
@@ -1363,6 +1491,29 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
     return mat3(uu, vv, ww);
 }
 
+float roundel(vec2 uv) {
+    float radius = 215. + 90. / 2.;
+    float inner = radius - 90.;
+    float width = 640. / 2.;
+    float height = 100. / 2.;
+    uv *= 166.;
+    uv = abs(uv);
+    float bar = uv.x - width;
+    bar = max(bar, uv.y - height);
+    float circle = length(uv) - radius;
+    circle = max(circle, -(length(uv) - inner));
+    return min(bar, circle);
+}
+
+float backgroundMap(vec2 uv) {
+    // return roundel(uv);
+    uv *= .78;
+    uv = abs(uv);
+    float d = uv.x - 1.25;
+    d = max(d, uv.y - .25);
+    d = min(d, length(uv) - 1.);
+    return d;
+}
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
@@ -1375,7 +1526,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    camPos = vec3(-1.,0,.25) * .9;
+    camPos = vec3(-1.,0,.25) * .95;
     vec3 camTar = vec3(0,-.0025,0);
     vec3 camUp = vec3(0,0,1);
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
@@ -1392,7 +1543,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     Hit hit = raymarch(camPos, rayDirection);
 
-    vec3 color = render(hit);
+    vec3 material = BACKGROUND_MAT;
+    material.y += step(0., backgroundMap(p)) * .01;
+    vec3 color = render(hit, material);
 
     vec2 uv = fragCoord/iResolution.xy;
     float vig = pow(
@@ -1401,10 +1554,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     );
     // color *= vig;
 
+    // color = getColor(vec3(GREY_CLR, 1.-fragCoord.x/iResolution.x, 0));
+    // color = mix(color, vec3(1.-fragCoord.x/iResolution.x), step(0., p.y));
 
     color = pow(color, vec3(1. / 2.2)); // Gamma
 
     fragColor = vec4(color,1);
+
 }
 
 
