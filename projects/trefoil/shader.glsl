@@ -1257,10 +1257,8 @@ float calcAO( in vec3 pos, in vec3 nor )
     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
 }
 
-vec3 render(Hit hit){
-    vec3 col;
-    vec3 bg = vec3(.03);
-    col = bg;
+
+vec3 render(Hit hit, vec3 col) {
     if ( ! hit.isBackground) {
         vec3 albedo = hit.model.material;
         vec3 light = normalize(vec3(-.5,-1,0));
@@ -1363,6 +1361,29 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
     return mat3(uu, vv, ww);
 }
 
+float roundel(vec2 uv) {
+    float radius = 215. + 90. / 2.;
+    float inner = radius - 90.;
+    float width = 640. / 2.;
+    float height = 100. / 2.;
+    uv *= 166.;
+    uv = abs(uv);
+    float bar = uv.x - width;
+    bar = max(bar, uv.y - height);
+    float circle = length(uv) - radius;
+    circle = max(circle, -(length(uv) - inner));
+    return min(bar, circle);
+}
+
+float backgroundMap(vec2 uv) {
+    // return roundel(uv);
+    uv *= .78;
+    uv = abs(uv);
+    float d = uv.x - 1.25;
+    d = max(d, uv.y - .25);
+    d = min(d, length(uv) - 1.);
+    return d;
+}
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
@@ -1375,7 +1396,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    camPos = vec3(-1.,0,.25) * .9;
+    camPos = vec3(-1.,0,.25) * .95;
     vec3 camTar = vec3(0,-.0025,0);
     vec3 camUp = vec3(0,0,1);
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
@@ -1392,7 +1413,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     Hit hit = raymarch(camPos, rayDirection);
 
-    vec3 color = render(hit);
+    vec3 bg = vec3(.03);
+    bg += step(0., backgroundMap(p)) * .01;
+    vec3 color = render(hit, bg);
 
     vec2 uv = fragCoord/iResolution.xy;
     float vig = pow(
