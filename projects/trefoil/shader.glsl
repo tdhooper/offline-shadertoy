@@ -44,7 +44,9 @@ precision mediump float;
 struct Model {
     float dist;
     vec3 material;
+    vec2 uv;
     float underStep;
+    int id;
 };
 
 struct Hit {
@@ -853,13 +855,26 @@ vec3 HANDRAIL_MAT = vec3(.7);
 // Model
 // --------------------------------------------------------
 
-Model mTrain(vec3 p, float width, float height) {
+Model mTrain(vec3 p, float width, float height, float index) {
     p.z *= -1.;
 
     float d = 1e12;
     float len = 1.2;
-    float isFront = max(0., sign(p.z));
+
     vec3 pp = p;
+
+    p /= height * 4.;
+    p.y *= sign(p.x);
+    p.y -= mix(.75, .25, sign(p.x) * .5 + .5);
+    p.z += (index - 1.) * len * 4.;
+    vec2 uv = p.zy;
+    // uv.xy = vec2(index / 3.);
+
+    p = pp;
+    p.x = abs(p.x);
+    pp = p;
+
+    float isFront = max(0., sign(p.z));
     float frontWidth = .12;
     float backWidth = .08;
     float innerLength = (len * 2.) - backWidth * 2.;
@@ -942,8 +957,6 @@ Model mTrain(vec3 p, float width, float height) {
     sideWindow = smax(sideWindow, -(p.z - windowFrameOffset * 2.), .01);
     color = mix(color, TRAIN_WINDOW, 1. - step(0., sideWindow));
     p = pp;
-
-    // return Model(d, color, 0.);
 
     // Roof
     float roof = smax(form, roofPane, .01);
@@ -1048,7 +1061,7 @@ Model mTrain(vec3 p, float width, float height) {
     d = min(d, undercarridge);
     p = pp;
 
-    Model train = Model(d, color, 0.);
+    Model train = Model(d, color, uv, 0., 1);
     return train;
 }
 
@@ -1056,6 +1069,7 @@ bool pastThreshold = false;
 float lastSide = 1.;
 
 Model mTrainSide(vec3 p, float curveLen, float radius) {
+    
     vec3 pp = p;
     float d = 1e12;
     vec3 color = CHANNEL_MAT;
@@ -1064,6 +1078,7 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
 
     // Channel
 
+    p.x = abs(p.x);
     d = -p.y - .001;
 
     float threshold = fBox2(p.xy + vec2(0,.003), vec2(radius, .002));
@@ -1101,6 +1116,7 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
 
     // Sleepers
 
+    p.x = abs(p.x);
     float sleeperSize = curveLen / 80.;
     float sleeperHeight = .02;
     pMod1(p.z, sleeperSize);
@@ -1112,6 +1128,7 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
 
 
     // Rails
+    p.x = abs(p.x);
     float railHeight = .01;
     p.x = abs(p.x);
     p.x -= channelWidth * .4;
@@ -1122,8 +1139,7 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     p = pp;
 
 
-
-    Model track = Model(d, color, 0.);
+    Model track = Model(d, color, vec2(0), 0., 2);
 
     // p.x -= radius;
     // Model platform = Model(
@@ -1134,16 +1150,20 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     // p = pp;
 
     p.z += curveLen * guiOffsetX;
-
     if (guiAnimation2) {
         p.z += time * (curveLen * 5. / 6.);
     } else {
         p.z += time * (curveLen * 5. / 6.);
     }
+    float c = floor(p.z / curveLen * 2. + .5);
+    c = mod(c, 2.);
+    if (time > .85) {
+        c += 1.;
+    }
     pMod1(p.z, curveLen / 2.);
     float trainHeight = trainSize * .8;
     p.y += trainHeight;
-    Model train = mTrain(p, trainSize, trainHeight);
+    Model train = mTrain(p, trainSize, trainHeight, c);
     p = pp;
 
     Model model = opU(track, train);
@@ -1152,6 +1172,8 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     if ( ! pastThreshold) {
         model.dist = max(model.dist, p.y);
     }
+
+    // model.uv = vec2(c);
 
     return model;
 }
@@ -1166,7 +1188,6 @@ float fStep(vec3 p, float stairSize) {
 Model mStairSide(vec3 p, float curveLen, float radius) {
     vec3 pp = p;
     float d = p.y;
-    // return Model(d, vec3(.5), 0.);
 
     float stairSize = curveLen / 60.;
     if (guiAnimation2) {
@@ -1222,7 +1243,7 @@ Model mStairSide(vec3 p, float curveLen, float radius) {
     p = pp;
 
     d = max(d, -p.y);
-    return Model(d, color, .2);
+    return Model(d, color, vec2(0), .2, 3);
 }
 
 bool AO_PASS = false;
@@ -1247,10 +1268,10 @@ Model fShape2(vec3 p) {
             pR(p.xy, time * PI * 2. * 2./3.);
         }
     } else {
-        float side = sign(p.x);
-        p.x = abs(p.x);
-        p.x -= .25;
-        p.y *= side;
+        // float side = sign(p.x);
+        // p.x = abs(p.x);
+        // p.x -= .25;
+        // p.y *= side;
     }
 
     // p /= s;
@@ -1272,7 +1293,7 @@ Model fShape2(vec3 p) {
     float d = -outer + eps * 2.;
     if ( ! AO_PASS) {
         if (outer > eps) {
-            return Model(outer, vec3(.2), 0.);
+            return Model(outer, vec3(.2), vec2(0), 0., 0);
         }
     } else {
         d = 1e12;
@@ -1280,10 +1301,10 @@ Model fShape2(vec3 p) {
 
 
     p.y -= .05;
-    p.x = abs(p.x);
-    vec3 pp = p;
 
     Model model = mTrainSide(p, curveLen, radius);
+
+    p.x = abs(p.x);
 
     if ( ! pastThreshold) {
         Model stair = mStairSide(p, curveLen, radius);
@@ -1319,7 +1340,7 @@ Model map(vec3 p) {
     // bool guiTrefoil = false;
 
     if ( ! guiTrefoil) {
-        model.dist = max(model.dist, fBox2(p.zy, vec2(2.)));
+        // model.dist = max(model.dist, fBox2(p.zy, vec2(2.)));
     }
 
     model.dist /= s;
@@ -1340,7 +1361,7 @@ Model mapDebug(vec3 p) {
         return model;
     }
 
-    return Model(d, DISTANCE_METER_MAT, 0.);
+    return Model(d, DISTANCE_METER_MAT, vec2(0), 0., 99);
 }
 
 
@@ -1366,6 +1387,18 @@ float calcAO( in vec3 pos, in vec3 nor )
     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
 }
 
+vec3 drawNova(vec3 col, vec2 uv) {
+    uv *= -1.;
+    float s = .3;
+    uv /= s;
+    uv.y -= .5;
+    uv.x += 1.;
+    float d = fNova(uv);
+    d *= s;
+    col = mix(col, vec3(1), smoothstep(.01, .0, d - .03));
+    col = mix(col, vec3(0), smoothstep(.01, .0, d));
+    return col;
+}
 
 vec3 render(Hit hit, vec3 col) {
     if ( ! hit.isBackground) {
@@ -1380,6 +1413,10 @@ vec3 render(Hit hit, vec3 col) {
         diffuse = mix(vec3(.5,.5,.6) * 1., vec3(1), d);
         col = albedo;
         // col *= vec3(ao);
+        if (hit.model.id == 1) {
+            col = drawNova(col, hit.model.uv);
+        }
+        // col = vec3(hit.model.uv, 0.);
         col *= diffuse;
         // col = mix(col, vec3(0,0,1), d * .05);
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
@@ -1513,6 +1550,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     time = mod(time, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
+    p.y *= -1.;
 
     camPos = vec3(-1.,0,.25) * .95;
     vec3 camTar = vec3(0,-.0025,0);
