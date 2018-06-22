@@ -45,14 +45,12 @@ float svmax(vec2 v) {
 }
 
 
-float fNova(vec2 p) {
+float fNova(vec2 p, float weight) {
 
     float d = 1e12;
     vec2 p2 = p;
     vec2 p3 = p;
     float arrow;
-
-    float weight = .133;
 
     // N
     // p.y -= .05;

@@ -1296,10 +1296,10 @@ vec3 drawNova(vec3 col, vec2 uv) {
     uv += sin((uvw + .25) * 5.) * .1;
     // uv.y += cos((uv.x + time) * 2.) * .1;
 
-    float d = fNova(uv);
+    float d = fNova(uv, .133);
 
     uv -= vec2(.05,-.1);
-    float d2 = fNova(uv);
+    float d2 = fNova(uv, .133);
     // d2 = max(d2, d);
 
     d *= s;
@@ -1437,7 +1437,39 @@ float roundel(vec2 uv) {
 }
 
 float backgroundMap(vec2 uv) {
-    return step(0., roundel(uv));
+    // return step(0., roundel(uv));
+
+    uv.y *= -1.;
+
+    float ss = 1.6;
+    uv /= ss;
+    // uv.y -= .5;
+    // uv.x /= 1.4;
+    float r = 3.55;
+
+    vec2 uvw = uv;
+
+    uv.x += time * r;
+    pMod1(uv.x, r);
+    uv.x += 1.2;
+
+    vec2 uvw2 = uvw;
+
+    vec2 w = vec2(0);
+
+    uvw -= time * 5.;
+    pR(uvw, PI * .5);
+    w += sin((uvw + .25) * 5.) * .1;
+
+    uvw = uvw2;
+    // w += sin((uvw + vec2(0, time * PI * 2.)) * 5.) * .05;
+    // w += sin((uvw + vec2(time * PI * 2.)) * 10.) * .025;
+    
+    // uv.y += cos((uvw.y) * 10.) * .1;
+    uv += w;
+
+    return step(0., fNova(uv, .06) * ss);
+
     float s = .78;
     uv *= s;
     uv = abs(uv);
@@ -1460,7 +1492,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (guiAnimation2) {
         time *= 1.5;
     }
-    // time *= .75;
+    time *= .75;
     time = mod(time, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
@@ -1495,6 +1527,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 bg = vec3(1.);
     bg = mix(bg, TRAIN_WINDOW, 1.-backgroundMap(p));
     // bg = vec3(backgroundMap(p));
+    // fragColor = vec4(bg,1);
+    // return;
 
     Hit hit = raymarch(camPos, rayDirection);
     vec3 color = render(hit, bg);
