@@ -1276,7 +1276,7 @@ vec3 render(Hit hit, vec3 col) {
         col = albedo;
         // col *= vec3(ao);
         col *= diffuse;
-        col = mix(col, vec3(0,0,1), d * .05);
+        // col = mix(col, vec3(0,0,1), d * .05);
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
     if (hit.model.material == DISTANCE_METER_MAT) {
@@ -1371,7 +1371,7 @@ float roundel(vec2 uv) {
     float inner = radius - 90.;
     float width = 640. / 2.;
     float height = 100. / 2.;
-    uv *= 166.;
+    uv *= 200.;
     uv = abs(uv);
     float bar = uv.x - width;
     bar = max(bar, uv.y - height);
@@ -1381,7 +1381,7 @@ float roundel(vec2 uv) {
 }
 
 float backgroundMap(vec2 uv) {
-    // return roundel(uv);
+    return step(0., roundel(uv));
     float s = .78;
     uv *= s;
     uv = abs(uv);
