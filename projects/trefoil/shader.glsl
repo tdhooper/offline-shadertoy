@@ -1288,12 +1288,29 @@ vec3 drawNova(vec3 col, vec2 uv) {
     float s = .3;
     uv /= s;
     uv.y -= .5;
-    uv.x += 1.;
-    uv.x /= 1.1;
+    uv.x /= 1.4;
+    uv.x += 1.2;
+
+    vec2 uvw = uv;
+    pR(uvw, PI * .25);
+    uv += sin((uvw + .25) * 5.) * .1;
+    // uv.y += cos((uv.x + time) * 2.) * .1;
+
     float d = fNova(uv);
+
+    uv -= vec2(.05,-.1);
+    float d2 = fNova(uv);
+    // d2 = max(d2, d);
+
     d *= s;
-    col = mix(col, vec3(1), smoothstep(.01, .0, d - .03));
-    col = mix(col, vec3(0), smoothstep(.01, .0, d));
+    d2 *= s;
+
+    col = mix(col, vec3(.3), smoothstep(.005, .0, d - .02));
+    col = mix(col, vec3(.0), smoothstep(.005, .0, d2 + .01));
+
+    d = max(d - .04, -d + .01);
+    col = mix(col, TRAIN_WHITE, smoothstep(.005, .0, d));
+
     return col;
 }
 
@@ -1450,9 +1467,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // p.x += 1.;
     // p *= 1.5;
-    // float d = fNova(p);
-    // vec3 cc = vec3(smoothstep(0.01, .0, d));
-    // cc += vec3(0,1,1) * mod(d * 5., 1.) * .5;
+    // // float d = fNova(p);
+    // // vec3 cc = vec3(smoothstep(0.01, .0, d));
+    // // cc = vec3(0,1,1) * mod(d * 5., 1.) * .5;
+    // vec3 cc = vec3(0);
+    // cc = drawNova(cc, p / vec2(-2) + vec2(.5,0));
     // fragColor = vec4(cc,1.0);
     // return;
 

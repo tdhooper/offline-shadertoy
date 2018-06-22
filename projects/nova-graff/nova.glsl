@@ -52,25 +52,27 @@ float fNova(vec2 p) {
     vec2 p3 = p;
     float arrow;
 
-    float weight = .1;
+    float weight = .133;
 
     // N
-    p.y += .05;
+    // p.y -= .05;
     p3 = p;
-    d = min(d, fBoxy(p, vec2(.6, .45)));
+    d = min(d, fBoxy(p, vec2(.6, .5)));
+    p.x -= .1;
     pR45(p);
-    d = max(d, fBoxy(p, vec2(1., .55)));
+    d = max(d, fBoxy(p, vec2(1., .6)));
     p = p3;
     p.x += .03;
-    p.x *= sign(p.y);
-    p.y = abs(p.y);
-    d = max(d, -fBoxy(p - vec2(.166, .5), vec2(weight/2.,.45)));
+    // p.x *= sign(p.y);
+    // p.y = abs(p.y);
+    d = max(d, -fBoxy(p - vec2(.2, .5), vec2(weight/2.,.6)));
+    d = max(d, -fBoxy(p + vec2(.2, .5), vec2(weight/2.,.6)));
     p = p2;
 
     // O
-    p.x -= 1.;
+    p.x -= .9;
     p2 = p;
-    float O = fBoxy(p, vec2(.5,.5));
+    float O = fBoxy(p, vec2(.5,.6));
     pR45(p);
     O = max(O, vmax(abs(p)) - .55);
     O = max(O, -d + weight);
@@ -83,11 +85,11 @@ float fNova(vec2 p) {
     pR45(p);
     arrow = vmax(p);
     p = p3;
-    arrow = max(arrow, fBoxy(p, vec2(.21, 1.)));
+    arrow = max(arrow, fBoxy(p, vec2(.1, 1.)));
     d = max(d, -arrow + weight);
     d = min(d, arrow);
     p = p2;
-    d = min(d, fBoxy(p - vec2(0,-.4), vec2(.1,.2)));
+    d = min(d, fBoxy(p - vec2(-.1,-.4), vec2(.25,.15)));
     d = max(d, -p.y - .5);
 
     // V
@@ -98,11 +100,13 @@ float fNova(vec2 p) {
     pR(p, -.42);
     float V = p.x;
     p = p2;
-    V = max(V, abs(p.y) - .5);
+    V = max(V, abs(p.y) - .6);
     p.y -= .6;
-    V = max(V, -fBoxy(p, vec2(weight/2., .5)));
+    p.x -= .025;
+    V = max(V, -fBoxy(p, vec2(weight/2., .75)));
     p = p2;
-    p.y -= .35;
+    p.x -= .075;
+    p.y -= .3;
     V = max(V, -vmax(p * vec2(1,-1)));
     d = max(d, -V + weight);
     d = min(d, V);
@@ -114,22 +118,21 @@ float fNova(vec2 p) {
     p.y += .1;
     float A = fBoxy(p, vec2(.45, .4));
     p = p2;
-    pR45(p);
-    A = max(A, -p.x - .6);
     A = max(A, -V + weight);
     d = min(d, A);
     p = p2;
 
-    p -= vec2(-.4, .2);
+    p -= vec2(-.3, .2);
     arrow = abs(p.y) - .125;
     p.y -= .05;
     pR45(p);
-    arrow = max(arrow, vmax(p * vec2(-1,1)));
+    pR(p, -.3);
+    arrow = max(arrow, -p.x * 1.5);
     d = max(d, -arrow + weight);
     d = min(d, arrow);
     p = p2;
     p.x -= .3;
-    d = min(d, fBoxy(p, vec2(.15)));
+    d = min(d, fBoxy(p, vec2(.15, .3)));
     p = p2;
     d = max(d, p.x- .45);
     pR45(p);
