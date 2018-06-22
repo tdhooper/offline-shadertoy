@@ -64,12 +64,12 @@ float fNova(vec2 p) {
     p2 = p;
     float O = fBoxy(p, vec2(.5,.5));
     pR45(p);
-    O = max(O, abs(p.y) - .55);
+    O = max(O, vmax(abs(p)) - .55);
     O = max(O, -d + .06);
     d = min(d, O);
     p = p2;
 
-    p += vec2(.25,-.15);
+    p += vec2(.25,-.2);
     p3 = p;
     p.y *= 1.25;
     pR45(p);
@@ -87,16 +87,16 @@ float fNova(vec2 p) {
     p2 = p;
     p.y += .95;
     p.x = abs(p.x);
-    pR(p, -.4);
+    pR(p, -.42);
     float V = p.x;
     p = p2;
     V = max(V, abs(p.y) - .5);
     p.y -= .6;
     V = max(V, -fBoxy(p, vec2(.03, .5)));
     p = p2;
-    d = max(d, -V + .06);
-    p.y -= .4;
+    p.y -= .35;
     V = max(V, -vmax(p * vec2(1,-1)));
+    d = max(d, -V + .06);
     d = min(d, V);
     p = p2;
 
