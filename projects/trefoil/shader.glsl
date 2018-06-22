@@ -715,19 +715,6 @@ Curve pModTrefoil(inout vec3 p, float len) {
     return curve;
 }
 
-// --------------------------------------------------------
-// Nova
-// --------------------------------------------------------
-
-
-void pR45(inout vec2 p) {
-    p = (p + vec2(p.y, -p.x))*sqrt(0.5);
-}
-
-float fBoxy(vec2 p, vec2 s) {
-    return vmax(abs(p) - s);
-}
-
 
 // --------------------------------------------------------
 // Materials
@@ -1302,6 +1289,7 @@ vec3 drawNova(vec3 col, vec2 uv) {
     uv /= s;
     uv.y -= .5;
     uv.x += 1.;
+    uv.x /= 1.1;
     float d = fNova(uv);
     d *= s;
     col = mix(col, vec3(1), smoothstep(.01, .0, d - .03));
