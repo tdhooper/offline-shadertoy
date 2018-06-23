@@ -1440,8 +1440,9 @@ float backgroundMap(vec2 uv) {
     // return step(0., roundel(uv));
 
     uv.y *= -1.;
+    uv.y += .1;
 
-    float ss = 1.6;
+    float ss = 1.5;
     uv /= ss;
     // uv.y -= .5;
     // uv.x /= 1.4;
@@ -1450,22 +1451,19 @@ float backgroundMap(vec2 uv) {
     vec2 uvw = uv;
 
     uv.x += time * r;
+    vec2 uv2 = uv;
     pMod1(uv.x, r);
     uv.x += 1.2;
 
-    vec2 uvw2 = uvw;
-
     vec2 w = vec2(0);
 
-    uvw -= time * 5.;
-    pR(uvw, PI * .5);
-    w += sin((uvw + .25) * 5.) * .1;
+    // uv2 -= time * 5.;
+    pR(uv2, PI * .5);
+    uv2 -= time * r;
+    w += sin((uv2 / r * PI * 1.) * 2.) * .2;
+    w *= sin(uvw.x * PI * 1.5 + PI / 2.) * .5 + .5;
+    w += sin(uvw * PI + PI / 2.) * .1;
 
-    uvw = uvw2;
-    // w += sin((uvw + vec2(0, time * PI * 2.)) * 5.) * .05;
-    // w += sin((uvw + vec2(time * PI * 2.)) * 10.) * .025;
-    
-    // uv.y += cos((uvw.y) * 10.) * .1;
     uv += w;
 
     return step(0., fNova(uv, .06) * ss);
@@ -1488,11 +1486,11 @@ float backgroundMap(vec2 uv) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
-    time = iTime / 3.;
+    time = iTime;
     if (guiAnimation2) {
         time *= 1.5;
     }
-    time *= .75;
+    time *= .3;
     time = mod(time, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;

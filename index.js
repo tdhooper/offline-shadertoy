@@ -13,7 +13,7 @@ var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 var Controls = require('./lib/controls');
 
-pixelRatio = .5;
+pixelRatio = .25;
 
 var overlay = document.createElement('div');
 overlay.classList.add('overlay');
@@ -490,10 +490,10 @@ var captureRender = function(milliseconds, done) {
 
 // Default config used by the UI
 var captureConfig = {
-  fps: 20,
-  seconds: 5, // (duration)
-  width: 1200,
-  height: 1200,
+  fps: 120,
+  seconds: 1, // (duration)
+  width: 640 * 2,
+  height: 360 * 2,
   prefix: 'tre-'
 };
 
