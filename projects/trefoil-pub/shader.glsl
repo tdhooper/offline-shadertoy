@@ -704,7 +704,7 @@ Curve TrefoilCurve(vec3 p) {
     );
 }
 
-Curve pModTrefoil(inout vec3 p, float len) {
+void pModTrefoil(inout vec3 p, float len) {
     Curve curve = TrefoilCurve(p);
     float x = dot(p - curve.position, curve.normal);
     float y = dot(p - curve.position, curve.binormal);
@@ -712,7 +712,6 @@ Curve pModTrefoil(inout vec3 p, float len) {
     p = vec3(x, y, z);
     p.z -= 0.0666;
     p.z *= len;
-    return curve;
 }
 
 
@@ -1144,79 +1143,48 @@ Model mStairSide(vec3 p, float curveLen, float radius) {
 
 bool AO_PASS = false;
 
-Model fShape2(vec3 p) {
-    // float s = 1.;
+Model fModel(vec3 p) {
 
-    // if (length(p) > 3.) {
-    //     s = dot(p,p);
-    //     s /= 5.;
-    //     p /= s;
-    //     // p.xz *= -1.;
-    //     // pR(p.xz, PI);
-    // }
-
-    // bool guiTrefoil = false;
-
-    if (guiTrefoil) {
-        if (guiAnimation2) {
-            pR(p.xy, time * -PI * 2. * 1./3.);
-        } else {
-            pR(p.xy, time * PI * 2. * 2./3.);
-        }
-    } else {
-        // float side = sign(p.x);
-        // p.x = abs(p.x);
-        // p.x -= .25;
-        // p.y *= side;
-    }
-
-    // p /= s;
-    Curve curve;
     float curveLen = 14.;
-
-    if (guiTrefoil) {
-        curve = pModTrefoil(p, curveLen);
-        // pR(p.xy, 2.5 + p.z / curveLen * PI * 2.);
-        pR(p.xy, -time * PI * 2.);
-    } else {
-        p = p.xzy * vec3(1,-1,1);
-    }
-
+    pModTrefoil(p, curveLen);
+    pR(p.xy, -time * PI * 2.);
 
     float radius = .28;
     float outer = length(p.xy) - radius;
     float eps = .02;
+
+    // Overstep can happen when we're past one part of the curve,
+    // but still moving torards another part. Avoid this by stepping
+    // to the inside edge of the curve tube
     float d = -outer + eps * 2.;
+
+    // Don't model the whole train/track/stairs when we're outside the trefoil
     if ( ! AO_PASS) {
         if (outer > eps) {
             return Model(outer, vec3(.2), vec2(0), 0., 0);
         }
     } else {
+        // Disable the shortcut and overstep hack
+        // when calculating ambient occlusion
         d = 1e12;
     }
 
-
     p.y -= .05;
-
     Model model = mTrainSide(p, curveLen, radius);
-
     p.x = abs(p.x);
 
+    // Don't model the stars when we're in the 'impossible channel'
+    // that the tracks carve
     if ( ! pastThreshold) {
         Model stair = mStairSide(p, curveLen, radius);
         model = opU(model, stair);
     }
 
+    // Cut the geometry to remain inside the trefoil tube
     model.dist = max(model.dist, outer);
 
+    // Apply the overstep hack
     model.dist = min(model.dist, d);
-
-    // model.dist = outer + .1;
-
-    // model.dist *= s;
-    
-
-    // model.dist -= .03;
 
     return model;
 }
@@ -1224,16 +1192,12 @@ Model fShape2(vec3 p) {
 float focalLength;
 
 Model map(vec3 p) {
+    pR(p.xy, .39 * PI * 2. + time * PI * 2. * 2./3.);
 
-    pR(p.xy, .39 * PI * 2.);
-
-    float d;
     float scale = focalLength;
     p *= scale;
-
-    Model model = fShape2(p);
+    Model model = fModel(p);
     model.dist /= scale;
-
     return model;
 }
 
