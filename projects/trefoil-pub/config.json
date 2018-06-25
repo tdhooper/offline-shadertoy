@@ -1,0 +1,94 @@
+{
+    "id": "trefoil109e",
+    "timer": {
+        "running": true,
+        "elapsed": 369520.6999999657
+    },
+    "mouse": [
+        684,
+        84,
+        false,
+        0
+    ],
+    "cameraMatrix": {
+        "0": -0.4399057626724243,
+        "1": 0.4056336283683777,
+        "2": -1.0968815088272095,
+        "3": 0,
+        "4": -1.1315898895263672,
+        "5": -0.5600757598876953,
+        "6": 0.11773037910461426,
+        "7": 0,
+        "8": -0.29528263211250305,
+        "9": 1.0629287958145142,
+        "10": 0.26416483521461487,
+        "11": 0,
+        "12": -1.1875418424606323,
+        "13": -0.2073255181312561,
+        "14": 0.7461069226264954,
+        "15": 1
+    },
+    "positionSpeed": 0.5,
+    "rotationSpeed": 3,
+    "controls": {
+        "closed": true,
+        "animation2": {
+            "type": "toggle",
+            "value": false
+        },
+        "trefoil": {
+            "type": "toggle",
+            "value": true
+        },
+        "focalLength": {
+            "type": "range",
+            "controller": 18,
+            "step": 0.01,
+            "min": 0,
+            "max": 3,
+            "value": 2.63
+        },
+        "smallRadius": {
+            "type": "range",
+            "controller": 11,
+            "step": 0.001,
+            "min": 0,
+            "max": 2,
+            "value": 0.108
+        },
+        "largeRadius": {
+            "type": "range",
+            "controller": 12,
+            "step": 0.001,
+            "min": 0,
+            "max": 4,
+            "value": 0.66
+        },
+        "offset": {
+            "x": {
+                "type": "range",
+                "controller": 13,
+                "step": 0.01,
+                "min": -1,
+                "max": 1,
+                "value": 0.14
+            },
+            "y": {
+                "type": "range",
+                "controller": 14,
+                "step": 0.01,
+                "min": -1,
+                "max": 1,
+                "value": 0.39
+            },
+            "z": {
+                "type": "range",
+                "controller": 15,
+                "step": 0.001,
+                "min": -1,
+                "max": 1,
+                "value": -0.004
+            }
+        }
+    }
+}
