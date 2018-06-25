@@ -1225,47 +1225,22 @@ float focalLength;
 
 Model map(vec3 p) {
 
-    pR(p.xy, guiOffsetY * PI * 2.);
+    pR(p.xy, .39 * PI * 2.);
 
     float d;
-    float s = focalLength;
-    p *= s;
+    float scale = focalLength;
+    p *= scale;
 
     Model model = fShape2(p);
-
-    // bool guiTrefoil = false;
-
-    if ( ! guiTrefoil) {
-        // model.dist = max(model.dist, fBox2(p.zy, vec2(2.)));
-    }
-
-    model.dist /= s;
+    model.dist /= scale;
 
     return model;
-}
-
-
-Model mapDebug(vec3 p) {
-
-    vec3 n = normalize(vec3(1,0,0));
-    float d = abs(dot(p, n) + .43) - .001;
-    Model model = map(p);
-
-    return model;
-
-    if (model.dist < d) {
-        return model;
-    }
-
-    return Model(d, DISTANCE_METER_MAT, vec2(0), 0., 99);
 }
 
 
 // --------------------------------------------------------
 // Rendering
 // --------------------------------------------------------
-
-vec3 camPos;
 
 float calcAO( in vec3 pos, in vec3 nor )
 {
@@ -1280,34 +1255,32 @@ float calcAO( in vec3 pos, in vec3 nor )
         occ += -(dd-hr)*sca;
         sca *= 0.95;
     }
-    return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
+    return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );
 }
 
 vec3 drawNova(vec3 col, vec2 uv) {
+    float scale = .3;
     uv *= -1.;
-    float s = .3;
-    uv /= s;
+    uv /= scale;
     uv.y -= .5;
     uv.x /= 1.4;
     uv.x += 1.2;
 
-    vec2 uvw = uv;
-    pR(uvw, PI * .25);
-    uv += sin((uvw + .25 + time) * 5.) * .1;
-    // uv.y += cos((uv.x + time) * 2.) * .1;
+    vec2 uv2 = uv;
+    pR(uv2, PI * .25);
+    vec2 warp = sin((uv2 + .25 + time) * 5.) * .1;
+    uv += warp;
 
     float d = fNova(uv, .133);
+    float dOffset = fNova(uv - vec2(.05,-.1), .133);
 
-    uv -= vec2(.05,-.1);
-    float d2 = fNova(uv, .133);
-    // d2 = max(d2, d);
-
-    d *= s;
-    d2 *= s;
+    d *= scale;
+    dOffset *= scale;
 
     col = mix(col, vec3(.3), smoothstep(.005, .0, d - .02));
-    col = mix(col, vec3(.0), smoothstep(.005, .0, d2 + .01));
+    col = mix(col, vec3(.0), smoothstep(.005, .0, dOffset + .01));
 
+    // Outline
     d = max(d - .04, -d + .01);
     col = mix(col, TRAIN_WHITE, smoothstep(.005, .0, d));
 
@@ -1316,32 +1289,15 @@ vec3 drawNova(vec3 col, vec2 uv) {
 
 vec3 render(Hit hit, vec3 col) {
     if ( ! hit.isBackground) {
-        vec3 albedo = hit.model.material;
-        vec3 light = normalize(vec3(-.5,-1,0));
-        float d = dot(hit.normal, light) * .5 + .5;
         float ao = calcAO(hit.pos, hit.normal);
-        d = ao;
-        vec3 diffuse = vec3(d);
-        // d = step(.6, d);
-        // d = smoothstep(.2, .8, d);
-        diffuse = mix(vec3(.5,.5,.6) * 1., vec3(1), d);
-        col = albedo;
-        // col *= vec3(ao);
+        col = hit.model.material;
+
         if (hit.model.id == 1) {
             col = drawNova(col, hit.model.uv);
         }
-        // col = vec3(hit.model.uv, 0.);
-        // if (hit.model.material == TRAIN_WINDOW) {
-        //     diffuse = vec3(1);
-        // }
-        col *= diffuse;
 
-        // col = mix(col, vec3(0,0,1), d * .05);
-        // vec3 ref = reflect(hit.rayDirection, hit.normal);
-    }
-    if (hit.model.material == DISTANCE_METER_MAT) {
-        float dist = map(hit.pos).dist;
-        col = distanceMeter(dist * 10., hit.rayLength, hit.rayDirection, 10.);
+        vec3 diffuse = mix(vec3(.5,.5,.6) * 1., vec3(1), ao);
+        col *= diffuse;
     }
     return col;
 }
@@ -1391,7 +1347,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         if (currentDist < INTERSECTION_PRECISION || rayLength > MAX_TRACE_DISTANCE) {
             break;
         }
-        model = mapDebug(rayOrigin + rayDirection * rayLength);
+        model = map(rayOrigin + rayDirection * rayLength);
         currentDist = model.dist;
         rayLength += currentDist * (1. - model.underStep);
     }
@@ -1418,7 +1374,6 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
     );
 }
 
-
 mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
     vec3 ww = normalize(ta - ro);
     vec3 uu = normalize(cross(ww,up));
@@ -1426,127 +1381,58 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
     return mat3(uu, vv, ww);
 }
 
-float roundel(vec2 uv) {
-    float radius = 215. + 90. / 2.;
-    float inner = radius - 90.;
-    float width = 640. / 2.;
-    float height = 100. / 2.;
-    uv *= 200.;
-    uv = abs(uv);
-    float bar = uv.x - width;
-    bar = max(bar, uv.y - height);
-    float circle = length(uv) - radius;
-    circle = max(circle, -(length(uv) - inner));
-    return min(bar, circle);
-}
-
 float backgroundMap(vec2 uv) {
-    // return step(0., roundel(uv));
+    float scale = 1.5;
+    float repeat = 3.55;
 
     uv.y *= -1.;
-    // uv.y += .05;
+    uv /= scale;
 
-    float ss = 1.5;
-    uv /= ss;
-    // uv.y -= .5;
-    // uv.x /= 1.4;
-    float r = 3.55;
-
-    vec2 uvw = uv;
-
-    uv.x += time * r;
     vec2 uv2 = uv;
-    pMod1(uv.x, r);
+    uv.x += time * repeat;
+    vec2 uv3 = uv;
+
+    pMod1(uv.x, repeat);
     uv.x += 1.2;
 
-    vec2 w = vec2(0);
+    pR(uv3, PI * .5);
+    uv3 -= time * repeat;
 
-    // uv2 -= time * 5.;
-    pR(uv2, PI * .5);
-    uv2 -= time * r;
-    w += sin((uv2 / r * PI * 1.) * 2.) * .2;
-    w *= sin(uvw.x * PI * 1.5 + PI / 2.) * .5 + .5;
-    w += sin(uvw * PI + PI / 2.) * .1;
+    vec2 warp = vec2(0);
+    warp += sin((uv3 / repeat * PI * 1.) * 2.) * .2;
+    warp *= sin(uv2.x * PI * 1.5 + PI / 2.) * .5 + .5;
+    warp += sin(uv2 * PI + PI / 2.) * .1;
 
-    uv += w;
+    uv += warp;
 
-    return step(0., fNova(uv, .06) * ss);
+    float d = fNova(uv, .06) * scale;
 
-    float s = .78;
-    uv *= s;
-    uv = abs(uv);
-    float d = uv.x - 1.25;
-    d = max(d, uv.y - .25);
-    d = min(d, length(uv) - 1.);
-    d /= s;
-    d = step(0., d);
-    // float r = sin(d * 20. - time * PI * 10.) * .1;
-    // d = min(d, abs(d - .2) - .1);
-    // d = (d + 1.5) * 5.;
-    // d = d * r;
-    // d = step(0.5, d);
-    return d;
+    return smoothstep(-0.01, .0, d);
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = iTime;
-    if (guiAnimation2) {
-        time *= 1.5;
-    }
     time *= .3;
     time = mod(time, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    p.x += 0.5;
-    p *= 2.5;
-    // float d = fNova(p);
-    // vec3 cc = vec3(smoothstep(0.01, .0, d));
-    // cc = vec3(0,1,1) * mod(d * 5., 1.) * .5;
-    vec3 cc = vec3(0);
-    cc = drawNova(cc, p / vec2(-2) + vec2(.5,0));
-    fragColor = vec4(cc,1.0);
-    return;
+    p.y *= -1.; // Put the train on top
 
-    p.y *= -1.;
-
-    camPos = vec3(-1.,0,.25) * .95;
+    vec3 camPos = vec3(-1.,0,.25) * .95;
     vec3 camTar = vec3(0,-.0025,0);
     vec3 camUp = vec3(0,0,1);
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
-    focalLength = pow(guiFocalLength, 3.);
+    focalLength = 18.191446;
     vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
 
-    // camPos = cameraPosition;
-    // mat4 camMat = cameraMatrix;
-    // focalLength = pow(guiFocalLength, 3.);
-    // focalLength = 2.5;
-    // vec3 rayDirection = normalize(
-    //     (vec4(p, -focalLength, 1) * camMat).xyz
-    // );
-
-    vec3 bg = vec3(1.);
-    bg = mix(bg, TRAIN_WINDOW, 1.-backgroundMap(p));
-    // bg = vec3(backgroundMap(p));
-    // fragColor = vec4(bg,1);
-    // return;
+    vec3 bg = mix(vec3(1), TRAIN_WINDOW, 1. - backgroundMap(p));
 
     Hit hit = raymarch(camPos, rayDirection);
     vec3 color = render(hit, bg);
-    // vec3 color = bg;
 
-    vec2 uv = fragCoord/iResolution.xy;
-    float vig = pow(
-        16. * uv.x * uv.y * (1. - uv.x) * (1. - uv.y),
-        0.4
-    );
-    // color *= vig;
-
-    // color *= mix(vec3(1), vec3(.7,1.2,2.5), color.r);
-
-    color = pow(color, vec3(1.,.9,.8));
-
+    color = pow(color, vec3(1.,.9,.8)); // Brighten and tint a little blue
     color = pow(color, vec3(1. / 2.2)); // Gamma
 
     fragColor = vec4(color,1);

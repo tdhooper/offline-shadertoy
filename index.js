@@ -65,8 +65,8 @@ var vert = glslify('./quad.vert');
 // inverted-torus
 // trefoil
 
-var frag = glslify('./projects/trefoil/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/trefoil/config.json', 'utf8'));
+var frag = glslify('./projects/trefoil-pub/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/trefoil-pub/config.json', 'utf8'));
 // var config = {};
 
 var configId;
