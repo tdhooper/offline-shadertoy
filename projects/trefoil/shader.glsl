@@ -957,7 +957,7 @@ Model mTrain(vec3 p, float width, float height, float index) {
     d = min(d, undercarridge);
     p = pp;
 
-    Model train = Model(d, color, uv, 0., 1);
+    Model train = Model(d, color, uv, .2, 1);
     return train;
 }
 
@@ -1293,7 +1293,7 @@ vec3 drawNova(vec3 col, vec2 uv) {
 
     vec2 uvw = uv;
     pR(uvw, PI * .25);
-    uv += sin((uvw + .25) * 5.) * .1;
+    uv += sin((uvw + .25 + time) * 5.) * .1;
     // uv.y += cos((uv.x + time) * 2.) * .1;
 
     float d = fNova(uv, .133);
@@ -1331,7 +1331,11 @@ vec3 render(Hit hit, vec3 col) {
             col = drawNova(col, hit.model.uv);
         }
         // col = vec3(hit.model.uv, 0.);
+        // if (hit.model.material == TRAIN_WINDOW) {
+        //     diffuse = vec3(1);
+        // }
         col *= diffuse;
+
         // col = mix(col, vec3(0,0,1), d * .05);
         // vec3 ref = reflect(hit.rayDirection, hit.normal);
     }
@@ -1440,7 +1444,7 @@ float backgroundMap(vec2 uv) {
     // return step(0., roundel(uv));
 
     uv.y *= -1.;
-    uv.y += .1;
+    // uv.y += .05;
 
     float ss = 1.5;
     uv /= ss;
@@ -1495,15 +1499,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    // p.x += 1.;
-    // p *= 1.5;
-    // // float d = fNova(p);
-    // // vec3 cc = vec3(smoothstep(0.01, .0, d));
-    // // cc = vec3(0,1,1) * mod(d * 5., 1.) * .5;
-    // vec3 cc = vec3(0);
-    // cc = drawNova(cc, p / vec2(-2) + vec2(.5,0));
-    // fragColor = vec4(cc,1.0);
-    // return;
+    p.x += 0.5;
+    p *= 2.5;
+    // float d = fNova(p);
+    // vec3 cc = vec3(smoothstep(0.01, .0, d));
+    // cc = vec3(0,1,1) * mod(d * 5., 1.) * .5;
+    vec3 cc = vec3(0);
+    cc = drawNova(cc, p / vec2(-2) + vec2(.5,0));
+    fragColor = vec4(cc,1.0);
+    return;
 
     p.y *= -1.;
 
