@@ -38,32 +38,11 @@ precision mediump float;
 #pragma glslify: distanceMeter = require(./distance-meter.glsl)
 #pragma glslify: fNova = require(../nova-graff/nova.glsl)
 
-// --------------------------------------------------------
-// Structs
-// --------------------------------------------------------
-
-struct Model {
-    float dist;
-    vec3 material;
-    vec2 uv;
-    float underStep;
-    int id;
-};
-
-struct Hit {
-    Model model;
-    vec3 pos;
-    bool isBackground;
-    vec3 normal;
-    vec3 rayOrigin;
-    float rayLength;
-    vec3 rayDirection;
-};
-
 float time;
 
 // --------------------------------------------------------
 // Utilities
+// hg_sdf https://www.shadertoy.com/view/Xs3GRB
 // --------------------------------------------------------
 
 #define PI 3.14159265359
@@ -75,18 +54,10 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
-// Repeat space along one axis
 float pMod1(inout float p, float size) {
     float halfsize = size*0.5;
     float c = floor((p + halfsize)/size);
     p = mod(p + halfsize, size) - halfsize;
-    return c;
-}
-
-// Repeat in three dimensions
-vec3 pMod3(inout vec3 p, vec3 size) {
-    vec3 c = floor((p + size*0.5)/size);
-    p = mod(p + size*0.5, size) - size*0.5;
     return c;
 }
 
@@ -103,24 +74,6 @@ float pModPolar(inout vec2 p, float repetitions) {
     return c;
 }
 
-// Distance to line segment between <a> and <b>, used for fCapsule() version 2below
-float fLineSegment(vec3 p, vec3 a, vec3 b) {
-    vec3 ab = b - a;
-    float t = saturate(dot(p - a, ab) / dot(ab, ab));
-    return length((ab*t + a) - p);
-}
-
-// Capsule version 2: between two end points <a> and <b> with radius r 
-float fCapsule(vec3 p, vec3 a, vec3 b, float r) {
-    return fLineSegment(p, a, b) - r;
-}
-
-// A circular disc with no thickness (i.e. a cylinder with no height).
-float fDisc(vec3 p, float r) {
- float l = length(p.xz) - r;
-    return l < 0. ? abs(p.y) : length(vec2(p.y, l));
-}
-
 float vmax(vec2 v) {
     return max(v.x, v.y);
 }
@@ -129,64 +82,14 @@ float vmax(vec3 v) {
     return max(max(v.x, v.y), v.z);
 }
 
-float range(float vmin, float vmax, float value) {
-  return (value - vmin) / (vmax - vmin);
-}
-
-float rangec(float a, float b, float t) {
-    return clamp(range(a, b, t), 0., 1.);
-}
-
 float fBox(vec3 p, vec3 b) {
     vec3 d = abs(p) - b;
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
-
 float fBox2(vec2 p, vec2 b) {
     vec2 d = abs(p) - b;
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
-}
-
-vec3 intersectPlane(vec3 rayOrigin, vec3 rayDirection, vec3 normal, float offset) {
-    float dist = dot(normal, normal * offset - rayOrigin) / dot(normal, rayDirection);
-    return rayOrigin + rayDirection * dist;
-}
-
-
-// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
-mat3 rotationMatrix(vec3 axis, float angle)
-{
-    axis = normalize(axis);
-    float s = sin(angle);
-    float c = cos(angle);
-    float oc = 1.0 - c;
-    
-    return mat3(
-        oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
-        oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
-        oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c
-    );
-}
-
-// The "Chamfer" flavour makes a 45-degree chamfered edge (the diagonal of a square of size <r>):
-float cmin(float a, float b, float r) {
-    return min(min(a, b), (a - r + b)*sqrt(0.5));
-}
-
-// Intersection has to deal with what is normally the inside of the resulting object
-// when using union, which we normally don't care about too much. Thus, intersection
-// implementations sometimes differ from union implementations.
-float cmax(float a, float b, float r) {
-    return max(max(a, b), (a + r + b)*sqrt(0.5));
-}
-
-
-
-// The "Round" variant uses a quarter-circle to join the two objects smoothly:
-float smin(float a, float b, float r) {
-    vec2 u = max(vec2(r - a,r - b), vec2(0));
-    return max(r, min (a, b)) - length(u);
 }
 
 float smax(float a, float b, float r) {
@@ -194,42 +97,19 @@ float smax(float a, float b, float r) {
     return min(-r, max (a, b)) + length(u);
 }
 
-// float smax(float a, float b, float r) {
-//     float m = max(a, b);
-//     if ((-a < r) && (-b < r)) {
-//         return max(m, -(r - sqrt((r+a)*(r+a) + (r+b)*(r+b))));
-//     } else {
-//         return m;
-//     }
-// }
-
-// float smin(float a, float b, float r) {
-//     float m = min(a, b);
-//     if ((a < r) && (b < r) ) {
-//         return min(m, r - sqrt((r-a)*(r-a) + (r-b)*(r-b)));
-//     } else {
-//      return m;
-//     }
-// }
-
-
-float smin(float a, float b) {
-    return smin(a, b, .0);
-}
-
 float smax(float a, float b) {
     return smax(a, b, .0);
 }
 
 
-
 // --------------------------------------------------------
 // Bezier
-// IQ
-// Modified to return closest point
+// IQ https://www.shadertoy.com/view/ldj3Wh
+// Modified to return the closest point instead of
+// the distance
 // --------------------------------------------------------
 
-vec4 sdBezier(vec3 A, vec3 B, vec3 C, vec3 pos)
+vec4 bezierPoint(vec3 A, vec3 B, vec3 C, vec3 pos)
 {    
     vec3 a = B - A;
     vec3 b = A - 2.0*B + C;
@@ -292,37 +172,27 @@ vec4 sdBezier(vec3 A, vec3 B, vec3 C, vec3 pos)
 }
 
 
-Model opU(Model a, Model b) {
-    if (a.dist < b.dist) {
-        return a;
-    }
-    return b;
-}
-
-// --------------------------------------------------------
-// Spectrum colour palette
-// IQ https://www.shadertoy.com/view/ll2GD3
-// --------------------------------------------------------
-
-vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
-    return a + b*cos( 6.28318*(c*t+d) );
-}
-
-vec3 spectrum(float n) {
-    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
-}
-
-
 // --------------------------------------------------------
 // Trefoil
+//
+// This is a lot of code to create a simple trefoil knot,
+// however the usual method (helix in polar-coordinate space)
+// produces a tube with a lot of distortion in the centre.
+//
+// Instead, I'm constructing it from bezier curves, which have
+// been calculated with a ThreeJS/CanonJS app that finds a
+// 'tight' knot as described in this paper (1), see 
+// https://github.com/tdhooper/trefoil-bezier
+//
+// I've reduced the number of individual curves that need to
+// be evaluated, from 15 to 9, by repeating space around
+// the knot's centre and plane. You can see these visaulised
+// in the app.
+//
+// (1) Ropelength of tight polygonal knots
+//     Justyna Baranska, Piotr Pieranski, Eric J. Rawdon
+//     https://arxiv.org/abs/physics/0409108
 // --------------------------------------------------------
-
-vec4 unionBezier(vec3 p, vec4 a, vec4 b) {
-    if (length(p - a.xyz) < length(p - b.xyz)) {
-        return a;
-    }
-    return b;
-}
 
 float switchBezier(vec3 p, vec4 a, vec4 b) {
     return length(p - a.xyz) - length(p - b.xyz);
@@ -342,7 +212,6 @@ struct CurvePart {
     vec3 normal;
     float offset;
 };
-
 
 // 14
 vec3 a0 = vec3(-0.5669088543444947, -0.23671635305770958, 0.3195550470325173);
@@ -420,6 +289,7 @@ vec3 cNor8 = vec3(0.6133085148535106, 0.709419711040007, -0.34724103904362313);
 float sepa;
 float sepR = 0.465;
 
+// Curve closest to the center
 CurvePart bezierInner(vec3 p) {
     vec4 bez, bezPart;
     vec3 a, b, c,
@@ -434,7 +304,7 @@ CurvePart bezierInner(vec3 p) {
     cTan = cTan0;
     aNor = aNor0;
     cNor = cNor0;
-    bezPart = sdBezier(a, b, c, p);
+    bezPart = bezierPoint(a, b, c, p);
     bez = bezPart;
     tan = mix(aTan, cTan, bez.w);
     nor = mix(aNor, cNor, bez.w);
@@ -447,7 +317,7 @@ CurvePart bezierInner(vec3 p) {
     cTan = cTan1;
     aNor = aNor1;
     cNor = cNor1;
-    bezPart = sdBezier(a, b, c, p);
+    bezPart = bezierPoint(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
         tan = mix(aTan, cTan, bez.w);
@@ -462,7 +332,7 @@ CurvePart bezierInner(vec3 p) {
     cTan = cTan2;
     aNor = aNor2;
     cNor = cNor2;
-    bezPart = sdBezier(a, b, c, p);
+    bezPart = bezierPoint(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
         tan = mix(aTan, cTan, bez.w);
@@ -480,6 +350,7 @@ CurvePart bezierInner(vec3 p) {
     );
 }
 
+// Curve that loops around the outside
 CurvePart bezierOuter(vec3 p) {
     vec4 bez, bezPart;
     vec3 a, b, c,
@@ -494,7 +365,7 @@ CurvePart bezierOuter(vec3 p) {
     cTan = cTan3;
     aNor = aNor3;
     cNor = cNor3;
-    bezPart = sdBezier(a, b, c, p);
+    bezPart = bezierPoint(a, b, c, p);
     bez = bezPart;
     tan = mix(aTan, cTan, bez.w);
     nor = mix(aNor, cNor, bez.w);
@@ -507,7 +378,7 @@ CurvePart bezierOuter(vec3 p) {
     cTan = cTan4;
     aNor = aNor4;
     cNor = cNor4;
-    bezPart = sdBezier(a, b, c, p);
+    bezPart = bezierPoint(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
         tan = mix(aTan, cTan, bez.w);
@@ -525,7 +396,7 @@ CurvePart bezierOuter(vec3 p) {
     cTan = cTan5;
     aNor = aNor5;
     cNor = cNor5;
-    bezPart = sdBezier(a, b, c, p);
+    bezPart = bezierPoint(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
         tan = mix(aTan, cTan, bez.w);
@@ -540,7 +411,7 @@ CurvePart bezierOuter(vec3 p) {
     cTan = cTan6;
     aNor = aNor6;
     cNor = cNor6;
-    bezPart = sdBezier(a, b, c, p);
+    bezPart = bezierPoint(a, b, c, p);
     if (switchBezier(p, bez, bezPart) > 0.) {
         bez = bezPart;
         tan = mix(aTan, cTan, bez.w);
@@ -557,7 +428,7 @@ CurvePart bezierOuter(vec3 p) {
     cTan = cTan7;
     aNor = aNor7;
     cNor = cNor7;
-    bezPart = sdBezier(a, b, c, p);
+    bezPart = bezierPoint(a, b, c, p);
 
     sepc = min(sepc, length(p - bezPart.xyz) - sepR);
 
@@ -575,7 +446,7 @@ CurvePart bezierOuter(vec3 p) {
     cTan = cTan8;
     aNor = aNor8;
     cNor = cNor8;
-    bezPart = sdBezier(a, b, c, p);
+    bezPart = bezierPoint(a, b, c, p);
 
     sepc = min(sepc, length(p - bezPart.xyz) - sepR);
 
@@ -623,7 +494,6 @@ Curve TrefoilCurve(vec3 p) {
     cell = pModPolar(p.xy, repetitions);
     pR(p.xy, angle / 2.);
 
-
     float outer = 0.;
 
     CurvePart curve = bezierInner(p);
@@ -633,19 +503,6 @@ Curve TrefoilCurve(vec3 p) {
         outer = 1.;
         curve = outerCurve;
     }
-
-    // curve = cornerCurve;
-
-    // curve = cornerCurve;
-
-    // float flip = sign(p.z);
-    // side = flip * .5 + .5;
-
-    // float rot = side * TAU / -6.;
-    // rot = 0.;
-
-    // vec3 pp = p;
-    // cell = floor((atan(p.y, p.x) + angle / 2. - rot) / angle);
 
     float an = cell * angle;
 
@@ -665,9 +522,6 @@ Curve TrefoilCurve(vec3 p) {
     if (side > 0.) {
         m = m * m2 * m3;
     }
-
-    // m = mat3(1,0,0,0,1,0,0,0,1);
-
 
     float parts = 24.;
 
@@ -716,11 +570,8 @@ void pModTrefoil(inout vec3 p, float len) {
 
 
 // --------------------------------------------------------
-// Materials
+// Materials, well, colours
 // --------------------------------------------------------
-
-vec3 DEFAULT_MAT = vec3(1.9);
-vec3 DISTANCE_METER_MAT = vec3(123.);
 
 vec3 TRAIN_MAT = vec3(.9,.5,.5);
 vec3 CHANNEL_MAT = vec3(.15);
@@ -733,7 +584,6 @@ vec3 TRAIN_RED = vec3(1,.025,.125);
 vec3 TRAIN_GREY = vec3(.4);
 vec3 TRAIN_ROOF = vec3(.6);
 vec3 TRAIN_WINDOW = vec3(.5,.9,1.);
-vec3 TRAIN_WINDOW_FRAME = vec3(.1);
 vec3 TRAIN_WHITE = vec3(1);
 vec3 TRAIN_BLUE = vec3(0,0,.7);
 vec3 TRAIN_UNDERCARRIDGE = vec3(.1);
@@ -741,7 +591,6 @@ vec3 TRAIN_UNDERCARRIDGE = vec3(.1);
 vec3 STAIR_BASE_MAT = vec3(.1);
 vec3 STEP_MAT = vec3(.3);
 vec3 STEP_TOP_MAT = vec3(.5);
-vec3 STEP_STRIPE_MAT = vec3(.3);
 vec3 STEP_YELLOW_MAT = MIND_THE_GAP_MAT;
 vec3 HANDRAIL_MAT = vec3(.7);
 
@@ -749,6 +598,21 @@ vec3 HANDRAIL_MAT = vec3(.7);
 // --------------------------------------------------------
 // Model
 // --------------------------------------------------------
+
+struct Model {
+    float dist;
+    vec3 material;
+    vec2 uv;
+    float underStep;
+    int id;
+};
+
+Model opU(Model a, Model b) {
+    if (a.dist < b.dist) {
+        return a;
+    }
+    return b;
+}
 
 Model mTrain(vec3 p, float width, float height, float index) {
     p.z *= -1.;
@@ -763,7 +627,6 @@ Model mTrain(vec3 p, float width, float height, float index) {
     p.y -= mix(.75, .25, sign(p.x) * .5 + .5);
     p.z += (index - 1.) * len * 4.;
     vec2 uv = p.zy;
-    // uv.xy = vec2(index / 3.);
 
     p = pp;
     p.x = abs(p.x);
@@ -779,7 +642,6 @@ Model mTrain(vec3 p, float width, float height, float index) {
 
     // Slanted side
     p.xy -= vec2(width, height * .45);
-    // d = smax(d, dot(p.xy, normalize(vec2(1.,-.175))), width * .01);
     d = max(d, dot(p.xy, normalize(vec2(1.,-.175))));
     p = pp;
 
@@ -788,11 +650,10 @@ Model mTrain(vec3 p, float width, float height, float index) {
     p.y += height - topRadius;
     float top = length(p.xy) - topRadius;
     top = min(top, -p.y);
-    // d = smax(d, top, width * .05);
     d = smax(d, top, .005);
     p = pp;
 
-    // Blue
+    // Blue bar
     float blueStripe = step(0., p.y - height + .03);
     vec3 color = mix(TRAIN_WHITE, TRAIN_BLUE, blueStripe);
 
@@ -801,20 +662,14 @@ Model mTrain(vec3 p, float width, float height, float index) {
     float thin = form + thinOffset;
     d = thin;
 
-    // Carridge
+    // Roof setup
+    float roofPane = p.y + height * .8;
+
+    // Carridge setup
     float carridgeCrop = max(-p.z - innerLength / 2., p.z - innerLength / 2. + frontDoorOffset);
     d = smax(d, carridgeCrop, .01);
 
-    float roofPane = p.y + height * .8;
-
-    // pMod1(p.z, len / 2.);
-    // p.y -= height;
-    // thin = max(-thin, fBox2(p.yz, vec2(thinTop,.2)));
-    // d = max(d, -thin);
-    // p = pp;
-
     // Side doors
-
     float sideDoorWidth = .17 / 2.;
     float spacing = innerLength / 3.;
     p.z -= spacing / 2.;
@@ -840,13 +695,10 @@ Model mTrain(vec3 p, float width, float height, float index) {
     d = min(d, sideDoors);
     p = pp;
 
-
     // Side windows
-
     p.y = abs(p.y);
     float sideWindow = p.y - .04;
     sideWindow = smax(sideWindow, -sideDoorMask + windowFrameOffset * 2., .01);
-    // color = mix(color, TRAIN_WINDOW_FRAME, 1. - step(0., sideWindow - windowFrameOffset));
     pMod1(p.z, spacing);
     p.z = abs(p.z);
     sideWindow = smax(sideWindow, -(p.z - windowFrameOffset * 2.), .01);
@@ -858,8 +710,6 @@ Model mTrain(vec3 p, float width, float height, float index) {
     roof = smax(roof, carridgeCrop, .01);
     color = mix(color, TRAIN_ROOF, step(0., d - roof));
     d = min(d, roof);
-
-
 
     // Front
 
@@ -876,9 +726,8 @@ Model mTrain(vec3 p, float width, float height, float index) {
     color = mix(color, TRAIN_RED, step(0., d - front));
     d = min(d, front);
     p = pp;
-    
-    // Back
 
+    // Back
     p.z += len;
     float back = smax(form, endcap, .03);
     back = smax(back, (p.z - backWidth), .01);
@@ -886,8 +735,6 @@ Model mTrain(vec3 p, float width, float height, float index) {
     color = mix(color, backColor, step(0., d - back));
     d = min(d, back);
     p = pp;
-
-
 
     // Front grey
     p.z = abs(p.z);
@@ -902,7 +749,6 @@ Model mTrain(vec3 p, float width, float height, float index) {
     }
     color = mix(color, TRAIN_GREY, step(0., d - grey));
     p = pp;
-
 
     // Front door
     vec2 doorWH = vec2(width * .22, height * 1.7);
@@ -932,12 +778,7 @@ Model mTrain(vec3 p, float width, float height, float index) {
     p = pp;
     window2 = max(window2, -(p.y + doorWH.y - doorXY.y - windowOffset + .005));
     window2 = smax(window2, grey + .02, .01);
-
-    p = pp;
-
-
     window = min(window, window2);
-    // color = mix(color, TRAIN_WINDOW_FRAME, 1.-step(0., window - windowFrameOffset));
     color = mix(color, TRAIN_WINDOW, 1.-step(0., window));
 
     // Undercarridge
@@ -946,8 +787,6 @@ Model mTrain(vec3 p, float width, float height, float index) {
     p.y -= height;
     d = smax(d, p.y, 0.);
 
-    // p.x = abs(p.x);
-    // p.x -= width;
     p.y -= baseHeight / 2.;
     float undercarridge = fBox2(p.xy, vec2(width - baseHeight, baseHeight / 2.));
     p.z = abs(p.z);
@@ -971,7 +810,9 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
 
     float trainSize = .175;
 
-    // Channel
+    // Impossible Channel
+    // Carves through beyond the other side of a thi turface,
+    // as if it had depth.
 
     p.x = abs(p.x);
     d = -p.y - .001;
@@ -1023,6 +864,7 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
 
 
     // Rails
+
     p.x = abs(p.x);
     float railHeight = .01;
     p.x = abs(p.x);
@@ -1036,20 +878,8 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
 
     Model track = Model(d, color, vec2(0), 0., 2);
 
-    // p.x -= radius;
-    // Model platform = Model(
-    //     fBox2(p.xy, vec2(.075)),
-    //     color,
-    //     0.
-    // );
-    // p = pp;
-
-    p.z += curveLen * guiOffsetX;
-    if (guiAnimation2) {
-        p.z += time * (curveLen * 5. / 6.);
-    } else {
-        p.z += time * (curveLen * 5. / 6.);
-    }
+    p.z += curveLen * .14;
+    p.z += time * (curveLen * 5. / 6.);
     float c = floor(p.z / curveLen * 2. + .5);
     c = mod(c, 2.);
     if (time > .85) {
@@ -1062,22 +892,12 @@ Model mTrainSide(vec3 p, float curveLen, float radius) {
     p = pp;
 
     Model model = opU(track, train);
-    // model = track;
 
     if ( ! pastThreshold) {
         model.dist = max(model.dist, p.y);
     }
 
-    // model.uv = vec2(c);
-
     return model;
-}
-
-float fStep(vec3 p, float stairSize) {
-    pR(p.yz, (30./180.) * PI);
-    float d = length(p.yz) - stairSize * .9;
-    d = smax(d, p.y, .001);
-    return d;
 }
 
 Model mStairSide(vec3 p, float curveLen, float radius) {
@@ -1085,11 +905,7 @@ Model mStairSide(vec3 p, float curveLen, float radius) {
     float d = p.y;
 
     float stairSize = curveLen / 60.;
-    if (guiAnimation2) {
-        p.z += time * stairSize * 2. * -15. * .5;
-    } else {
-        p.z += time * stairSize * 2. * -3.;
-    }
+    p.z += time * stairSize * 2. * -3.;
 
     pMod1(p.z, stairSize);
 
@@ -1131,7 +947,6 @@ Model mStairSide(vec3 p, float curveLen, float radius) {
     float handrailHeight = .14;
     float handrail = fBox2(p.xy, vec2(handrailWidth, handrailHeight));
     vec3 handrailColor = mix(STAIR_BASE_MAT, HANDRAIL_MAT, smoothstep(0., handrailHeight * 2., p.y));
-    // handrailColor = STEP_MAT;
     handrailColor = mix(handrailColor, HANDRAIL_MAT, step(0., p.x + handrailWidth * .75));
     color = mix(color, handrailColor, step(0., d - handrail));
     d = min(d, handrail);
@@ -1205,6 +1020,16 @@ Model map(vec3 p) {
 // --------------------------------------------------------
 // Rendering
 // --------------------------------------------------------
+
+struct Hit {
+    Model model;
+    vec3 pos;
+    bool isBackground;
+    vec3 normal;
+    vec3 rayOrigin;
+    float rayLength;
+    vec3 rayDirection;
+};
 
 float calcAO( in vec3 pos, in vec3 nor )
 {
