@@ -1,26 +1,8 @@
 precision highp float;
 
-#extension GL_OES_standard_derivatives : enable
-
 uniform vec2 iResolution;
 uniform vec2 iOffset;
 uniform float iTime;
-uniform sampler2D iChannel0;
-
-uniform mat4 cameraMatrix;
-uniform vec3 cameraPosition;
-
-uniform float guiFocalLength;
-uniform float guiSmallRadius;
-uniform float guiLargeRadius;
-uniform float guiOffsetX;
-uniform float guiOffsetY;
-uniform float guiOffsetZ;
-// uniform float guiRotateX;
-// uniform float guiRotateY;
-// uniform float guiRotateZ;
-uniform bool guiAnimation2;
-uniform bool guiTrefoil;
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -34,9 +16,6 @@ precision mediump float;
 
 
 /* SHADERTOY FROM HERE */
-
-#pragma glslify: distanceMeter = require(./distance-meter.glsl)
-#pragma glslify: fNova = require(../nova-graff/nova.glsl)
 
 float time;
 
@@ -52,6 +31,10 @@ float time;
 
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+void pR45(inout vec2 p) {
+    p = (p + vec2(p.y, -p.x))*sqrt(0.5);
 }
 
 float pMod1(inout float p, float size) {
@@ -92,13 +75,27 @@ float fBox2(vec2 p, vec2 b) {
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
 
+// Don't round corners when distance is reduced
+float fBoxy(vec2 p, vec2 s) {
+    return vmax(abs(p) - s);
+}
+
+float smin(float a, float b, float r) {
+    vec2 u = max(vec2(r - a,r - b), vec2(0));
+    return max(r, min (a, b)) - length(u);
+}
+
 float smax(float a, float b, float r) {
     vec2 u = max(vec2(r + a,r + b), vec2(0));
     return min(-r, max (a, b)) + length(u);
 }
 
+float smin(float a, float b) {
+    return smin(a, b, .0);
+}
+
 float smax(float a, float b) {
-    return smax(a, b, .0);
+    return smax(a, b, 0.);
 }
 
 
@@ -570,7 +567,7 @@ void pModTrefoil(inout vec3 p, float len) {
 
 
 // --------------------------------------------------------
-// Materials, well, colours
+// Materials, well, actually just colours
 // --------------------------------------------------------
 
 vec3 TRAIN_MAT = vec3(.9,.5,.5);
@@ -1018,6 +1015,105 @@ Model map(vec3 p) {
 
 
 // --------------------------------------------------------
+// NOVA graffiti
+// --------------------------------------------------------
+
+float fNova(vec2 p, float weight) {
+
+    float d = 1e12;
+    vec2 p2 = p;
+    vec2 p3 = p;
+    float arrow;
+
+    // N
+    p3 = p;
+    d = min(d, fBoxy(p, vec2(.6, .5)));
+    p.x -= .1;
+    pR45(p);
+    d = max(d, fBoxy(p, vec2(1., .6)));
+    p = p3;
+    p.x += .03;
+    d = max(d, -fBoxy(p - vec2(.2, .5), vec2(weight/2.,.6)));
+    d = max(d, -fBoxy(p + vec2(.2, .5), vec2(weight/2.,.6)));
+    p = p2;
+
+    // O
+    p.x -= .9;
+    p2 = p;
+    float O = fBoxy(p, vec2(.5,.6));
+    pR45(p);
+    O = max(O, vmax(abs(p)) - .55);
+    O = max(O, -d + weight);
+    d = min(d, O);
+    p = p2;
+
+    p += vec2(.25,-.2);
+    p3 = p;
+    p.y *= 1.25;
+    pR45(p);
+    arrow = vmax(p);
+    p = p3;
+    arrow = max(arrow, fBoxy(p, vec2(.1, 1.)));
+    d = max(d, -arrow + weight);
+    d = min(d, arrow);
+    p = p2;
+    d = min(d, fBoxy(p - vec2(-.1,-.4), vec2(.25,.15)));
+    d = max(d, -p.y - .5);
+
+    // V
+    p.x -= .8;
+    p2 = p;
+    p.y += .95;
+    p.x = abs(p.x);
+    pR(p, -.42);
+    float V = p.x;
+    p = p2;
+    V = max(V, abs(p.y) - .6);
+    p.y -= .6;
+    p.x -= .025;
+    V = max(V, -fBoxy(p, vec2(weight/2., .75)));
+    p = p2;
+    p.x -= .075;
+    p.y -= .3;
+    V = max(V, -vmax(p * vec2(1,-1)));
+    d = max(d, -V + weight);
+    d = min(d, V);
+    p = p2;
+
+    // A
+    p.x -= .75;
+    p2 = p;
+    p.y += .1;
+    float A = fBoxy(p, vec2(.45, .4));
+    p = p2;
+    A = max(A, -V + weight);
+    d = min(d, A);
+    p = p2;
+
+    p -= vec2(-.3, .2);
+    arrow = abs(p.y) - .125;
+    p.y -= .05;
+    pR45(p);
+    pR(p, -.3);
+    arrow = max(arrow, -p.x * 1.5);
+    d = max(d, -arrow + weight);
+    d = min(d, arrow);
+    p = p2;
+    p.x -= .3;
+    d = min(d, fBoxy(p, vec2(.15, .3)));
+    p = p2;
+    d = max(d, p.x- .45);
+    pR45(p);
+    d = max(d, p.x - .43);
+
+    p = p2;
+    d = max(d, -fBoxy(p + vec2(-.05,.23), vec2(.1, weight/2.)));
+
+    return d;
+}
+
+
+// --------------------------------------------------------
 // Rendering
 // --------------------------------------------------------
 
@@ -1101,18 +1197,6 @@ const float MAX_TRACE_DISTANCE = 10.;
 const float INTERSECTION_PRECISION = .0001;
 const int NUM_OF_TRACE_STEPS = 150;
 
-
-// Faster runtime
-vec3 _calcNormal(vec3 pos){
-    vec3 eps = vec3(.0001,0,0);
-    vec3 nor = vec3(
-        map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
-        map(pos+eps.yxy).dist - map(pos-eps.yxy).dist,
-        map(pos+eps.yyx).dist - map(pos-eps.yyx).dist );
-    return normalize(nor);
-}
-
-// Faster compilation
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
     vec3 eps = vec3(.0001,0,0);
@@ -1207,7 +1291,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    p.y *= -1.; // Put the train on top
+    p.y *= -1.; // Last minute adjustment, put the train on top
 
     vec3 camPos = vec3(-1.,0,.25) * .95;
     vec3 camTar = vec3(0,-.0025,0);
@@ -1226,6 +1310,3 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     fragColor = vec4(color,1);
 }
-
-
-
