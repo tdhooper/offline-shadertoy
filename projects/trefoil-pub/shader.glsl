@@ -183,7 +183,7 @@ vec4 bezierPoint(vec3 A, vec3 B, vec3 C, vec3 pos)
 //
 // I've reduced the number of individual curves that need to
 // be evaluated, from 15 to 9, by repeating space around
-// the knot's centre and plane. You can see these visaulised
+// the knot's centre and plane. You can see these visualised
 // in the app.
 //
 // (1) Ropelength of tight polygonal knots

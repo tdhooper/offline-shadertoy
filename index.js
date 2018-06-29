@@ -13,7 +13,7 @@ var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 var Controls = require('./lib/controls');
 
-pixelRatio = 1.;
+pixelRatio = .5;
 
 var overlay = document.createElement('div');
 overlay.classList.add('overlay');
@@ -64,10 +64,11 @@ var vert = glslify('./quad.vert');
 // clifford-torus
 // inverted-torus
 // trefoil
+// impossible-channel
 
-var frag = glslify('./projects/trefoil-pub/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/trefoil-pub/config.json', 'utf8'));
-// var config = {};
+var frag = glslify('./projects/impossible-channel/shader.glsl');
+// var config = JSON.parse(fs.readFileSync('./projects/trefoil-pub/config.json', 'utf8'));
+var config = {};
 
 var configId;
 
