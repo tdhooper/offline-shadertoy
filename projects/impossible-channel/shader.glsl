@@ -138,17 +138,17 @@ struct Model {
     int id;
 };
 
-bool pastThresholdA = false;
-bool pastThresholdB = false;
-float lastSideA = 1.;
-float lastSideB = 1.;
+bool pastThreshold = false;
+float thresholdSide = 0.;
 
 Model mTrainSide(vec3 p, float curveLen) {
 
-    float thick = .05;
+    float thick = .1;
     float width = .3;
-    float channelWidth = width - thick;
-    float channelDepth = channelWidth;
+    float channelWidth = width - thick / 2.;
+    float channelDepth = channelWidth * 2.;
+    float round = thick / 2.;
+    // round = 0.;
 
     // p.y += channelDepth/2.;
 
@@ -157,37 +157,26 @@ Model mTrainSide(vec3 p, float curveLen) {
     // as if it had depth.
 
     p.x = abs(p.x);
-    float d = -p.y - thick;
+    float d = fBox2(p.xy, vec2(width, thick - round)) - round;
 
-    float thresholdA = fBox2(
-        p.xy + vec2(0, thick/2. + .003),
-        vec2(width, thick/2. + .002)
+    float threshold = fBox2(
+        p.xy,
+        vec2(channelWidth + round, thick + .02)
     );
-    float sideA = sign(thresholdA);
-    if (sideA != lastSideA) {
-        pastThresholdA = true;
+    // threshold = max(threshold, -d);
+    if (threshold <= 0. && ! pastThreshold) {
+        pastThreshold = true;
+        thresholdSide = sign(p.y);
     }
-    lastSideA = sideA;
-
-    float thresholdB = fBox2(
-        p.xy + vec2(0, thick/2. + .003),
-        vec2(width, thick/2. + .002)
-    );
-    float sideB = sign(thresholdB);
-    if (sideB != lastSideB) {
-        pastThresholdB = true;
-    }
-    lastSideB = sideB;
+    // lastSide = side;
 
     float cut = fBox2(p.xy, vec2(channelWidth, channelDepth));
 
-    if (pastThresholdA) {
-        d = max(d, -cut);
-    } else {
-        d = max(d, p.y);
+    if (pastThreshold) {
+        d = smax(thresholdSide * p.y - thick, -cut, round);
     }
 
-    d = max(d, p.x - width);
+    // d = max(d, p.x - width);
 
     Model model = Model(d, vec3(.5), vec2(0), 0., 10);
     return model;
