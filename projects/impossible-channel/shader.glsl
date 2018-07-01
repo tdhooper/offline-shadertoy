@@ -119,7 +119,7 @@ vec3 polarToCart(vec3 p) {
 
 void pModTrefoil(inout vec3 p, float len) {
     p = cartToPolar(p);
-    p.z -= 1.;
+    p.z -= 2.;
     p = p.xzy;
     // outer = length(p.xz) - .2;
 }
@@ -144,10 +144,10 @@ float thresholdSide = 0.;
 Model mTrainSide(vec3 p, float curveLen) {
 
     float thick = .1;
-    float width = .3;
+    float width = .8;
     float channelWidth = width - thick / 2.;
-    float channelDepth = channelWidth * 2.;
-    float round = thick / 2.;
+    float channelDepth = channelWidth;
+    float round = thick;
     // round = 0.;
 
     // p.y += channelDepth/2.;
@@ -161,7 +161,7 @@ Model mTrainSide(vec3 p, float curveLen) {
 
     float threshold = fBox2(
         p.xy,
-        vec2(channelWidth + round, thick + .02)
+        vec2(channelWidth + round, thick + .002)
     );
     // threshold = max(threshold, -d);
     if (threshold <= 0. && ! pastThreshold) {
@@ -173,7 +173,8 @@ Model mTrainSide(vec3 p, float curveLen) {
     float cut = fBox2(p.xy, vec2(channelWidth, channelDepth));
 
     if (pastThreshold) {
-        d = smax(thresholdSide * p.y - thick, -cut, round);
+        d = fBox2(p.xy + vec2(0, thresholdSide * (channelDepth * 2. - thick)), vec2(width, channelDepth * 2. - round)) - round;
+        d = smax(-cut, d, round);
     }
 
     // d = max(d, p.x - width);
@@ -191,7 +192,7 @@ Model fModel(vec3 p) {
     pModTrefoil(p, curveLen);
 
 
-    pR(p.xy, 1. + time * PI * 2.);
+    pR(p.xy, .5 * p.z + time * PI * 2.);
 
     Model model = mTrainSide(p, curveLen);
 
@@ -204,7 +205,8 @@ Model map(vec3 p) {
     float scale = focalLength;
     p *= scale;
     Model model = fModel(p);
-    model.dist = min(model.dist, length(p) - .2);
+    // model.dist = min(model.dist, length(p) - .2);
+    // model.dist = max(model.dist, -p.y);
     model.dist /= scale;
     return model;
 }
@@ -247,6 +249,7 @@ vec3 render(Hit hit, vec3 col) {
         col = hit.model.material;
         vec3 diffuse = mix(vec3(.5,.5,.6) * 1., vec3(1), ao);
         diffuse = vec3(dot(normalize(vec3(1,1,0)), hit.normal) * .5 + .5);
+        // diffuse *= mix(.7, 1., ao);
         col *= diffuse;
     }
     return col;
@@ -260,7 +263,7 @@ vec3 render(Hit hit, vec3 col) {
 
 const float MAX_TRACE_DISTANCE = 10.;
 const float INTERSECTION_PRECISION = .0001;
-const int NUM_OF_TRACE_STEPS = 150;
+const int NUM_OF_TRACE_STEPS = 1500;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
