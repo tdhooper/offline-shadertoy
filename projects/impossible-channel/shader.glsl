@@ -22,6 +22,21 @@ precision mediump float;
 
 float time;
 
+
+// --------------------------------------------------------
+// IQ
+// https://www.shadertoy.com/view/ll2GD3
+// --------------------------------------------------------
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+
 // --------------------------------------------------------
 // Utilities
 // hg_sdf https://www.shadertoy.com/view/Xs3GRB
@@ -119,7 +134,7 @@ vec3 polarToCart(vec3 p) {
 
 void pModTrefoil(inout vec3 p, float len) {
     p = cartToPolar(p);
-    p.z -= 2.;
+    p.z -= 3.;
     p = p.xzy;
     p.z /= PI * 2.;
     // outer = length(p.xz) - .2;
@@ -157,6 +172,7 @@ Model mTrainSide(vec3 p, float curveLen) {
     // Impossible Channel
     // Carves through beyond the other side of a thi turface,
     // as if it had depth.
+
     if (length(lastZ - p.z) > .5) {
         thresholdSide *= -1.;
     }
@@ -184,7 +200,50 @@ Model mTrainSide(vec3 p, float curveLen) {
 
     // d = max(d, p.x - width);
 
-    Model model = Model(d, vec3(.5), vec2(0), 0., 10);
+    float zScale = 36.;
+    float repeat = 11.;
+    float bounceSpeed = 3.;
+    // if (p.y > 0. || thresholdSide > 0. && ! (sign(p.y) < thresholdSide)) {
+    //     p.z += .5 / repeat;
+    // }
+    // if (sign(p.y) != thresholdSide) {
+    //     p.z += .5 / repeat;
+    // }
+
+    float side = mix(sign(p.y), thresholdSide, abs(thresholdSide));
+    if (side > 0.) {
+        p.z += 1.;
+    }
+    p.z /= 2.;
+
+    // float bounce = abs(sin((p.z + time * 2.) * 2. * PI));
+
+    vec3 col = spectrum(p.z);
+
+    float ballSize = channelWidth * .7;
+
+    float tt = time / (repeat / bounceSpeed);
+    p.z -= tt;
+    p.z *= zScale;
+
+    float cell = pMod1(p.z, zScale / repeat);
+    cell /= repeat;
+
+    // cell += repeat / 10. * time;
+
+    float bounce = abs(sin((cell + tt) * 5. * PI));
+    // bounce = 0.;
+    p.y -= mix((channelDepth - ballSize) * -side, 1.5 * side, bounce);
+
+    // col = spectrum(cell);
+
+    float balls = length(p) - ballSize;
+    // if ( ! pastThreshold) {
+        d = min(d, balls);
+    // }
+
+
+    Model model = Model(d, col, vec2(0), 0., 10);
     return model;
 }
 
@@ -330,7 +389,7 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = iTime;
-    time *= .3;
+    time *= .4;
     time = mod(time, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
