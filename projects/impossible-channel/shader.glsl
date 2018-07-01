@@ -121,6 +121,7 @@ void pModTrefoil(inout vec3 p, float len) {
     p = cartToPolar(p);
     p.z -= 2.;
     p = p.xzy;
+    p.z /= PI * 2.;
     // outer = length(p.xz) - .2;
 }
 
@@ -140,6 +141,7 @@ struct Model {
 
 bool pastThreshold = false;
 float thresholdSide = 0.;
+float lastZ = 0.;
 
 Model mTrainSide(vec3 p, float curveLen) {
 
@@ -155,6 +157,10 @@ Model mTrainSide(vec3 p, float curveLen) {
     // Impossible Channel
     // Carves through beyond the other side of a thi turface,
     // as if it had depth.
+    if (length(lastZ - p.z) > .5) {
+        thresholdSide *= -1.;
+    }
+    lastZ = p.z;
 
     p.x = abs(p.x);
     float d = fBox2(p.xy, vec2(width, thick - round)) - round;
@@ -168,7 +174,6 @@ Model mTrainSide(vec3 p, float curveLen) {
         pastThreshold = true;
         thresholdSide = sign(p.y);
     }
-    // lastSide = side;
 
     float cut = fBox2(p.xy, vec2(channelWidth, channelDepth));
 
@@ -192,7 +197,7 @@ Model fModel(vec3 p) {
     pModTrefoil(p, curveLen);
 
 
-    pR(p.xy, .5 * p.z + time * PI * 2.);
+    pR(p.xy, p.z * PI + time * PI * 2.);
 
     Model model = mTrainSide(p, curveLen);
 
