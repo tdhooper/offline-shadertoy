@@ -118,16 +118,16 @@ float smax(float a, float b) {
 
 vec3 cartToPolar(vec3 p) {
     float x = p.x; // distance from the plane it lies on
-    float a = atan(p.y, p.z); // angle around center
     float r = length(p.zy); // distance from center
-    return vec3(x, a, r);
+    float a = atan(p.y, p.z); // angle around center
+    return vec3(x, r, a);
 }
 
 vec3 polarToCart(vec3 p) {
     return vec3(
         p.x,
-        sin(p.y) * p.z,
-        cos(p.y) * p.z
+        sin(p.z) * p.y,
+        cos(p.z) * p.y
     );
 }
 
@@ -154,20 +154,22 @@ bool AO_PASS = false;
 
 Model fModel(vec3 p) {
 
+    vec3 pp = p;
     float curveLen = 14.;
 
     p = cartToPolar(p);
-    p.z -= 3.;
-    p = p.xzy;
+    p.y -= 3.;
     p.z /= PI * 2.;
 
+    float rotate = -time;
+    // rotate = 0.;
 
-    pR(p.xy, p.z * PI + time * PI * 2.);
+    pR(p.xy, p.z * PI + rotate * PI * 2.);
 
     float thick = .1;
     float width = .8;
     float channelWidth = width - thick / 2.;
-    float channelDepth = channelWidth * 2.;
+    float channelDepth = channelWidth * 1.;
     float round = thick;
     // round = 0.;
 
@@ -205,8 +207,9 @@ Model fModel(vec3 p) {
     // d = max(d, p.x - width);
 
     float zScale = 36.;
-    float repeat = 20.;
-    float bounceSpeed = 5.;
+    float repeat = 5.;
+    float bounceSpeed = 2.;
+    float bounceRatio = 4.;
     // if (p.y > 0. || thresholdSide > 0. && ! (sign(p.y) < thresholdSide)) {
     //     p.z += .5 / repeat;
     // }
@@ -226,26 +229,46 @@ Model fModel(vec3 p) {
 
     float ballSize = channelWidth * .7;
 
-    float tt = time / (repeat / bounceSpeed);
-    p.z -= tt;
-    p.z *= zScale;
+    float tt = (time / repeat) * bounceSpeed;
 
-    float cell = pMod1(p.z, zScale / repeat);
-    cell /= repeat;
+    p.z += tt;
+
+    float cell = pMod1(p.z, 1./repeat);
+    // col = spectrum(cell/repeat);
+
+
+    vec3 bp = vec3(0,0,0);
+    bp.z -= tt * 2.;
+    bp.z += 2. * cell / repeat;
+
+    float bounce = bp.z * 2. + time * 2. * bounceRatio;
+    // bounce = abs(sin(bounce * PI));
+    bounce = (1. - fract(bounce)) * fract(bounce) * 4.;
+
+    bp.y += mix((channelDepth - ballSize), 2. * -1., bounce);
+    // bp.y -= 1.;
+
+    pR(bp.xy, -(bp.z * PI + rotate * PI * 2.));
+    bp.y += 3.;
+
 
     // cell += repeat / 10. * time;
 
-    float bounce = abs(sin((cell + tt) * 16. * PI));
-    // bounce = 0.;
-    p.y -= mix((channelDepth - ballSize) * -side, 1.5 * side, bounce);
 
     // col = spectrum(cell);
 
     float balls = length(p) - ballSize;
     // if ( ! pastThreshold) {
-        d = min(d, balls);
+        // d = min(d, balls);
     // }
 
+    bp.z *= PI * 2.;
+    bp = polarToCart(bp);
+
+    p = pp;
+    d = min(d, length(p - bp)- ballSize);
+
+    col = vec3(.8);
 
     Model model = Model(d, col, vec2(0), 0., 10);
 
@@ -378,7 +401,7 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = iTime;
-    time *= .4;
+    time *= .333;
     time = mod(time, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
