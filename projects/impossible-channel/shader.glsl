@@ -132,16 +132,6 @@ vec3 polarToCart(vec3 p) {
 }
 
 
-void pModTrefoil(inout vec3 p, float len) {
-    p = cartToPolar(p);
-    p.z -= 3.;
-    p = p.xzy;
-    p.z /= PI * 2.;
-    // outer = length(p.xz) - .2;
-}
-
-
-
 // --------------------------------------------------------
 // Model
 // --------------------------------------------------------
@@ -158,12 +148,26 @@ bool pastThreshold = false;
 float thresholdSide = 0.;
 float lastZ = 0.;
 
-Model mTrainSide(vec3 p, float curveLen) {
+
+
+bool AO_PASS = false;
+
+Model fModel(vec3 p) {
+
+    float curveLen = 14.;
+
+    p = cartToPolar(p);
+    p.z -= 3.;
+    p = p.xzy;
+    p.z /= PI * 2.;
+
+
+    pR(p.xy, p.z * PI + time * PI * 2.);
 
     float thick = .1;
     float width = .8;
     float channelWidth = width - thick / 2.;
-    float channelDepth = channelWidth;
+    float channelDepth = channelWidth * 2.;
     float round = thick;
     // round = 0.;
 
@@ -201,8 +205,8 @@ Model mTrainSide(vec3 p, float curveLen) {
     // d = max(d, p.x - width);
 
     float zScale = 36.;
-    float repeat = 11.;
-    float bounceSpeed = 3.;
+    float repeat = 20.;
+    float bounceSpeed = 5.;
     // if (p.y > 0. || thresholdSide > 0. && ! (sign(p.y) < thresholdSide)) {
     //     p.z += .5 / repeat;
     // }
@@ -231,7 +235,7 @@ Model mTrainSide(vec3 p, float curveLen) {
 
     // cell += repeat / 10. * time;
 
-    float bounce = abs(sin((cell + tt) * 5. * PI));
+    float bounce = abs(sin((cell + tt) * 16. * PI));
     // bounce = 0.;
     p.y -= mix((channelDepth - ballSize) * -side, 1.5 * side, bounce);
 
@@ -244,21 +248,6 @@ Model mTrainSide(vec3 p, float curveLen) {
 
 
     Model model = Model(d, col, vec2(0), 0., 10);
-    return model;
-}
-
-
-bool AO_PASS = false;
-
-Model fModel(vec3 p) {
-
-    float curveLen = 14.;
-    pModTrefoil(p, curveLen);
-
-
-    pR(p.xy, p.z * PI + time * PI * 2.);
-
-    Model model = mTrainSide(p, curveLen);
 
     return model;
 }
