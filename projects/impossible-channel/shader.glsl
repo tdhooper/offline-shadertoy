@@ -20,7 +20,16 @@ precision mediump float;
 
 /* SHADERTOY FROM HERE */
 
-float time;
+
+const float EDGE_THICKNESS = .2;
+const float WIDTH = 1.;
+const float RADIUS = 3.;
+const float CHANNEL_DEPTH_RATIO = 1.;
+const float BALL_COUNT = 19.;
+const float BALL_SIZE_RATIO = 1.;
+const float BALL_SPEED = -5.;
+const float TWISTS = .5;
+const float TWIST_SPEED = 1.;
 
 
 // --------------------------------------------------------
@@ -38,7 +47,7 @@ vec3 spectrum(float n) {
 
 
 // --------------------------------------------------------
-// Utilities
+// Modelling utilities
 // hg_sdf https://www.shadertoy.com/view/Xs3GRB
 // --------------------------------------------------------
 
@@ -118,20 +127,9 @@ bool pastThreshold = false;
 // the threshold
 float thresholdSide = 0.;
 
-// Last torus 'z' position or the ray
-float lastZ = 0.;
-
+float lastZ = 0.; // Last torus 'z' position or the ray
 bool AO_PASS = false;
-
-const float EDGE_THICKNESS = .2;
-const float WIDTH = 1.;
-const float RADIUS = 3.;
-const float CHANNEL_DEPTH_RATIO = 1.;
-const float BALL_COUNT = 19.;
-const float BALL_SIZE_RATIO = 1.;
-const float BALL_SPEED = -5.;
-const float TWISTS = .5;
-const float TWIST_SPEED = 1.;
+float time;
 
 Model fModel(vec3 p) {
 
