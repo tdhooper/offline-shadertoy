@@ -166,11 +166,16 @@ Model fModel(vec3 p) {
 
     pR(p.xy, p.z * PI + rotate * PI * 2.);
 
-    float thick = .1;
-    float width = .8;
+    float thick = .2;
+    float width = 1.;
     float channelWidth = width - thick / 2.;
-    float channelDepth = channelWidth * 1.;
+    float channelDepth = channelWidth / 1.;
+    float channelOffset = channelWidth - channelDepth;
     float round = thick;
+
+    float repeat = 19.;
+    float ballSize = channelWidth * 1.;
+
     // round = 0.;
 
     // p.y += channelDepth/2.;
@@ -197,7 +202,8 @@ Model fModel(vec3 p) {
         thresholdSide = sign(p.y);
     }
 
-    float cut = fBox2(p.xy, vec2(channelWidth, channelDepth));
+    float side = mix(sign(p.y), thresholdSide, abs(thresholdSide));
+    float cut = length(p.xy - vec2(0, channelOffset) * side) - channelWidth;
 
     if (pastThreshold) {
         d = fBox2(p.xy + vec2(0, thresholdSide * (channelDepth * 2. - thick)), vec2(width, channelDepth * 2. - round)) - round;
@@ -207,8 +213,7 @@ Model fModel(vec3 p) {
     // d = max(d, p.x - width);
 
     float zScale = 36.;
-    float repeat = 5.;
-    float bounceSpeed = 2.;
+    float bounceSpeed = 0.;
     float bounceRatio = 4.;
     // if (p.y > 0. || thresholdSide > 0. && ! (sign(p.y) < thresholdSide)) {
     //     p.z += .5 / repeat;
@@ -217,7 +222,6 @@ Model fModel(vec3 p) {
     //     p.z += .5 / repeat;
     // }
 
-    float side = mix(sign(p.y), thresholdSide, abs(thresholdSide));
     if (side > 0.) {
         p.z += 1.;
     }
@@ -227,48 +231,35 @@ Model fModel(vec3 p) {
 
     vec3 col = spectrum(p.z);
 
-    float ballSize = channelWidth * .7;
 
     float tt = (time / repeat) * bounceSpeed;
 
     p.z += tt;
 
     float cell = pMod1(p.z, 1./repeat);
-    // col = spectrum(cell/repeat);
 
 
     vec3 bp = vec3(0,0,0);
     bp.z -= tt * 2.;
     bp.z += 2. * cell / repeat;
 
-    float bounce = bp.z * 2. + time * 2. * bounceRatio;
-    // bounce = abs(sin(bounce * PI));
-    bounce = (1. - fract(bounce)) * fract(bounce) * 4.;
+    cell /= repeat;
+    col = spectrum(cell);
 
-    bp.y += mix((channelDepth - ballSize), 2. * -1., bounce);
-    // bp.y -= 1.;
-
+    bp.y -= channelOffset;
     pR(bp.xy, -(bp.z * PI + rotate * PI * 2.));
     bp.y += 3.;
 
-
-    // cell += repeat / 10. * time;
-
-
-    // col = spectrum(cell);
-
-    float balls = length(p) - ballSize;
-    // if ( ! pastThreshold) {
-        // d = min(d, balls);
-    // }
 
     bp.z *= PI * 2.;
     bp = polarToCart(bp);
 
     p = pp;
-    d = min(d, length(p - bp)- ballSize);
+    float balls = length(p - bp)- ballSize;
 
-    col = vec3(.8);
+    col = mix(col, vec3(.8), step(d - balls, 0.));
+    d = min(d, balls);
+
 
     Model model = Model(d, col, vec2(0), 0., 10);
 
