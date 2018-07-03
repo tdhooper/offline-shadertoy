@@ -144,11 +144,36 @@ struct Model {
     int id;
 };
 
+// Imagine a plane with a channel cut in each side, if the plane were
+// thin, the channels would cut through to the other side, forming
+// a hole:
+// ___     ___
+// ___|   |___
+//
+// If the plane were thick, the channels would have depth, and
+// if it were thick enough, they'd never intersect:
+// ___     ___
+//    \___/
+//     ___
+// ___/   \___
+//
+// We want to create a thin plane, but with channels that have depth,
+// don't intersect, and don't create a hole.
+//
+// The threshold is the surface covering the bowl:
+// ___ ___ ___
+//    \___/
+
+// This gets set to true when the ray passes through that surface,
+// into the channel
 bool pastThreshold = false;
+
+// This is the side of the plane we were on when we crossed
+// the threshold
 float thresholdSide = 0.;
+
+// Last torus 'z' position or the ray
 float lastZ = 0.;
-
-
 
 bool AO_PASS = false;
 
@@ -159,112 +184,109 @@ const float CHANNEL_DEPTH_RATIO = 1.;
 const float BALL_COUNT = 19.;
 const float BALL_SIZE_RATIO = 1.;
 const float BALL_SPEED = -5.;
-const float TWISTS = 1.;
+const float TWISTS = .5;
 const float TWIST_SPEED = 1.;
 
 Model fModel(vec3 p) {
 
     vec3 pp = p;
-    float curveLen = 14.;
+    float twist = time * TWIST_SPEED;
 
+    // Transform space into a torus knot
     p = cartToPolar(p);
     p.y -= RADIUS;
     p.z /= PI * 2.;
+    pR(p.xy, (TWISTS * p.z + twist) * PI * 2.);
 
-    float twist = time * TWIST_SPEED;
-
-    pR(p.xy, TWISTS * p.z * PI + twist * PI * 2.);
-
-    float channelWidth = WIDTH - EDGE_THICKNESS / 2.;
-    float channelDepth = channelWidth * CHANNEL_DEPTH_RATIO;
-    float channelOffset = channelWidth - channelDepth;
-    float ballSize = channelWidth * BALL_SIZE_RATIO;
-    float round = EDGE_THICKNESS;
-
-    // Impossible Channel
-    // Carves through beyond the other side of a the surface,
-    // as if it had depth.
-
+    // When the ray shoots past the 'join' in the torus,
+    // flip the side so it matches up
     if (length(lastZ - p.z) > .5) {
         thresholdSide *= -1.;
     }
     lastZ = p.z;
 
-    p.x = abs(p.x);
-    float d = fBox2(p.xy, vec2(WIDTH, EDGE_THICKNESS - round)) - round;
+    float round = EDGE_THICKNESS;
 
+    // The base plane that we carve into
+    float d = fBox2(
+        p.xy,
+        vec2(WIDTH, EDGE_THICKNESS - round)
+    ) - round;
+
+    float channelWidth = WIDTH - EDGE_THICKNESS / 2.;
+    float channelDepth = channelWidth * CHANNEL_DEPTH_RATIO;
+    float channelOffset = channelWidth - channelDepth;
+
+    // Surface covering the channel, when the ray passes into this,
+    // we know we're inside the channel
     float threshold = fBox2(
         p.xy,
         vec2(channelWidth + round, EDGE_THICKNESS + .002)
     );
 
-    if (threshold <= 0. && ! pastThreshold) {
+    // When the ray passes into the channel for the first time,
+    // record which side of the plane we were on.
+    // Always assume we're past the threshold when calculating ambient
+    // occlusion, as the channel never actually gets cut when
+    // we're not inside it.
+    if ((AO_PASS || threshold <= 0.) && ! pastThreshold) {
         pastThreshold = true;
         thresholdSide = sign(p.y);
     }
 
     float side = mix(sign(p.y), thresholdSide, abs(thresholdSide));
-    float cut = length(p.xy - vec2(0, channelOffset) * side) - channelWidth;
 
-    if (AO_PASS && ! pastThreshold) {
-        pastThreshold = true;
-        thresholdSide = sign(p.y);
-    }
-
+    // Cut the channel when we're past the threshold. This actually
+    // constructs entirely new geometry, so we don't cut through to
+    // the other side.
     if (pastThreshold) {
-        d = fBox2(p.xy + vec2(0, thresholdSide * (channelDepth * 2. - EDGE_THICKNESS)), vec2(WIDTH, channelDepth * 2. - round)) - round;
+        float cut = length(
+            p.xy - vec2(0, channelOffset) * side
+        ) - channelWidth;
+        d = fBox2(
+            p.xy + vec2(0, thresholdSide * (channelDepth * 2. - EDGE_THICKNESS)),
+            vec2(WIDTH, channelDepth * 2. - round)
+        ) - round;
         d = smax(-cut, d, round);
     }
 
-    float zScale = 36.;
-    // if (p.y > 0. || thresholdSide > 0. && ! (sign(p.y) < thresholdSide)) {
-    //     p.z += .5 / repeat;
-    // }
-    // if (sign(p.y) != thresholdSide) {
-    //     p.z += .5 / repeat;
-    // }
-
+    // A Möbius strip has a surface length of 2x it's diamater,
+    // so increment our position when corssing over to the other
+    // side of the plane
     if (side > 0.) {
         p.z += 1.;
     }
     p.z /= 2.;
 
-    // float bounce = abs(sin((p.z + time * 2.) * 2. * PI));
-
-    vec3 col = spectrum(p.z);
-
     float repeat = BALL_COUNT;
-    float tt = (time / repeat) * BALL_SPEED;
 
-    p.z += tt;
+    float ballOffset = (time / repeat) * BALL_SPEED;
+    p.z += ballOffset;
 
-    float cell = pMod1(p.z, 1./repeat);
+    // Divide the strip up into cells
+    float cell = floor((p.z + .5 / repeat) * repeat);
 
+    // Ball position
+    vec3 bp = vec3(0);
+    bp.y = -channelOffset;
+    bp.z = 2. * (cell / repeat - ballOffset);
 
-    vec3 bp = vec3(0,0,0);
-    bp.z -= tt * 2.;
-    bp.z += 2. * cell / repeat;
+    vec3 col = spectrum(bp.z / 2.);
 
-    cell /= repeat;
-    col = spectrum(cell - tt);
-
-    bp.y -= channelOffset;
-    pR(bp.xy, -(TWISTS * bp.z * PI + twist * PI * 2.));
+    // Transform ball's torus position into cartesian space
+    pR(bp.xy, -(TWISTS * p.z + twist) * PI * 2.);
     bp.y += RADIUS;
-
-
     bp.z *= PI * 2.;
     bp = polarToCart(bp);
 
+    // Add the ball sdf, and colour it
     p = pp;
-    float balls = length(p - bp)- ballSize;
-
+    float ballSize = channelWidth * BALL_SIZE_RATIO;
+    float balls = length(p - bp) - ballSize;
     col = mix(col, vec3(1.), step(d - balls, 0.));
     d = min(d, balls);
 
-
     Model model = Model(d, col, vec2(0), 0., 10);
-
     return model;
 }
 
