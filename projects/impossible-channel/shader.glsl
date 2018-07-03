@@ -20,7 +20,6 @@ precision mediump float;
 
 /* SHADERTOY FROM HERE */
 
-
 const float EDGE_THICKNESS = .2;
 const float WIDTH = 1.;
 const float RADIUS = 3.;
@@ -113,12 +112,13 @@ struct Model {
 // ___/   \___
 //
 // We want to create a thin plane, but with channels that have depth,
-// don't intersect, and don't create a hole.
-//
+// don't intersect, and don't create a hole. I've achieved this by
+// only cutting the channel when we get close to where it would be.
+
 // The threshold is the surface covering the bowl:
 // ___ ___ ___
 //    \___/
-
+//
 // This gets set to true when the ray passes through that surface,
 // into the channel
 bool pastThreshold = false;
@@ -362,7 +362,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    vec3 camPos = vec3(3.,0,4.);
+    vec3 camPos = vec3(2.5,0,3.5);
     vec3 camTar = vec3(-.5,0,0);
     vec3 camUp = vec3(1,0,0);
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
