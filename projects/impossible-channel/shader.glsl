@@ -162,9 +162,11 @@ Model fModel(vec3 p) {
     p.z /= PI * 2.;
 
     float rotate = -time;
-    // rotate = 0.;
+    rotate = time;
 
-    pR(p.xy, p.z * PI + rotate * PI * 2.);
+    float twists = 1.;
+
+    pR(p.xy, twists * p.z * PI + rotate * PI * 2.);
 
     float thick = .2;
     float width = 1.;
@@ -213,7 +215,7 @@ Model fModel(vec3 p) {
     // d = max(d, p.x - width);
 
     float zScale = 36.;
-    float bounceSpeed = 0.;
+    float bounceSpeed = -5.;
     float bounceRatio = 4.;
     // if (p.y > 0. || thresholdSide > 0. && ! (sign(p.y) < thresholdSide)) {
     //     p.z += .5 / repeat;
@@ -244,10 +246,10 @@ Model fModel(vec3 p) {
     bp.z += 2. * cell / repeat;
 
     cell /= repeat;
-    col = spectrum(cell);
+    col = spectrum(cell - tt);
 
     bp.y -= channelOffset;
-    pR(bp.xy, -(bp.z * PI + rotate * PI * 2.));
+    pR(bp.xy, -(twists * bp.z * PI + rotate * PI * 2.));
     bp.y += 3.;
 
 
@@ -271,6 +273,8 @@ float focalLength;
 Model map(vec3 p) {
     float scale = focalLength;
     p *= scale;
+    // pR(p.yz, -time * PI * 2.);
+    pR(p.yz, 1.25);
     Model model = fModel(p);
     // model.dist = min(model.dist, length(p) - .2);
     // model.dist = max(model.dist, -p.y);
@@ -397,14 +401,20 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    vec3 camPos = cameraPosition;
-    mat4 camMat = cameraMatrix;
+    // vec3 camPos = cameraPosition;
+    // mat4 camMat = cameraMatrix;
+    // focalLength = 2.;
+    // vec3 rayDirection = normalize(
+    //     (vec4(p, -focalLength, 1) * camMat).xyz
+    // );
+
+
+    vec3 camPos = vec3(3.,0,3.5);
+    vec3 camTar = vec3(-.5,0,0);
+    vec3 camUp = vec3(1,0,0);
+    mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     focalLength = 2.;
-    
-    // vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
-    vec3 rayDirection = normalize(
-        (vec4(p, -focalLength, 1) * camMat).xyz
-    );
+    vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
 
     vec3 bg = vec3(1);
 

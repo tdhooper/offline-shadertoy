@@ -191,7 +191,7 @@ var frameCount = 0;
 var fpsTimeout;
 
 var camera = createCamera({
-    position: [0,0,-1]
+    position: [0,0,-5]
 });
 var lastMouse;
 var startMouse = [0,0];
