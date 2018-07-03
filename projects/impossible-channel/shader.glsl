@@ -43,49 +43,13 @@ vec3 spectrum(float n) {
 // --------------------------------------------------------
 
 #define PI 3.14159265359
-#define TAU 6.28318530718
-
-#define saturate(x) clamp(x, 0., 1.)
 
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
-void pR45(inout vec2 p) {
-    p = (p + vec2(p.y, -p.x))*sqrt(0.5);
-}
-
-float pMod1(inout float p, float size) {
-    float halfsize = size*0.5;
-    float c = floor((p + halfsize)/size);
-    p = mod(p + halfsize, size) - halfsize;
-    return c;
-}
-
-float pModPolar(inout vec2 p, float repetitions) {
-    float angle = 2.*PI/repetitions;
-    float a = atan(p.y, p.x) + angle/2.;
-    float r = length(p);
-    float c = floor(a/angle);
-    a = mod(a,angle) - angle/2.;
-    p = vec2(cos(a), sin(a))*r;
-    // For an odd number of repetitions, fix cell index of the cell in -x direction
-    // (cell index would be e.g. -5 and 5 in the two halves of the cell):
-    if (abs(c) >= (repetitions/2.)) c = abs(c);
-    return c;
-}
-
 float vmax(vec2 v) {
     return max(v.x, v.y);
-}
-
-float vmax(vec3 v) {
-    return max(max(v.x, v.y), v.z);
-}
-
-float fBox(vec3 p, vec3 b) {
-    vec3 d = abs(p) - b;
-    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
 float fBox2(vec2 p, vec2 b) {
@@ -93,27 +57,9 @@ float fBox2(vec2 p, vec2 b) {
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
 
-// Don't round corners when distance is reduced
-float fBoxy(vec2 p, vec2 s) {
-    return vmax(abs(p) - s);
-}
-
-float smin(float a, float b, float r) {
-    vec2 u = max(vec2(r - a,r - b), vec2(0));
-    return max(r, min (a, b)) - length(u);
-}
-
 float smax(float a, float b, float r) {
     vec2 u = max(vec2(r + a,r + b), vec2(0));
     return min(-r, max (a, b)) + length(u);
-}
-
-float smin(float a, float b) {
-    return smin(a, b, .0);
-}
-
-float smax(float a, float b) {
-    return smax(a, b, 0.);
 }
 
 vec3 cartToPolar(vec3 p) {
@@ -331,85 +277,14 @@ float calcAO( in vec3 pos, in vec3 nor )
     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );
 }
 
-
-// --------------------------------------------------------
-// LIGHTING
-// https://www.shadertoy.com/view/Xds3zN
-// --------------------------------------------------------
-
-float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
-{
-    float res = 1.0;
-    float t = mint;
-    for( int i=0; i<16; i++ )
-    {
-        float h = map( ro + rd*t ).dist;
-        res = min( res, 8.0*h/t );
-        t += clamp( h, 0.1, 0.1 );
-        if( h<0.00001 || t>tmax ) break;
-    }
-    return clamp( res, 0.0, 1.0 );
-}
-
-// float calcAO( in vec3 pos, in vec3 nor )
-// {
-//     float occ = 0.0;
-//     float sca = 1.0;
-//     for( int i=0; i<5; i++ )
-//     {
-//         float hr = 0.01 + 0.12*float(i)/4.0;
-//         vec3 aopos =  nor * hr + pos;
-//         float dd = map( aopos, false ).dist;
-//         occ += -(dd-hr)*sca;
-//         sca *= 0.95;
-//     }
-//     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
-// }
-
-vec3 doLighting(vec3 albedo, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
-
-    vec3 lightPos = normalize(vec3(3,1,-2));
-    vec3 backLightPos = normalize(vec3(0,-.3,1));
-    vec3 ambientPos = vec3(0,1,0);
-
-    float occ = mix(.5, 1., calcAO( pos, nor ));
-    vec3  lig = lightPos;
-    float amb = clamp((dot(nor, ambientPos) + 1.) / 2., 0., 1.);
-    float dif = clamp((dot(nor, lig) + 1.) / 3., 0.0, 1.0 );
-    float bac = pow(clamp(dot(nor, backLightPos), 0., 1.), 1.5);
-    float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
-    
-    dif *= softshadow( pos, lig, 0.01, 2.5 ) * .5 + .5;
-
-    vec3 lin = vec3(0.0);
-    lin += 1.20*dif*vec3(.95,0.80,0.60);
-    lin += 0.80*amb*vec3(0.50,0.70,.80)*occ;
-    lin += 0.30*bac*vec3(0.25,0.25,0.25)*occ;
-    lin += 0.20*fre*vec3(1.00,1.00,1.00)*occ;
-    vec3 col = albedo*lin;
-    
-    float spe = clamp(dot(ref, lightPos), 0., 1.);
-    spe = pow(spe, 2.) * .1;
-    col += spe;
-
-    return col;
-}  
-
 vec3 render(Hit hit, vec3 col) {
     AO_PASS = true;
-
     if ( ! hit.isBackground) {
         float ao = calcAO(hit.pos, hit.normal);
-        col = hit.model.material;
         float amb = dot(normalize(vec3(1,1,0)), hit.normal) * .5 + .5;
         float dif = mix(amb, ao, .1);
-        // dif = amb;
         vec3 diffuse = mix(vec3(.5,.5,.6) * .5, vec3(1), dif);
-        // diffuse = vec3(dot(normalize(vec3(1,1,0)), hit.normal) * .5 + .5);
-        // diffuse *= mix(.7, 1., ao);
-        col *= diffuse;
-        vec3 ref = reflect(hit.rayDirection, hit.normal);
-        col = doLighting(hit.model.material, hit.pos, hit.normal, ref, hit.rayDirection);
+        col = hit.model.material * diffuse;
     }
     return col;
 }
@@ -489,14 +364,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    // vec3 camPos = cameraPosition;
-    // mat4 camMat = cameraMatrix;
-    // focalLength = 2.;
-    // vec3 rayDirection = normalize(
-    //     (vec4(p, -focalLength, 1) * camMat).xyz
-    // );
-
-
     vec3 camPos = vec3(3.,0,4.);
     vec3 camTar = vec3(-.5,0,0);
     vec3 camUp = vec3(1,0,0);
@@ -509,7 +376,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     Hit hit = raymarch(camPos, rayDirection);
     vec3 color = render(hit, bg);
 
-    color = pow(color, vec3(1.,.9,.8)); // Brighten and tint a little blue
     color = pow(color, vec3(1. / 2.2)); // Gamma
 
     fragColor = vec4(color,1);
