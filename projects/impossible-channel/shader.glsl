@@ -295,11 +295,8 @@ float focalLength;
 Model map(vec3 p) {
     float scale = focalLength;
     p *= scale;
-    // pR(p.yz, -time * PI * 2.);
     pR(p.yz, 1.25);
     Model model = fModel(p);
-    // model.dist = min(model.dist, length(p) - .2);
-    // model.dist = max(model.dist, -p.y);
     model.dist /= scale;
     return model;
 }
@@ -348,7 +345,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
     {
         float h = map( ro + rd*t ).dist;
         res = min( res, 8.0*h/t );
-        t += clamp( h, 0.02, 0.10 );
+        t += clamp( h, 0.1, 0.1 );
         if( h<0.00001 || t>tmax ) break;
     }
     return clamp( res, 0.0, 1.0 );
@@ -371,11 +368,11 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 
 vec3 doLighting(vec3 albedo, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
 
-    vec3 lightPos = vec3(0,0,-1);
+    vec3 lightPos = normalize(vec3(3,1,-2));
     vec3 backLightPos = normalize(vec3(0,-.3,1));
     vec3 ambientPos = vec3(0,1,0);
 
-    float occ = calcAO( pos, nor );
+    float occ = mix(.5, 1., calcAO( pos, nor ));
     vec3  lig = lightPos;
     float amb = clamp((dot(nor, ambientPos) + 1.) / 2., 0., 1.);
     float dif = clamp((dot(nor, lig) + 1.) / 3., 0.0, 1.0 );
@@ -412,7 +409,7 @@ vec3 render(Hit hit, vec3 col) {
         // diffuse *= mix(.7, 1., ao);
         col *= diffuse;
         vec3 ref = reflect(hit.rayDirection, hit.normal);
-        // col = doLighting(hit.model.material, hit.pos, hit.normal, ref, hit.rayDirection);
+        col = doLighting(hit.model.material, hit.pos, hit.normal, ref, hit.rayDirection);
     }
     return col;
 }
