@@ -152,38 +152,37 @@ float lastZ = 0.;
 
 bool AO_PASS = false;
 
+const float EDGE_THICKNESS = .2;
+const float WIDTH = 1.;
+const float RADIUS = 3.;
+const float CHANNEL_DEPTH_RATIO = 1.;
+const float BALL_COUNT = 19.;
+const float BALL_SIZE_RATIO = 1.;
+const float BALL_SPEED = -5.;
+const float TWISTS = 1.;
+const float TWIST_SPEED = 1.;
+
 Model fModel(vec3 p) {
 
     vec3 pp = p;
     float curveLen = 14.;
 
     p = cartToPolar(p);
-    p.y -= 3.;
+    p.y -= RADIUS;
     p.z /= PI * 2.;
 
-    float rotate = -time;
-    rotate = time;
+    float twist = time * TWIST_SPEED;
 
-    float twists = 1.;
+    pR(p.xy, TWISTS * p.z * PI + twist * PI * 2.);
 
-    pR(p.xy, twists * p.z * PI + rotate * PI * 2.);
-
-    float thick = .2;
-    float width = 1.;
-    float channelWidth = width - thick / 2.;
-    float channelDepth = channelWidth / 1.;
+    float channelWidth = WIDTH - EDGE_THICKNESS / 2.;
+    float channelDepth = channelWidth * CHANNEL_DEPTH_RATIO;
     float channelOffset = channelWidth - channelDepth;
-    float round = thick;
-
-    float repeat = 19.;
-    float ballSize = channelWidth * 1.;
-
-    // round = 0.;
-
-    // p.y += channelDepth/2.;
+    float ballSize = channelWidth * BALL_SIZE_RATIO;
+    float round = EDGE_THICKNESS;
 
     // Impossible Channel
-    // Carves through beyond the other side of a thi turface,
+    // Carves through beyond the other side of a the surface,
     // as if it had depth.
 
     if (length(lastZ - p.z) > .5) {
@@ -192,13 +191,13 @@ Model fModel(vec3 p) {
     lastZ = p.z;
 
     p.x = abs(p.x);
-    float d = fBox2(p.xy, vec2(width, thick - round)) - round;
+    float d = fBox2(p.xy, vec2(WIDTH, EDGE_THICKNESS - round)) - round;
 
     float threshold = fBox2(
         p.xy,
-        vec2(channelWidth + round, thick + .002)
+        vec2(channelWidth + round, EDGE_THICKNESS + .002)
     );
-    // threshold = max(threshold, -d);
+
     if (threshold <= 0. && ! pastThreshold) {
         pastThreshold = true;
         thresholdSide = sign(p.y);
@@ -213,15 +212,11 @@ Model fModel(vec3 p) {
     }
 
     if (pastThreshold) {
-        d = fBox2(p.xy + vec2(0, thresholdSide * (channelDepth * 2. - thick)), vec2(width, channelDepth * 2. - round)) - round;
+        d = fBox2(p.xy + vec2(0, thresholdSide * (channelDepth * 2. - EDGE_THICKNESS)), vec2(WIDTH, channelDepth * 2. - round)) - round;
         d = smax(-cut, d, round);
     }
 
-    // d = max(d, p.x - width);
-
     float zScale = 36.;
-    float bounceSpeed = -5.;
-    float bounceRatio = 4.;
     // if (p.y > 0. || thresholdSide > 0. && ! (sign(p.y) < thresholdSide)) {
     //     p.z += .5 / repeat;
     // }
@@ -238,8 +233,8 @@ Model fModel(vec3 p) {
 
     vec3 col = spectrum(p.z);
 
-
-    float tt = (time / repeat) * bounceSpeed;
+    float repeat = BALL_COUNT;
+    float tt = (time / repeat) * BALL_SPEED;
 
     p.z += tt;
 
@@ -254,8 +249,8 @@ Model fModel(vec3 p) {
     col = spectrum(cell - tt);
 
     bp.y -= channelOffset;
-    pR(bp.xy, -(twists * bp.z * PI + rotate * PI * 2.));
-    bp.y += 3.;
+    pR(bp.xy, -(TWISTS * bp.z * PI + twist * PI * 2.));
+    bp.y += RADIUS;
 
 
     bp.z *= PI * 2.;
@@ -483,7 +478,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // );
 
 
-    vec3 camPos = vec3(3.,0,3.5);
+    vec3 camPos = vec3(3.,0,4.);
     vec3 camTar = vec3(-.5,0,0);
     vec3 camUp = vec3(1,0,0);
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
