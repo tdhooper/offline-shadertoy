@@ -207,6 +207,11 @@ Model fModel(vec3 p) {
     float side = mix(sign(p.y), thresholdSide, abs(thresholdSide));
     float cut = length(p.xy - vec2(0, channelOffset) * side) - channelWidth;
 
+    if (AO_PASS && ! pastThreshold) {
+        pastThreshold = true;
+        thresholdSide = sign(p.y);
+    }
+
     if (pastThreshold) {
         d = fBox2(p.xy + vec2(0, thresholdSide * (channelDepth * 2. - thick)), vec2(width, channelDepth * 2. - round)) - round;
         d = smax(-cut, d, round);
@@ -259,7 +264,7 @@ Model fModel(vec3 p) {
     p = pp;
     float balls = length(p - bp)- ballSize;
 
-    col = mix(col, vec3(.8), step(d - balls, 0.));
+    col = mix(col, vec3(1.), step(d - balls, 0.));
     d = min(d, balls);
 
 
@@ -299,7 +304,6 @@ struct Hit {
 
 float calcAO( in vec3 pos, in vec3 nor )
 {
-    AO_PASS = true;
     float occ = 0.0;
     float sca = 1.0;
     for( int i=0; i<5; i++ )
@@ -314,14 +318,84 @@ float calcAO( in vec3 pos, in vec3 nor )
 }
 
 
+// --------------------------------------------------------
+// LIGHTING
+// https://www.shadertoy.com/view/Xds3zN
+// --------------------------------------------------------
+
+float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
+{
+    float res = 1.0;
+    float t = mint;
+    for( int i=0; i<16; i++ )
+    {
+        float h = map( ro + rd*t ).dist;
+        res = min( res, 8.0*h/t );
+        t += clamp( h, 0.02, 0.10 );
+        if( h<0.00001 || t>tmax ) break;
+    }
+    return clamp( res, 0.0, 1.0 );
+}
+
+// float calcAO( in vec3 pos, in vec3 nor )
+// {
+//     float occ = 0.0;
+//     float sca = 1.0;
+//     for( int i=0; i<5; i++ )
+//     {
+//         float hr = 0.01 + 0.12*float(i)/4.0;
+//         vec3 aopos =  nor * hr + pos;
+//         float dd = map( aopos, false ).dist;
+//         occ += -(dd-hr)*sca;
+//         sca *= 0.95;
+//     }
+//     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
+// }
+
+vec3 doLighting(vec3 albedo, vec3 pos, vec3 nor, vec3 ref, vec3 rd) {
+
+    vec3 lightPos = vec3(0,0,-1);
+    vec3 backLightPos = normalize(vec3(0,-.3,1));
+    vec3 ambientPos = vec3(0,1,0);
+
+    float occ = calcAO( pos, nor );
+    vec3  lig = lightPos;
+    float amb = clamp((dot(nor, ambientPos) + 1.) / 2., 0., 1.);
+    float dif = clamp((dot(nor, lig) + 1.) / 3., 0.0, 1.0 );
+    float bac = pow(clamp(dot(nor, backLightPos), 0., 1.), 1.5);
+    float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
+    
+    dif *= softshadow( pos, lig, 0.01, 2.5 ) * .5 + .5;
+
+    vec3 lin = vec3(0.0);
+    lin += 1.20*dif*vec3(.95,0.80,0.60);
+    lin += 0.80*amb*vec3(0.50,0.70,.80)*occ;
+    lin += 0.30*bac*vec3(0.25,0.25,0.25)*occ;
+    lin += 0.20*fre*vec3(1.00,1.00,1.00)*occ;
+    vec3 col = albedo*lin;
+    
+    float spe = clamp(dot(ref, lightPos), 0., 1.);
+    spe = pow(spe, 2.) * .1;
+    col += spe;
+
+    return col;
+}  
+
 vec3 render(Hit hit, vec3 col) {
+    AO_PASS = true;
+
     if ( ! hit.isBackground) {
         float ao = calcAO(hit.pos, hit.normal);
         col = hit.model.material;
-        vec3 diffuse = mix(vec3(.5,.5,.6) * 1., vec3(1), ao);
-        diffuse = vec3(dot(normalize(vec3(1,1,0)), hit.normal) * .5 + .5);
+        float amb = dot(normalize(vec3(1,1,0)), hit.normal) * .5 + .5;
+        float dif = mix(amb, ao, .1);
+        // dif = amb;
+        vec3 diffuse = mix(vec3(.5,.5,.6) * .5, vec3(1), dif);
+        // diffuse = vec3(dot(normalize(vec3(1,1,0)), hit.normal) * .5 + .5);
         // diffuse *= mix(.7, 1., ao);
         col *= diffuse;
+        vec3 ref = reflect(hit.rayDirection, hit.normal);
+        // col = doLighting(hit.model.material, hit.pos, hit.normal, ref, hit.rayDirection);
     }
     return col;
 }
@@ -416,7 +490,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     focalLength = 2.;
     vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
 
-    vec3 bg = vec3(1);
+    vec3 bg = vec3(.7,.8,.9) * 1.1;
 
     Hit hit = raymarch(camPos, rayDirection);
     vec3 color = render(hit, bg);

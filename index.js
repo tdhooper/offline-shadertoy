@@ -13,7 +13,7 @@ var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 var Controls = require('./lib/controls');
 
-pixelRatio = .5;
+pixelRatio = 1.;
 
 var overlay = document.createElement('div');
 overlay.classList.add('overlay');
