@@ -115,7 +115,7 @@ struct Model {
 // don't intersect, and don't create a hole. I've achieved this by
 // only cutting the channel when we get close to where it would be.
 
-// The threshold is the surface covering the bowl:
+// The threshold is the surface covering the channel:
 // ___ ___ ___
 //    \___/
 //
@@ -194,6 +194,9 @@ Model fModel(vec3 p) {
         d = smax(-cut, d, round);
     }
 
+    // Rough uv mapping, used to correct the ambient occlusion
+    vec2 uv = side * p.xy / (channelDepth * 2.) + vec2(0, .5);
+    
     // A Möbius strip has a surface length of 2x it's diamater,
     // so increment our position when corssing over to the other
     // side of the plane
@@ -227,10 +230,10 @@ Model fModel(vec3 p) {
     p = pp;
     float ballSize = channelWidth * BALL_SIZE_RATIO;
     float balls = length(p - bp) - ballSize;
-    col = mix(col, vec3(1.), step(d - balls, 0.));
+    col = d < balls ? vec3(1) : col;
     d = min(d, balls);
-
-    Model model = Model(d, col, vec2(0), 0., 10);
+    
+    Model model = Model(d, col, uv, 0., 10);
     return model;
 }
 
@@ -278,10 +281,18 @@ float calcAO( in vec3 pos, in vec3 nor )
 vec3 render(Hit hit, vec3 col) {
     AO_PASS = true;
     if ( ! hit.isBackground) {
+        // The simple ambient occlusion method results in hot spots
+        // at the base and sides of the balls. This is a result of
+        // the limited samples we do across the normal. In reality
+        // there would be a more evenly distributed darkness along
+        // the base of the channell; so here it's faked with the uv
+        // coordinates and blended in.
         float ao = calcAO(hit.pos, hit.normal);
-        float amb = dot(normalize(vec3(1,1,0)), hit.normal) * .5 + .5;
-        float dif = mix(amb, ao, .1);
-        vec3 diffuse = mix(vec3(.5,.5,.6) * .5, vec3(1), dif);
+        float fakeAo = min(hit.model.uv.y * 3., 1.);
+        ao = mix(ao, fakeAo, .7);
+        float light = dot(normalize(vec3(1,1,0)), hit.normal) * .5 + .5;
+        float diff = light * ao;
+        vec3 diffuse = mix(vec3(.5,.5,.6) * .7, vec3(1), diff);
         col = hit.model.material * diffuse;
     }
     return col;
@@ -362,7 +373,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-    vec3 camPos = vec3(2.5,0,3.5);
+    vec3 camPos = vec3(2.5,0,3.5) * 1.25;
     vec3 camTar = vec3(-.5,0,0);
     vec3 camUp = vec3(1,0,0);
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
