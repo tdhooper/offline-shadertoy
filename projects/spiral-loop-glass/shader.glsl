@@ -467,6 +467,7 @@ void addPipe(inout float d, vec3 p, float scale, float tt) {
     part = mix(part, length(p.yz) - .5, round);
     part /= scale;
 
+    t = clamp(t, 0., 1.);
     d = mix(d, part, t);
     // d = mix(d, part, smoothstep(.0, .75, t));
 }
