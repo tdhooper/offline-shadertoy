@@ -532,13 +532,13 @@ bool isInsideTransparentModel(vec3 pos) {
     return model.dist < 0. && model.material.transparency > 0.;
 }
 
-const float REFRACT_SAMPLES = 20.; // max trace distance
+const float REFRACT_SAMPLES = 100.; // max trace distance
 
 
 Hit renderTransparency(Hit hit) {
 
     float riMax = hit.model.material.refractiveIndex;
-    float riMin = riMax * .9;
+    float riMin = riMax * .7;
     float refractiveIndex;
 
     float wl;
