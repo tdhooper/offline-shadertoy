@@ -65,10 +65,24 @@ float fBox2(vec2 p, vec2 b) {
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
 
+float smin(float a, float b, float r) {
+    vec2 u = max(vec2(r - a,r - b), vec2(0));
+    return max(r, min (a, b)) - length(u);
+}
+
 float smax(float a, float b, float r) {
     vec2 u = max(vec2(r + a,r + b), vec2(0));
     return min(-r, max (a, b)) + length(u);
 }
+
+float smin(float a, float b) {
+    return smin(a, b, .0);
+}
+
+float smax(float a, float b) {
+    return smax(a, b, 0.);
+}
+
 
 vec3 cartToPolar(vec3 p) {
     float x = p.x; // distance from the plane it lies on
@@ -95,10 +109,53 @@ struct Model {
     vec3 material;
 };
 
+Model mapA(vec3 p) {
+    float d;
+    float c = length(p.xy) - .5;
+
+    float lead = 20.;
+    float strands = 2.;
+
+    d = abs(
+        sin((atan(p.y,p.x)-p.z * lead) / strands)
+        * min(1., length(p.xy))
+    ) / (lead / strands) - .02;
+    d = max(d, c);
+
+    return Model(d, vec3(.8));
+}
+
+float helix(vec3 p, float lead, float thick) {
+    p.z += iTime * .1;
+    float d = (mod(atan(p.y, p.x) - p.z * lead, PI * 2.) - PI) / lead;
+    d = abs(d) - thick;
+    return d;
+}
+
 Model map(vec3 p) {
+    vec3 pp = p;
+
+    float h = helix(p, 30., .05);
+
+    p.z /= 1.2;
     float d = length(p) - .5;
-    p = mod(p, 1.);
-    d = min(d, length(p) - .2);
+
+    p.x -= .55;
+    d = smin(d, length(p) - .1, .1);
+
+    p = pp;
+    p.z -= .7;
+    p.z /= 2.;
+    d = smin(d, length(p) - .25, .1);
+
+    p = pp;
+    p.z -= 2.2;
+    d = smin(d, length(p) - 1.5, .1);
+
+    d = abs(d + .01) - .01;
+    
+    d = max(d, h);
+
     return Model(d, vec3(.8));
 }
 
