@@ -377,248 +377,6 @@ void doCamera() {
 }
 
 
-
-// --------------------------------------------------------
-// Ray Marching
-// Adapted from: https://www.shadertoy.com/view/Xl2XWt
-// --------------------------------------------------------
-
-const float MAX_TRACE_DISTANCE = 30.; // max trace distance
-const float INTERSECTION_PRECISION = .001; // precision of the intersection
-const int NUM_OF_TRACE_STEPS = 100;
-const float FUDGE_FACTOR = 1.; // Default is 1, reduce to fix overshoots
-
-struct CastRay {
-    vec3 origin;
-    vec3 direction;
-};
-
-struct Ray {
-    vec3 origin;
-    vec3 direction;
-    float len;
-};
-
-struct Hit {
-    Ray ray;
-    Model model;
-    vec3 pos;
-    bool isBackground;
-    vec3 normal;
-    vec3 color;
-};
-
-vec3 calcNormal( in vec3 pos ){
-    vec3 eps = vec3( 0.001, 0.0, 0.0 );
-    vec3 nor = vec3(
-        map(pos+eps.xyy).dist - map(pos-eps.xyy).dist,
-        map(pos+eps.yxy).dist - map(pos-eps.yxy).dist,
-        map(pos+eps.yyx).dist - map(pos-eps.yyx).dist );
-    return normalize(nor);
-}
-
-Hit raymarch(CastRay castRay){
-
-    float currentDist = INTERSECTION_PRECISION * 2.0;
-    Model model;
-
-    Ray ray = Ray(castRay.origin, castRay.direction, 0.);
-
-    for( int i=0; i< NUM_OF_TRACE_STEPS ; i++ ){
-        if (currentDist < INTERSECTION_PRECISION || ray.len > MAX_TRACE_DISTANCE) {
-            break;
-        }
-        model = map(ray.origin + ray.direction * ray.len);
-        currentDist = model.dist;
-        ray.len += currentDist * FUDGE_FACTOR;
-    }
-
-    bool isBackground = false;
-    vec3 pos = vec3(0);
-    vec3 normal = vec3(0);
-
-    if (ray.len > MAX_TRACE_DISTANCE) {
-        isBackground = true;
-    } else {
-        pos = ray.origin + ray.direction * ray.len;
-        normal = calcNormal(pos);
-    }
-
-    return Hit(ray, model, pos, isBackground, normal, vec3(0));
-}
-
-
-// --------------------------------------------------------
-// Rendering
-// Refraction from https://www.shadertoy.com/view/lsXGzH
-// --------------------------------------------------------
-
-float makeLines(float x, float lines, float thick) {
-    x += .5;
-    float start = thick * .5;
-    float end = 1. - start;
-    float aa = .001;
-    float str = mod(x, 1. / lines) * lines;
-    str = smoothstep(start, start - aa, str) + smoothstep(end, end + aa, str);
-    return str;
-}
-
-void shadeSurface(inout Hit hit){
-    
-    vec3 color = vec3(.04,.045,.05);
-    
-    if (hit.isBackground) {
-        hit.color = color;
-        hit.color = hit.ray.direction * .5 + .5;
-        //hit.color = vec3(sign(hit.ray.direction.x) * .5 + .5);
-        //hit.color = vec3(dot(vec3(0,0,1), hit.ray.direction) * .5 + .5);
-        //hit.color = vec3(sin(dot(vec3(0,1,0), hit.ray.direction) * 2.) * .5 + .5);
-        
-        vec3 d = hit.ray.direction;
-        vec3 y = vec3(0,1,0);
-        vec3 z = vec3(1,0,0);
-        vec3 dd = normalize(cross(d, z));
-        float angle = acos(dot(dd, y));
-        
-        angle *= sign(dot(cross(dd, y), z)) / PI;
-        angle += time * .5 - .125;
-        
-        // angle /= PI;
-
-        float str = makeLines(angle, 4., .175);
-
-        hit.color = vec3(1);
-        hit.color *= str;
-
-        float hor = dot(hit.ray.direction, z);
-        // hit.color *= makeLines(hor, 5., .1);
-        
-        // hit.color = mix(hit.color, hit.color * spectrum(angle - .333), .5) * 1.5;
-        // hit.color *= mix(spectrum(angle+.1), vec3(1), .5) * 3.5;
-        hit.color *= mix(spectrum(.3), vec3(1), .5) * 3.5;
-        
-        // hit.color *= vec3(1,.8,.9) * 3.5;
-        // hit.color *= 2.;
-
-        // if (angle < .33) {
-        //     hit.color *= vec3(1,0,0);
-        // } else if (angle < .66) {
-        //     hit.color *= vec3(0,1,0);
-        // } else {
-        //     hit.color *= vec3(0,0,1);
-        // }
-
-        return;
-    }
-
-    hit.color = hit.model.material.albedo;
-}
-
-CastRay transparencyCastRay(Hit hit, float refractiveIndex) {
-    float separation = 0.05;    
-    vec3 rayDirection, rayOrigin;
-    float startDistance;    
-    rayDirection = refract(hit.ray.direction, hit.normal, refractiveIndex);
-    if (rayDirection == vec3(0)) {
-        rayDirection = reflect(hit.ray.direction, hit.normal);
-    }
-    startDistance = separation / abs(dot(rayDirection, hit.normal));
-    rayOrigin = hit.pos + startDistance * rayDirection;
-    return CastRay(rayOrigin, rayDirection);
-}
-
-bool isInsideTransparentModel(vec3 pos) {
-    Model model = map(pos);
-    return model.dist < 0. && model.material.transparency > 0.;
-}
-
-const float REFRACT_SAMPLES = 100.; // max trace distance
-
-
-Hit renderTransparency(Hit hit) {
-
-    float riMax = hit.model.material.refractiveIndex;
-    float riMin = riMax * .7;
-    float refractiveIndex;
-
-    float wl;
-    Hit hitOutside;
-    vec3 color = vec3(0);
-
-    CastRay castRay;
-
-    for(float i = 0.; i < REFRACT_SAMPLES; i++){
-
-        wl = i / REFRACT_SAMPLES;
-        refractiveIndex = mix(riMin, riMax, wl);
-
-        // First march ray through to the other side
-
-        castRay = transparencyCastRay(hit, refractiveIndex);
-        insideTransparency = true;
-        enableTransparency = true;
-        Hit hitInside = raymarch(castRay);
-        float thickness = hitInside.ray.len;
-        
-        // Then march back out into the scene
-        
-        castRay = transparencyCastRay(hitInside, 1. / refractiveIndex);
-        insideTransparency = false;
-        enableTransparency = false;
-        hitOutside = raymarch(castRay);
-        enableTransparency = true;
-        
-        // Shade the final model
-        
-        shadeSurface(hitOutside);
-// 
-        hitOutside.color *= spectrum(wl) * 2.;
-        color += hitOutside.color;
-
-    }
-
-    color /= REFRACT_SAMPLES;
-    hitOutside.color = color;
-
-    // float core = thickness;
-    // hitOutside.color = mix(hitOutside.color, vec3(1), core);
-    
-    return hitOutside;
-}
-
-
-void mixTransparency(inout Hit hit, Hit hit2) {
-    hit.color = mix(hit.color, hit2.color, hit.model.material.transparency);
-}
-
-vec3 render(Hit hit){
-    
-    shadeSurface(hit);
-    
-    if (hit.isBackground) {
-        return vec3(0);
-        return hit.color;
-    }
-
-    // return hit.normal * .5 + .5;
-    
-    if (hit.model.material.transparency > 0.) {
-        Hit hit2 = renderTransparency(hit);
-        if ( ! hit2.isBackground && hit2.model.material.transparency > 0.) {
-            Hit hit3 = renderTransparency(hit2);
-            if ( ! hit3.isBackground && hit3.model.material.transparency > 0.) {
-                Hit hit4 = renderTransparency(hit3);
-                mixTransparency(hit3, hit4);
-            }
-            mixTransparency(hit2, hit3);
-        }
-        mixTransparency(hit, hit2);
-    }
-
-    return hit.color;
-}
-
-
 // --------------------------------------------------------
 // Camera
 // https://www.shadertoy.com/view/Xl2XWt
@@ -651,6 +409,11 @@ vec3 linearToScreen(vec3 linearRGB) {
 
 
 
+const float MAX_TRACE_DISTANCE = 6.; // max trace distance
+const float INTERSECTION_PRECISION = .0004; // precision of the intersection
+const float FUDGE_FACTOR = .05; // Default is 1, reduce to fix overshoots
+
+const int iter = 105;
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
@@ -668,9 +431,47 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
     float focalLength = 2.;
     vec3 rd = normalize(camMat * vec3(p, focalLength));
-    Hit hit = raymarch(CastRay(camPos, rd));
 
-    vec3 color = render(hit);
-    color = linearToScreen(color);
+
+    vec3 color;
+    color = vec3(.25,.5,2)*.005;    
+
+    vec3 ro = camPos;
+    float t = 0.0;
+    float h = INTERSECTION_PRECISION * 2.0;
+    float res = -1.0;
+    
+    vec3 c;
+    
+    
+    float dist;
+    vec3 pos;
+    for( int i=0; i < iter; i++ ){
+    
+        if( t > MAX_TRACE_DISTANCE ) break;
+        dist = t;
+        Model m = map( ro+rd*t );
+        //h = abs(m.dist*max(mix(5., 3., length(ro+rd*t) * 2.), 2.));
+        h = abs(m.dist*4.);
+        t += max(INTERSECTION_PRECISION, h * FUDGE_FACTOR);
+        
+        c = vec3(1.4,2.1,1.7) * pow(max(0., (.02 - h)) * 19.5, 10.) * 250.;
+        c += vec3(.6,.25,.7) * .05 * FUDGE_FACTOR;
+
+        float ee = smoothstep(MAX_TRACE_DISTANCE, .1, t);
+        // if (p.x > 0.) {
+            // c *= spectrum(ee* 30. + iGlobalTime * .0);
+        // } else {
+            c *= spectrum(ee* 300. + iGlobalTime * .0);
+        // }
+        color += c * ee;
+    }
+
+    color = pow(color, vec3(1./1.9)) * 1.2;
+    color = pow(color, vec3(1.2));
+    
+    color *= 2.5;
+
+
     fragColor = vec4(color,1.0);
 }
