@@ -13,7 +13,7 @@ var createCamera = require('./lib/free-fly-camera');
 var pressed = require('key-pressed');
 var Controls = require('./lib/controls');
 
-pixelRatio = 1.;
+pixelRatio = .5;
 
 var overlay = document.createElement('div');
 overlay.classList.add('overlay');
@@ -65,9 +65,12 @@ var vert = glslify('./quad.vert');
 // inverted-torus
 // trefoil
 // impossible-channel
+// lines
+// helix-wat
+// peel
 
-var frag = glslify('./projects/spiral-loop-glass/shader.glsl');
-var config = JSON.parse(fs.readFileSync('./projects/spiral-loop-glass/config.json', 'utf8'));
+var frag = glslify('./projects/peel/shader.glsl');
+var config = JSON.parse(fs.readFileSync('./projects/peel/config.json', 'utf8'));
 // var config = {};
 
 var configId;
@@ -491,11 +494,11 @@ var captureRender = function(milliseconds, done) {
 
 // Default config used by the UI
 var captureConfig = {
-  fps: 100,
+  fps: 90,
   seconds: 1, // (duration)
-  width: 600 * 2,
-  height: 600 * 2,
-  prefix: 'imp-'
+  width: 640 * 2,
+  height: 360 * 2,
+  prefix: 'watt-'
 };
 
 var webCapture = new WebCaptureClient(
