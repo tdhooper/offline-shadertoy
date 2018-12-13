@@ -4,17 +4,34 @@ const regl = require('regl')({
   extensions: ['ext_frag_depth'],
 });
 const { mat4 } = require('gl-matrix');
+const createMouse = require('./lib/mouse');
 const createCamera = require('./lib/camera');
 const StateStore = require('./lib/state-store');
 
+// aura
+// rhombille-triangle
+// helix
+// spiral-loop
+// spiral-loop-2
+// spiral-loop-pub
+// spiral
+// icosahedron-twist
+// geodesic-tiling
+// geodesic-tiling-free
+// geodesic-twist
+// helix-distance
+// inverted-helix
+// clifford-torus
+// inverted-torus
+// trefoil
+// impossible-channel
+// lines
+// helix-wat
+// peel
 
-const frag = glslify('./projects/rays-and-polygons/shader.glsl');
-const defaultState = JSON.parse(fs.readFileSync('./projects/rays-and-polygons/config.json', 'utf8'));
-// const defaultState = null;
-
-const camera = createCamera(regl._gl.canvas, {
-  position: [0, 0, 5],
-});
+const frag = glslify('./projects/aura/shader.glsl');
+// const defaultState = JSON.parse(fs.readFileSync('./projects/rays-and-polygons/config.json', 'utf8'));
+const defaultState = null;
 
 const setup = regl({
   uniforms: {
@@ -25,7 +42,7 @@ const setup = regl({
       0.01,
       1000
     ),
-    view: () => camera.view(),
+    view: () => regl.prop('cameraMatrix'),
   },
 });
 
@@ -42,11 +59,37 @@ const drawRaymarch = regl({
   count: 3,
   uniforms: {
     model: mat4.identity([]),
+    iResolution: (context, props) => {
+      const resolution = [context.viewportWidth, context.viewportHeight];
+      return props.resolution || resolution;
+    },
+    iOffset: (context, props) => (props.offset || [0, 0]),
+    cameraMatrix: regl.prop('cameraMatrix'),
+    cameraPosition: regl.prop('cameraPosition'),
+    iGlobalTime: regl.prop('time'),
+    iTime: regl.prop('time'),
+    iMouse: (context, props) => {
+      const mouseProp = props.mouse.map(value => value * context.pixelRatio);
+      mouseProp[1] = context.viewportHeight - mouseProp[1];
+      // console.log(mouse[0] / context.viewportWidth);
+      // console.log(mouse[1] / context.viewportHeight)
+      return mouseProp;
+    },
   },
 });
 
+const camera = createCamera(regl._gl.canvas, {
+  position: [0, 0, 5],
+});
+
+const mouse = createMouse(regl._gl.canvas);
+
 const toState = () => ({
   camera: camera.toState(),
+  cameraMatrix: camera.view(),
+  cameraPosition: camera.position,
+  time: 0,
+  mouse,
 });
 
 const fromState = (state) => {
@@ -57,12 +100,11 @@ const fromState = (state) => {
 
 const stateStore = new StateStore(toState, fromState, defaultState);
 
-
 regl.frame(() => {
   camera.tick();
   if (stateStore.update()) {
     setup(() => {
-      drawRaymarch();
+      drawRaymarch(stateStore.state);
     });
   }
 });
