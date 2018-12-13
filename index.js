@@ -7,6 +7,8 @@ const { mat4 } = require('gl-matrix');
 const createMouse = require('./lib/mouse');
 const createCamera = require('./lib/camera');
 const StateStore = require('./lib/state-store');
+const createScrubber = require('./lib/scrubber');
+const Timer = require('./lib/timer');
 
 // aura
 // rhombille-triangle
@@ -66,8 +68,8 @@ const drawRaymarch = regl({
     iOffset: (context, props) => (props.offset || [0, 0]),
     cameraMatrix: regl.prop('cameraMatrix'),
     cameraPosition: regl.prop('cameraPosition'),
-    iGlobalTime: regl.prop('time'),
-    iTime: regl.prop('time'),
+    iGlobalTime: regl.prop('timer.elapsed'),
+    iTime: regl.prop('timer.elapsed'),
     iMouse: (context, props) => {
       const mouseProp = props.mouse.map(value => value * context.pixelRatio);
       mouseProp[1] = context.viewportHeight - mouseProp[1];
@@ -84,17 +86,21 @@ const camera = createCamera(regl._gl.canvas, {
 
 const mouse = createMouse(regl._gl.canvas);
 
+const timer = new Timer();
+const scrubber = createScrubber(timer);
+
 const toState = () => ({
   camera: camera.toState(),
   cameraMatrix: camera.view(),
   cameraPosition: camera.position,
-  time: 0,
+  timer: timer.serialize(),
   mouse,
 });
 
 const fromState = (state) => {
   if (state.camera) {
     camera.fromState(state.camera);
+    timer.fromObject(state.timer);
   }
 };
 
@@ -102,6 +108,7 @@ const stateStore = new StateStore(toState, fromState, defaultState);
 
 regl.frame(() => {
   camera.tick();
+  scrubber.update();
   if (stateStore.update()) {
     setup(() => {
       drawRaymarch(stateStore.state);
