@@ -1,3 +1,4 @@
+const fs = require('fs');
 const glslify = require('glslify');
 const regl = require('regl')({
   extensions: ['ext_frag_depth'],
@@ -8,6 +9,8 @@ const StateStore = require('./lib/state-store');
 
 
 const frag = glslify('./projects/rays-and-polygons/shader.glsl');
+const defaultState = JSON.parse(fs.readFileSync('./projects/rays-and-polygons/config.json', 'utf8'));
+// const defaultState = null;
 
 const camera = createCamera(regl._gl.canvas, {
   position: [0, 0, 5],
@@ -42,20 +45,17 @@ const drawRaymarch = regl({
   },
 });
 
-const stateStore = new StateStore(
-  () => ({
-    camera: camera.toState(),
-  }),
-  (state) => {
-    if (state.camera) {
-      camera.fromState(state.camera);
-    }
-  },
-  {
-    name: 'some_name',
-    camera: camera.toState(),
+const toState = () => ({
+  camera: camera.toState(),
+});
+
+const fromState = (state) => {
+  if (state.camera) {
+    camera.fromState(state.camera);
   }
-);
+};
+
+const stateStore = new StateStore(toState, fromState, defaultState);
 
 
 regl.frame(() => {

@@ -13,7 +13,7 @@
     float map(vec3 p) {
       // 1 x 1 x 1 Box
       float d = fBox(p, vec3(.5));
-      d = 1e12;
+      // d = 1e12;
 
       p = mod(p, 1.) - .5;
       d = min(d, length(p) - .04);
