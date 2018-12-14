@@ -10,6 +10,7 @@ const createCamera = require('./lib/camera');
 const StateStore = require('./lib/state-store');
 const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
+const createControls = require('./lib/uniform-controls');
 
 // aura
 // rhombille-triangle
@@ -32,9 +33,9 @@ const Timer = require('./lib/timer');
 // helix-wat
 // peel
 
-const frag = glslify('./projects/aura/shader.glsl');
-// const defaultState = JSON.parse(fs.readFileSync('./projects/rays-and-polygons/config.json', 'utf8'));
-const defaultState = null;
+const frag = glslify('./projects/rhombille-triangle/shader.glsl');
+const defaultState = JSON.parse(fs.readFileSync('./projects/rhombille-triangle/config.json', 'utf8'));
+// const defaultState = null;
 
 const setup = regl({
   uniforms: {
@@ -49,6 +50,29 @@ const setup = regl({
   },
 });
 
+const uniforms = {
+  model: mat4.identity([]),
+  iResolution: (context, props) => {
+    const resolution = [context.viewportWidth, context.viewportHeight];
+    return props.resolution || resolution;
+  },
+  iOffset: (context, props) => (props.offset || [0, 0]),
+  cameraMatrix: regl.prop('cameraMatrix'),
+  cameraPosition: regl.prop('cameraPosition'),
+  iGlobalTime: regl.prop('timer.elapsed'),
+  iTime: regl.prop('timer.elapsed'),
+  iMouse: (context, props) => {
+    const mouseProp = props.mouse.map(value => value * context.pixelRatio);
+    mouseProp[1] = context.viewportHeight - mouseProp[1];
+    // console.log(mouse[0] / context.viewportWidth);
+    // console.log(mouse[1] / context.viewportHeight)
+    return mouseProp;
+  },
+};
+
+const controls = defaultState && defaultState.controls
+  ? createControls(defaultState.controls, uniforms) : null;
+
 const drawRaymarch = regl({
   vert: glslify('./quad.vert'),
   frag,
@@ -60,25 +84,7 @@ const drawRaymarch = regl({
     ],
   },
   count: 3,
-  uniforms: {
-    model: mat4.identity([]),
-    iResolution: (context, props) => {
-      const resolution = [context.viewportWidth, context.viewportHeight];
-      return props.resolution || resolution;
-    },
-    iOffset: (context, props) => (props.offset || [0, 0]),
-    cameraMatrix: regl.prop('cameraMatrix'),
-    cameraPosition: regl.prop('cameraPosition'),
-    iGlobalTime: regl.prop('timer.elapsed'),
-    iTime: regl.prop('timer.elapsed'),
-    iMouse: (context, props) => {
-      const mouseProp = props.mouse.map(value => value * context.pixelRatio);
-      mouseProp[1] = context.viewportHeight - mouseProp[1];
-      // console.log(mouse[0] / context.viewportWidth);
-      // console.log(mouse[1] / context.viewportHeight)
-      return mouseProp;
-    },
-  },
+  uniforms: uniforms,
 });
 
 const camera = createCamera(regl._gl.canvas, {
@@ -90,18 +96,29 @@ const mouse = createMouse(regl._gl.canvas);
 const timer = new Timer();
 const scrubber = createScrubber(timer);
 
-const toState = () => ({
-  camera: camera.toState(),
-  cameraMatrix: camera.view(),
-  cameraPosition: camera.position,
-  timer: timer.serialize(),
-  mouse,
-});
+const toState = () => {
+  const state = {
+    camera: camera.toState(),
+    cameraMatrix: camera.view(),
+    cameraPosition: camera.position,
+    timer: timer.serialize(),
+    mouse,
+  };
+  if (controls) {
+    state.controls = controls.toState();
+  }
+  return state;
+};
 
 const fromState = (state) => {
   if (state.camera) {
     camera.fromState(state.camera);
+  }
+  if (state.timer) {
     timer.fromObject(state.timer);
+  }
+  if (state.controls) {
+    controls.fromState(state.controls);
   }
 };
 
