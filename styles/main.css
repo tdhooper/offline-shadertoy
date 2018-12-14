@@ -5,23 +5,26 @@ html, body {
 
 body {
     margin: 0;
-    display: flex;
-    flex-direction: column;
-}
-
-canvas {
-    flex-grow: 1;
-    position: relative !important;
 }
 
 .controls {
-	padding: 5px 10px;
-    /*display: none;*/
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 5px 10px;
+    background: black;
+    opacity: 0;
+}
+
+body:hover .controls {
+    opacity: .7;
 }
 
 .scrubber {
-	width: 100%;
-	margin: 0;
+    display: block;
+    width: 100%;
+    margin: 0;
 }
 
 .dg {
