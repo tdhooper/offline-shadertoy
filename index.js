@@ -59,8 +59,8 @@ const uniforms = {
   iOffset: (context, props) => (props.offset || [0, 0]),
   cameraMatrix: regl.prop('cameraMatrix'),
   cameraPosition: regl.prop('cameraPosition'),
-  iGlobalTime: regl.prop('timer.elapsed'),
-  iTime: regl.prop('timer.elapsed'),
+  iGlobalTime: (context, props) => props.timer.elapsed / 1000,
+  iTime: (context, props) => props.timer.elapsed / 1000,
   iMouse: (context, props) => {
     const mouseProp = props.mouse.map(value => value * context.pixelRatio);
     mouseProp[1] = context.viewportHeight - mouseProp[1];
