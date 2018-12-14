@@ -2,6 +2,7 @@ const fs = require('fs');
 const glslify = require('glslify');
 const regl = require('regl')({
   extensions: ['ext_frag_depth'],
+  pixelRatio: .5,
 });
 const { mat4 } = require('gl-matrix');
 const createMouse = require('./lib/mouse');
