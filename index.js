@@ -39,8 +39,8 @@ const canvas = regl._gl.canvas;
 // helix-wat
 // peel
 
-const frag = glslify('./projects/trefoil/shader.glsl');
-const defaultState = JSON.parse(fs.readFileSync('./projects/trefoil/config.json', 'utf8'));
+const frag = glslify('./projects/trefoil-grey/shader.glsl');
+const defaultState = JSON.parse(fs.readFileSync('./projects/trefoil-grey/config.json', 'utf8'));
 // const defaultState = null;
 
 const setup = regl({
