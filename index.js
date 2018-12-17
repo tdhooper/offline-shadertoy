@@ -2,15 +2,21 @@ const fs = require('fs');
 const glslify = require('glslify');
 const regl = require('regl')({
   extensions: ['ext_frag_depth'],
-  pixelRatio: .5,
+  pixelRatio: 1,
+  attributes: {
+    preserveDrawingBuffer: true,
+  },
 });
 const { mat4 } = require('gl-matrix');
+const WebCaptureClient = require('web-frames-capture');
 const createMouse = require('./lib/mouse');
 const createCamera = require('./lib/camera');
 const StateStore = require('./lib/state-store');
 const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
 const createControls = require('./lib/uniform-controls');
+
+const canvas = regl._gl.canvas;
 
 // aura
 // rhombille-triangle
@@ -33,8 +39,8 @@ const createControls = require('./lib/uniform-controls');
 // helix-wat
 // peel
 
-const frag = glslify('./projects/rhombille-triangle/shader.glsl');
-const defaultState = JSON.parse(fs.readFileSync('./projects/rhombille-triangle/config.json', 'utf8'));
+const frag = glslify('./projects/trefoil/shader.glsl');
+const defaultState = JSON.parse(fs.readFileSync('./projects/trefoil/config.json', 'utf8'));
 // const defaultState = null;
 
 const setup = regl({
@@ -103,6 +109,7 @@ const toState = () => {
     cameraPosition: camera.position,
     timer: timer.serialize(),
     mouse,
+    r: [canvas.width, canvas.height],
   };
   if (controls) {
     state.controls = controls.toState();
@@ -124,12 +131,54 @@ const fromState = (state) => {
 
 const stateStore = new StateStore(toState, fromState, defaultState);
 
-regl.frame(() => {
+const draw = () => {
   camera.tick();
   scrubber.update();
   if (stateStore.update()) {
+    regl.clear({
+      color: [0, 0, 0, 1],
+      depth: 1,
+    });
     setup(() => {
       drawRaymarch(stateStore.state);
     });
   }
-});
+};
+
+regl.frame(draw);
+
+const captureSetup = (config, done) => {
+  timer.pause();
+  canvas.width = config.width;
+  canvas.height = config.height;
+  canvas.style.width = config.width + 'px';
+  canvas.style.height = config.height + 'px';
+  done();
+};
+
+const captureTeardown = () => {
+  // Restore your scene as it was before captureSetup
+};
+
+const captureRender = (milliseconds, done) => {
+  timer.set(milliseconds);
+  draw();
+  done();
+};
+
+// Default config used by the UI
+const captureConfig = {
+  fps: 3,
+  seconds: 1, // (duration)
+  width: 2000,
+  height: 2000,
+  prefix: 'ttest-'
+};
+
+const webCapture = new WebCaptureClient(
+  canvas,
+  captureSetup,
+  captureTeardown,
+  captureRender,
+  captureConfig
+);
