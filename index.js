@@ -145,9 +145,10 @@ const draw = () => {
   }
 };
 
-regl.frame(draw);
+let tick = regl.frame(draw);
 
 const captureSetup = (config, done) => {
+  tick.cancel();
   timer.pause();
   canvas.width = config.width;
   canvas.height = config.height;
@@ -157,7 +158,7 @@ const captureSetup = (config, done) => {
 };
 
 const captureTeardown = () => {
-  // Restore your scene as it was before captureSetup
+  tick = regl.frame(draw);
 };
 
 const captureRender = (milliseconds, done) => {
