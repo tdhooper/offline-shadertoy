@@ -1491,11 +1491,11 @@ float backgroundMap(vec2 uv) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = iTime;
-    if (guiAnimation2) {
-        time *= 1.5;
-    }
-    time *= .3;
-    time = mod(time, 1.);
+    // if (guiAnimation2) {
+    //     time *= 1.5;
+    // }
+    // time *= .3;
+    // time = mod(time, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
@@ -1547,7 +1547,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     color = mix(color, pow(color, vec3(1.,.9,.8)), .5);
 
-    color = pow(color, vec3(1. / 2.2)); // Gamma
+    color = pow(color, vec3(1. / 2.5)); // Gamma
 
     fragColor = vec4(color,1);
 }
