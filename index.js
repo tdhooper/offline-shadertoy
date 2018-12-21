@@ -10,6 +10,7 @@ const regl = require('regl')({
 const { mat4 } = require('gl-matrix');
 const WebCaptureClient = require('web-frames-capture');
 const createMouse = require('./lib/mouse');
+const createOldCamera = require('./lib/free-fly-camera');
 const createCamera = require('./lib/camera');
 const StateStore = require('./lib/state-store');
 const createScrubber = require('./lib/scrubber');
@@ -38,9 +39,10 @@ const canvas = regl._gl.canvas;
 // lines
 // helix-wat
 // peel
+// rays-and-polygons
 
-const frag = glslify('./projects/trefoil-grey/shader.glsl');
-const defaultState = JSON.parse(fs.readFileSync('./projects/trefoil-grey/config.json', 'utf8'));
+const frag = glslify('./projects/peel/shader.glsl');
+const defaultState = JSON.parse(fs.readFileSync('./projects/peel/config.json', 'utf8'));
 // const defaultState = null;
 
 const setup = regl({
@@ -52,7 +54,7 @@ const setup = regl({
       0.01,
       1000
     ),
-    view: () => regl.prop('cameraMatrix'),
+    view: () => regl.prop('view'),
   },
 });
 
@@ -93,11 +95,15 @@ const drawRaymarch = regl({
   uniforms: uniforms,
 });
 
-const camera = createCamera(regl._gl.canvas, {
+const camera = createCamera(canvas, {
   position: [0, 0, 5],
 });
 
-const mouse = createMouse(regl._gl.canvas);
+const oldCamera = createOldCamera(canvas, {
+  position: [0, 0, 5],
+});
+
+const mouse = createMouse(canvas);
 
 const timer = new Timer();
 const scrubber = createScrubber(timer);
@@ -105,8 +111,9 @@ const scrubber = createScrubber(timer);
 const toState = () => {
   const state = {
     camera: camera.toState(),
-    cameraMatrix: camera.view(),
-    cameraPosition: camera.position,
+    view: camera.view(),
+    cameraMatrix: oldCamera.view(),
+    cameraPosition: oldCamera.position,
     timer: timer.serialize(),
     mouse,
     r: [canvas.width, canvas.height],
@@ -121,6 +128,9 @@ const fromState = (state) => {
   if (state.camera) {
     camera.fromState(state.camera);
   }
+  if (state.cameraMatrix) {
+    oldCamera.fromMatrix(state.cameraMatrix);
+  }
   if (state.timer) {
     timer.fromObject(state.timer);
   }
@@ -133,6 +143,7 @@ const stateStore = new StateStore(toState, fromState, defaultState);
 
 const draw = () => {
   camera.tick();
+  oldCamera.tick();
   scrubber.update();
   if (stateStore.update()) {
     regl.clear({
