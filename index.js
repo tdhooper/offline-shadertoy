@@ -169,11 +169,11 @@ const captureRender = (milliseconds, done) => {
 
 // Default config used by the UI
 const captureConfig = {
-  fps: 3,
+  fps: 100,
   seconds: 1, // (duration)
-  width: 2000,
-  height: 2000,
-  prefix: 'ttest-'
+  width: 800 * 2,
+  height: 800 * 2,
+  prefix: 'greytrain-',
 };
 
 const webCapture = new WebCaptureClient(
