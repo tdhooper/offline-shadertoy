@@ -17,7 +17,9 @@ const Timer = require('./lib/timer');
 const createControls = require('./lib/uniform-controls');
 
 
-module.exports = (frag, defaultState) => {
+module.exports = (project) => {
+  const { frag } = project;
+  const defaultState = project.config || null;
 
   const canvas = regl._gl.canvas;
 

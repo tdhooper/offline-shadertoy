@@ -1,6 +1,4 @@
-const fs = require('fs');
 const main = require('./main.js');
-const glslify = require('glslify');
 
 // aura
 // rhombille-triangle
@@ -24,8 +22,6 @@ const glslify = require('glslify');
 // peel
 // rays-and-polygons
 
-const frag = glslify('./projects/peel/shader.glsl');
-const defaultState = JSON.parse(fs.readFileSync('./projects/peel/config.json', 'utf8'));
-// const defaultState = null;
+const project = LOADPROJECT('candy-core-2');
 
-main(frag, defaultState);
+main(project);
