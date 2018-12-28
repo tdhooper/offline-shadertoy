@@ -16,6 +16,7 @@ const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
 const createControls = require('./lib/uniform-controls');
 
+global.regl = regl;
 
 module.exports = (project) => {
   const { frag } = project;
@@ -130,6 +131,9 @@ module.exports = (project) => {
       });
       setup(stateStore.state, () => {
         drawRaymarch(stateStore.state);
+        if (project.draw) {
+          project.draw();
+        }
       });
     }
   };

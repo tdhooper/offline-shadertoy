@@ -24,7 +24,14 @@ module.exports = () => {
       frag,
     };
 
-    return JSON.stringify(project);
+    const drawFile = `projects/${name}/draw.js`;
+    if (fs.existsSync(drawFile)) {
+      project.draw = '__REQUIRE_DRAW__';
+    }
+
+    let str = JSON.stringify(project);
+    str = str.replace('"__REQUIRE_DRAW__"', `require('./projects/${name}/draw')`);
+    return str;
   }
 
   function process(buf, enc, next) {
