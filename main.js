@@ -32,7 +32,7 @@ module.exports = (project) => {
         0.01,
         1000
       ),
-      view: () => regl.prop('view'),
+      view: regl.prop('view'),
     },
   });
 
@@ -70,7 +70,7 @@ module.exports = (project) => {
       ],
     },
     count: 3,
-    uniforms: uniforms,
+    uniforms,
   });
 
   const camera = createCamera(canvas, {
@@ -128,7 +128,7 @@ module.exports = (project) => {
         color: [0, 0, 0, 1],
         depth: 1,
       });
-      setup(() => {
+      setup(stateStore.state, () => {
         drawRaymarch(stateStore.state);
       });
     }
