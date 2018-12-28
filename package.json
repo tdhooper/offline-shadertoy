@@ -21,8 +21,8 @@
     "gl-matrix": "^2.8.1",
     "glsl-random": "0.0.5",
     "glsl-scale-linear": "^1.0.0",
-    "glslify": "^6.0.2",
-    "glslify-import": "^3.0.0",
+    "glslify": "^7.0.0",
+    "glslify-import": "^3.1.0",
     "key-pressed": "0.0.1",
     "mouse-change": "^1.4.0",
     "pad-number": "0.0.4",
@@ -31,6 +31,11 @@
     "through2": "^3.0.0",
     "web-frames-capture": "^0.1.1",
     "webmidi": "^2.0.4"
+  },
+  "glslify": {
+    "transform": [
+      "glslify-import"
+    ]
   },
   "browserify": {
     "transform": [
