@@ -1,7 +1,7 @@
 const glslify = require('glslify');
 const regl = require('regl')({
   extensions: ['ext_frag_depth'],
-  pixelRatio: 1,
+  pixelRatio: .5,
   attributes: {
     preserveDrawingBuffer: true,
   },
