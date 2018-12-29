@@ -21,7 +21,8 @@ const main = require('./main.js');
 // helix-wat
 // peel
 // rays-and-polygons
+// stereo
 
-const project = LOADPROJECT('rays-and-polygons');
+const project = LOADPROJECT('stereo');
 
 main(project);
