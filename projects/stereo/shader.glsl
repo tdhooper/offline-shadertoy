@@ -20,9 +20,9 @@ float fBox(vec3 p, vec3 s) {
 float map(vec3 p) {
   // 1 x 1 x 1 Box
 
-  pR(p.xy, time * PI/ 2.);
-  // p.x += 1.25;
-  // pR(p.xz, time * PI * 2.);
+  // pR(p.xy, time * PI/ 2.);
+  p.x += 1.33;
+  pR(p.xz, time * PI / 2.);
   // p.x += iTime;
 
   float floor = dot(abs(p), vec3(0,-1,0)) + .5;
@@ -72,7 +72,7 @@ vec3 getStereoDir() {
   );
   dir = dir.xzy;
   // pR(dir.xz, time * PI * 2.);
-  // pR(dir.xy, 2.5);
+  pR(dir.xy, .5);
   return normalize(dir);
 }
 
