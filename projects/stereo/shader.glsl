@@ -117,7 +117,7 @@ float fBox(vec2 p, vec2 s) {
 void moveCam(inout vec3 p) {
   // p.z -= .2;
   // p.y += .2;
-  p.x += 1.25;
+  p.x += 1.;
   pR(p.xz, time * PI / 2.);
   // p.y += time * 2. + .5;
 }
@@ -194,7 +194,7 @@ float map(vec3 p) {
   // p = mod(p + .5, 1.) - .5;
   // moveCam(p);
   // return dot(p, vec3(0,-1,0));
-  p.y += .1;
+  p.y -= .9;
 
   moveCam(p);
 
