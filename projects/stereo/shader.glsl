@@ -281,7 +281,7 @@ const float MAX_DIST = 5.;
 
 vec3 getStereoDir() {
   vec2 p = gl_FragCoord.xy / iResolution.xy;
-  float m = .5;
+  float m = .2;
   p = (p * 2. * m - m) * 3.142;
   p.x *= iResolution.x / iResolution.y;
   vec3 dir = vec3(
@@ -299,7 +299,7 @@ vec3 getStereoDir() {
 
 void main() {
 
-  time = mod(iTime * .5, 1.);
+  time = -mod(iTime * .5, 1.);
 
   vec2 vertex = 2.0 * (gl_FragCoord.xy / iResolution.xy) - 1.0;
 
