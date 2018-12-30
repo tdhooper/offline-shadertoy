@@ -184,6 +184,8 @@ float stairPart(vec3 p, vec3 size, float steps) {
   d = fOpDifferenceColumns(d, -min(p.y * .5, p.x), .125, 3.);
   d = max(d, p.y);
 
+  d = min(d, fBox(p + vec3(1.,size.y+stepSize.y/2.,-.5), vec3(.5 + size.z, stepSize.y / 2., .5 + size.z)));
+
   p.x -= size.x + size.z;
   p.y -= .01;
   d = min(d, length(p) - .05);
@@ -202,7 +204,9 @@ float map(vec3 p) {
 
   float grid = _map(p);
 
-  pModMirror2(p.xz, vec2(1.));
+  pModMirror2(p.xz, vec2(2));
+
+  // pModMirror2(p.xz, vec2(1));
 
   p.y -= time * .5;
   // pR(p.xz, min(c.x, c.y) * PI / 2.);
