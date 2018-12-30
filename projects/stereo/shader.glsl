@@ -12,34 +12,90 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+// Repeat space along one axis. Use like this to repeat along the x axis:
+// <float cell = pMod1(p.x,5);> - using the return value is optional.
+float pMod1(inout float p, float size) {
+    float halfsize = size*0.5;
+    float c = floor((p + halfsize)/size);
+    p = mod(p + halfsize, size) - halfsize;
+    return c;
+}
+
+// Repeat around the origin by a fixed angle.
+// For easier use, num of repetitions is use to specify the angle.
+float pModPolar(inout vec2 p, float repetitions) {
+    float angle = 2.*PI/repetitions;
+    float a = atan(p.y, p.x) + angle/2.;
+    float r = length(p);
+    float c = floor(a/angle);
+    a = mod(a,angle) - angle/2.;
+    p = vec2(cos(a), sin(a))*r;
+    // For an odd number of repetitions, fix cell index of the cell in -x direction
+    // (cell index would be e.g. -5 and 5 in the two halves of the cell):
+    if (abs(c) >= (repetitions/2.)) c = abs(c);
+    return c;
+}
+
+float smin(float a, float b, float r) {
+    vec2 u = max(vec2(r - a,r - b), vec2(0));
+    return max(r, min (a, b)) - length(u);
+}
+
+float smax(float a, float b, float r) {
+    vec2 u = max(vec2(r + a,r + b), vec2(0));
+    return min(-r, max (a, b)) + length(u);
+}
+
+float smin(float a, float b) {
+    return smin(a, b, .0);
+}
+
+float smax(float a, float b) {
+    return smax(a, b, 0.);
+}
+
 float fBox(vec3 p, vec3 s) {
   p = abs(p) - s;
   return max(p.x, max(p.y, p.z));
 }
 
-float map(vec3 p) {
-  // 1 x 1 x 1 Box
+float fBox(vec2 p, vec2 s) {
+  p = abs(p) - s;
+  return max(p.x, p.y);
+}
 
-  // pR(p.xy, time * PI/ 2.);
-  p.x += 1.33;
+void moveCam(inout vec3 p) {
+  // p.z -= .2;
+  // p.y += .2;
+  p.x += 1.25;
   pR(p.xz, time * PI / 2.);
-  // p.x += iTime;
+  // p.y += time * 2. + .5;
+}
+
+float _map(vec3 p) {
+  // 1 x 1 x 1 Box
+  // p /= 3.;
+  // p.y /= 2.;
+
+  moveCam(p);
 
   float floor = dot(abs(p), vec3(0,-1,0)) + .5;
+  float midpoint = length(p) - .2;
   float d = 1e12;
 
   p += .5;
   p = mod(p, 1.) - .5;
 
   float th = .3;
-  d = min(d, fBox(p, vec3(.52,th,th)));
-  d = min(d, fBox(p, vec3(th,.52,th)));
-  d = min(d, fBox(p, vec3(th,th,.52)));
+  d = min(d, fBox(p, vec3(.55,th,th)));
+  d = min(d, fBox(p, vec3(th,.55,th)));
+  d = min(d, fBox(p, vec3(th,th,.55)));
 
   d = min(d, fBox(p, vec3(.48)));
   
   d = -d;
   // d = min(d, floor);
+  d = min(d, midpoint);
 
   // d = 1e12;
 
@@ -47,8 +103,64 @@ float map(vec3 p) {
   return d;
 }
 
+float stair2d(vec2 p, vec2 size) {
+  float g = dot(p + size.yx / 2., normalize(-size.yx));
+  if (g > .001) {
+    return g;
+  }
+  p.y -= floor((-p.x / size.x)) * size.y;
+  p.x = mod(p.x, size.x) - size.x;
+  return min(
+    -p.y,
+    max(-p.x, -p.y - size.y)
+  );
+}
+
+// xyz: length, height, width
+float stairPart(vec3 p, vec3 size, float steps) {
+  vec2 stepSize = size.xy / steps;
+  float st = stair2d(p.xy, stepSize);
+  st = max(st, dot(p.xy - stepSize.yx / 2., normalize(stepSize.yx)));
+  float b = fBox(p, size);
+  float d = max(st, b);
+  vec3 platformSize = vec3(size.z, stepSize.y / 2., size.z);
+  vec3 platformOffset = vec3(size.x + size.z, -size.y + platformSize.y, 0.);
+  platformOffset *= sign(p.x);
+  d = min(d, fBox(p - platformOffset, platformSize));
+  return d;
+}
+
+float map(vec3 p) {
+  // p = mod(p + .5, 1.) - .5;
+  // moveCam(p);
+  // return dot(p, vec3(0,-1,0));
+  p -= .1;
+  float steps = 3.;
+  vec3 size = vec3(.5,.25,.1);
+  size.x -= size.z;
+  size.y += (size.y * 2.) / (steps * 2. - 1.) / 2.;
+  float d = fBox(p.xz, vec2(.4));
+
+  p.y = mod(p.y + 1.25, 2.) - 1.25;
+  vec3 pp = p;
+
+  float c = pModPolar(p.zx, 4.);
+  float s = stairPart(p + vec3(0, c * .5, -.5), size, steps);
+
+  p = pp;
+
+  pR(p.xz, PI);
+  s = min(s, stairPart(p + vec3(0,-1,-.5), size, steps));
+
+  pR(p.xz, PI/-2.);
+  s = min(s, stairPart(p + vec3(0,1.5,-.5), size, steps));
+
+  d = min(d, s);
+  return d;
+}
+
 vec3 calcNormal(vec3 p) {
-  vec3 eps = vec3(.001,0,0);
+  vec3 eps = vec3(.0001,0,0);
   vec3 n = vec3(
     map(p + eps.xyy) - map(p - eps.xyy),
     map(p + eps.yxy) - map(p - eps.yxy),
@@ -76,6 +188,8 @@ vec3 getStereoDir() {
   return normalize(dir);
 }
 
+
+
 void main() {
 
   time = mod(iTime * .5, 1.);
@@ -87,19 +201,21 @@ void main() {
   vec3 eye = -(view[3].xyz) * mat3(view);
   vec3 dir = vec3(vertex.x * fov * aspect, vertex.y * fov,-1.0) * mat3(view);
 
-  dir = getStereoDir();
-  dir *= mat3(view);
+  // dir = getStereoDir();
+  // dir *= mat3(view);
 
   vec3 rayOrigin = vec3(0);
+  rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
   vec3 rayPosition = rayOrigin;
   float rayLength = 0.;
 
   float distance = 0.;
-  vec3 color = vec3(0);
+  vec3 color = vec3(1);
   for (float i = 0.; i < ITER; i++) {
     rayLength += distance;
     rayPosition = rayOrigin + rayDirection * rayLength;
+    // moveCam(rayPosition);
     distance = map(rayPosition);
     if (distance < .001) {
       vec3 normal = calcNormal(rayPosition);
@@ -111,7 +227,7 @@ void main() {
       break;
     }
   }
-  color = mix(color, vec3(1), smoothstep(0., MAX_DIST, rayLength));
+  // color = mix(color, vec3(1), smoothstep(0., MAX_DIST, rayLength));
 
   gl_FragColor = vec4(color, 1);
 }
