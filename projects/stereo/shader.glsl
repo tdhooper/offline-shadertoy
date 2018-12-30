@@ -127,7 +127,7 @@ float _map(vec3 p) {
   // p /= 3.;
   // p.y /= 2.;
 
-  moveCam(p);
+  // moveCam(p);
 
   float floor = dot(abs(p), vec3(0,-1,0)) + .5;
   float midpoint = length(p) - .2;
@@ -136,12 +136,12 @@ float _map(vec3 p) {
   p += .5;
   p = mod(p, 1.) - .5;
 
-  float th = .3;
+  float th = .49;
   d = min(d, fBox(p, vec3(.55,th,th)));
   d = min(d, fBox(p, vec3(th,.55,th)));
   d = min(d, fBox(p, vec3(th,th,.55)));
 
-  d = min(d, fBox(p, vec3(.48)));
+  d = min(d, fBox(p, vec3(.49)));
   
   d = -d;
   // d = min(d, floor);
@@ -194,13 +194,19 @@ float map(vec3 p) {
   // p = mod(p + .5, 1.) - .5;
   // moveCam(p);
   // return dot(p, vec3(0,-1,0));
-  p.y -= .2;
+  p.y += .1;
 
-  // moveCam(p);
+  moveCam(p);
+
+  float grid = _map(p);
 
   pModMirror2(p.xz, vec2(1.));
 
-  float steps = 4.;
+  p.y -= time * .5;
+  // pR(p.xz, min(c.x, c.y) * PI / 2.);
+  // pR(p.xz, c.y * PI / 2.);
+
+  float steps = 5.;
   vec3 size = vec3(.5,.25,.15);
   size.x -= size.z;
   size.y += (size.y * 2.) / (steps * 2. - 1.) / 2.;
@@ -242,6 +248,8 @@ float map(vec3 p) {
   p = ppp;
   // d = max(d, -p.y);
 
+  // d = min(d, grid);
+
   return d;
 }
 
@@ -278,7 +286,7 @@ vec3 getStereoDir() {
 
 void main() {
 
-  time = mod(iTime * .5, 4.);
+  time = mod(iTime * .5, 1.);
 
   vec2 vertex = 2.0 * (gl_FragCoord.xy / iResolution.xy) - 1.0;
 
@@ -287,11 +295,11 @@ void main() {
   vec3 eye = -(view[3].xyz) * mat3(view);
   vec3 dir = vec3(vertex.x * fov * aspect, vertex.y * fov,-1.0) * mat3(view);
 
-  // dir = getStereoDir();
-  // dir *= mat3(view);
+  dir = getStereoDir();
+  dir *= mat3(view);
 
   vec3 rayOrigin = vec3(0);
-  rayOrigin = eye;
+  // rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
   vec3 rayPosition = rayOrigin;
   float rayLength = 0.;
