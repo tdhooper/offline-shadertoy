@@ -185,7 +185,9 @@ float stairPart(vec3 p, vec3 size, float steps) {
   d = max(d, p.y);
 
   p.x -= size.x + size.z;
-  d = min(d, length(p.xz) - .02);
+  p.y -= .01;
+  d = min(d, length(p) - .05);
+  // d = min(d, length(p.xz) - .02);
 
   return d;
 }
