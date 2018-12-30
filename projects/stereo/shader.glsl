@@ -26,6 +26,23 @@ float pMod1(inout float p, float size) {
     return c;
 }
 
+// Repeat in two dimensions
+vec2 pMod2(inout vec2 p, vec2 size) {
+    vec2 c = floor((p + size*0.5)/size);
+    p = mod(p + size*0.5,size) - size*0.5;
+    return c;
+}
+
+// Same, but mirror every second cell so all boundaries match
+vec2 pModMirror2(inout vec2 p, vec2 size) {
+    vec2 halfsize = size*0.5;
+    vec2 c = floor((p + halfsize)/size);
+    p = mod(p + halfsize, size) - halfsize;
+    p *= mod(c,vec2(2))*2. - vec2(1);
+    return c;
+}
+
+
 // Repeat around the origin by a fixed angle.
 // For easier use, num of repetitions is use to specify the angle.
 float pModPolar(inout vec2 p, float repetitions) {
@@ -177,13 +194,13 @@ float map(vec3 p) {
   // p = mod(p + .5, 1.) - .5;
   // moveCam(p);
   // return dot(p, vec3(0,-1,0));
-  p.y -= .5;
+  p.y -= .2;
 
   // moveCam(p);
 
-  // pModMirror2(p.xz, vec2(1.));
+  pModMirror2(p.xz, vec2(1.));
 
-  float steps = 5.;
+  float steps = 4.;
   vec3 size = vec3(.5,.25,.15);
   size.x -= size.z;
   size.y += (size.y * 2.) / (steps * 2. - 1.) / 2.;
@@ -261,7 +278,7 @@ vec3 getStereoDir() {
 
 void main() {
 
-  time = mod(iTime * .5, 1.);
+  time = mod(iTime * .5, 4.);
 
   vec2 vertex = 2.0 * (gl_FragCoord.xy / iResolution.xy) - 1.0;
 
@@ -296,7 +313,7 @@ void main() {
       break;
     }
   }
-  // color = mix(color, vec3(1), smoothstep(0., MAX_DIST, rayLength));
+  color = mix(color, vec3(1), smoothstep(0., MAX_DIST, rayLength));
 
   gl_FragColor = vec4(color, 1);
 }
