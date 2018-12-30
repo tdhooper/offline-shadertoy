@@ -12,6 +12,11 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+// Shortcut for 45-degrees rotation
+void pR45(inout vec2 p) {
+    p = (p + vec2(p.y, -p.x))*sqrt(0.5);
+}
+
 // Repeat space along one axis. Use like this to repeat along the x axis:
 // <float cell = pMod1(p.x,5);> - using the return value is optional.
 float pMod1(inout float p, float size) {
@@ -52,6 +57,34 @@ float smin(float a, float b) {
 
 float smax(float a, float b) {
     return smax(a, b, 0.);
+}
+
+float fOpDifferenceColumns(float a, float b, float r, float n) {
+    a = -a;
+    float m = min(a, b);
+    //avoid the expensive computation where not needed (produces discontinuity though)
+    if ((a < r) && (b < r)) {
+        vec2 p = vec2(a, b);
+        float columnradius = r*sqrt(2.)/n/2.0;
+        columnradius = r*sqrt(2.)/((n-1.)*2.+sqrt(2.));
+
+        pR45(p);
+        p.y += columnradius;
+        p.x -= sqrt(2.)/2.*r;
+        p.x += -columnradius*sqrt(2.)/2.;
+
+        if (mod(n,2.) == 1.) {
+            p.y += columnradius;
+        }
+        pMod1(p.y,columnradius*2.);
+
+        float result = -length(p) + columnradius;
+        result = max(result, p.x);
+        result = min(result, a);
+        return -min(result, b);
+    } else {
+        return -m;
+    }
 }
 
 float fBox(vec3 p, vec3 s) {
@@ -119,13 +152,21 @@ float stair2d(vec2 p, vec2 size) {
 // xyz: length, height, width
 float stairPart(vec3 p, vec3 size, float steps) {
   vec2 stepSize = size.xy / vec2(steps - 1., steps);
-  float st = stair2d(p.xy, stepSize);
-  st = max(st, dot(p.xy - stepSize.yx / 1.5, normalize(stepSize.yx)));
-  float b = fBox(p - vec3(size.z, 0, 0), size + vec3(size.z, 0, 0));
-  float d = max(st, b);
-  vec3 platformSize = vec3(size.z, stepSize.y / 2., size.z);
-  d = min(d, fBox(p - vec3(size.x + size.z, -size.y + platformSize.y, 0.), platformSize));
-  d = min(d, fBox(p + vec3(size.x + size.z, -size.y + platformSize.y, 0.), platformSize));
+  float d = stair2d(p.xy, stepSize);
+  // st = max(st, dot(p.xy - stepSize.yx / 1.5, normalize(stepSize.yx)));
+  float b = fBox(p.xz - vec2(size.z, 0), size.xz + vec2(size.z, 0));
+  d = max(d, b);
+
+  d = max(d, -p.y - size.y); // top step
+
+  p.y -= size.y * 2.;
+  float a = length(p.xy) - size.x;
+  a = min(a, fBox(p.xy - vec2(0, size.x * 2.), vec2(size.x, size.x * 2.)));
+  d = max(d, -a);
+
+  d = fOpDifferenceColumns(d, -min(p.y * .5, p.x), .125, 3.);
+  d = max(d, p.y);
+
   return d;
 }
 
@@ -133,32 +174,54 @@ float map(vec3 p) {
   // p = mod(p + .5, 1.) - .5;
   // moveCam(p);
   // return dot(p, vec3(0,-1,0));
-  p -= .1;
-  float steps = 4.;
-  vec3 size = vec3(.5,.25,.1);
+  p.y -= .5;
+
+  // moveCam(p);
+
+  // pModMirror2(p.xz, vec2(1.));
+
+  float steps = 5.;
+  vec3 size = vec3(.5,.25,.15);
   size.x -= size.z;
   size.y += (size.y * 2.) / (steps * 2. - 1.) / 2.;
-  float d = fBox(p.xz, vec2(.4));
-  // float d = 1e12;
+  // float d = fBox(p.xz, vec2(.4));
+  float d = 1e12;
+  vec3 ppp = p;
 
-  p.y = mod(p.y + 1.25, 2.) - 1.25;
+  p.y = mod(p.y, 2.);
   vec3 pp = p;
 
-  float c = pModPolar(p.zx, 4.);
-  // float c = 0.;
-  float s = stairPart(p + vec3(0, c * .5, -.5), size, steps);
+  // return stairPart(p + vec3(0, .5, -.5), size, steps);
+  float s = 1e12;
+
+  p.y += .5;
+  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
+
   pR(p.xz, PI / 2.);
-  s = min(s, stairPart(p + vec3(0, c * .5 - .5, -.5), size, steps));
+  p.y -= .5;
+  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
 
-  p = pp;
+  pR(p.xz, PI / 2.);
+  p.y -= .5;
+  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
 
-  pR(p.xz, PI);
-  s = min(s, stairPart(p + vec3(0,-1,-.5), size, steps));
+  pR(p.xz, PI / 2.);
+  p.y -= .5;
+  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
 
-  pR(p.xz, PI/-2.);
-  s = min(s, stairPart(p + vec3(0,1.5,-.5), size, steps));
+  pR(p.xz, PI / 2.);
+  p.y -= .5;
+  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
+
+  pR(p.xz, PI / 2.);
+  p.y -= .5;
+  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
 
   d = min(d, s);
+
+  p = ppp;
+  // d = max(d, -p.y);
+
   return d;
 }
 
