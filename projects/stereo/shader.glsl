@@ -29,7 +29,10 @@ float pMod1(inout float p, float size) {
 // Repeat in two dimensions
 vec2 pMod2(inout vec2 p, vec2 size) {
     vec2 c = floor((p + size*0.5)/size);
-    p = mod(p + size*0.5,size) - size*0.5;
+    // c.x = clamp(c.x, -1., 0.);
+    // c.y = clamp(c.y, -1., 0.);
+    // p = mod(p + size*0.5,size) - size*0.5;
+    p -= c * size;
     return c;
 }
 
@@ -259,14 +262,18 @@ float map(vec3 p) {
   return d;
 }
 
-vec3 calcNormal(vec3 p) {
+
+const int NORMAL_STEPS = 6;
+vec3 calcNormal(vec3 pos){
   vec3 eps = vec3(.0001,0,0);
-  vec3 n = vec3(
-    map(p + eps.xyy) - map(p - eps.xyy),
-    map(p + eps.yxy) - map(p - eps.yxy),
-    map(p + eps.yyx) - map(p - eps.yyx)
-  );
-  return normalize(n);
+  vec3 nor = vec3(0);
+  float invert = 1.;
+  for (int i = 0; i < NORMAL_STEPS; i++){
+    nor += map(pos + eps * invert) * eps * invert;
+    eps = eps.zxy;
+    invert *= -1.;
+  }
+  return normalize(nor);
 }
 
 const float ITER = 200.;
