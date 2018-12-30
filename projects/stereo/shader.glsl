@@ -120,7 +120,7 @@ float fBox(vec2 p, vec2 s) {
 void moveCam(inout vec3 p) {
   // p.z -= .2;
   // p.y += .2;
-  p.x += 1.;
+  p.x += 2.3;
   pR(p.xz, time * PI / 2.);
   // p.y += time * 2. + .5;
 }
@@ -171,6 +171,10 @@ float stair2d(vec2 p, vec2 size) {
 
 // xyz: length, height, width
 float stairPart(vec3 p, vec3 size, float steps) {
+
+  size.x -= size.z;
+  size.y += (size.y * 2.) / (steps * 2. - 1.) / 2.;
+
   vec2 stepSize = size.xy / vec2(steps - 1., steps);
   float d = stair2d(p.xy, stepSize);
   // st = max(st, dot(p.xy - stepSize.yx / 1.5, normalize(stepSize.yx)));
@@ -179,35 +183,82 @@ float stairPart(vec3 p, vec3 size, float steps) {
 
   d = max(d, -p.y - size.y); // top step
 
+  vec3 pp = p;
+
   p.y -= size.y * 2.;
   float a = length(p.xy) - size.x;
   a = min(a, fBox(p.xy - vec2(0, size.x * 2.), vec2(size.x, size.x * 2.)));
   d = max(d, -a);
 
-  d = fOpDifferenceColumns(d, -min(p.y * .5, p.x), .125, 3.);
+  // d = fOpDifferenceColumns(d, -min(p.y * .5, p.x), .125, 3.);
   d = max(d, p.y);
 
-  d = min(d, fBox(p + vec3(1.,size.y+stepSize.y/2.,-.5), vec3(.5 + size.z, stepSize.y / 2., .5 + size.z)));
-
-  p.x -= size.x + size.z;
-  p.y -= .01;
-  d = min(d, length(p) - .05);
+  // p.x -= size.x + size.z;
+  // p.y -= .01;
+  // d = min(d, length(p) - .05);
   // d = min(d, length(p.xz) - .02);
 
+  // float tSize = .25 + size.z;
+
+  // p = pp;
+  // p.z += .5;
+  // p.xz -= .5 + .25;
+  // p.y += size.y;
+  // d = min(d, max(fBox(p.xz, vec2(tSize)), -p.y));
+
+  // p = pp;
+  // p.z += .5;
+  // p.xz -= vec2(-.5 - .25, .5 + .25);
+  // p.y -= size.y - stepSize.y;
+  // d = min(d, max(fBox(p.xz, vec2(tSize)), -p.y));
+
+  // p.x += tSize;
+  // d = min(d, fBox(p.xz, vec2(tSize)));
+
+  // p.xz -= tSize;
+  // d = min(d, fBox(p.xz, vec2(tSize)));
+
+  // d = max(d, -p.y - size.y * 4.);
+  // d = max(d, p.y - size.y * 4.);
+
   return d;
+}
+
+void starPart2(inout float d, vec3 p, vec3 size, float steps) {
+  vec2 stepSize = size.xy / vec2(steps - 1., steps);
+
+  d = min(d, stairPart(p + vec3(0, 0, -.5), size, steps));
+
+  float h = .4;
+  float w = .4;
+
+  p.xz += .5 - size.z;
+
+  p.y -= size.y * 3. - stepSize.y / 2. - h;
+  float g = fBox(p, vec3(w, h, w));
+
+  d = max(d, -g);
+
+  p.y += h;
+
+  float a = length(p.xy) - w;
+  a = max(a, length(p.zy) - w);
+  d = max(d, -a);
+
+
 }
 
 float map(vec3 p) {
   // p = mod(p + .5, 1.) - .5;
   // moveCam(p);
   // return dot(p, vec3(0,-1,0));
-  p.y -= .9;
+  p.y += 1.;
 
   moveCam(p);
 
   float grid = _map(p);
 
-  pModMirror2(p.xz, vec2(2));
+  pMod2(p.xz, vec2(2));
 
   // pModMirror2(p.xz, vec2(1));
 
@@ -216,12 +267,16 @@ float map(vec3 p) {
   // pR(p.xz, c.y * PI / 2.);
 
   float steps = 5.;
-  vec3 size = vec3(.5,.25,.15);
-  size.x -= size.z;
-  size.y += (size.y * 2.) / (steps * 2. - 1.) / 2.;
-  // float d = fBox(p.xz, vec2(.4));
-  float d = 1e12;
+  vec3 size = vec3(.5,.25,.1);
+
   vec3 ppp = p;
+
+  p.xz -= .75;
+  pMod2(p.xz, vec2(1.5));
+  float d = fBox(p.xz, vec2(.25 + size.z));
+  // float d = 1e12;
+
+  p = ppp;
 
   p.y = mod(p.y, 2.);
   vec3 pp = p;
@@ -230,29 +285,27 @@ float map(vec3 p) {
   float s = 1e12;
 
   p.y += .5;
-  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
+  starPart2(d, p, size, steps);
 
   pR(p.xz, PI / 2.);
   p.y -= .5;
-  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
+  starPart2(d, p, size, steps);
 
   pR(p.xz, PI / 2.);
   p.y -= .5;
-  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
+  starPart2(d, p, size, steps);
 
   pR(p.xz, PI / 2.);
   p.y -= .5;
-  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
+  starPart2(d, p, size, steps);
 
   pR(p.xz, PI / 2.);
   p.y -= .5;
-  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
+  starPart2(d, p, size, steps);
 
   pR(p.xz, PI / 2.);
   p.y -= .5;
-  s = min(s, stairPart(p + vec3(0, 0, -.5), size, steps));
-
-  d = min(d, s);
+  starPart2(d, p, size, steps);
 
   p = ppp;
   // d = max(d, -p.y);
