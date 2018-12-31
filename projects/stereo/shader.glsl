@@ -144,7 +144,7 @@ mat3 rotationMatrix(vec3 axis, float angle)
 }
 
 
-
+mat3 cornerAxis;
 
 
 void moveCam(inout vec3 p) {
@@ -156,8 +156,7 @@ void moveCam(inout vec3 p) {
   // pR(p.yz, time * PI * -.5);
   // pR(p.xz, time * PI / 2.);
 
-  mat3 m = rotationMatrix(normalize(vec3(1,1,-1)), time * PI * 2. / 3.);
-  p *= m;
+  p *= cornerAxis;
 
   // p.y += time * 2. + .5;
 }
@@ -368,6 +367,7 @@ vec3 getStereoDir() {
 void main() {
 
   time = mod(iTime * .5, 1.);
+  cornerAxis = rotationMatrix(normalize(vec3(1,1,-1)), time * PI * 2. / 3.);
 
   vec2 vertex = 2.0 * (gl_FragCoord.xy / iResolution.xy) - 1.0;
 
