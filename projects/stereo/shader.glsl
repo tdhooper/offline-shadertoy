@@ -36,6 +36,14 @@ vec2 pMod2(inout vec2 p, vec2 size) {
     return c;
 }
 
+// Repeat in three dimensions
+vec3 pMod3(inout vec3 p, vec3 size) {
+    vec3 c = floor((p + size*0.5)/size);
+    p = mod(p + size*0.5, size) - size*0.5;
+    return c;
+}
+
+
 // Same, but mirror every second cell so all boundaries match
 vec2 pModMirror2(inout vec2 p, vec2 size) {
     vec2 halfsize = size*0.5;
@@ -117,11 +125,40 @@ float fBox(vec2 p, vec2 s) {
   return max(p.x, p.y);
 }
 
+// --------------------------------------------------------
+// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
+// --------------------------------------------------------
+
+mat3 rotationMatrix(vec3 axis, float angle)
+{
+    axis = normalize(axis);
+    float s = sin(angle);
+    float c = cos(angle);
+    float oc = 1.0 - c;
+
+    return mat3(
+        oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
+        oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
+        oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c
+    );
+}
+
+
+
+
+
 void moveCam(inout vec3 p) {
   // p.z -= .2;
   // p.y += .2;
-  p.x += 1.;
-  pR(p.xz, time * PI / 2.);
+  p.x += 1.1;
+  p.y += .5;
+  p.z -= .05;
+  // pR(p.yz, time * PI * -.5);
+  // pR(p.xz, time * PI / 2.);
+
+  mat3 m = rotationMatrix(normalize(vec3(1,1,-1)), time * PI * 2. / 3.);
+  p *= m;
+
   // p.y += time * 2. + .5;
 }
 
@@ -197,7 +234,7 @@ float stairPart(vec3 p, vec3 size, float steps) {
   return d;
 }
 
-float map(vec3 p) {
+float _xmap(vec3 p) {
   // p = mod(p + .5, 1.) - .5;
   // moveCam(p);
   // return dot(p, vec3(0,-1,0));
@@ -256,6 +293,37 @@ float map(vec3 p) {
 
   p = ppp;
   // d = max(d, -p.y);
+
+  // d = min(d, grid);
+  d = grid;
+
+  return d;
+}
+
+float map(vec3 p) {
+
+
+  moveCam(p);
+
+  float grid = _map(p);
+
+  vec3 pp = p;
+
+  float mask = fBox(p, vec3(.5));
+
+  float sz = 1./5.;
+  pMod3(p, vec3(sz));
+  float d = fBox(p, vec3(sz / 2. - .005));
+
+  // d = max(d, mask);
+
+  p = pp;
+  p = mod(p + .5, 1.) - .5;
+  float hole = 3./5. * .5;
+  d = max(d, -fBox(p.xy, vec2(hole)));
+  d = max(d, -fBox(p.yz, vec2(hole)));
+  d = max(d, -fBox(p.zx, vec2(hole)));
+
 
   // d = min(d, grid);
 
