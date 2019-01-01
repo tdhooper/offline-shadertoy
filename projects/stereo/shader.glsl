@@ -231,7 +231,6 @@ float _map(vec3 p) {
   float midpoint = length(p) - .33;
   float d = 1e12;
 
-  p += .5;
   p = mod(p, 1.) - .5;
 
   float th = .49;
@@ -360,6 +359,7 @@ float _xmap(vec3 p) {
 
 float randomBoxes(vec3 p) {
 
+  p += .5;
   vec3 pp = p;
 
   float d = 1e12;
@@ -429,7 +429,7 @@ void calcOrientCorner() {
 vec3 calcModP(vec3 p) {
   pR(p.yz, .001); // fix boundry condition
   p *= orientConer;
-  vec3 modP = floor(p + .5);
+  vec3 modP = floor(p) + .5;
   modP *= orientConerInv;
   pR(modP.zy, .001);
   return modP;
@@ -451,11 +451,15 @@ float map(vec3 p) {
 
   float bb = randomBoxes(p);
 
+  p += .5;
   vec3 c = pMod3(p, vec3(1));
   float mask = fBox(p, vec3(.25));
+  modelColor = spectrum(noise(c));
 
   float d = bb;
   d = max(d, mask);
+
+  d = min(d, grid);
 
   return d;
 }
@@ -529,6 +533,7 @@ void main() {
     if (distance < .001) {
       vec3 normal = calcNormal(rayPosition);
       color = normal * .5 + .5;
+      color = vec3(1);
       color = color * mix(1., dot(vec3(0,1,1), normal) * .5 + .5, .5);
       break;
     }
@@ -536,7 +541,7 @@ void main() {
       break;
     }
   }
-  // color *= modelColor;
+  color *= modelColor;
   color = mix(color, vec3(1), smoothstep(0., MAX_DIST, rayLength));
   color = pow(color, vec3(1. / 2.2)); // Gamma
 
