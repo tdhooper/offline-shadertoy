@@ -144,6 +144,36 @@ mat3 rotationMatrix(vec3 axis, float angle)
 }
 
 
+// https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
+
+float mod289(float x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 mod289(vec4 x){return x - floor(x * (1.0 / 289.0)) * 289.0;}
+vec4 perm(vec4 x){return mod289(((x * 34.0) + 1.0) * x);}
+
+float noise(vec3 p){
+    vec3 a = floor(p);
+    vec3 d = p - a;
+    d = d * d * (3.0 - 2.0 * d);
+
+    vec4 b = a.xxyy + vec4(0.0, 1.0, 0.0, 1.0);
+    vec4 k1 = perm(b.xyxy);
+    vec4 k2 = perm(k1.xyxy + b.zzww);
+
+    vec4 c = k2 + a.zzzz;
+    vec4 k3 = perm(c);
+    vec4 k4 = perm(c + 1.0);
+
+    vec4 o1 = fract(k3 * (1.0 / 41.0));
+    vec4 o2 = fract(k4 * (1.0 / 41.0));
+
+    vec4 o3 = o2 * d.z + o1 * (1.0 - d.z);
+    vec2 o4 = o3.yw * d.x + o3.xz * (1.0 - d.x);
+
+    return o4.y * d.y + o4.x * (1.0 - d.y);
+}
+
+
+
 mat3 cornerAxis;
 
 
@@ -310,15 +340,22 @@ float map(vec3 p) {
 
   float mask = fBox(p, vec3(.5));
 
-  float sz = 1./5.;
-  pMod3(p, vec3(sz));
-  float d = fBox(p, vec3(sz / 2. - .005));
+  float sz = 1./4.;
+
+  vec3 c = pMod3(p, vec3(sz)) + 5.;
+
+  float n = noise(c);
+  float d = fBox(p, vec3(sz / 2.) - .00);
+
+  if (d < .005 && n < .6) {
+    d = -d + .0025;
+  }
 
   // d = max(d, mask);
 
   p = pp;
   p = mod(p + .5, 1.) - .5;
-  float hole = 3./5. * .5;
+  float hole = sz / 2. + .001;
   d = max(d, -fBox(p.xy, vec2(hole)));
   d = max(d, -fBox(p.yz, vec2(hole)));
   d = max(d, -fBox(p.zx, vec2(hole)));
@@ -344,7 +381,7 @@ vec3 calcNormal(vec3 pos){
 }
 
 const float ITER = 200.;
-const float MAX_DIST = 5.;
+const float MAX_DIST = 1.5;
 
 vec3 getStereoDir() {
   vec2 p = gl_FragCoord.xy / iResolution.xy;
@@ -366,7 +403,8 @@ vec3 getStereoDir() {
 
 void main() {
 
-  time = mod(iTime * .5, 1.);
+  // time = mod(iTime * .5, 1.);
+  time = iTime * .5;
   cornerAxis = rotationMatrix(normalize(vec3(1,1,-1)), time * PI * 2. / 3.);
 
   vec2 vertex = 2.0 * (gl_FragCoord.xy / iResolution.xy) - 1.0;
