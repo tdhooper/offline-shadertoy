@@ -212,7 +212,7 @@ float _map(vec3 p) {
   // moveCam(p);
 
   float floor = dot(abs(p), vec3(0,-1,0)) + .5;
-  float midpoint = length(p) - .2;
+  float midpoint = length(p) - .33;
   float d = 1e12;
 
   p += .5;
@@ -227,7 +227,7 @@ float _map(vec3 p) {
   
   d = -d;
   // d = min(d, floor);
-  // d = min(d, midpoint);
+  d = min(d, midpoint);
 
   // d = 1e12;
 
@@ -394,6 +394,20 @@ vec3 modelColor;
 
 float map(vec3 p) {
 
+  float ground = -p.y + 1.02;
+
+  float axis = min(
+    length(p.xy) - .05,
+    min(
+      length(p.yz) - .05,
+      length(p.zx) - .05
+    )
+  );
+
+  pR(p.yz, iTime);
+
+  pR(p.xz, atan(sqrt(.5)));
+  pR45(p.xy);
 
   // moveCam(p);
 
@@ -428,7 +442,8 @@ float map(vec3 p) {
 
   d = min(d, grid);
 
-  // d = min(d, mask);
+  d = min(d, ground);
+  d = min(d, axis);
 
   return d;
 }
