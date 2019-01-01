@@ -455,21 +455,11 @@ vec3 calcModP(vec3 p) {
 
 float map(vec3 p) {
 
-  float axis = min(
-    length(p.xy) - .05,
-    min(
-      length(p.yz) - .05,
-      length(p.zx) - .05
-    )
-  );
-
   pR(p.yz, time * PI * 2. / 3.);
 
   vec3 modP = calcModP(p);
   float modA = pModPolarAngle(modP.yz, 3.);
   pModPolarApply(p.yz, modA);
-
-  // float nn = noise(p * 10.);
 
   p *= orientConer;
 
@@ -486,9 +476,6 @@ float map(vec3 p) {
   modelColor = spectrum(n);
   n = floor(mix(1., 7., n));
 
-  // modelColor = spectrum(nn);
-  // modelColor = spectrum(noise(modP));
-
   p = pp;
 
   float d = 1e12;
@@ -504,13 +491,7 @@ float map(vec3 p) {
 
   d = max(d, mask);
 
-
-  d = min(d, grid);
-
-  d = min(d, axis);
-
-  // p = pp;
-  // d = length(p - modP) - .1;
+  // d = min(d, grid);
 
   return d;
 }
