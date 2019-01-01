@@ -358,49 +358,31 @@ float _xmap(vec3 p) {
   return d;
 }
 
-float _map2(vec3 p) {
-
-
-  // moveCam(p);
-
-  float grid = _map(p);
+float randomBoxes(vec3 p) {
 
   vec3 pp = p;
 
-  float mask = fBox(p, vec3(.5));
-
   float d = 1e12;
 
-  if (mask < .001) {
+  float nn = 5.;
+  float sz = 1. / nn;
+  p += sz * fract((nn + 1.) / 2.);
 
-    float nn = 5.;
-    float sz = 1. / nn;
-    p += sz * fract((nn + 1.) / 2.);
+  vec3 c = pMod3(p, vec3(sz)) + 5.;
 
-    vec3 c = pMod3(p, vec3(sz)) + 5.;
+  float n = noise(c);
+  d = fBox(p, vec3(sz / 2.) - .00);
 
-    float n = noise(c);
-    d = fBox(p, vec3(sz / 2.) - .00);
-
-    if (d < .005 && n < .4) {
-      d = -d + .0025;
-    }
-
-    d = max(d, mask + .001);
-
-    p = pp;
-    p = mod(p + .5, 1.) - .5;
-    float hole = sz / 2. + .001;
-    d = max(d, -fBox(p.xy, vec2(hole)));
-    d = max(d, -fBox(p.yz, vec2(hole)));
-    d = max(d, -fBox(p.zx, vec2(hole)));
-  } else {
-    d = mask;
+  if (d < .005 && n < .4) {
+    d = -d + .0025;
   }
 
-  d = min(d, grid);
-
-  // d = min(d, mask);
+  p = pp;
+  p = mod(p + .5, 1.) - .5;
+  float hole = sz / 2. + .001;
+  d = max(d, -fBox(p.xy, vec2(hole)));
+  d = max(d, -fBox(p.yz, vec2(hole)));
+  d = max(d, -fBox(p.zx, vec2(hole)));
 
   return d;
 }
@@ -467,33 +449,13 @@ float map(vec3 p) {
 
   float grid = _map(p);
 
-  vec3 pp = p;
-
-  float maskSz = .25;
+  float bb = randomBoxes(p);
 
   vec3 c = pMod3(p, vec3(1));
   float mask = fBox(p, vec3(.25));
 
-  float n = noise(c);
-  modelColor = spectrum(n);
-  n = floor(mix(1., 7., n));
-
-  p = pp;
-
-  float d = 1e12;
-
-  float sz = 1. / n;
-  sz *= maskSz * 2.;
-
-  p += sz * fract((n + 1.) / 2.);
-
-  pMod3(p, vec3(sz)) + 5.;
-
-  d = fBox(p, vec3(sz / 2.) - .01);
-
+  float d = bb;
   d = max(d, mask);
-
-  // d = min(d, grid);
 
   return d;
 }
@@ -528,7 +490,7 @@ vec3 getStereoDir() {
   );
   dir = dir.xzy;
   // pR(dir.xz, time * PI * 2.);
-  // pR(dir.xy, .5);
+  pR(dir.xy, .5);
   return normalize(dir);
 }
 
@@ -566,15 +528,15 @@ void main() {
     distance = map(rayPosition);
     if (distance < .001) {
       vec3 normal = calcNormal(rayPosition);
-      // color = normal * .5 + .5;
-      color = vec3(1) * mix(1., dot(vec3(0,1,1), normal) * .5 + .5, .5);
+      color = normal * .5 + .5;
+      color = color * mix(1., dot(vec3(0,1,1), normal) * .5 + .5, .5);
       break;
     }
     if (distance >= MAX_DIST) {
       break;
     }
   }
-  color *= modelColor;
+  // color *= modelColor;
   color = mix(color, vec3(1), smoothstep(0., MAX_DIST, rayLength));
   color = pow(color, vec3(1. / 2.2)); // Gamma
 
