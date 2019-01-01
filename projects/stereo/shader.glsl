@@ -394,8 +394,6 @@ vec3 modelColor;
 
 float map(vec3 p) {
 
-  float ground = -p.y + 1.02;
-
   float axis = min(
     length(p.xy) - .05,
     min(
@@ -406,7 +404,10 @@ float map(vec3 p) {
 
   pR(p.yz, iTime);
 
-  pR(p.xz, atan(sqrt(.5)));
+  pModPolar(p.yz, 3.);
+
+  pR(p.yz, atan(sqrt(1. / 3.)));
+  pR(p.xz, atan(sqrt(1. / 2.)));
   pR45(p.xy);
 
   // moveCam(p);
@@ -442,7 +443,6 @@ float map(vec3 p) {
 
   d = min(d, grid);
 
-  d = min(d, ground);
   d = min(d, axis);
 
   return d;
