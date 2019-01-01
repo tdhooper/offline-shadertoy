@@ -455,6 +455,8 @@ vec3 calcModP(vec3 p) {
 
 float map(vec3 p) {
 
+  pR(p.yx, PI / 2.);
+
   pR(p.yz, time * PI * 2. / 3.);
 
   vec3 modP = calcModP(p);
