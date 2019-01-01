@@ -173,6 +173,19 @@ float noise(vec3 p){
 }
 
 
+// --------------------------------------------------------
+// Spectrum colour palette
+// IQ https://www.shadertoy.com/view/ll2GD3
+// --------------------------------------------------------
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
 
 mat3 cornerAxis;
 
@@ -214,7 +227,7 @@ float _map(vec3 p) {
   
   d = -d;
   // d = min(d, floor);
-  d = min(d, midpoint);
+  // d = min(d, midpoint);
 
   // d = 1e12;
 
@@ -329,7 +342,7 @@ float _xmap(vec3 p) {
   return d;
 }
 
-float map(vec3 p) {
+float _map2(vec3 p) {
 
 
   // moveCam(p);
@@ -375,6 +388,51 @@ float map(vec3 p) {
 
   return d;
 }
+
+
+vec3 modelColor;
+
+float map(vec3 p) {
+
+
+  // moveCam(p);
+
+  float grid = _map(p);
+
+  vec3 pp = p;
+
+  float maskSz = .25;
+
+  vec3 c = pMod3(p, vec3(1));
+  float mask = fBox(p, vec3(.25));
+
+  float n = noise(c);
+  modelColor = spectrum(n);
+  n = floor(mix(1., 7., n));
+
+  p = pp;
+
+  float d = 1e12;
+
+  float sz = 1. / n;
+  sz *= maskSz * 2.;
+
+  p += sz * fract((n + 1.) / 2.);
+
+  pMod3(p, vec3(sz)) + 5.;
+
+  d = fBox(p, vec3(sz / 2.) - .01);
+
+  d = max(d, mask);
+
+
+  d = min(d, grid);
+
+  // d = min(d, mask);
+
+  return d;
+}
+
 
 
 const int NORMAL_STEPS = 6;
@@ -442,15 +500,18 @@ void main() {
     distance = map(rayPosition);
     if (distance < .001) {
       vec3 normal = calcNormal(rayPosition);
-      color = normal * .5 + .5;
-      // color *= mix(1., dot(vec3(1,1,1), normal) * .5 + .5, .5);
+      // color = normal * .5 + .5;
+      color = vec3(1) * mix(1., dot(vec3(0,1,1), normal) * .5 + .5, .5);
       break;
     }
     if (distance >= MAX_DIST) {
       break;
     }
   }
+  color *= modelColor;
   color = mix(color, vec3(1), smoothstep(0., MAX_DIST, rayLength));
+  color = pow(color, vec3(1. / 2.2)); // Gamma
+
 
   gl_FragColor = vec4(color, 1);
 }
