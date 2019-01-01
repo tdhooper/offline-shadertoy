@@ -21,6 +21,14 @@ body:hover .controls {
     opacity: .7;
 }
 
+.stats {
+    opacity: 0 !important;
+}
+
+body:hover .stats {
+    opacity: .9 !important;
+}
+
 .scrubber {
     display: block;
     width: 100%;

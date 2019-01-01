@@ -1,3 +1,4 @@
+const Stats = require('stats.js');
 const glslify = require('glslify');
 const regl = require('regl')({
   extensions: ['ext_frag_depth'],
@@ -16,11 +17,17 @@ const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
 const createControls = require('./lib/uniform-controls');
 
+
 global.regl = regl;
 
 module.exports = (project) => {
   const { frag } = project;
   const defaultState = project.config || null;
+
+  const stats = new Stats();
+  stats.showPanel(0);
+  document.body.appendChild(stats.dom);
+  stats.dom.classList.add('stats');
 
   const canvas = regl._gl.canvas;
 
@@ -121,6 +128,7 @@ module.exports = (project) => {
   const stateStore = new StateStore(toState, fromState, defaultState);
 
   const draw = () => {
+    stats.begin();
     camera.tick();
     oldCamera.tick();
     scrubber.update();
@@ -136,6 +144,7 @@ module.exports = (project) => {
         }
       });
     }
+    stats.end();
   };
 
   let tick = regl.frame(draw);
