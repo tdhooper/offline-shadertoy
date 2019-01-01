@@ -332,7 +332,7 @@ float _xmap(vec3 p) {
 float map(vec3 p) {
 
 
-  moveCam(p);
+  // moveCam(p);
 
   float grid = _map(p);
 
@@ -340,28 +340,38 @@ float map(vec3 p) {
 
   float mask = fBox(p, vec3(.5));
 
-  float sz = 1./4.;
+  float d = 1e12;
 
-  vec3 c = pMod3(p, vec3(sz)) + 5.;
+  if (mask < .001) {
 
-  float n = noise(c);
-  float d = fBox(p, vec3(sz / 2.) - .00);
+    float nn = 5.;
+    float sz = 1. / nn;
+    p += sz * fract((nn + 1.) / 2.);
 
-  if (d < .005 && n < .6) {
-    d = -d + .0025;
+    vec3 c = pMod3(p, vec3(sz)) + 5.;
+
+    float n = noise(c);
+    d = fBox(p, vec3(sz / 2.) - .00);
+
+    if (d < .005 && n < .4) {
+      d = -d + .0025;
+    }
+
+    d = max(d, mask + .001);
+
+    p = pp;
+    p = mod(p + .5, 1.) - .5;
+    float hole = sz / 2. + .001;
+    d = max(d, -fBox(p.xy, vec2(hole)));
+    d = max(d, -fBox(p.yz, vec2(hole)));
+    d = max(d, -fBox(p.zx, vec2(hole)));
+  } else {
+    d = mask;
   }
 
-  // d = max(d, mask);
+  d = min(d, grid);
 
-  p = pp;
-  p = mod(p + .5, 1.) - .5;
-  float hole = sz / 2. + .001;
-  d = max(d, -fBox(p.xy, vec2(hole)));
-  d = max(d, -fBox(p.yz, vec2(hole)));
-  d = max(d, -fBox(p.zx, vec2(hole)));
-
-
-  // d = min(d, grid);
+  // d = min(d, mask);
 
   return d;
 }
@@ -381,11 +391,11 @@ vec3 calcNormal(vec3 pos){
 }
 
 const float ITER = 200.;
-const float MAX_DIST = 1.5;
+const float MAX_DIST = 5.;
 
 vec3 getStereoDir() {
   vec2 p = gl_FragCoord.xy / iResolution.xy;
-  float m = .5;
+  float m = .2;
   p = (p * 2. * m - m) * 3.142;
   p.x *= iResolution.x / iResolution.y;
   vec3 dir = vec3(
@@ -395,7 +405,7 @@ vec3 getStereoDir() {
   );
   dir = dir.xzy;
   // pR(dir.xz, time * PI * 2.);
-  pR(dir.xy, .5);
+  // pR(dir.xy, .5);
   return normalize(dir);
 }
 
@@ -418,7 +428,7 @@ void main() {
   dir *= mat3(view);
 
   vec3 rayOrigin = vec3(0);
-  // rayOrigin = eye;
+  rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
   vec3 rayPosition = rayOrigin;
   float rayLength = 0.;
