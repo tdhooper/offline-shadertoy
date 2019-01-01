@@ -392,6 +392,40 @@ float _map2(vec3 p) {
 
 vec3 modelColor;
 
+float pModPolarAngle(vec2 p, float repetitions) {
+  float angle = 2.*PI/repetitions;
+  float a = atan(p.y, p.x) + angle/2.;
+  float c = floor(a/angle);
+  return c * angle;
+}
+
+void pModPolarApply(inout vec2 p, float a) {
+  pR(p, a);
+  // float r = length(p);
+  // p = vec2(cos(a), sin(a))*r;
+}
+
+void cubeAxis(inout vec3 p) {
+  pR(p.yz, atan(sqrt(1. / 3.)));
+  pR(p.xz, atan(sqrt(1. / 2.)));
+  pR45(p.xy);
+}
+
+void cubeAxisInv(inout vec3 p) {
+  pR45(p.yx);
+  pR(p.zx, atan(sqrt(1. / 2.)));
+  pR(p.zy, atan(sqrt(1. / 3.)));
+}
+
+vec3 calcModP(vec3 p) {
+  pR(p.yz, .001); // fix boundry condition
+  cubeAxis(p);
+  vec3 modP = floor(p + .5);
+  cubeAxisInv(modP);
+  pR(modP.zy, .001);
+  return modP;
+}
+
 float map(vec3 p) {
 
   float axis = min(
@@ -404,13 +438,14 @@ float map(vec3 p) {
 
   pR(p.yz, time * PI * 2. / 3.);
 
-  pModPolar(p.yz, 3.);
+  vec3 modP = calcModP(p);
 
-  pR(p.yz, atan(sqrt(1. / 3.)));
-  pR(p.xz, atan(sqrt(1. / 2.)));
-  pR45(p.xy);
+  float modA = pModPolarAngle(modP.yz, 3.);
+  pModPolarApply(p.yz, modA);
 
-  // moveCam(p);
+  // float nn = noise(p * 10.);
+
+  cubeAxis(p);
 
   float grid = _map(p);
 
@@ -424,6 +459,9 @@ float map(vec3 p) {
   float n = noise(c);
   modelColor = spectrum(n);
   n = floor(mix(1., 7., n));
+
+  // modelColor = spectrum(nn);
+  // modelColor = spectrum(noise(modP));
 
   p = pp;
 
@@ -444,6 +482,9 @@ float map(vec3 p) {
   d = min(d, grid);
 
   d = min(d, axis);
+
+  // p = pp;
+  // d = length(p - modP) - .1;
 
   return d;
 }
