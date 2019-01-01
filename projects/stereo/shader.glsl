@@ -143,6 +143,22 @@ mat3 rotationMatrix(vec3 axis, float angle)
     );
 }
 
+mat3 inverse(mat3 m) {
+  float a00 = m[0][0], a01 = m[0][1], a02 = m[0][2];
+  float a10 = m[1][0], a11 = m[1][1], a12 = m[1][2];
+  float a20 = m[2][0], a21 = m[2][1], a22 = m[2][2];
+
+  float b01 = a22 * a11 - a12 * a21;
+  float b11 = -a22 * a10 + a12 * a20;
+  float b21 = a21 * a10 - a11 * a20;
+
+  float det = a00 * b01 + a01 * b11 + a02 * b21;
+
+  return mat3(b01, (-a22 * a01 + a02 * a21), (a12 * a01 - a02 * a11),
+              b11, (a22 * a00 - a02 * a20), (-a12 * a00 + a02 * a10),
+              b21, (-a21 * a00 + a01 * a20), (a11 * a00 - a01 * a10)) / det;
+}
+
 
 // https://gist.github.com/patriciogonzalezvivo/670c22f3966e662d2f83
 
@@ -405,23 +421,34 @@ void pModPolarApply(inout vec2 p, float a) {
   // p = vec2(cos(a), sin(a))*r;
 }
 
-void cubeAxis(inout vec3 p) {
-  pR(p.yz, atan(sqrt(1. / 3.)));
-  pR(p.xz, atan(sqrt(1. / 2.)));
-  pR45(p.xy);
-}
+mat3 orientConer, orientConerInv;
 
-void cubeAxisInv(inout vec3 p) {
-  pR45(p.yx);
-  pR(p.zx, atan(sqrt(1. / 2.)));
-  pR(p.zy, atan(sqrt(1. / 3.)));
+void calcOrientCorner() {
+  float heading = PI / 4.; // y
+  float attitude = atan(sqrt(1. / 2.)); // z
+  float bank = atan(sqrt(1. / 3.)); // x
+
+  float sa = sin(attitude);
+  float ca = cos(attitude);
+  float sb = sin(bank);
+  float cb = cos(bank);
+  float sh = sin(heading);
+  float ch = cos(heading);
+
+  orientConer = mat3(
+    ch*ca, -ch*sa*cb + sh*sb, ch*sa*sb + sh*cb,
+    sa, ca*cb, -ca*sb,
+    -sh*ca, sh*sa*cb + ch*sb, -sh*sa*sb + ch*cb
+  );
+
+  orientConerInv = inverse(orientConer);
 }
 
 vec3 calcModP(vec3 p) {
   pR(p.yz, .001); // fix boundry condition
-  cubeAxis(p);
+  p *= orientConer;
   vec3 modP = floor(p + .5);
-  cubeAxisInv(modP);
+  modP *= orientConerInv;
   pR(modP.zy, .001);
   return modP;
 }
@@ -439,13 +466,12 @@ float map(vec3 p) {
   pR(p.yz, time * PI * 2. / 3.);
 
   vec3 modP = calcModP(p);
-
   float modA = pModPolarAngle(modP.yz, 3.);
   pModPolarApply(p.yz, modA);
 
   // float nn = noise(p * 10.);
 
-  cubeAxis(p);
+  p *= orientConer;
 
   float grid = _map(p);
 
@@ -530,6 +556,7 @@ void main() {
   time = mod(iTime * .5, 1.);
   // time = iTime * .5;
   cornerAxis = rotationMatrix(normalize(vec3(1,1,-1)), time * PI * 2. / 3.);
+  calcOrientCorner();
 
   vec2 vertex = 2.0 * (gl_FragCoord.xy / iResolution.xy) - 1.0;
 
