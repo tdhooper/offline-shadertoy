@@ -402,7 +402,7 @@ float map(vec3 p) {
     )
   );
 
-  pR(p.yz, iTime);
+  pR(p.yz, time * PI * 2. / 3.);
 
   pModPolar(p.yz, 3.);
 
@@ -486,8 +486,8 @@ vec3 getStereoDir() {
 
 void main() {
 
-  // time = mod(iTime * .5, 1.);
-  time = iTime * .5;
+  time = mod(iTime * .5, 1.);
+  // time = iTime * .5;
   cornerAxis = rotationMatrix(normalize(vec3(1,1,-1)), time * PI * 2. / 3.);
 
   vec2 vertex = 2.0 * (gl_FragCoord.xy / iResolution.xy) - 1.0;
