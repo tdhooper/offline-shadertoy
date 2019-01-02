@@ -22,6 +22,6 @@ const main = require('./main.js');
 // peel
 // rays-and-polygons
 
-const project = LOADPROJECT('spiral-loop');
+const project = LOADPROJECT('rays-and-polygons');
 
 main(project);
