@@ -82,6 +82,7 @@ module.exports = (project) => {
 
   const camera = createCamera(canvas, {
     position: [0, 0, 5],
+    positionSpeed: 1,
   });
 
   const mouse = createMouse(canvas);

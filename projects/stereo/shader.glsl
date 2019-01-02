@@ -443,7 +443,13 @@ vec3 eye;
 
 float map(vec3 p) {
 
-  float axis = length(p.yz) - .1;
+  float axis = min(
+    length(p.xy),
+    min(
+      length(p.yz),
+      length(p.zx)
+    )
+  ) - .02;
   // pR(p.yz, sin(time * PI * 2. - PI * .7) * .5);
   // p.y += cos(time * PI * 2. + PI * .5) * -.2;
 
@@ -480,7 +486,7 @@ float map(vec3 p) {
 
   d = max(d, -tunnel);
 
-  // d = max(d, -axis);
+  // d = min(d, axis);
 
   return d;
 }
@@ -505,7 +511,7 @@ const float MAX_DIST = 5.;
 
 vec3 getStereoDir() {
   vec2 p = gl_FragCoord.xy / iResolution.xy;
-  float m = .3;
+  float m = .5;
   p = (p * 2. * m - m) * 3.142;
   p.x *= iResolution.x / iResolution.y;
   vec3 dir = vec3(
