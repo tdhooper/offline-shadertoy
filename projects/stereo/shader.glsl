@@ -228,7 +228,7 @@ float _map(vec3 p) {
   // moveCam(p);
 
   float floor = dot(abs(p), vec3(0,-1,0)) + .5;
-  float midpoint = length(p) - .33;
+  float midpoint = length(p) - .1;
   float d = 1e12;
 
   p = mod(p, 1.) - .5;
@@ -357,6 +357,8 @@ float _xmap(vec3 p) {
   return d;
 }
 
+float density;
+
 float randomBoxes(vec3 p) {
 
   p += .5;
@@ -364,25 +366,27 @@ float randomBoxes(vec3 p) {
 
   float d = 1e12;
 
-  float nn = 5.;
+  float nn = 3.;
   float sz = 1. / nn;
   p += sz * fract((nn + 1.) / 2.);
 
-  vec3 c = pMod3(p, vec3(sz)) + 5.;
+  vec3 c = pMod3(p, vec3(sz)) + 15.;
 
   float n = noise(c);
   d = fBox(p, vec3(sz / 2.) - .00);
 
-  if (d < .005 && n < .4) {
+  if (d < .005 && n < 1. - density) {
     d = -d + .0025;
   }
 
   p = pp;
   p = mod(p + .5, 1.) - .5;
-  float hole = sz / 2. + .001;
+  float hole = sz * .5 + .001;
   d = max(d, -fBox(p.xy, vec2(hole)));
   d = max(d, -fBox(p.yz, vec2(hole)));
   d = max(d, -fBox(p.zx, vec2(hole)));
+
+  // d = min(d, length(p) - .5 * density);
 
   return d;
 }
@@ -435,7 +439,18 @@ vec3 calcModP(vec3 p) {
   return modP;
 }
 
+vec3 eye;
+
 float map(vec3 p) {
+
+  float axis = length(p.yz) - .1;
+  // pR(p.yz, sin(time * PI * 2. - PI * .7) * .5);
+  // p.y += cos(time * PI * 2. + PI * .5) * -.2;
+
+  float tunnel = length(
+    vec2(length(p), p.y)
+    - vec2(length(eye), eye.y)
+  ) - .2;
 
   pR(p.yx, PI / 2.);
 
@@ -456,10 +471,16 @@ float map(vec3 p) {
   float mask = fBox(p, vec3(.25));
   modelColor = spectrum(noise(c));
 
-  float d = bb;
-  d = max(d, mask);
+  density = smoothstep(1., 3., length(c));
 
-  d = min(d, grid);
+  float d = bb;
+  // d = max(d, mask);
+
+  // d = min(d, grid);
+
+  d = max(d, -tunnel);
+
+  // d = max(d, -axis);
 
   return d;
 }
@@ -484,7 +505,7 @@ const float MAX_DIST = 5.;
 
 vec3 getStereoDir() {
   vec2 p = gl_FragCoord.xy / iResolution.xy;
-  float m = .2;
+  float m = .3;
   p = (p * 2. * m - m) * 3.142;
   p.x *= iResolution.x / iResolution.y;
   vec3 dir = vec3(
@@ -511,7 +532,7 @@ void main() {
 
   float fov = 1. / projection[1].y;
   float aspect = projection[1].y / projection[0].x;
-  vec3 eye = -(view[3].xyz) * mat3(view);
+  eye = -(view[3].xyz) * mat3(view);
   vec3 dir = vec3(vertex.x * fov * aspect, vertex.y * fov,-1.0) * mat3(view);
 
   dir = getStereoDir();
@@ -533,7 +554,7 @@ void main() {
     if (distance < .001) {
       vec3 normal = calcNormal(rayPosition);
       color = normal * .5 + .5;
-      color = vec3(1);
+      // color = vec3(1);
       color = color * mix(1., dot(vec3(0,1,1), normal) * .5 + .5, .5);
       break;
     }
@@ -541,7 +562,7 @@ void main() {
       break;
     }
   }
-  color *= modelColor;
+  // color *= modelColor;
   color = mix(color, vec3(1), smoothstep(0., MAX_DIST, rayLength));
   color = pow(color, vec3(1. / 2.2)); // Gamma
 
