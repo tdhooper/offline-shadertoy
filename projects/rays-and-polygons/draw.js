@@ -29,6 +29,9 @@ const drawPolygons = global.regl({
   },
   elements: mesh.cells,
   uniforms: {
+    // model: function(context, props) {
+    //   return mat4.fromTranslation([], props.camera.position);
+    // }
     model: mat4.identity([]),
   },
 });

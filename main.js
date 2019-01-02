@@ -11,7 +11,7 @@ const { mat4 } = require('gl-matrix');
 const WebCaptureClient = require('web-frames-capture');
 const createMouse = require('./lib/mouse');
 const createOldCamera = require('./lib/free-fly-camera');
-const createCamera = require('./lib/camera');
+const createCamera = require('./lib/camera2');
 const StateStore = require('./lib/state-store');
 const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
@@ -140,7 +140,7 @@ module.exports = (project) => {
       setup(stateStore.state, () => {
         drawRaymarch(stateStore.state);
         if (project.draw) {
-          project.draw();
+          project.draw(stateStore.state);
         }
       });
     }
