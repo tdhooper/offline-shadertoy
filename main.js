@@ -10,7 +10,6 @@ const regl = require('regl')({
 const { mat4 } = require('gl-matrix');
 const WebCaptureClient = require('web-frames-capture');
 const createMouse = require('./lib/mouse');
-const createOldCamera = require('./lib/free-fly-camera');
 const createCamera = require('./lib/camera2');
 const StateStore = require('./lib/state-store');
 const createScrubber = require('./lib/scrubber');
@@ -85,10 +84,6 @@ module.exports = (project) => {
     position: [0, 0, 5],
   });
 
-  const oldCamera = createOldCamera(canvas, {
-    position: [0, 0, 5],
-  });
-
   const mouse = createMouse(canvas);
 
   const timer = new Timer();
@@ -98,8 +93,8 @@ module.exports = (project) => {
     const state = {
       camera: camera.toState(),
       view: camera.view(),
-      cameraMatrix: oldCamera.view(),
-      cameraPosition: oldCamera.position,
+      cameraMatrix: camera.view(),
+      cameraPosition: camera.position,
       timer: timer.serialize(),
       mouse,
       r: [canvas.width, canvas.height],
@@ -113,9 +108,8 @@ module.exports = (project) => {
   const fromState = (state) => {
     if (state.camera) {
       camera.fromState(state.camera);
-    }
-    if (state.cameraMatrix) {
-      oldCamera.fromMatrix(state.cameraMatrix);
+    } else if (state.cameraMatrix) {
+      camera.fromState(state.cameraMatrix);
     }
     if (state.timer) {
       timer.fromObject(state.timer);
@@ -130,7 +124,6 @@ module.exports = (project) => {
   const draw = () => {
     stats.begin();
     camera.tick();
-    oldCamera.tick();
     scrubber.update();
     if (stateStore.update()) {
       regl.clear({
