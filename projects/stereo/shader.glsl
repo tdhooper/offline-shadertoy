@@ -497,10 +497,10 @@ float map(vec3 p) {
     - vec2(length(eye), eye.y)
   );
 
-  float density = smoothstep(.5, 3., tunnel);
+  float density = smoothstep(.0, 2.5, tunnel);
 
-  float n = noise(c);
-  float d = fBox(p, vec3(sz / 2.) - .2) - .19;
+  float n = noise(c - 9.2);
+  float d = fBox(p, vec3(sz / 2.) - .012) - .01;
 
   if (n < 1. - density * .75) {
     d = -fBox(p, vec3(sz / 2.)) + .001;
@@ -567,7 +567,7 @@ void main() {
   dir = getStereoDir();
   // dir *= mat3(view);
   dir.yz = dir.zy;
-  pR(dir.yz, -1.);
+  // pR(dir.yz, -.1);
   eye = vec3(0,0,-3.);
 
   vec3 rayOrigin = eye;
