@@ -357,6 +357,7 @@ float _xmap(vec3 p) {
   return d;
 }
 
+
 float density;
 
 float randomBoxes(vec3 p) {
@@ -374,6 +375,15 @@ float randomBoxes(vec3 p) {
 
   float n = noise(c);
   d = fBox(p, vec3(sz / 2.) - .00);
+
+  // also remove boxes who's center is
+  // within distance of camera path
+
+  // make all model rotation camera rotation
+  // instead
+
+  // distance from camera path is then world
+  // box position fed into camera path sdf
 
   if (d < .005 && n < 1. - density) {
     d = -d + .0025;
@@ -456,7 +466,7 @@ float map(vec3 p) {
   float tunnel = length(
     vec2(length(p), p.y)
     - vec2(length(eye), eye.y)
-  ) - .2;
+  ) - .9;
 
   pR(p.yx, PI / 2.);
 
@@ -473,18 +483,33 @@ float map(vec3 p) {
   float bb = randomBoxes(p);
 
   p += .5;
+
   vec3 c = pMod3(p, vec3(1));
   float mask = fBox(p, vec3(.25));
   modelColor = spectrum(noise(c));
 
   density = smoothstep(1., 3., length(c));
 
+  vec3 tp = c;
+  tp -= .5;
+  tp *= orientConerInv;
+  pR(tp.zy, time * PI * 2. / 3.);
+  pR(tp.xy, PI / 2.);
+
+  tunnel = length(
+    vec2(length(tp), tp.y)
+    - vec2(length(eye), eye.y)
+  );
+
+  density = smoothstep(.5, 2., tunnel);
+
+
   float d = bb;
   // d = max(d, mask);
 
   // d = min(d, grid);
 
-  d = max(d, -tunnel);
+  // d = max(d, -tunnel);
 
   // d = min(d, axis);
 
@@ -511,7 +536,7 @@ const float MAX_DIST = 5.;
 
 vec3 getStereoDir() {
   vec2 p = gl_FragCoord.xy / iResolution.xy;
-  float m = .5;
+  float m = .3;
   p = (p * 2. * m - m) * 3.142;
   p.x *= iResolution.x / iResolution.y;
   vec3 dir = vec3(
