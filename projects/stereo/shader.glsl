@@ -440,12 +440,12 @@ void calcOrientCorner() {
   orientConerInv = inverse(orientConer);
 }
 
-vec3 calcModP(vec3 p) {
-  pR(p.yz, .001); // fix boundry condition
+vec3 calcModP(vec3 p, vec3 size) {
+  pR(p.yz, .0001); // fix boundry condition
   p *= orientConer;
-  vec3 modP = floor(p) + .5;
+  vec3 modP = pMod3(p, size) * size;
   modP *= orientConerInv;
-  pR(modP.zy, .001);
+  pR(modP.zy, .0001);
   return modP;
 }
 
@@ -463,16 +463,13 @@ float map(vec3 p) {
   // pR(p.yz, sin(time * PI * 2. - PI * .7) * .5);
   // p.y += cos(time * PI * 2. + PI * .5) * -.2;
 
-  float tunnel = length(
-    vec2(length(p), p.y)
-    - vec2(length(eye), eye.y)
-  ) - .9;
-
   pR(p.yx, PI / 2.);
-
   pR(p.yz, time * PI * 2. / 3.);
 
-  vec3 modP = calcModP(p);
+  float nn = 4.;
+  float sz = 1. / nn;
+
+  vec3 modP = calcModP(p, vec3(sz));
   float modA = pModPolarAngle(modP.yz, 3.);
   pModPolarApply(p.yz, modA);
 
@@ -480,36 +477,29 @@ float map(vec3 p) {
 
   float grid = _map(p);
 
-  float bb = randomBoxes(p);
+  vec3 c = pMod3(p, vec3(sz));
 
-  p += .5;
-
-  vec3 c = pMod3(p, vec3(1));
-  float mask = fBox(p, vec3(.25));
-  modelColor = spectrum(noise(c));
-
-  density = smoothstep(1., 3., length(c));
-
-  vec3 tp = c;
-  tp -= .5;
+  vec3 tp = c * sz;
   tp *= orientConerInv;
   pR(tp.zy, time * PI * 2. / 3.);
   pR(tp.xy, PI / 2.);
 
-  tunnel = length(
+  float tunnel = length(
     vec2(length(tp), tp.y)
     - vec2(length(eye), eye.y)
   );
 
-  density = smoothstep(.5, 2., tunnel);
+  float density = smoothstep(.25, 1., tunnel);
 
+  float n = noise(c);
+  float d = fBox(p, vec3(sz / 2.));
 
-  float d = bb;
-  // d = max(d, mask);
+  if (d < .005 && n < 1. - density) {
+    d = -d + .0025;
+  }
 
-  // d = min(d, grid);
-
-  // d = max(d, -tunnel);
+  // float d = grid;
+  d = min(d, grid);
 
   // d = min(d, axis);
 
@@ -536,7 +526,7 @@ const float MAX_DIST = 5.;
 
 vec3 getStereoDir() {
   vec2 p = gl_FragCoord.xy / iResolution.xy;
-  float m = .3;
+  float m = .5;
   p = (p * 2. * m - m) * 3.142;
   p.x *= iResolution.x / iResolution.y;
   vec3 dir = vec3(
