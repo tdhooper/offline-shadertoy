@@ -115,9 +115,15 @@ float fOpDifferenceColumns(float a, float b, float r, float n) {
     }
 }
 
-float fBox(vec3 p, vec3 s) {
-  p = abs(p) - s;
-  return max(p.x, max(p.y, p.z));
+
+float vmax(vec3 v) {
+    return max(max(v.x, v.y), v.z);
+}
+
+// Box: correct distance to corners
+float fBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
 float fBox(vec2 p, vec2 s) {
@@ -460,13 +466,15 @@ float map(vec3 p) {
       length(p.zx)
     )
   ) - .02;
+
+  axis = length(p.zx + .1) - .02;
   // pR(p.yz, sin(time * PI * 2. - PI * .7) * .5);
   // p.y += cos(time * PI * 2. + PI * .5) * -.2;
 
-  pR(p.yx, PI / 2.);
+  // pR(p.yx, PI / 2.);
   pR(p.yz, time * PI * 2. / 3.);
 
-  float nn = 4.;
+  float nn = 1.;
   float sz = 1. / nn;
 
   vec3 modP = calcModP(p, vec3(sz));
@@ -489,19 +497,19 @@ float map(vec3 p) {
     - vec2(length(eye), eye.y)
   );
 
-  float density = smoothstep(.25, 1., tunnel);
+  float density = smoothstep(.5, 3., tunnel);
 
   float n = noise(c);
-  float d = fBox(p, vec3(sz / 2.));
+  float d = fBox(p, vec3(sz / 2.) - .2) - .19;
 
-  if (d < .005 && n < 1. - density) {
-    d = -d + .0025;
+  if (n < 1. - density * .75) {
+    d = -fBox(p, vec3(sz / 2.)) + .001;
   }
 
   // float d = grid;
-  d = min(d, grid);
+  // d = min(d, grid);
 
-  // d = min(d, axis);
+  d = min(d, axis);
 
   return d;
 }
@@ -521,7 +529,7 @@ vec3 calcNormal(vec3 pos){
   return normalize(nor);
 }
 
-const float ITER = 200.;
+const float ITER = 1000.;
 const float MAX_DIST = 5.;
 
 vec3 getStereoDir() {
@@ -536,7 +544,7 @@ vec3 getStereoDir() {
   );
   dir = dir.xzy;
   // pR(dir.xz, time * PI * 2.);
-  pR(dir.xy, .5);
+  // pR(dir.xy, .5);
   return normalize(dir);
 }
 
@@ -557,10 +565,12 @@ void main() {
   vec3 dir = vec3(vertex.x * fov * aspect, vertex.y * fov,-1.0) * mat3(view);
 
   dir = getStereoDir();
-  dir *= mat3(view);
+  // dir *= mat3(view);
+  dir.yz = dir.zy;
+  pR(dir.yz, -1.);
+  eye = vec3(0,0,-3.);
 
-  vec3 rayOrigin = vec3(0);
-  rayOrigin = eye;
+  vec3 rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
   vec3 rayPosition = rayOrigin;
   float rayLength = 0.;
@@ -575,8 +585,8 @@ void main() {
     if (distance < .001) {
       vec3 normal = calcNormal(rayPosition);
       color = normal * .5 + .5;
-      // color = vec3(1);
-      color = color * mix(1., dot(vec3(0,1,1), normal) * .5 + .5, .5);
+      color = vec3(1);
+      color = color * mix(1., dot(normalize(vec3(0,1,1)), normal) * .5 + .5, 1.);
       break;
     }
     if (distance >= MAX_DIST) {
@@ -584,7 +594,7 @@ void main() {
     }
   }
   // color *= modelColor;
-  color = mix(color, vec3(1), smoothstep(0., MAX_DIST, rayLength));
+  color = mix(color, vec3(0), pow(smoothstep(.0, MAX_DIST, rayLength), .5));
   color = pow(color, vec3(1. / 2.2)); // Gamma
 
 
