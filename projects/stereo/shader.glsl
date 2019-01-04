@@ -474,7 +474,7 @@ float map(vec3 p) {
   // pR(p.yx, PI / 2.);
   pR(p.yz, time * PI * 2. / 3.);
 
-  float nn = 1.;
+  float nn = .75;
   float sz = 1. / nn;
 
   vec3 modP = calcModP(p, vec3(sz));
@@ -499,17 +499,17 @@ float map(vec3 p) {
 
   float density = smoothstep(.0, 2.5, tunnel);
 
-  float n = noise(c - 9.2);
-  float d = fBox(p, vec3(sz / 2.) - .012) - .01;
+  float n = noise(c - 23.2);
+  float d = fBox(p, vec3(sz / 2.) - density * .2 - .05) - .0;
 
   if (n < 1. - density * .75) {
-    d = -fBox(p, vec3(sz / 2.)) + .001;
+    d = -fBox(p, vec3(sz / 2.)) + .01;
   }
 
   // float d = grid;
   // d = min(d, grid);
 
-  d = min(d, axis);
+  // d = min(d, axis);
 
   return d;
 }
@@ -553,7 +553,7 @@ vec3 getStereoDir() {
 void main() {
 
   time = mod(iTime * .5, 1.);
-  // time = iTime * .5;
+  // time = iTime;
   cornerAxis = rotationMatrix(normalize(vec3(1,1,-1)), time * PI * 2. / 3.);
   calcOrientCorner();
 
@@ -567,8 +567,8 @@ void main() {
   dir = getStereoDir();
   // dir *= mat3(view);
   dir.yz = dir.zy;
-  // pR(dir.yz, -.1);
-  eye = vec3(0,0,-3.);
+  pR(dir.yz, -.4);
+  eye = vec3(0,0,-5.);
 
   vec3 rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
@@ -587,6 +587,7 @@ void main() {
       color = normal * .5 + .5;
       color = vec3(1);
       color = color * mix(1., dot(normalize(vec3(0,1,1)), normal) * .5 + .5, 1.);
+      color = spectrum(dot(rayDirection, normal) * .75 + .75);
       break;
     }
     if (distance >= MAX_DIST) {
@@ -594,7 +595,7 @@ void main() {
     }
   }
   // color *= modelColor;
-  color = mix(color, vec3(0), pow(smoothstep(.0, MAX_DIST, rayLength), .5));
+  color = mix(color, vec3(.1,0,.1), pow(smoothstep(1.5, MAX_DIST, rayLength), .5));
   color = pow(color, vec3(1. / 2.2)); // Gamma
 
 
