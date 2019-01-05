@@ -237,16 +237,18 @@ float _map(vec3 p) {
   float midpoint = length(p) - .1;
   float d = 1e12;
 
-  p = mod(p, 1.) - .5;
+  float sz = .25;
 
-  float th = .49;
-  d = min(d, fBox(p, vec3(.55,th,th)));
-  d = min(d, fBox(p, vec3(th,.55,th)));
-  d = min(d, fBox(p, vec3(th,th,.55)));
+  p = mod(p - sz, sz * 2.) - sz;
 
-  d = min(d, fBox(p, vec3(.49)));
+  float th = .02;
+  d = min(d, length(p.xy) - th);
+  d = min(d, length(p.yz) - th);
+  d = min(d, length(p.zx) - th);
+
+  // d = min(d, fBox(p, vec3(.49)));
   
-  d = -d;
+  // d = -d;
   // d = min(d, floor);
   d = min(d, midpoint);
 
@@ -504,7 +506,7 @@ float map(vec3 p) {
 
   float density = smoothstep(.0, 1.5, tunnel);
 
-  float n = noise(c - 9.2);
+  float n = noise(c - 9.2 + 7. * 10.);
   float d = fBox(p, vec3(sz / 2.) - .012) - .01;
 
   if (n < 1. - density * .75) {
@@ -512,9 +514,10 @@ float map(vec3 p) {
   }
 
   // float d = grid;
-  // d = min(d, grid);
+  d = min(d, grid);
+  // d = grid;
 
-  d = min(d, axis);
+  // d = min(d, axis);
   // d = axis;
   // d = max(d, -mask);
 
