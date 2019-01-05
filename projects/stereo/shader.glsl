@@ -459,6 +459,8 @@ vec3 eye;
 
 float map(vec3 p) {
 
+  float mask = length(p - eye) - .5;
+
   float axis = min(
     length(p.xy),
     min(
@@ -467,11 +469,11 @@ float map(vec3 p) {
     )
   ) - .02;
 
-  axis = length(p.zx + .1) - .02;
+  axis = length(p.zx) - .02;
   // pR(p.yz, sin(time * PI * 2. - PI * .7) * .5);
   // p.y += cos(time * PI * 2. + PI * .5) * -.2;
 
-  // pR(p.yx, PI / 2.);
+  pR(p.yx, PI / 2.);
   pR(p.yz, time * PI * 2. / 3.);
 
   float nn = 1.;
@@ -492,12 +494,15 @@ float map(vec3 p) {
   pR(tp.zy, time * PI * 2. / 3.);
   pR(tp.xy, PI / 2.);
 
+  vec3 ep = eye;
+  // ep = vec3(0);
+
   float tunnel = length(
     vec2(length(tp), tp.y)
-    - vec2(length(eye), eye.y)
+    - vec2(length(ep), ep.y)
   );
 
-  float density = smoothstep(.0, 2.5, tunnel);
+  float density = smoothstep(.0, 1.5, tunnel);
 
   float n = noise(c - 9.2);
   float d = fBox(p, vec3(sz / 2.) - .012) - .01;
@@ -510,6 +515,8 @@ float map(vec3 p) {
   // d = min(d, grid);
 
   d = min(d, axis);
+  // d = axis;
+  // d = max(d, -mask);
 
   return d;
 }
@@ -565,10 +572,10 @@ void main() {
   vec3 dir = vec3(vertex.x * fov * aspect, vertex.y * fov,-1.0) * mat3(view);
 
   dir = getStereoDir();
-  // dir *= mat3(view);
-  dir.yz = dir.zy;
+  dir *= mat3(view);
+  // dir.yz = dir.zy;
   // pR(dir.yz, -.1);
-  eye = vec3(0,0,-3.);
+  // eye = vec3(0,0,-3.);
 
   vec3 rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
