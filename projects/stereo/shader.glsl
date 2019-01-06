@@ -622,7 +622,7 @@ const float MAX_DIST = 5.;
 
 vec3 getStereoDir() {
   vec2 p = gl_FragCoord.xy / iResolution.xy;
-  float m = .5;
+  float m = 1.;
   p = (p * 2. * m - m) * 3.142;
   p.x *= iResolution.x / iResolution.y;
   vec3 dir = vec3(
@@ -640,7 +640,7 @@ vec3 getStereoDir() {
 
 void main() {
 
-  time = mod(iTime * .25, 1.);
+  time = mod(iTime * .5, 1.);
   // time = iTime * .5;
   cornerAxis = rotationMatrix(normalize(vec3(1,1,-1)), time * PI * 2. / 3.);
   calcOrientCorner();
