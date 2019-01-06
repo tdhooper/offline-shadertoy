@@ -272,6 +272,16 @@ float stair2d(vec2 p, vec2 size) {
 }
 
 // xyz: length, height, width
+float stair3d(vec3 p, vec3 size, float steps) {
+  vec2 stepSize = size.xy / steps;
+  float d = stair2d(p.xy, stepSize);
+  float b = fBox(p, size);
+  d = max(d, b);
+  return d;
+}
+
+
+// xyz: length, height, width
 float stairPart(vec3 p, vec3 size, float steps) {
   vec2 stepSize = size.xy / vec2(steps - 1., steps);
   float d = stair2d(p.xy, stepSize);
@@ -459,9 +469,37 @@ vec3 calcModP(vec3 p, vec3 size) {
 
 vec3 eye;
 
-float map(vec3 p) {
+float room(vec3 p) {
+  p *= orientConer;
+  float d = -fBox(p, vec3(1.5));
+  d = -p.z + 1.5;
+  // d = min(d, -p.y + 1.5);
+  // d = 1e12;
+  // d = min(d, fBox(p.xy - vec2(1.), vec2(.5)));
+  d = min(d, fBox(p.xy + vec2(1.), vec2(.5)));
 
-  float mask = length(p - eye) - .5;
+  d = max(d, -fBox(p.xyz - vec3(1,-.2,3), vec3(.5,.3,2)));
+
+  d = max(d, -fBox(p.zxy - vec3(-.1,-1.1,-9), vec3(.2,.4,10)));
+
+  d = min(d, stair3d(p.zyx - vec3(1.,1.,-.3), vec3(.5,.5,.2), 3.));
+  // d = min(d, stair3d(p.zxy - vec3(1.,1.,.25), vec3(.5,.5,.25), 3.));
+
+  // d = min(d, stair3d(p.zyx * vec3(-1,1,1) - vec3(-.5,1.,.3), vec3(.5,.5,.2), 3.));
+  // d = min(d, fBox(p + vec3(-.3,-1,.25), vec3(.2,.5,.25)));
+
+  // d = max(d, p.y - 1.5);
+  // d = max(d, -p.z - 1.5);
+
+  return d;  
+}
+
+float fGrid(vec3 p) {
+  p *= orientConer;
+  return _map(p); 
+}
+
+float map(vec3 p) {
 
   float axis = min(
     length(p.xy),
@@ -481,45 +519,85 @@ float map(vec3 p) {
   float nn = 1.;
   float sz = 1. / nn;
 
-  vec3 modP = calcModP(p, vec3(sz));
-  float modA = pModPolarAngle(modP.yz, 3.);
-  pModPolarApply(p.yz, modA);
+  // vec3 modP = calcModP(p, vec3(sz));
+  // float modA = pModPolarAngle(modP.yz, 3.);
+  // pModPolarApply(p.yz, modA);
 
-  p *= orientConer;
+  // pModPolar(p.yz, 3.);
 
-  float grid = _map(p);
+  float grid = fGrid(p);
 
-  vec3 c = pMod3(p, vec3(sz));
+  float d = 1e12;
 
-  vec3 tp = c * sz;
-  tp *= orientConerInv;
-  pR(tp.zy, time * PI * 2. / 3.);
-  pR(tp.xy, PI / 2.);
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, room(p));
 
-  vec3 ep = eye;
-  // ep = vec3(0);
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, room(p));
 
-  float tunnel = length(
-    vec2(length(tp), tp.y)
-    - vec2(length(ep), ep.y)
-  );
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, room(p));
 
-  float density = smoothstep(.0, 1.5, tunnel);
+  p.x *= -1.;
+  pR(p.yz, PI * 2. / -6.);
 
-  float n = noise(c - 9.2 + 7. * 10.);
-  float d = fBox(p, vec3(sz / 2.) - .012) - .01;
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, room(p));
 
-  if (n < 1. - density * .75) {
-    d = -fBox(p, vec3(sz / 2.)) + .001;
-  }
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, room(p));
+
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, room(p));
+
+  // d = min(d, fBox(p - 1. * vec3(1,1,-1), vec3(1.)));
+  // d = min(d, fBox(p - 1. * vec3(-1,-1,1), vec3(1.25)));
+  // d = max(d, -fBox(p + .25 * vec3(1,1,-1), vec3(.75)));
+  // mask = min(mask, fBox(p - vec3(-.3,0,0), vec3(.125,.25,2)));
+  // mask = min(mask, fBox(p - 1. * vec3(1,1,1), vec3(.5,1,.5)));
+
+
+
+  // vec3 c = pMod3(p, vec3(sz));
+
+
+
+  // vec3 tp = c * sz;
+  // tp *= orientConerInv;
+  // pR(tp.zy, time * PI * 2. / 3.);
+  // pR(tp.xy, PI / 2.);
+
+  // vec3 ep = eye;
+  // // ep = vec3(0);
+
+  // float tunnel = length(
+  //   vec2(length(tp), tp.y)
+  //   - vec2(length(ep), ep.y)
+  // );
+
+  // float density = smoothstep(.2, 1.5, tunnel);
+
+  // float n = noise(c - 9.2 + 7. * 10.);
+  // float d = fBox(p, vec3(sz / 2.) - .012) - .01;
+
+  // if (n < 1. - density * .75) {
+  //   d = -fBox(p, vec3(sz / 2.)) + .001;
+  // }
+
+  // d = mask;
 
   // float d = grid;
-  d = min(d, grid);
+  // d = min(d, grid);
   // d = grid;
 
   // d = min(d, axis);
   // d = axis;
   // d = max(d, -mask);
+
+  // d = min(d, mask);
+
+
+  // d = min(d, axis);
 
   return d;
 }
@@ -562,7 +640,7 @@ vec3 getStereoDir() {
 
 void main() {
 
-  time = mod(iTime * .5, 1.);
+  time = mod(iTime * .25, 1.);
   // time = iTime * .5;
   cornerAxis = rotationMatrix(normalize(vec3(1,1,-1)), time * PI * 2. / 3.);
   calcOrientCorner();
@@ -578,7 +656,7 @@ void main() {
   dir *= mat3(view);
   // dir.yz = dir.zy;
   // pR(dir.yz, -.1);
-  // eye = vec3(0,0,-3.);
+  // eye = vec3(0,0,0);
 
   vec3 rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
