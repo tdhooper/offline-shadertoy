@@ -478,7 +478,7 @@ float map(vec3 p) {
   pR(p.yx, PI / 2.);
   pR(p.yz, time * PI * 2. / 3.);
 
-  float nn = 1.;
+  float nn = 2.;
   float sz = 1. / nn;
 
   vec3 modP = calcModP(p, vec3(sz));
@@ -504,17 +504,18 @@ float map(vec3 p) {
     - vec2(length(ep), ep.y)
   );
 
-  float density = smoothstep(.0, 1.5, tunnel);
+  float density = tunnel;
 
   float n = noise(c - 9.2 + 7. * 10.);
   float d = fBox(p, vec3(sz / 2.) - .012) - .01;
 
-  if (n < 1. - density * .75) {
+  if (density < 1.) {
+  // if (n < 1. - density * .75) {
     d = -fBox(p, vec3(sz / 2.)) + .001;
   }
 
   // float d = grid;
-  d = min(d, grid);
+  // d = min(d, grid);
   // d = grid;
 
   // d = min(d, axis);
@@ -544,7 +545,7 @@ const float MAX_DIST = 5.;
 
 vec3 getStereoDir() {
   vec2 p = gl_FragCoord.xy / iResolution.xy;
-  float m = .5;
+  float m = 1.;
   p = (p * 2. * m - m) * 3.142;
   p.x *= iResolution.x / iResolution.y;
   vec3 dir = vec3(
