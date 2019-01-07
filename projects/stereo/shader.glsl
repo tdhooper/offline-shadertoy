@@ -499,6 +499,19 @@ float fGrid(vec3 p) {
   return _map(p); 
 }
 
+float anim(vec3 p, float t) {
+  p *= orientConer;
+  float r = .4;
+  p.x -= 1.5 - r;
+  p.z -= .1;
+  p.y -= mix(1.5 + r, .25, smoothstep(0., .3, t));
+  p.z -= mix(0., 1.3 - r, smoothstep(.2, .55, t));
+  p.x += mix(0., 1., smoothstep(.25, .55, t));
+  p.x += mix(0., 0., smoothstep(.45, .65, t));
+  p.y -= mix(0., 3., smoothstep(.45, 1., t));
+  return length(p) - .1;
+}
+
 float map(vec3 p) {
 
   float axis = min(
@@ -513,8 +526,9 @@ float map(vec3 p) {
   // pR(p.yz, sin(time * PI * 2. - PI * .7) * .5);
   // p.y += cos(time * PI * 2. + PI * .5) * -.2;
 
+  pR(p.xz, time * PI * 2. / 3.);
   pR(p.yx, PI / 2.);
-  pR(p.yz, time * PI * 2. / 3.);
+  
 
   float nn = 1.;
   float sz = 1. / nn;
@@ -524,6 +538,8 @@ float map(vec3 p) {
   // pModPolarApply(p.yz, modA);
 
   // pModPolar(p.yz, 3.);
+
+  vec3 pp = p;
 
   float grid = fGrid(p);
 
@@ -539,6 +555,7 @@ float map(vec3 p) {
   d = min(d, room(p));
 
   p.x *= -1.;
+
   pR(p.yz, PI * 2. / -6.);
 
   pR(p.yz, PI * 2. / 3.);
@@ -549,6 +566,30 @@ float map(vec3 p) {
 
   pR(p.yz, PI * 2. / 3.);
   d = min(d, room(p));
+
+  
+  // p = pp;
+
+
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, anim(p, mod(time - 0./6., 1.)));
+
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, anim(p, mod(time - 1./6., 1.)));
+
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, anim(p, mod(time - 2./6., 1.)));
+
+  p.x *= -1.;
+
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, anim(p, mod(time - 3./6., 1.)));
+
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, anim(p, mod(time - 4./6., 1.)));
+
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, anim(p, mod(time - 5./6., 1.)));
 
   // d = min(d, fBox(p - 1. * vec3(1,1,-1), vec3(1.)));
   // d = min(d, fBox(p - 1. * vec3(-1,-1,1), vec3(1.25)));
@@ -672,7 +713,7 @@ void main() {
     distance = map(rayPosition);
     if (distance < .001) {
       vec3 normal = calcNormal(rayPosition);
-      color = normal * .5 + .5;
+      // color = normal * .5 + .5;
       color = vec3(1);
       color = color * mix(1., dot(normalize(vec3(0,1,1)), normal) * .5 + .5, 1.);
       break;
