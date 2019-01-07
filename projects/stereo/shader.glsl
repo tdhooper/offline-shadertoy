@@ -502,13 +502,13 @@ float fGrid(vec3 p) {
 float anim(vec3 p, float t) {
   p *= orientConer;
   float r = .4;
-  p.x -= 1.5 - r;
+  p.x -= 1.5 - r/2.;
   p.z -= .1;
   p.y -= mix(1.5 + r, .25, smoothstep(0., .3, t));
-  p.z -= mix(0., 1.3 - r, smoothstep(.2, .55, t));
+  p.z -= mix(0., 1.3, smoothstep(.2, .55, t));
   p.x += mix(0., 1., smoothstep(.25, .55, t));
   p.x += mix(0., 0., smoothstep(.45, .65, t));
-  p.y -= mix(0., 3., smoothstep(.45, 1., t));
+  p.y -= mix(0., 4.5, smoothstep(.45, 1., t));
   return length(p) - .1;
 }
 
@@ -570,26 +570,25 @@ float map(vec3 p) {
   
   // p = pp;
 
+  pR(p.yz, PI * 2. / 3.);
+  d = min(d, anim(p, mod(time / 3. + 0./3., 1.)));
 
   pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time - 0./6., 1.)));
+  d = min(d, anim(p, mod(time / 3. + 1./3., 1.)));
 
   pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time - 1./6., 1.)));
-
-  pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time - 2./6., 1.)));
+  d = min(d, anim(p, mod(time / 3. + 2./3., 1.)));
 
   p.x *= -1.;
+  pR(p.yz, PI * 2. / -6.);
+
+  d = min(d, anim(p, mod(time / 3. + 0./3., 1.)));
 
   pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time - 3./6., 1.)));
+  d = min(d, anim(p, mod(time / 3. + 1./3., 1.)));
 
   pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time - 4./6., 1.)));
-
-  pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time - 5./6., 1.)));
+  d = min(d, anim(p, mod(time / 3. + 2./3., 1.)));
 
   // d = min(d, fBox(p - 1. * vec3(1,1,-1), vec3(1.)));
   // d = min(d, fBox(p - 1. * vec3(-1,-1,1), vec3(1.25)));
