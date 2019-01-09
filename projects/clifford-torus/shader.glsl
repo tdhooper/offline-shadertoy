@@ -297,6 +297,10 @@ float fTorus(vec3 p, float smallRadius, float largeRadius) {
 
 // Torus in the XZ-plane
 float fTorus4(vec4 p, float smallRadius, float largeRadius) {
+    return length(p.xy) - .5;
+    return (length(p.xy) * length(p.zw)) - .2;
+    p.x -= .5;
+    return dot(p.xyz, p.yzw) - .5;
     return length(
         vec2(
             length(p.xw) - largeRadius,
@@ -307,6 +311,24 @@ float fTorus4(vec4 p, float smallRadius, float largeRadius) {
 
 
 Model map(vec3 p) {
+
+    float s = dot(p,p);
+    p /= s;
+
+
+    float e = 2.;
+
+    p.y += e;
+
+    pR(p.xy, iTime);    
+
+    float dd = fTorus(p, e, e * 1.333);
+
+    dd = abs(dd) - .01;
+
+    dd *= s;
+
+    return Model(dd, vec2(0), 0);
     // float s = dot(p,p);
     // s = .1;
     // s *= guiZoom * 10.;
@@ -317,6 +339,8 @@ Model map(vec3 p) {
     float r = length(p);
     vec4 z4 = vec4(2. * p, 1. - r * r) * 1. / (1. + r * r);
 
+    z4.x += .5;
+
     Model model;
 
     // p.x += iTime * .1;
@@ -326,7 +350,7 @@ Model map(vec3 p) {
     // z4.x += guiOffset * 4.;
     // model = mapHelix(p);
 
-    pR(z4.yw, iTime);
+    // pR(z4.yw, iTime);
 
     pMod3(p, vec3(.05));
     d = length(p) - .03;
