@@ -313,21 +313,10 @@ float time;
 
 Model map(vec3 p) {
 
-    p = p.zyx;
-
-    bool sw = p.x > 0.;
-
-    // pR(p.xy, PI / 2.);
-    // pR(p.yz, PI / 2.);
-
     pR(p.yz, time * PI / 2.);
     p.y -= .25;
-    // pR(p.yz, time * PI * .5);
-    // p.y -= .31;
-    // p.y += .2;
     
     float e = 2.;
-    // p.y -= .3;
 
     float s = dot(p,p);
     // s = .1;
@@ -335,12 +324,7 @@ Model map(vec3 p) {
 
     p.y += e;
 
-    // pR(p.xy, time * PI / 2.);
     pR(p.xy, time * PI / 2.);
-
-    // if (sw) {
-    //     p.x -= .2;
-    // }
 
     float dd = fTorus(p, e, e * sqrt(2.));
 
