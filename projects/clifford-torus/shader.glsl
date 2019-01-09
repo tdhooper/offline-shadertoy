@@ -320,10 +320,7 @@ Model map(vec3 p) {
     // pR(p.xy, PI / 2.);
     // pR(p.yz, PI / 2.);
 
-    if (sw) {
-        pR(p.yz, PI / 2.);
-        
-    }
+    pR(p.yz, time * PI / 2.);
     p.y -= .25;
     // pR(p.yz, time * PI * .5);
     // p.y -= .31;
@@ -338,10 +335,8 @@ Model map(vec3 p) {
 
     p.y += e;
 
-    if (sw) {
-        pR(p.xy, PI / 2.);
-    }
-    pR(p.xy, iTime);
+    // pR(p.xy, time * PI / 2.);
+    pR(p.xy, time * PI / 2.);
 
     // if (sw) {
     //     p.x -= .2;
