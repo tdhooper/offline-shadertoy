@@ -309,22 +309,47 @@ float fTorus4(vec4 p, float smallRadius, float largeRadius) {
     ) - smallRadius;
 }
 
+float time;
 
 Model map(vec3 p) {
 
-    float s = dot(p,p);
-    p /= s;
+    p = p.zyx;
 
+    bool sw = p.x > 0.;
 
+    // pR(p.xy, PI / 2.);
+    // pR(p.yz, PI / 2.);
+
+    if (sw) {
+        pR(p.yz, PI / 2.);
+        
+    }
+    p.y -= .25;
+    // pR(p.yz, time * PI * .5);
+    // p.y -= .31;
+    // p.y += .2;
+    
     float e = 2.;
+    // p.y -= .3;
+
+    float s = dot(p,p);
+    // s = .1;
+    p /= s;
 
     p.y += e;
 
-    pR(p.xy, iTime);    
+    if (sw) {
+        pR(p.xy, PI / 2.);
+    }
+    pR(p.xy, iTime);
 
-    float dd = fTorus(p, e, e * 1.333);
+    // if (sw) {
+    //     p.x -= .2;
+    // }
 
-    dd = abs(dd) - .01;
+    float dd = fTorus(p, e, e * sqrt(2.));
+
+    dd = abs(dd) - .0001;
 
     dd *= s;
 
@@ -478,6 +503,8 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+
+    time = mod(iTime, 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
