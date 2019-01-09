@@ -469,14 +469,23 @@ vec3 calcModP(vec3 p, vec3 size) {
 
 vec3 eye;
 
+float fPeak(vec3 p, vec3 sz) {
+  float d = fBox(p, sz);
+  p.y = abs(p.y);
+  p.x -= sz.x;
+  sz.x *= 2.;
+  d = max(d, dot(p.xy, normalize(sz.yx)));
+  return d;
+}
+
 float room(vec3 p) {
   p *= orientConer;
-  float d = -fBox(p, vec3(1.5));
+  float d = 1e12;
   d = -p.z + 1.5;
-  // d = min(d, -p.y + 1.5);
-  // d = 1e12;
-  // d = min(d, fBox(p.xy - vec2(1.), vec2(.5)));
-  d = min(d, fBox(p.xy + vec2(1.), vec2(.5)));
+  d = max(d, -p.y - .5);
+
+  d = min(d, fBox(p.xy + vec2(1.,1.5), vec2(.5,1.)));
+
 
   d = max(d, -fBox(p.xyz - vec3(1,-.2,3), vec3(.5,.3,2)));
 
@@ -491,6 +500,21 @@ float room(vec3 p) {
   // d = max(d, p.y - 1.5);
   // d = max(d, -p.z - 1.5);
 
+  vec3 pp = p;
+  p -= vec3(.65,-.2,1.8);
+  float arc = fBox(p + vec3(.125,0,0), vec3(.3,.3,.3));
+  p.x -= .15;
+  arc = max(arc, -(length(p.xy) - .3));
+  d = min(d, arc);
+
+  p = pp;
+  p = p.xzy + vec3(.65,.1,.5);
+  d = min(d, fPeak(p, vec3(.075,.3,.1)));
+  p.y = abs(p.y);
+  p.y -= .25;
+  d = min(d, max(length(p.yz) - .075, p.x + .07));
+
+
   return d;  
 }
 
@@ -499,7 +523,9 @@ float fGrid(vec3 p) {
   return _map(p); 
 }
 
-float anim(vec3 p, float t) {
+vec3 mcolor;
+
+void anim(inout float d, vec3 p, float t) {
   p *= orientConer;
   float r = .4;
   p.x -= 1.5 - r/2.;
@@ -509,10 +535,14 @@ float anim(vec3 p, float t) {
   p.x += mix(0., 1., smoothstep(.25, .55, t));
   p.x += mix(0., 0., smoothstep(.45, .65, t));
   p.y -= mix(0., 4.5, smoothstep(.45, 1., t));
-  return length(p) - .1;
+  float b = length(p) - .1;
+  if (b < d) mcolor = vec3(1,0,0);
+  d = min(d, length(p) - .1);
 }
 
 float map(vec3 p) {
+
+  mcolor = vec3(1);
 
   float axis = min(
     length(p.xy),
@@ -527,6 +557,7 @@ float map(vec3 p) {
   // p.y += cos(time * PI * 2. + PI * .5) * -.2;
 
   pR(p.xz, time * PI * 2. / 3.);
+  // pR(p.xz, floor(iTime * .5) * PI * 2. / -3.);
   pR(p.yx, PI / 2.);
   
 
@@ -571,24 +602,24 @@ float map(vec3 p) {
   // p = pp;
 
   pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time / 3. + 0./3., 1.)));
+  anim(d, p, mod(time / 3. + 0./3., 1.));
 
   pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time / 3. + 1./3., 1.)));
+  anim(d, p, mod(time / 3. + 1./3., 1.));
 
   pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time / 3. + 2./3., 1.)));
+  anim(d, p, mod(time / 3. + 2./3., 1.));
 
   p.x *= -1.;
   pR(p.yz, PI * 2. / -6.);
 
-  d = min(d, anim(p, mod(time / 3. + 0./3., 1.)));
+  anim(d, p, mod(time / 3. + 0./3., 1.));
 
   pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time / 3. + 1./3., 1.)));
+  anim(d, p, mod(time / 3. + 1./3., 1.));
 
   pR(p.yz, PI * 2. / 3.);
-  d = min(d, anim(p, mod(time / 3. + 2./3., 1.)));
+  anim(d, p, mod(time / 3. + 2./3., 1.));
 
   // d = min(d, fBox(p - 1. * vec3(1,1,-1), vec3(1.)));
   // d = min(d, fBox(p - 1. * vec3(-1,-1,1), vec3(1.25)));
@@ -713,7 +744,7 @@ void main() {
     if (distance < .001) {
       vec3 normal = calcNormal(rayPosition);
       // color = normal * .5 + .5;
-      color = vec3(1);
+      color = mcolor;
       color = color * mix(1., dot(normalize(vec3(0,1,1)), normal) * .5 + .5, 1.);
       break;
     }
