@@ -313,6 +313,14 @@ float time;
 
 Model map(vec3 p) {
 
+    vec3 ppp = p;
+    pMod3(p, vec3(.01));
+    float mask = length(p) - .007;
+    p = ppp;
+
+
+    // pR(p.xy, PI / 4.);
+
     pR(p.yz, time * PI / 2.);
     p.y -= .25;
     
@@ -331,6 +339,8 @@ Model map(vec3 p) {
     dd = abs(dd) - .0001;
 
     dd *= s;
+
+    dd = max(dd, -mask);
 
     return Model(dd, vec2(0), 0);
     // float s = dot(p,p);
@@ -483,7 +493,7 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
-    time = mod(iTime, 1.);
+    time = mod(iTime / 2., 1.);
 
     vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
