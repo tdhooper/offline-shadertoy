@@ -18,13 +18,35 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
-// Repeat in three dimensions
+vec2 pMod2(inout vec2 p, vec2 size) {
+    vec2 c = floor((p + size*0.5)/size);
+    p = mod(p + size*0.5,size) - size*0.5;
+    return c;
+}
+
 vec3 pMod3(inout vec3 p, vec3 size) {
     vec3 c = floor((p + size*0.5)/size);
     p = mod(p + size*0.5, size) - size*0.5;
     return c;
 }
 
+float vmax(vec2 v) {
+    return max(v.x, v.y);
+}
+
+float vmax(vec3 v) {
+    return max(max(v.x, v.y), v.z);
+}
+
+float fBox(vec2 p, vec2 b) {
+    vec2 d = abs(p) - b;
+    return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
+}
+
+float fBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
 
 // Torus in the XZ-plane
 float fTorus(vec3 p, float smallRadius, float largeRadius) {
@@ -44,6 +66,7 @@ float time;
 vec3 mcolor;
 
 float map(vec3 p) {
+    float d;
 
     p = -p.yxz;
 
@@ -51,7 +74,7 @@ float map(vec3 p) {
     pR(p.xy, PI/-2.);
     pR(p.yz, PI / -4.);
 
-    pR(p.yz, time * PI / 2.);
+    // pR(p.yz, time * PI / 2.);
     p.y -= .25;
 
     vec3 ppp = p;
@@ -68,17 +91,20 @@ float map(vec3 p) {
 
     p.y += e;
 
-    pR(p.xy, time * PI / 2.);
+    pR(p.xy, time * PI / 1.);
 
     pModTorus(p, e, e * sqrt(2.));
-    float d = p.z;
+    d = p.z;
     mcolor = p;
 
-    d = abs(d) - .0001;
+    // d = abs(d) - .0001;
+
+    pMod2(p.xy, vec2(.1));
+    d = fBox(p, vec3(.03,.03,.1));
 
     d *= s;
 
-    d = max(d, -mask);
+    // d = max(d, -mask);
 
     return d;
 
@@ -99,7 +125,7 @@ vec3 calcNormal(vec3 p) {
   return normalize(n);
 }
 
-const float ITER = 100.;
+const float ITER = 1000.;
 
 void main() {
 
@@ -117,9 +143,9 @@ void main() {
     rayPosition = rayOrigin + rayDirection * rayLength;
     distance = map(rayPosition);
     // color += .003;
-    if (distance < .001) {
+    if (distance < .00001) {
       color = calcNormal(rayPosition);
-      color = mcolor;
+      // color = mcolor;
       break;
     }
   }
