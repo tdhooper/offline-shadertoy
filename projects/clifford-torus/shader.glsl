@@ -31,7 +31,17 @@ float fTorus(vec3 p, float smallRadius, float largeRadius) {
     return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
 }
 
+void pModTorus(inout vec3 p, float smallRadius, float largeRadius) {
+    vec2 xy = vec2(length(p.xz), p.y) - vec2(largeRadius,0);
+    p = vec3(
+        (atan(p.x, p.z) / PI) * .5 + .5,
+        (atan(xy.y, xy.x) / PI) * .5 + .5,
+        fTorus(p, smallRadius, largeRadius)
+    );
+} 
+
 float time;
+vec3 mcolor;
 
 float map(vec3 p) {
 
@@ -60,15 +70,17 @@ float map(vec3 p) {
 
     pR(p.xy, time * PI / 2.);
 
-    float dd = fTorus(p, e, e * sqrt(2.));
+    pModTorus(p, e, e * sqrt(2.));
+    float d = p.z;
+    mcolor = p;
 
-    dd = abs(dd) - .0001;
+    d = abs(d) - .0001;
 
-    dd *= s;
+    d *= s;
 
-    dd = max(dd, -mask);
+    d = max(d, -mask);
 
-    return dd;
+    return d;
 
 }
 
@@ -107,6 +119,7 @@ void main() {
     // color += .003;
     if (distance < .001) {
       color = calcNormal(rayPosition);
+      color = mcolor;
       break;
     }
   }
