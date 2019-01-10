@@ -313,16 +313,19 @@ float time;
 
 Model map(vec3 p) {
 
-    vec3 ppp = p;
-    pMod3(p, vec3(.01));
-    float mask = length(p) - .007;
-    p = ppp;
+    p = -p.yxz;
 
-
-    // pR(p.xy, PI / 4.);
+    pR(p.xy, PI/-2.);
+    pR(p.yz, PI / -4.);
 
     pR(p.yz, time * PI / 2.);
     p.y -= .25;
+
+    vec3 ppp = p;
+    pMod3(p, vec3(.05));
+    float mask = length(p) - .025;
+    p = ppp;
+
     
     float e = 2.;
 
