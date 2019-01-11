@@ -104,11 +104,11 @@ vec4 istereographic(vec3 p, out float k) {
 
 float map(vec3 p) {
 
-    if (p.z > 0.) {
+    // if (p.z > 0.) {
         // return length(p) - 1.215;
-    }
+    // }
 
-    p.y -= 1.2;
+    // p.y -= 1.2;
     float s = 1.;
 
     // pR(p.xy, PI / -2.);
@@ -127,38 +127,37 @@ float map(vec3 p) {
     // vec4 p4 = vec4(2. * p, 1. - r * r) * 1. / (1. + r * r);
     float k;
     vec4 p4 = istereographic(p, k);
+
     pR(p4.zy, time * -PI / 2.);
     pR(p4.xw, time * -PI / 2.);
 
-    // p4.xyw *= rotationMatrix(normalize(vec3(0,-1,1)), iTime);
+    if (p.x > 0.) {
+        p4 = p4.wzyx;
+    }
 
+    float di = 1. - (length(p4.zw) / length(p4.xy));
     d = (length(p4.xy) / length(p4.zw)) - 1.;
 
-    // d *= 5.;
-    d *= -1.;
-    float sg = sign(d);
+    if (d > 0.) {
+        d = di;
+    }
+    // d *= di;
+    // d = di * 10.;
+
+    // d = dot(d, d);
+    // d = pow(d, 4.) * 10.;
+
+    float sn = sign(d);
+    d = abs(d);
     d = (d * dot(p, p)) / 4.2;
     if (d > 1.) {
         d = pow(d, .5);
         d = (d - 1.) * 1.8 + 1.;
     }
-    // d *= sg;
-    // d = pow(d * dot(p, p), .5) / PI * 3.;
+    d *= sn;
 
-    // if (d < 0.) {
-    //     d *= -PI;
-    //     d = mix(d, pow(d, 4.) / 6.4, step(1., d));
-    //     d = -d;
-    // }
-    // d *= 1.5;
-    // d = abs(d) - .0001;
-    // return d / s;
-    // d *= PI;
-    // return mix(d, pow(d, 4.) / 6.4, step(1., d));
-    // // return (d-.2) * 10.;
-    // return (pow(d + .5, 10.)) * .5 - .5;
-    // d = pow(d * dot(p, p), .5) / PI * 2.;
-    // d *= d < 2. ? .5 : 1.;
+    // d = abs(d) - .001;
+
     return d;
 
     vec2 uv = vec2(
@@ -196,8 +195,8 @@ bool debug = false;
 
 float mapDebug(vec3 p) {
     float d = map(p);
-    return d;
-    float plane = abs(p.x);
+    // return d;
+    float plane = min(abs(p.z), abs(p.y));
     // debug = true;
     // return plane;
     debug = plane < abs(d);
@@ -223,7 +222,7 @@ const float ITER = 500.;
 
 void main() {
 
-  time = mod(iTime / 2., 2.);
+  time = mod(iTime / .5, 2.);
 
   vec3 rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
@@ -237,15 +236,15 @@ void main() {
     rayPosition = rayOrigin + rayDirection * rayLength;
     distance = mapDebug(rayPosition);
     distance = abs(distance);
-    if (distance < .001) {
+    if (distance < .0001) {
       color = calcNormal(rayPosition) * .5 + .5;
       // color = mcolor;
       if (debug) {
         float d = map(rayPosition);
-        color = vec3(mod(d, 1.));
+        color = vec3(mod(abs(d)*10., 1.));
         // color = mix(color, vec3(1,1,0), 1.-step(0., d - .04));
-        color *= spectrum(abs(d) / 10.);
-        // color = mix(color, vec3(1), step(0., -d));
+        color *= spectrum(abs(d*10.) / 10.);
+        color = mix(color, vec3(1), step(0., -d) * .25);
       }
       break;
     }
