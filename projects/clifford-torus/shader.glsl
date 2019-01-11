@@ -132,7 +132,7 @@ float map(vec3 p) {
     pR(p4.xw, time * -PI / 2.);
 
     if (p.x > 0.) {
-        p4 = p4.wzyx;
+        // p4 = p4.wzyx;
     }
 
     float di = 1. - (length(p4.zw) / length(p4.xy));
@@ -141,11 +141,8 @@ float map(vec3 p) {
     if (d > 0.) {
         d = di;
     }
-    // d *= di;
-    // d = di * 10.;
 
-    // d = dot(d, d);
-    // d = pow(d, 4.) * 10.;
+    float dj = d;
 
     float sn = sign(d);
     d = abs(d);
@@ -156,7 +153,11 @@ float map(vec3 p) {
     }
     d *= sn;
 
-    // d = abs(d) - .001;
+    if (abs(d) < 1.) {
+        d = dj / 5.;
+    }
+
+    d = abs(d);
 
     return d;
 
