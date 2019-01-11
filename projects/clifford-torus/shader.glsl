@@ -154,10 +154,13 @@ float map(vec3 p) {
     d *= sn;
 
     if (abs(d) < 1.) {
-        d = dj / 5.;
+        d = dj / 3.;
     }
 
+    // d = dj;
+
     d = abs(d);
+    d -= .01;
 
     return d;
 
@@ -219,11 +222,11 @@ vec3 calcNormal(vec3 p) {
   return normalize(n);
 }
 
-const float ITER = 500.;
+const float ITER = 2000.;
 
 void main() {
 
-  time = mod(iTime / .5, 2.);
+  time = mod(iTime / 2., 2.);
 
   vec3 rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
@@ -235,9 +238,9 @@ void main() {
   for (float i = 0.; i < ITER; i++) {
     rayLength += distance * 1.;
     rayPosition = rayOrigin + rayDirection * rayLength;
-    distance = mapDebug(rayPosition);
-    distance = abs(distance);
-    if (distance < .0001) {
+    distance = map(rayPosition);
+    // distance = abs(distance);
+    if (distance < .001) {
       color = calcNormal(rayPosition) * .5 + .5;
       // color = mcolor;
       if (debug) {
@@ -247,6 +250,9 @@ void main() {
         color *= spectrum(abs(d*10.) / 10.);
         color = mix(color, vec3(1), step(0., -d) * .25);
       }
+      break;
+    }
+    if (rayLength > 50.) {
       break;
     }
   }
