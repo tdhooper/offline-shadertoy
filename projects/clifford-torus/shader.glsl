@@ -102,41 +102,10 @@ vec4 istereographic(vec3 p, out float k) {
 // TODO: To fix glitch, when we're on the inside,
 // use the flipped/rotated distance
 
-float map(vec3 p) {
-
-    // if (p.z > 0.) {
-        // return length(p) - 1.215;
-    // }
-
-    // p.y -= 1.2;
-    float s = 1.;
-
-    // pR(p.xy, PI / -2.);
-    // pR45(p.xz);
-
-    if (p.y > 0.) {
-        // pR(p.xz, PI / -2.);
-    }
-
-    p *= s;
-
-    float d;
-    vec3 pp = p;
-
-    // float r = length(p);
-    // vec4 p4 = vec4(2. * p, 1. - r * r) * 1. / (1. + r * r);
-    float k;
-    vec4 p4 = istereographic(p, k);
-
-    pR(p4.zy, time * -PI / 2.);
-    pR(p4.xw, time * -PI / 2.);
-
-    if (p.x > 0.) {
-        // p4 = p4.wzyx;
-    }
+float fTorus(vec3 p, vec4 p4, out vec2 uv) {
 
     float di = 1. - (length(p4.zw) / length(p4.xy));
-    d = (length(p4.xy) / length(p4.zw)) - 1.;
+    float d = (length(p4.xy) / length(p4.zw)) - 1.;
 
     if (d > 0.) {
         d = di;
@@ -157,19 +126,36 @@ float map(vec3 p) {
         d = dj / 3.;
     }
 
-    // d = dj;
-
     d = abs(d);
     d -= .01;
 
-    return d;
-
-    vec2 uv = vec2(
+    uv = (vec2(
         atan(p4.y, p4.x),
         atan(p4.z, p4.w)
-    );
-    uv += PI;
-    uv /= PI * 2.;
+    ) / PI) * .5 + .5;
+
+    return d;
+}
+
+float map(vec3 p) {
+
+    float d;
+
+    // pR(p.xy, PI / -2.);
+    // pR45(p.xz);
+
+    float k;
+    vec4 p4 = istereographic(p, k);
+
+    pR(p4.zy, time * -PI / 2.);
+    pR(p4.xw, time * -PI / 2.);
+
+    vec2 uv;
+    d = fTorus(p, p4, uv);
+    d = abs(d);
+    d -= .01;
+
+    // return d;
 
     p = vec3(uv, d);
 
@@ -177,9 +163,9 @@ float map(vec3 p) {
 
     // p.xy += .5/n;
 
-    pMod2(p.xy, vec2(1./n));
-    d = length(p.xy) - (1./n) * .4;
-    d = max(d, abs(p.z) - .05);
+    // pMod2(p.xy, vec2(1./n));
+    // d = length(p.xy) - (1./n) * .4;
+    // d = max(d, abs(p.z) - .05);
 
     // d = fBox(p, vec3(vec2((1./n) * .4), .05));
 
@@ -188,11 +174,7 @@ float map(vec3 p) {
     mcolor -= vec3(0,1,0) * smoothstep(0., .005, abs(p.x) - (1./n) * .4);
     mcolor -= vec3(1,0,0) * smoothstep(0., .005, abs(p.y) - (1./n) * .4);
 
-    if (p.z > .5) {
-        d /= 5.;
-    }
-
-    return d / s;
+    return d;
 }
 
 bool debug = false;
@@ -226,7 +208,7 @@ const float ITER = 2000.;
 
 void main() {
 
-  time = mod(iTime / 2., 2.);
+  time = mod(iTime / 2., 1.);
 
   vec3 rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
@@ -242,7 +224,7 @@ void main() {
     // distance = abs(distance);
     if (distance < .001) {
       color = calcNormal(rayPosition) * .5 + .5;
-      // color = mcolor;
+      color = mcolor;
       if (debug) {
         float d = map(rayPosition);
         color = vec3(mod(abs(d)*10., 1.));
