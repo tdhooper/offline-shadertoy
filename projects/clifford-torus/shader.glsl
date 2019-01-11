@@ -68,6 +68,15 @@ float fBox(vec3 p, vec3 b) {
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+
 // Torus in the XZ-plane
 float fTorus(vec3 p, float smallRadius, float largeRadius) {
     return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
@@ -90,12 +99,24 @@ vec4 istereographic(vec3 p, out float k) {
   return vec4(k*p,k-1.0);
 }
 
+// TODO: To fix glitch, when we're on the inside,
+// use the flipped/rotated distance
+
 float map(vec3 p) {
 
-    float s = 5.;
+    if (p.z > 0.) {
+        // return length(p) - 1.215;
+    }
+
+    p.y -= 1.2;
+    float s = 1.;
 
     // pR(p.xy, PI / -2.);
-    pR45(p.xz);
+    // pR45(p.xz);
+
+    if (p.y > 0.) {
+        // pR(p.xz, PI / -2.);
+    }
 
     p *= s;
 
@@ -112,7 +133,33 @@ float map(vec3 p) {
     // p4.xyw *= rotationMatrix(normalize(vec3(0,-1,1)), iTime);
 
     d = (length(p4.xy) / length(p4.zw)) - 1.;
+
+    // d *= 5.;
+    d *= -1.;
+    float sg = sign(d);
+    d = (d * dot(p, p)) / 4.2;
+    if (d > 1.) {
+        d = pow(d, .5);
+        d = (d - 1.) * 1.8 + 1.;
+    }
+    // d *= sg;
+    // d = pow(d * dot(p, p), .5) / PI * 3.;
+
+    // if (d < 0.) {
+    //     d *= -PI;
+    //     d = mix(d, pow(d, 4.) / 6.4, step(1., d));
+    //     d = -d;
+    // }
+    // d *= 1.5;
     // d = abs(d) - .0001;
+    // return d / s;
+    // d *= PI;
+    // return mix(d, pow(d, 4.) / 6.4, step(1., d));
+    // // return (d-.2) * 10.;
+    // return (pow(d + .5, 10.)) * .5 - .5;
+    // d = pow(d * dot(p, p), .5) / PI * 2.;
+    // d *= d < 2. ? .5 : 1.;
+    return d;
 
     vec2 uv = vec2(
         atan(p4.y, p4.x),
@@ -145,50 +192,16 @@ float map(vec3 p) {
     return d / s;
 }
 
+bool debug = false;
 
-float map_(vec3 p) {
-    float d;
-
-    p = -p.yxz;
-
-
-    pR(p.xy, PI/-2.);
-    pR(p.yz, PI / -4.);
-
-    // pR(p.yz, time * PI / 2.);
-    p.y -= .25;
-
-    vec3 ppp = p;
-    pMod3(p, vec3(.05));
-    float mask = length(p) - .025;
-    p = ppp;
-
-    
-    float e = 2.;
-
-    float s = dot(p,p);
-    // s = .1;
-    p /= s;
-
-    p.y += e;
-
-    pR(p.xy, time * PI / 1.);
-
-    pModTorus(p, e, e * sqrt(2.));
-    d = p.z;
-    mcolor = p;
-
-    // d = abs(d) - .0001;
-
-    pMod2(p.xy, vec2(.1));
-    d = fBox(p, vec3(.03,.03,.1));
-
-    d *= s;
-
-    // d = max(d, -mask);
-
+float mapDebug(vec3 p) {
+    float d = map(p);
     return d;
-
+    float plane = abs(p.x);
+    // debug = true;
+    // return plane;
+    debug = plane < abs(d);
+    return debug ? plane : d;
 }
 
 
@@ -220,12 +233,20 @@ void main() {
   float distance = 0.;
   vec3 color = vec3(0);
   for (float i = 0.; i < ITER; i++) {
-    rayLength += distance * .5;
+    rayLength += distance * 1.;
     rayPosition = rayOrigin + rayDirection * rayLength;
-    distance = map(rayPosition);
+    distance = mapDebug(rayPosition);
+    distance = abs(distance);
     if (distance < .001) {
       color = calcNormal(rayPosition) * .5 + .5;
       // color = mcolor;
+      if (debug) {
+        float d = map(rayPosition);
+        color = vec3(mod(d, 1.));
+        // color = mix(color, vec3(1,1,0), 1.-step(0., d - .04));
+        color *= spectrum(abs(d) / 10.);
+        // color = mix(color, vec3(1), step(0., -d));
+      }
       break;
     }
   }
