@@ -136,17 +136,24 @@ float fixDistance(vec3 p, float d, float threshold) {
     return d;
 }
 
-float fTorus(vec3 p, vec4 p4, out vec2 uv) {
+float fTorus(vec4 p4, out vec2 uv) {
 
-    float di = 1. - (length(p4.zw) / length(p4.xy));
+    // Torus distance
     float d = (length(p4.xy) / length(p4.zw)) - 1.;
 
     if (d > 0.) {
-        d = di;
+        // The distance outside the torus gets exponentially large
+        // because of the stereographic projection. So use the inside
+        // of an inverted torus for the outside distance.
+        d = 1. - (length(p4.zw) / length(p4.xy));
     }
 
+    // Because of the projection, distances aren't lipschitz continuous,
+    // so scale down the distance at the most warped point - the inside
+    // edge of the torus such that it is 1:1 with the domain.
     d /= PI;
 
+    // UV coordinates over the surface, from 0 - 1
     uv = (vec2(
         atan(p4.y, p4.x),
         atan(p4.z, p4.w)
@@ -178,7 +185,7 @@ float map(vec3 p) {
     pR(p4.xw, time * -PI / 2.);
 
     vec2 uv;
-    d = fTorus(p, p4, uv);
+    d = fTorus(p4, uv);
     // d = abs(d);
     // d -= .01;
 
@@ -190,7 +197,7 @@ float map(vec3 p) {
     float n = 10.;
     float rep = 2.25 / n;
 
-    // p.xy += .5/n;
+    p.xy += rep / 2.;
     // p.x += .5/n;
 
     pMod2(p.xy, vec2(rep));
@@ -199,10 +206,10 @@ float map(vec3 p) {
     // d = smax(d, abs(p.z) - .02, .01);
 
     d = abs(d);
-    d = fBox(p, vec3(rep * .33));
+    // d = fBox(p, vec3(rep * .33));
     // d = length(p) - rep * .333;
 
-    d = fixDistance(pp, d, .01);
+    d = fixDistance(pp, d, 1.);
 
     pMod2(p.xy, vec2(1./n));
     mcolor = vec3(1.);
@@ -216,7 +223,7 @@ bool debug = false;
 
 float mapDebug(vec3 p) {
     float d = map(p);
-    return d;
+    // return d;
     float plane = min(abs(p.z), abs(p.y));
     // debug = true;
     // return plane;
