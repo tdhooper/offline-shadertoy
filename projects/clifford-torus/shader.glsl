@@ -113,16 +113,34 @@ vec4 istereographic(vec3 p, out float k) {
   return vec4(k*p,k-1.0);
 }
 
-// TODO: To fix glitch, when we're on the inside,
-// use the flipped/rotated distance
+// Distances get warped by the stereographic projection, this applies
+// some hacky adjustments which makes them lipschitz continuous.
+
+// I don't really understand why, and the numbers have been hand
+// picked by comparing our 4D torus SDF to a usual 3D torus of the
+// same size.
+
+// vec3 p
+//   Original 3D domain, centered with the stereographic projection;
+//   basically it should not be scaled or translated.
+
+// vec3 d
+//   SDF to fix, this should be applied after the last step of
+//   modelling on the torus.
+
+// vec3 threshold
+//   The fix causes a blob artefact at the origin, so return the
+//   original SDF when below this distance to the surface. Smaller
+//   values result in a faster ray hit, but can cause more artefacts.
 
 float fixDistance(vec3 p, float d, float threshold) {
     d *= PI;
-    float dj = d;
 
+    float od = d;
     float sn = sign(d);
+
     d = abs(d);
-    d = (d * dot(p, p)) / 4.2;
+    d = d * dot(p, p) / 4.2;
     if (d > 1.) {
         d = pow(d, .5);
         d = (d - 1.) * 1.8 + 1.;
@@ -130,7 +148,7 @@ float fixDistance(vec3 p, float d, float threshold) {
     d *= sn;
 
     if (abs(d) < threshold) {
-        d = dj / PI;
+        d = od / PI;
     }
 
     return d;
@@ -139,13 +157,13 @@ float fixDistance(vec3 p, float d, float threshold) {
 float fTorus(vec4 p4, out vec2 uv) {
 
     // Torus distance
-    float d = (length(p4.xy) / length(p4.zw)) - 1.;
+    float d = length(p4.xy) / length(p4.zw) - 1.;
 
     if (d > 0.) {
         // The distance outside the torus gets exponentially large
         // because of the stereographic projection. So use the inside
         // of an inverted torus for the outside distance.
-        d = 1. - (length(p4.zw) / length(p4.xy));
+        d = 1. - length(p4.zw) / length(p4.xy);
     }
 
     // Because of the projection, distances aren't lipschitz continuous,
