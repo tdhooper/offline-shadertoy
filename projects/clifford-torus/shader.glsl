@@ -68,6 +68,16 @@ float fBox(vec3 p, vec3 b) {
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
+float smin(float a, float b, float r) {
+    vec2 u = max(vec2(r - a,r - b), vec2(0));
+    return max(r, min (a, b)) - length(u);
+}
+
+float smax(float a, float b, float r) {
+    vec2 u = max(vec2(r + a,r + b), vec2(0));
+    return min(-r, max (a, b)) + length(u);
+}
+
 vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
     return a + b*cos( 6.28318*(c*t+d) );
 }
@@ -126,9 +136,6 @@ float fTorus(vec3 p, vec4 p4, out vec2 uv) {
         d = dj / 3.;
     }
 
-    d = abs(d);
-    d -= .01;
-
     uv = (vec2(
         atan(p4.y, p4.x),
         atan(p4.z, p4.w)
@@ -141,6 +148,12 @@ float map(vec3 p) {
 
     float d;
 
+    if (p.x < 0.) {
+        // return length(p) - 1.;
+    }
+
+    float s = dot(p,p);
+
     // pR(p.xy, PI / -2.);
     // pR45(p.xz);
 
@@ -152,8 +165,8 @@ float map(vec3 p) {
 
     vec2 uv;
     d = fTorus(p, p4, uv);
-    d = abs(d);
-    d -= .01;
+    // d = abs(d);
+    // d -= .01;
 
     // return d;
 
@@ -161,13 +174,15 @@ float map(vec3 p) {
 
     float n = 10.;
 
-    // p.xy += .5/n;
+    p.xy += .5/n;
+    // p.x += .5/n;
 
-    // pMod2(p.xy, vec2(1./n));
-    // d = length(p.xy) - (1./n) * .4;
-    // d = max(d, abs(p.z) - .05);
+    pMod2(p.xy, vec2(1./n));
+    d = length(p.xy) - (1./n) * .4;
+    // d *= s;
+    d = smax(d, abs(p.z) - .02, .01);
 
-    // d = fBox(p, vec3(vec2((1./n) * .4), .05));
+    // d = fBox(p, vec3(vec2((1./n) * .4), .01));
 
     pMod2(p.xy, vec2(1./n));
     mcolor = vec3(1.);
@@ -181,7 +196,7 @@ bool debug = false;
 
 float mapDebug(vec3 p) {
     float d = map(p);
-    // return d;
+    return d;
     float plane = min(abs(p.z), abs(p.y));
     // debug = true;
     // return plane;
@@ -204,7 +219,7 @@ vec3 calcNormal(vec3 p) {
   return normalize(n);
 }
 
-const float ITER = 2000.;
+const float ITER = 5000.;
 
 void main() {
 
@@ -218,18 +233,20 @@ void main() {
   float distance = 0.;
   vec3 color = vec3(0);
   for (float i = 0.; i < ITER; i++) {
-    rayLength += distance * 1.;
+    rayLength += distance * .5;
     rayPosition = rayOrigin + rayDirection * rayLength;
-    distance = map(rayPosition);
+    distance = mapDebug(rayPosition);
     // distance = abs(distance);
     if (distance < .001) {
-      color = calcNormal(rayPosition) * .5 + .5;
-      color = mcolor;
+      vec3 normal = calcNormal(rayPosition);
+      color = normal * .5 + .5;
+      color = vec3(dot(vec3(1,0,0), normal) * .5 + .5);
+      // color = mcolor;
       if (debug) {
         float d = map(rayPosition);
-        color = vec3(mod(abs(d)*10., 1.));
+        color = vec3(mod(abs(d)*100., 1.));
         // color = mix(color, vec3(1,1,0), 1.-step(0., d - .04));
-        color *= spectrum(abs(d*10.) / 10.);
+        color *= spectrum(abs(d*100.) / 10.);
         color = mix(color, vec3(1), step(0., -d) * .25);
       }
       break;
@@ -238,6 +255,9 @@ void main() {
       break;
     }
   }
+
+  color = mix(color, vec3(0), pow(smoothstep(7., 12., rayLength), .25));
+  color = pow(color, vec3(1. / 2.2));
 
   gl_FragColor = vec4(color, 1);
 
