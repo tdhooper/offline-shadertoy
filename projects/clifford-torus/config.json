@@ -1,5 +1,5 @@
 {
-  "id": "clifford-torus-pose-1",
+  "id": "clifford-torus-pose-2",
   "camera": {
     "rotation": [
       0.8296586275100708,
@@ -12,5 +12,27 @@
       5.404464870721313,
       -5.776246669313423
     ]
+  },
+  "controls": {
+    "color": {
+      "scale": {
+        "type": "range",
+        "min": 0,
+        "max": 1,
+        "value": 0.2,
+        "step": 0.01
+      },
+      "offset": {
+        "type": "range",
+        "min": 0,
+        "max": 1,
+        "value": 0.4,
+        "step": 0.01
+      },
+      "flip": {
+        "type": "toggle",
+        "value": true
+      }
+    }
   }
 }

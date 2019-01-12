@@ -9,6 +9,10 @@ varying vec3 eye;
 varying vec3 dir;
 varying vec3 cameraForward;
 
+uniform float guiColorScale;
+uniform float guiColorOffset;
+uniform bool guiColorFlip;
+
 
 /* SHADERTOY FROM HERE */
 
@@ -240,7 +244,7 @@ void main() {
     if (distance < .001) {
       vec3 normal = calcNormal(rayPosition);
       color = normal * .5 + .5;
-      color = vec3(dot(vec3(1,0,0), normal) * .5 + .5);
+      color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
       // color = mcolor;
       if (debug) {
         float d = map(rayPosition);
@@ -256,7 +260,13 @@ void main() {
     }
   }
 
-  color = mix(color, vec3(0), pow(smoothstep(7., 12., rayLength), .25));
+  float fog = pow(smoothstep(7.25, 12., rayLength), .25);
+  color = mix(color, vec3(0), fog);
+  // color = spectrum(1. - (color.r * .6 + .5));
+  float f = guiColorFlip ? 1. : -1.;
+  color = spectrum(f * (color.r * 2. - 1.) * guiColorScale + guiColorOffset);
+  color *= mix(1., .025, fog);
+
   color = pow(color, vec3(1. / 2.2));
 
   gl_FragColor = vec4(color, 1);
