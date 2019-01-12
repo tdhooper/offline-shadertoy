@@ -4,10 +4,21 @@ precision mediump float;
 
 uniform float iTime;
 
-uniform mat4 projection;
-varying vec3 eye;
-varying vec3 dir;
-varying vec3 cameraForward;
+uniform vec2 iResolution;
+uniform vec4 iMouse;
+
+uniform float guiLead;
+uniform float guiRadius;
+
+void mainImage(out vec4 a, in vec2 b);
+
+void main() {
+    mainImage(gl_FragColor, gl_FragCoord.xy);
+}
+
+#ifdef GL_ES
+precision mediump float;
+#endif
 
 
 /* SHADERTOY FROM HERE */
@@ -25,29 +36,10 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
-// Shortcut for 45-degrees rotation
-void pR45(inout vec2 p) {
-    p = (p + vec2(p.y, -p.x))*sqrt(0.5);
-}
-
 vec2 pMod2(inout vec2 p, vec2 size) {
     vec2 c = floor((p + size*0.5)/size);
     p = mod(p + size*0.5,size) - size*0.5;
     return c;
-}
-
-vec3 pMod3(inout vec3 p, vec3 size) {
-    vec3 c = floor((p + size*0.5)/size);
-    p = mod(p + size*0.5, size) - size*0.5;
-    return c;
-}
-
-float vmax(vec2 v) {
-    return max(v.x, v.y);
-}
-
-float vmax(vec3 v) {
-    return max(max(v.x, v.y), v.z);
 }
 
 float smax(float a, float b, float r) {
@@ -57,22 +49,6 @@ float smax(float a, float b, float r) {
 
 float fTorus(vec3 p, float smallRadius, float largeRadius) {
     return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
-}
-
-
-// http://www.neilmendoza.com/glsl-rotation-about-an-arbitrary-axis/
-mat3 rotationMatrix(vec3 axis, float angle)
-{
-    axis = normalize(axis);
-    float s = sin(angle);
-    float c = cos(angle);
-    float oc = 1.0 - c;
-    
-    return mat3(
-        oc * axis.x * axis.x + c,           oc * axis.x * axis.y - axis.z * s,  oc * axis.z * axis.x + axis.y * s,
-        oc * axis.x * axis.y + axis.z * s,  oc * axis.y * axis.y + c,           oc * axis.y * axis.z - axis.x * s,
-        oc * axis.z * axis.x - axis.y * s,  oc * axis.y * axis.z + axis.x * s,  oc * axis.z * axis.z + c
-    );
 }
 
 
@@ -209,7 +185,7 @@ float map(vec3 p) {
     float uvScale = 2.25; // Magic number that makes xy distances the same scale as z distances
     p = vec3(uv * uvScale, d);
 
-    // Draw some repeated pellets
+    // Draw some repeated circles
 
     float n = 10.;
     float repeat = uvScale / n;
@@ -252,16 +228,30 @@ vec3 calcNormal(vec3 p) {
   return normalize(n);
 }
 
+mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(ww,up));
+    vec3 vv = normalize(cross(uu,ww));
+    return mat3(uu, vv, ww);
+}
+
 const float ITER = 400.;
 const float MAX_DIST = 12.;
 
-void main() {
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = mod(iTime / 2., 1.);
-    // time = .5;
 
-    vec3 rayOrigin = eye;
-    vec3 rayDirection = normalize(dir);
+    vec3 camPos = vec3(1.8, 5.5, -5.5);
+    vec3 camTar = vec3(0);
+    vec3 camUp = vec3(-1,0,-1.5);
+    mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
+
+    float focalLength = 2.4;
+    vec2 p = (-iResolution.xy + 2. * fragCoord.xy) / iResolution.y;
+
+    vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
+    vec3 rayOrigin = camPos;
     vec3 rayPosition = rayOrigin;
     float rayLength = 0.;
 
@@ -275,7 +265,6 @@ void main() {
 
         if (distance < .001) {
             vec3 normal = calcNormal(rayPosition);
-            color = normal * .5 + .5;
             color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
 
             #ifdef DEBUG
@@ -310,5 +299,5 @@ void main() {
     #endif
 
     color = pow(color, vec3(1. / 2.2)); // Gamma
-    gl_FragColor = vec4(color, 1);
+    fragColor = vec4(color, 1);
 }
