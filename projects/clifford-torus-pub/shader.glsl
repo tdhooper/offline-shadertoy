@@ -22,6 +22,16 @@ precision mediump float;
 
 
 /* SHADERTOY FROM HERE */
+/*
+
+    Clifford Torus Rotation
+    -----------------------
+
+    Getting a good distance for this 4D stereographic projection was
+    tricky, see the notes in 'Main SDF', or just toggle DEBUG below to
+    see what's going on.
+
+*/
 
 // #define DEBUG
 
@@ -79,6 +89,32 @@ vec4 inverseStereographic(vec3 p) {
     return p4;
 }
 
+float fTorus(vec4 p4, out vec2 uv) {
+
+    // Torus distance
+    float d = length(p4.xy) / length(p4.zw) - 1.;
+
+    if (d > 0.) {
+        // The distance outside the torus gets exponentially large
+        // because of the stereographic projection. So use the inside
+        // of an inverted torus for the outside distance.
+        d = 1. - length(p4.zw) / length(p4.xy);
+    }
+
+    // Because of the projection, distances aren't lipschitz continuous,
+    // so scale down the distance at the most warped point - the inside
+    // edge of the torus such that it is 1:1 with the domain.
+    d /= PI;
+
+    // UV coordinates over the surface, from 0 - 1
+    uv = (vec2(
+        atan(p4.y, p4.x),
+        atan(p4.z, p4.w)
+    ) / PI) * .5 + .5;
+
+    return d;
+}
+
 // Distances get warped by the stereographic projection, this applies
 // some hacky adjustments which makes them lipschitz continuous.
 
@@ -116,32 +152,6 @@ float fixDistance(vec3 p, float d, float threshold) {
     if (abs(d) < threshold) {
         d = od / PI;
     }
-
-    return d;
-}
-
-float fTorus(vec4 p4, out vec2 uv) {
-
-    // Torus distance
-    float d = length(p4.xy) / length(p4.zw) - 1.;
-
-    if (d > 0.) {
-        // The distance outside the torus gets exponentially large
-        // because of the stereographic projection. So use the inside
-        // of an inverted torus for the outside distance.
-        d = 1. - length(p4.zw) / length(p4.xy);
-    }
-
-    // Because of the projection, distances aren't lipschitz continuous,
-    // so scale down the distance at the most warped point - the inside
-    // edge of the torus such that it is 1:1 with the domain.
-    d /= PI;
-
-    // UV coordinates over the surface, from 0 - 1
-    uv = (vec2(
-        atan(p4.y, p4.x),
-        atan(p4.z, p4.w)
-    ) / PI) * .5 + .5;
 
     return d;
 }
@@ -241,9 +251,12 @@ const float MAX_DIST = 12.;
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = mod(iTime / 2., 1.);
+    #ifdef DEBUG
+        time = iTime / 6.;
+    #endif
 
     vec3 camPos = vec3(1.8, 5.5, -5.5);
-    vec3 camTar = vec3(0);
+    vec3 camTar = vec3(.1,0,.1);
     vec3 camUp = vec3(-1,0,-1.5);
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
 
