@@ -34,7 +34,7 @@ module.exports = (project) => {
     uniforms: {
       projection: ({ viewportWidth, viewportHeight }) => mat4.perspective(
         [],
-        Math.PI / 5,
+        Math.PI / 4,
         viewportWidth / viewportHeight,
         0.01,
         1000
@@ -165,10 +165,10 @@ module.exports = (project) => {
   // Default config used by the UI
   const captureConfig = {
     fps: 100,
-    seconds: 1, // (duration)
+    seconds: 2, // (duration)
     width: 800 * 2,
     height: 800 * 2,
-    prefix: 'greytrain-',
+    prefix: 'cliff-',
   };
 
   const webCapture = new WebCaptureClient(
