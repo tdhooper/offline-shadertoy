@@ -116,17 +116,8 @@ vec4 istereographic(vec3 p, out float k) {
 // TODO: To fix glitch, when we're on the inside,
 // use the flipped/rotated distance
 
-float fTorus(vec3 p, vec4 p4, out vec2 uv) {
-
-    float di = 1. - (length(p4.zw) / length(p4.xy));
-    float d = (length(p4.xy) / length(p4.zw)) - 1.;
-
-    if (d > 0.) {
-        d = di;
-    }
-
-    // return d / 3.;
-
+float fixDistance(vec3 p, float d) {
+    d *= PI;
     float dj = d;
 
     float sn = sign(d);
@@ -139,8 +130,22 @@ float fTorus(vec3 p, vec4 p4, out vec2 uv) {
     d *= sn;
 
     if (abs(d) < 1.) {
-        d = dj / 3.;
+        d = dj / PI;
     }
+
+    return d;
+}
+
+float fTorus(vec3 p, vec4 p4, out vec2 uv) {
+
+    float di = 1. - (length(p4.zw) / length(p4.xy));
+    float d = (length(p4.xy) / length(p4.zw)) - 1.;
+
+    if (d > 0.) {
+        d = di;
+    }
+
+    d /= PI;
 
     uv = (vec2(
         atan(p4.y, p4.x),
@@ -157,7 +162,7 @@ float map(vec3 p) {
     // pR(p.xy, .2);
 
     if (p.x < 0.) {
-        return fTorus(p.xzy, 1.002, 1.4163);
+        return abs(fTorus(p.xzy, 1.002, 1.4163));
         // return abs(length(p)) - .415;
     }
 
@@ -177,21 +182,27 @@ float map(vec3 p) {
     // d = abs(d);
     // d -= .01;
 
-    return abs(d);
+    // return abs(d);
 
-    p = vec3(uv, d);
+    vec3 pp = p;
+    p = vec3(uv * 2.25, d);
 
     float n = 10.;
+    float rep = 2.25 / n;
 
-    p.xy += .5/n;
+    // p.xy += .5/n;
     // p.x += .5/n;
 
-    pMod2(p.xy, vec2(1./n));
-    d = length(p.xy) - (1./n) * .4;
+    pMod2(p.xy, vec2(rep));
+    // d = length(p.xy) - (1./n) * .4;
     // d *= s;
-    d = smax(d, abs(p.z) - .02, .01);
+    // d = smax(d, abs(p.z) - .02, .01);
 
-    // d = fBox(p, vec3(vec2((1./n) * .4), .01));
+    d = abs(d);
+    d = fBox(p, vec3(rep * .33));
+    // d = length(p) - rep * .333;
+
+    d = fixDistance(pp, d);
 
     pMod2(p.xy, vec2(1./n));
     mcolor = vec3(1.);
@@ -243,7 +254,7 @@ void main() {
   float distance = 0.;
   vec3 color = vec3(0);
   for (float i = 0.; i < ITER; i++) {
-    rayLength += distance * .5;
+    rayLength += distance;
     rayPosition = rayOrigin + rayDirection * rayLength;
     distance = mapDebug(rayPosition);
     // distance = abs(distance);
@@ -254,7 +265,7 @@ void main() {
       // color = mcolor;
       if (debug) {
         float d = map(rayPosition);
-        color = vec3(mod(abs(d)*10., 1.));
+        color = vec3(mod(abs(d)*100., 1.));
         // color = mix(color, vec3(1,1,0), 1.-step(0., d - .04));
         color *= spectrum(abs(d));
         color = mix(color, vec3(1), step(0., -d) * .25);
