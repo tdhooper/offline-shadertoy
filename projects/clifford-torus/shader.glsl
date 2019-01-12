@@ -116,7 +116,7 @@ vec4 istereographic(vec3 p, out float k) {
 // TODO: To fix glitch, when we're on the inside,
 // use the flipped/rotated distance
 
-float fixDistance(vec3 p, float d) {
+float fixDistance(vec3 p, float d, float threshold) {
     d *= PI;
     float dj = d;
 
@@ -129,7 +129,7 @@ float fixDistance(vec3 p, float d) {
     }
     d *= sn;
 
-    if (abs(d) < .01) {
+    if (abs(d) < threshold) {
         d = dj / PI;
     }
 
@@ -202,7 +202,7 @@ float map(vec3 p) {
     d = fBox(p, vec3(rep * .33));
     // d = length(p) - rep * .333;
 
-    d = fixDistance(pp, d);
+    d = fixDistance(pp, d, .01);
 
     pMod2(p.xy, vec2(1./n));
     mcolor = vec3(1.);
@@ -216,7 +216,7 @@ bool debug = false;
 
 float mapDebug(vec3 p) {
     float d = map(p);
-    // return d;
+    return d;
     float plane = min(abs(p.z), abs(p.y));
     // debug = true;
     // return plane;
@@ -244,7 +244,7 @@ const float ITER = 5000.;
 void main() {
 
   time = mod(iTime / 2., 1.);
-  // time = .5;
+  // time = .48;
 
   vec3 rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
