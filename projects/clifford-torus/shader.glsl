@@ -125,6 +125,8 @@ float fTorus(vec3 p, vec4 p4, out vec2 uv) {
         d = di;
     }
 
+    // return d / 3.;
+
     float dj = d;
 
     float sn = sign(d);
@@ -152,10 +154,11 @@ float map(vec3 p) {
 
     float d;
 
-    pR(p.xy, .2);
+    // pR(p.xy, .2);
 
     if (p.x < 0.) {
-        // return length(p) - 1.;
+        return fTorus(p.xzy, 1.002, 1.4163);
+        // return abs(length(p)) - .415;
     }
 
     float s = dot(p,p);
@@ -174,7 +177,7 @@ float map(vec3 p) {
     // d = abs(d);
     // d -= .01;
 
-    // return d;
+    return abs(d);
 
     p = vec3(uv, d);
 
@@ -202,7 +205,7 @@ bool debug = false;
 
 float mapDebug(vec3 p) {
     float d = map(p);
-    return d;
+    // return d;
     float plane = min(abs(p.z), abs(p.y));
     // debug = true;
     // return plane;
@@ -230,6 +233,7 @@ const float ITER = 5000.;
 void main() {
 
   time = mod(iTime / 2., 1.);
+  // time = .5;
 
   vec3 rayOrigin = eye;
   vec3 rayDirection = normalize(dir);
@@ -250,9 +254,9 @@ void main() {
       // color = mcolor;
       if (debug) {
         float d = map(rayPosition);
-        color = vec3(mod(abs(d)*100., 1.));
+        color = vec3(mod(abs(d)*10., 1.));
         // color = mix(color, vec3(1,1,0), 1.-step(0., d - .04));
-        color *= spectrum(abs(d*100.) / 10.);
+        color *= spectrum(abs(d));
         color = mix(color, vec3(1), step(0., -d) * .25);
       }
       break;
@@ -262,14 +266,12 @@ void main() {
     }
   }
 
-  float fog = pow(smoothstep(7.25, 12., rayLength), .25);
-  color = mix(color, vec3(0), fog);
-  // color = spectrum(1. - (color.r * .6 + .5));
-  float f = guiColorFlip ? 1. : -1.;
-  color = spectrum(f * (color.r * 2. - 1.) * guiColorScale + guiColorOffset);
-  color *= mix(1., .025, fog);
-
-  color = pow(color, vec3(1. / 2.2));
+  // float fog = pow(smoothstep(7.25, 12., rayLength), .25);
+  // color = mix(color, vec3(0), fog);
+  // float f = guiColorFlip ? 1. : -1.;
+  // color = spectrum(f * (color.r * 2. - 1.) * guiColorScale + guiColorOffset);
+  // color *= mix(1., .025, fog);
+  // color = pow(color, vec3(1. / 2.2));
 
   gl_FragColor = vec4(color, 1);
 
