@@ -129,7 +129,7 @@ float fixDistance(vec3 p, float d) {
     }
     d *= sn;
 
-    if (abs(d) < 1.) {
+    if (abs(d) < .01) {
         d = dj / PI;
     }
 
@@ -162,7 +162,7 @@ float map(vec3 p) {
     // pR(p.xy, .2);
 
     if (p.x < 0.) {
-        return abs(fTorus(p.xzy, 1.002, 1.4163));
+        // return abs(fTorus(p.xzy, 1.002, 1.4163));
         // return abs(length(p)) - .415;
     }
 
