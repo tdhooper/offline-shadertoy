@@ -152,6 +152,8 @@ float map(vec3 p) {
 
     float d;
 
+    pR(p.xy, .2);
+
     if (p.x < 0.) {
         // return length(p) - 1.;
     }
