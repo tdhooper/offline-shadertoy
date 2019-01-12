@@ -16,7 +16,7 @@ uniform bool guiColorFlip;
 
 /* SHADERTOY FROM HERE */
 
-#define DEBUG
+// #define DEBUG
 
 #define PI 3.14159265359
 
@@ -212,28 +212,28 @@ float map(vec3 p) {
     float d = fTorus(p4, uv);
     modelUv = uv;
 
-    // return abs(d);
+    #ifdef DEBUG
+        d = abs(d);
+        d = fixDistance(p, d, 1.);
+        return d;
+    #endif
 
+    // Recreate domain to be wrapped around the torus surface
+    // xy = surface / face, z = depth / distance
     vec3 pp = p;
-    p = vec3(uv * 2.25, d);
+    float uvScale = 2.25; // Magic number that makes xy distances the same scale as z distances
+    p = vec3(uv * uvScale, d);
 
     float n = 10.;
-    float rep = 2.25 / n;
+    float repeat = uvScale / n;
 
-    p.xy += rep / 2.;
-    // p.x += .5/n;
+    p.xy += repeat / 2.;
+    pMod2(p.xy, vec2(repeat));
 
-    pMod2(p.xy, vec2(rep));
-    // d = length(p.xy) - (1./n) * .4;
-    // d *= s;
-    // d = smax(d, abs(p.z) - .02, .01);
+    d = length(p.xy) - repeat * .4;
+    d = smax(d, abs(p.z) - .013, .01);
 
-    d = abs(d);
-    // d = fBox(p, vec3(rep * .33));
-    // d = length(p) - rep * .333;
-
-    d = fixDistance(pp, d, 1.);
-
+    d = fixDistance(pp, d, .01);
     return d;
 }
 
@@ -264,12 +264,13 @@ vec3 calcNormal(vec3 p) {
   return normalize(n);
 }
 
-const float ITER = 5000.;
+const float ITER = 400.;
+const float MAX_DIST = 12.;
 
 void main() {
 
     time = mod(iTime / 2., 1.);
-    // time = .48;
+    // time = .5;
 
     vec3 rayOrigin = eye;
     vec3 rayDirection = normalize(dir);
@@ -305,13 +306,13 @@ void main() {
             #endif
             break;
         }
-        if (rayLength > 50.) {
+        if (rayLength > MAX_DIST) {
             break;
         }
     }
 
     #ifndef DEBUG
-        float fog = pow(smoothstep(7.25, 12., rayLength), .25);
+        float fog = pow(smoothstep(7.25, MAX_DIST, rayLength), .25);
         color = mix(color, vec3(0), fog);
         float f = guiColorFlip ? 1. : -1.;
         color = spectrum(f * (color.r * 2. - 1.) * guiColorScale + guiColorOffset);
