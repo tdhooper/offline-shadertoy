@@ -16,6 +16,8 @@ uniform bool guiColorFlip;
 
 /* SHADERTOY FROM HERE */
 
+#define DEBUG
+
 #define PI 3.14159265359
 
 void pR(inout vec2 p, float a) {
@@ -108,9 +110,13 @@ void pModTorus(inout vec3 p, float smallRadius, float largeRadius) {
 float time;
 vec3 mcolor;
 
-vec4 istereographic(vec3 p, out float k) {
-  k = 2.0/(1.0+dot(p,p));
-  return vec4(k*p,k-1.0);
+// Inverse stereographic projection of p,
+// p4 lies onto the unit 3-sphere centered at 0.
+// - Syntopia https://www.shadertoy.com/view/XdfGW4
+vec4 inverseStereographic(vec3 p) {
+    float r = length(p);
+    vec4 p4 = vec4(2.*p,1.-r*r)*1./(1.+r*r);
+    return p4;
 }
 
 // Distances get warped by the stereographic projection, this applies
@@ -118,7 +124,7 @@ vec4 istereographic(vec3 p, out float k) {
 
 // I don't really understand why, and the numbers have been hand
 // picked by comparing our 4D torus SDF to a usual 3D torus of the
-// same size.
+// same size, see DEBUG.
 
 // vec3 p
 //   Original 3D domain, centered with the stereographic projection;
@@ -180,32 +186,31 @@ float fTorus(vec4 p4, out vec2 uv) {
     return d;
 }
 
+vec2 modelUv;
+bool hit3DTorus = false;
+
 float map(vec3 p) {
 
-    float d;
+    #ifdef DEBUG
+        if (p.x < 0.) {
+            hit3DTorus = true;
+            return abs(fTorus(p.xzy, 1.002, 1.4163));
+        }
+    #endif
 
-    // pR(p.xy, .2);
+    vec4 p4 = inverseStereographic(p);
 
-    if (p.x < 0.) {
-        // return abs(fTorus(p.xzy, 1.002, 1.4163));
-        // return abs(length(p)) - .415;
-    }
-
-    float s = dot(p,p);
-
-    // pR(p.xy, PI / -2.);
-    // pR45(p.xz);
-
-    float k;
-    vec4 p4 = istereographic(p, k);
-
+    // The inside-out rotation puts the torus at a different
+    // orientation, so rotate to point it at back in the same
+    // direction
     pR(p4.zy, time * -PI / 2.);
+
+    // Rotate in 4D, turning the torus inside-out
     pR(p4.xw, time * -PI / 2.);
 
     vec2 uv;
-    d = fTorus(p4, uv);
-    // d = abs(d);
-    // d -= .01;
+    float d = fTorus(p4, uv);
+    modelUv = uv;
 
     // return abs(d);
 
@@ -229,24 +234,19 @@ float map(vec3 p) {
 
     d = fixDistance(pp, d, 1.);
 
-    pMod2(p.xy, vec2(1./n));
-    mcolor = vec3(1.);
-    mcolor -= vec3(0,1,0) * smoothstep(0., .005, abs(p.x) - (1./n) * .4);
-    mcolor -= vec3(1,0,0) * smoothstep(0., .005, abs(p.y) - (1./n) * .4);
-
     return d;
 }
 
-bool debug = false;
+bool hitDebugPlane = false;
 
 float mapDebug(vec3 p) {
     float d = map(p);
-    // return d;
+    #ifndef DEBUG
+        return d;
+    #endif
     float plane = min(abs(p.z), abs(p.y));
-    // debug = true;
-    // return plane;
-    debug = plane < abs(d);
-    return debug ? plane : d;
+    hitDebugPlane = plane < abs(d);
+    return hitDebugPlane ? plane : d;
 }
 
 
@@ -268,47 +268,56 @@ const float ITER = 5000.;
 
 void main() {
 
-  time = mod(iTime / 2., 1.);
-  // time = .48;
+    time = mod(iTime / 2., 1.);
+    // time = .48;
 
-  vec3 rayOrigin = eye;
-  vec3 rayDirection = normalize(dir);
-  vec3 rayPosition = rayOrigin;
-  float rayLength = 0.;
+    vec3 rayOrigin = eye;
+    vec3 rayDirection = normalize(dir);
+    vec3 rayPosition = rayOrigin;
+    float rayLength = 0.;
 
-  float distance = 0.;
-  vec3 color = vec3(0);
-  for (float i = 0.; i < ITER; i++) {
-    rayLength += distance;
-    rayPosition = rayOrigin + rayDirection * rayLength;
-    distance = mapDebug(rayPosition);
-    // distance = abs(distance);
-    if (distance < .001) {
-      vec3 normal = calcNormal(rayPosition);
-      color = normal * .5 + .5;
-      color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
-      // color = mcolor;
-      if (debug) {
-        float d = map(rayPosition);
-        color = vec3(mod(abs(d)*100., 1.));
-        // color = mix(color, vec3(1,1,0), 1.-step(0., d - .04));
-        color *= spectrum(abs(d));
-        color = mix(color, vec3(1), step(0., -d) * .25);
-      }
-      break;
+    float distance = 0.;
+    vec3 color = vec3(0);
+
+    for (float i = 0.; i < ITER; i++) {
+        rayLength += distance;
+        rayPosition = rayOrigin + rayDirection * rayLength;
+        distance = mapDebug(rayPosition);
+
+        if (distance < .001) {
+            vec3 normal = calcNormal(rayPosition);
+            color = normal * .5 + .5;
+            color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
+            #ifdef DEBUG
+                if (hitDebugPlane) {
+                    // Display distance
+                    float d = map(rayPosition);
+                    color = vec3(mod(abs(d) * 10., 1.));
+                    color *= spectrum(abs(d));
+                    color = mix(color, vec3(1), step(0., -d) * .25);
+                } else if ( ! hit3DTorus) {
+                    // Color UVs
+                    float repeat = 1. / 20.;
+                    pMod2(modelUv, vec2(repeat));
+                    color -= color * vec3(0,1,0) * smoothstep(0., .001, abs(modelUv.x) - repeat * .4);
+                    color -= color * vec3(1,0,0) * smoothstep(0., .001, abs(modelUv.y) - repeat * .4);
+                }
+            #endif
+            break;
+        }
+        if (rayLength > 50.) {
+            break;
+        }
     }
-    if (rayLength > 50.) {
-      break;
-    }
-  }
 
-  // float fog = pow(smoothstep(7.25, 12., rayLength), .25);
-  // color = mix(color, vec3(0), fog);
-  // float f = guiColorFlip ? 1. : -1.;
-  // color = spectrum(f * (color.r * 2. - 1.) * guiColorScale + guiColorOffset);
-  // color *= mix(1., .025, fog);
-  // color = pow(color, vec3(1. / 2.2));
+    #ifndef DEBUG
+        float fog = pow(smoothstep(7.25, 12., rayLength), .25);
+        color = mix(color, vec3(0), fog);
+        float f = guiColorFlip ? 1. : -1.;
+        color = spectrum(f * (color.r * 2. - 1.) * guiColorScale + guiColorOffset);
+        color *= mix(1., .025, fog);
+    #endif
 
-  gl_FragColor = vec4(color, 1);
-
+    color = pow(color, vec3(1. / 2.2)); // Gamma
+    gl_FragColor = vec4(color, 1);
 }
