@@ -13,10 +13,11 @@ uniform float guiColorScale;
 uniform float guiColorOffset;
 uniform bool guiColorFlip;
 
+#pragma glslify: distanceMeter = require(./distance-meter.glsl)
 
 /* SHADERTOY FROM HERE */
 
-// #define DEBUG
+#define DEBUG
 
 #define PI 3.14159265359
 
@@ -297,7 +298,7 @@ vec3 calcNormal(vec3 p) {
 }
 
 const float ITER = 400.;
-const float MAX_DIST = 12.;
+const float MAX_DIST = 70.;
 
 void main() {
 
@@ -329,6 +330,7 @@ void main() {
                     color = vec3(mod(abs(d) * 100., 1.));
                     color *= spectrum(abs(d)*10.);
                     color = mix(color, vec3(1), step(0., -d) * .25);
+                    color = distanceMeter(d * 2., rayLength, rayDirection, rayOrigin);
                 } else if ( ! hit3DTorus) {
                     // Color UVs
                     // float repeat = 1. / 20.;
