@@ -138,47 +138,70 @@ vec4 inverseStereographic(vec3 p, out float k) {
 // vec3 k
 //   scale factor
 
-#define mla
+// 0 - original
+// 1 - MLA 1
+// 2 - MLA 2
+#define DIST_FN 0
 
 float fixDistance(vec3 p, float d, float k) {
 
-    #ifndef mla
-        d *= PI;
-    #endif
+    // return d;
 
-    float od = d;
+    // return d / k;
+
+    // #if DIST_FN == 0
+    //     d *= PI;
+    //     float od = d;
+    // #endif
+
+    
     float sn = sign(d);
-
     d = abs(d);
-    #ifdef mla
-        d = d / k * 1.;
+
+    #if DIST_FN == 0
+        d = d / k;
+        d += 1.;
+        d = pow(d, .425);
+        d -= 1.;
+        d *= 3.7;
     #else
-        d = d * dot(p, p) / 4.2;
+        float e = .485;
+        d = d / k * pow(2., 1./e) * .93;
+        d += 1.;
+        d = pow(d, e);
+        d -= 1.;
     #endif
-    if (d > 1.) {
-        d = pow(d, .5);
-        d = (d - 1.) * 1.8 + 1.;
-    }
+
     d *= sn;
 
-    #ifndef mla
-        if (abs(d) < .01) {
-            d = od / PI;
-        }
-    #endif
+    // #if DIST_FN == 0
+    //     if (abs(d) < .01) {
+    //         d = od / PI;
+    //     }
+    // #endif
 
     return d;
 }
 
 float fTorus(vec4 p4, out vec2 uv) {
     // Torus distance
-    #ifdef mla
+    #if DIST_FN == 1
         // Distance from surface x^2 + y^2 = 0.5
-        float d = length(p4.xy) - .707;
-        if (d > 0.) {
-            d = .707-length(p4.zw);
+        float d1 = length(p4.xy)-.707;
+        float d2 = length(p4.zw)-.707;
+        float d = d1 < 0. ? d1 : -d2;
+        d /= 1.275;
+    #elif DIST_FN == 2
+        //vec4 q4 = vec4(0.707*p4.xy/length(p4.xy), p4.zw);
+        vec4 q4 = vec4(p4.xy,sqrt(.5)*p4.zw/length(p4.zw));
+        q4 = normalize(q4);
+        float d = distance(p4, q4);
+        if (length(p4.xy) - .707 < 0.) {
+            q4 = vec4(p4.zw,sqrt(.5)*p4.xy/length(p4.xy));
+            q4 = normalize(q4);
+            d = -distance(p4, q4.zwxy);
         }
-        d/=1.23;
+        d /= .94;
     #else
         float d = length(p4.xy) / length(p4.zw) - 1.;
         if (d > 0.) {
@@ -211,7 +234,7 @@ float map(vec3 p) {
     #ifdef DEBUG
         if (p.x < 0.) {
             hit3DTorus = true;
-            return abs(fTorus(p.xzy, 1.002, 1.4163));
+            return fTorus(p.xzy, 1.002, 1.4163);
         }
     #endif
 
@@ -221,17 +244,17 @@ float map(vec3 p) {
     // The inside-out rotation puts the torus at a different
     // orientation, so rotate to point it at back in the same
     // direction
-    pR(p4.zy, time * -PI / 2.);
+    pR(p4.zy, time * -PI / 2. + PI/2.);
 
     // Rotate in 4D, turning the torus inside-out
-    pR(p4.xw, time * -PI / 2.);
+    pR(p4.xw, time * -PI / 2. + PI/2.);
 
     vec2 uv;
     float d = fTorus(p4, uv);
     modelUv = uv;
 
     #ifdef DEBUG
-        d = abs(d);
+        // d = abs(d);
         d = fixDistance(p, d, k);
         return d;
     #endif
@@ -239,24 +262,27 @@ float map(vec3 p) {
     // Recreate domain to be wrapped around the torus surface
     // xy = surface / face, z = depth / distance
     vec3 pp = p;
-    float uvScale = 2.25; // Magic number that makes xy distances the same scale as z distances
+    float uvScale = 2.75; // Magic number that makes xy distances the same scale as z distances
     p = vec3(uv * uvScale, d);
 
     float n = 10.;
     float repeat = uvScale / n;
 
-    p.xy += repeat / 2.;
+    // p.xy += repeat / 2.;
     pMod2(p.xy, vec2(repeat));
 
     // d = abs(p.z);
-    d = length(p.xy) - repeat * .4;
-    d = smax(d, abs(p.z) - .013, .01);
-    // p.z = -abs(p.z);
-    // d = fBox(p, vec3(repeat * .2));
-    // p.z += .1;
-    // d = min(d, fBox(p, vec3(repeat * .2)));
-    // p.z += .1;
-    // d = min(d, fBox(p, vec3(repeat * .2)));
+    // d = length(p.xy) - repeat * .4;
+    // d = smax(d, abs(p.z) - .013, .01);
+
+    float sz = repeat * .2;
+
+    p.z = -abs(p.z);
+    d = fBox(p, vec3(sz));
+    p.z += sz * 2.;
+    d = min(d, fBox(p, vec3(sz)));
+    // p.z += sz * 2.;
+    // d = min(d, fBox(p, vec3(sz)));
     // p.z += .1;
     // d = min(d, fBox(p, vec3(repeat * .2)));
     // d = fBox(p, vec3(repeat * .2));
@@ -278,7 +304,7 @@ float mapDebug(vec3 p) {
     float plane = min(abs(p.z), abs(p.y));
     // plane= abs(p.y);
     hitDebugPlane = plane < abs(d);
-    // hitDebugPlane = true;
+    hitDebugPlane = true;
     return hitDebugPlane ? plane : d;
 }
 
