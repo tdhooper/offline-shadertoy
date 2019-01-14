@@ -2,10 +2,31 @@ Nothing special, just a harness so I can live edit shaders with glslify, and use
 
 Run with:
 
-    npm start
+    $ npm start
 
+Then open the given url in your browser
 
-From the console, start and pause playback with:
+From your browser console, start and pause playback with:
 
 	play()
 	pause()
+	toggle()
+	
+Free-fly-camera, when used, has the controls
+
+	W - forward
+	S - back
+	A - left
+	D - right
+
+	R - up
+	F - down
+
+	Q - tilt left
+	E - tilt right
+
+	Mouse (click and drag) - look
+
+Reset camera and other state from your browser console with:
+
+	resetState()
