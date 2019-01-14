@@ -2,7 +2,7 @@ const Stats = require('stats.js');
 const glslify = require('glslify');
 const regl = require('regl')({
   extensions: ['ext_frag_depth'],
-  pixelRatio: .25,
+  //pixelRatio: .25,
   attributes: {
     preserveDrawingBuffer: true,
   },
