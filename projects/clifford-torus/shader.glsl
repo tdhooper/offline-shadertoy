@@ -4,6 +4,8 @@ precision mediump float;
 
 uniform float iTime;
 
+uniform vec2 iResolution;
+
 uniform mat4 projection;
 varying vec3 eye;
 varying vec3 dir;
@@ -201,7 +203,7 @@ bool hit3DTorus = false;
 
 float map(vec3 p) {
 
-    // return abs(length(p) - 2.) - .1;
+    // return length(p) - 1.;
 
     #ifdef DEBUG
         if (p.x < 0.) {
@@ -239,26 +241,40 @@ float map(vec3 p) {
 
 
     d = abs(d);
-
-    d = fixDistance(pp, d - .3, .01) * 2.5;
-    d = smax(d, length(pp) - 2., .5);
-    float d2= -d;
     // return d;
 
+    float d3 = fixDistance(pp, d-.3, .00001);
+
+    d = fixDistance(pp, d-.2, .00001);
+
+    d = smax(d, length(pp) - 1.85, .2);
+    // d = max(d, length(pp) - 2.);
+    // d = smin(-d, d3, .2);
+    float d2= -d;
+
+    // d = min(d, -d3);
+
+
+    return d;
+
+    float n = sqrt(2.) * 20.;
+    float repeat = uvScale / n;
 
     pR45(p.xy);
 
-    float n = 100.;
-    float repeat = uvScale / n;
-
+    p.xy += repeat / 2.;
 
     // p.z = abs(p.z) - .15;
-    pMod1(p.z, .2);
-    p.xy += repeat / 2.;
+    // pMod1(p.z, .2);
     pMod2(p.xy, vec2(repeat));
 
-    d = length(p) - repeat * smoothstep(2., 1., length(pp)) * .2;
-    // d = fBox(p, vec3(repeat * smoothstep(2., 0., length(pp)) * .2));
+    float ww = repeat * mix(.1, .6, smoothstep(3., 1., length(pp)));
+    // d = length(p) - ww;
+    d = fBox(p, vec3(ww,ww,ww*.5));
+
+    // ww = repeat * .01;
+    // d = fBox(p.xz, vec2(ww));
+    // d = min(d, fBox(p.yz, vec2(ww)));
     // d = max(d, abs(p.z) - .1);
     d = fixDistance(pp, d, .01);
 
@@ -293,10 +309,17 @@ vec3 calcNormal(vec3 p) {
   return normalize(n);
 }
 
-const float ITER = 1000.;
+const float ITER = 150.;
 const float INTERSECTION_PRECISION = .001;
-const float MAX_DIST = 50.;
-const float FUDGE_FACTORR = .1;
+const float MAX_DIST = 20.;
+const float FUDGE_FACTORR = .2;
+
+mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(ww,up));
+    vec3 vv = normalize(cross(uu,ww));
+    return mat3(uu, vv, ww);
+}
 
 void main() {
 
@@ -311,6 +334,17 @@ void main() {
     float distance = 0.;
     vec3 color = vec3(0);
 
+    vec3 camPos = vec3(1.8, 5.5, -5.5) * 1.75;
+    vec3 camTar = vec3(.0,0,.0);
+    vec3 camUp = vec3(-1,0,-1.5);
+    mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
+    float focalLength = 5.;
+    vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.y;
+    rayDirection = normalize(camMat * vec3(p, focalLength));
+    rayOrigin = camPos;
+    rayPosition = rayOrigin;
+
+
     float h, t;
     vec3 c;
 
@@ -323,11 +357,10 @@ void main() {
         
         c = vec3(1.4,2.1,1.7) * pow(max(0., (.02 - h)) * 19.5, 10.) * 150.;
         c += vec3(.6,.25,.7) * .0125 * FUDGE_FACTORR;
-        c *= smoothstep(4., 0., length(rayPosition));
+        c *= smoothstep(10., 5., length(rayPosition));
         
-
         float ee = smoothstep(MAX_DIST, .1, rayLength);
-        c *= spectrum(ee * 30. + .3);
+        c *= spectrum(ee * 6. - .6);
         color += c * ee;
 
 
@@ -358,8 +391,8 @@ void main() {
     }
 
 
-    color = pow(color, vec3(1./1.8)) * 1.5;
-    color = pow(color, vec3(1.8));
+    color = pow(color, vec3(1./1.8)) * 2.;
+    color = pow(color, vec3(2.));
     
     color *= 3.;
 
