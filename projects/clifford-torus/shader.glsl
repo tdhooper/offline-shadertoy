@@ -44,6 +44,16 @@ mat3 rotationMatrix(vec3 axis, float angle)
     );
 }
 
+
+// Repeat space along one axis. Use like this to repeat along the x axis:
+// <float cell = pMod1(p.x,5);> - using the return value is optional.
+float pMod1(inout float p, float size) {
+    float halfsize = size*0.5;
+    float c = floor((p + halfsize)/size);
+    p = mod(p + halfsize, size) - halfsize;
+    return c;
+}
+
 vec2 pMod2(inout vec2 p, vec2 size) {
     vec2 c = floor((p + size*0.5)/size);
     p = mod(p + size*0.5,size) - size*0.5;
@@ -191,6 +201,8 @@ bool hit3DTorus = false;
 
 float map(vec3 p) {
 
+    // return abs(length(p) - 2.) - .1;
+
     #ifdef DEBUG
         if (p.x < 0.) {
             hit3DTorus = true;
@@ -213,10 +225,11 @@ float map(vec3 p) {
     modelUv = uv;
 
     #ifdef DEBUG
-        d = abs(d);
-        d = fixDistance(p, d, 1.);
-        return d;
+        // d = abs(d);
+        // d = fixDistance(p, d, 1.);
+        // return d;
     #endif
+
 
     // Recreate domain to be wrapped around the torus surface
     // xy = surface / face, z = depth / distance
@@ -224,16 +237,32 @@ float map(vec3 p) {
     float uvScale = 2.25; // Magic number that makes xy distances the same scale as z distances
     p = vec3(uv * uvScale, d);
 
-    float n = 10.;
+
+    d = abs(d);
+
+    d = fixDistance(pp, d - .3, .01) * 2.5;
+    d = smax(d, length(pp) - 2., .5);
+    float d2= -d;
+    // return d;
+
+
+    pR45(p.xy);
+
+    float n = 100.;
     float repeat = uvScale / n;
 
+
+    // p.z = abs(p.z) - .15;
+    pMod1(p.z, .2);
     p.xy += repeat / 2.;
     pMod2(p.xy, vec2(repeat));
 
-    d = length(p.xy) - repeat * .4;
-    d = smax(d, abs(p.z) - .013, .01);
-
+    d = length(p) - repeat * smoothstep(2., 1., length(pp)) * .2;
+    // d = fBox(p, vec3(repeat * smoothstep(2., 0., length(pp)) * .2));
+    // d = max(d, abs(p.z) - .1);
     d = fixDistance(pp, d, .01);
+
+    // d = max(d, -d2);
     return d;
 }
 
@@ -264,12 +293,14 @@ vec3 calcNormal(vec3 p) {
   return normalize(n);
 }
 
-const float ITER = 400.;
-const float MAX_DIST = 12.;
+const float ITER = 1000.;
+const float INTERSECTION_PRECISION = .001;
+const float MAX_DIST = 50.;
+const float FUDGE_FACTORR = .1;
 
 void main() {
 
-    time = mod(iTime / 2., 1.);
+    time = mod(iTime / 2., 100.);
     // time = .5;
 
     vec3 rayOrigin = eye;
@@ -280,45 +311,66 @@ void main() {
     float distance = 0.;
     vec3 color = vec3(0);
 
+    float h, t;
+    vec3 c;
+
     for (float i = 0.; i < ITER; i++) {
-        rayLength += distance;
+        rayLength += max(INTERSECTION_PRECISION, h * FUDGE_FACTORR);
         rayPosition = rayOrigin + rayDirection * rayLength;
         distance = mapDebug(rayPosition);
 
-        if (distance < .001) {
-            vec3 normal = calcNormal(rayPosition);
-            color = normal * .5 + .5;
-            color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
-            #ifdef DEBUG
-                if (hitDebugPlane) {
-                    // Display distance
-                    float d = map(rayPosition);
-                    color = vec3(mod(abs(d) * 10., 1.));
-                    color *= spectrum(abs(d));
-                    color = mix(color, vec3(1), step(0., -d) * .25);
-                } else if ( ! hit3DTorus) {
-                    // Color UVs
-                    float repeat = 1. / 20.;
-                    pMod2(modelUv, vec2(repeat));
-                    color -= color * vec3(0,1,0) * smoothstep(0., .001, abs(modelUv.x) - repeat * .4);
-                    color -= color * vec3(1,0,0) * smoothstep(0., .001, abs(modelUv.y) - repeat * .4);
-                }
-            #endif
-            break;
-        }
+        h = abs(distance * 4.);
+        
+        c = vec3(1.4,2.1,1.7) * pow(max(0., (.02 - h)) * 19.5, 10.) * 150.;
+        c += vec3(.6,.25,.7) * .0125 * FUDGE_FACTORR;
+        c *= smoothstep(4., 0., length(rayPosition));
+        
+
+        float ee = smoothstep(MAX_DIST, .1, rayLength);
+        c *= spectrum(ee * 30. + .3);
+        color += c * ee;
+
+
+        // if (distance < .001) {
+        //     vec3 normal = calcNormal(rayPosition);
+        //     color = normal * .5 + .5;
+        //     color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
+        //     #ifdef DEBUG
+        //         if (hitDebugPlane) {
+        //             // Display distance
+        //             float d = map(rayPosition);
+        //             color = vec3(mod(abs(d) * 10., 1.));
+        //             color *= spectrum(abs(d));
+        //             color = mix(color, vec3(1), step(0., -d) * .25);
+        //         } else if ( ! hit3DTorus) {
+        //             // Color UVs
+        //             float repeat = 1. / 20.;
+        //             pMod2(modelUv, vec2(repeat));
+        //             color -= color * vec3(0,1,0) * smoothstep(0., .001, abs(modelUv.x) - repeat * .4);
+        //             color -= color * vec3(1,0,0) * smoothstep(0., .001, abs(modelUv.y) - repeat * .4);
+        //         }
+        //     #endif
+        //     break;
+        // }
         if (rayLength > MAX_DIST) {
             break;
         }
     }
 
-    #ifndef DEBUG
-        float fog = pow(smoothstep(7.25, MAX_DIST, rayLength), .25);
-        color = mix(color, vec3(0), fog);
-        float f = guiColorFlip ? 1. : -1.;
-        color = spectrum(f * (color.r * 2. - 1.) * guiColorScale + guiColorOffset);
-        color *= mix(1., .025, fog);
-    #endif
 
+    color = pow(color, vec3(1./1.8)) * 1.5;
+    color = pow(color, vec3(1.8));
+    
+    color *= 3.;
+
+    // #ifndef DEBUG
+    //     float fog = pow(smoothstep(7.25, MAX_DIST, rayLength), .25);
+    //     color = mix(color, vec3(0), fog);
+    //     float f = guiColorFlip ? 1. : -1.;
+    //     color = spectrum(f * (color.r * 2. - 1.) * guiColorScale + guiColorOffset);
+    //     color *= mix(1., .025, fog);
+    // #endif
+    // color = 1. -color;
     color = pow(color, vec3(1. / 2.2)); // Gamma
     gl_FragColor = vec4(color, 1);
 }
