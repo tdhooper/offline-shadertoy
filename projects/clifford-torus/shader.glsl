@@ -4,6 +4,7 @@ precision mediump float;
 
 uniform float iTime;
 
+uniform vec2 iResolution;
 uniform mat4 projection;
 varying vec3 eye;
 varying vec3 dir;
@@ -13,6 +14,9 @@ uniform float guiColorScale;
 uniform float guiColorOffset;
 uniform bool guiColorFlip;
 uniform int guiMethod;
+uniform float guiS;
+uniform float guiE;
+uniform float guiF;
 
 #pragma glslify: distanceMeter = require(./distance-meter.glsl)
 
@@ -159,16 +163,15 @@ float fixDistance(vec3 p, float d, float k) {
     d = abs(d);
 
     if (guiMethod == 1) {
-        d = d / k;
+        d = d / k * 4.468;
         d += 1.;
-        d = pow(d, .425);
+        d = pow(d, .5);
         d -= 1.;
-        d *= 3.7;
+        d *= .831;
     } else {
-        float e = .485;
-        d = d / k * pow(2., 1./e) * .93;
+        d = d / k * 3.607;
         d += 1.;
-        d = pow(d, e);
+        d = pow(d, .5);
         d -= 1.;
     }
 
@@ -237,7 +240,7 @@ float map(vec3 p) {
     #ifdef DEBUG
         if (p.x < 0.) {
             hit3DTorus = true;
-            return fTorus(p.xzy, 1.002, 1.4163);
+            return fTorus(p.xzy, 1.000, 1.4145);
         }
     #endif
 
@@ -329,6 +332,16 @@ vec3 calcNormal(vec3 p) {
 const float ITER = 400.;
 const float MAX_DIST = 70.;
 
+
+float plot(float height, vec2 p, float y){
+    float thick = .005;
+    y *= height;
+    return (
+        smoothstep( y - thick, y, p.y) - 
+        smoothstep( y, y + thick, p.y)
+    );
+}
+
 void main() {
 
     time = mod(iTime / 2., 1.);
@@ -384,5 +397,52 @@ void main() {
     #endif
 
     color = pow(color, vec3(1. / 2.2)); // Gamma
+
+    gl_FragColor = vec4(color, 1);
+    return;
+
+    color = mix(color, vec3(1,0,1), 1.);
+
+    vec2 p = gl_FragCoord.xy / iResolution.xy;
+    vec3 p3;
+    float start = 0.;
+    float end = 2000.;
+
+    p3 = vec3(-.01, mix(start, end, 1.-p.x), 0);
+    float d = map(p3) / end*1.5;
+
+    p3 = vec3(.01, mix(start, end, 1.-p.x), 0);
+    float d2 = map(p3) / end*1.5;
+
+    end = 10.;
+
+    p3 = vec3(-.01, mix(start, end, 1.-p.x), 0);
+    float db = map(p3) / end*1.5;
+
+    p3 = vec3(.01, mix(start, end, 1.-p.x), 0);
+    float db2 = map(p3) / end*1.5;
+
+    end = 3.;
+
+    p3 = vec3(-.01, mix(start, end, 1.-p.x), 0);
+    float dc = map(p3) / end*1.5;
+
+    p3 = vec3(.01, mix(start, end, 1.-p.x), 0);
+    float dc2 = map(p3) / end*1.5;
+
+
+    p.y -= .5;
+    color = mix(color, vec3(1), plot(1., p, d));
+    color = mix(color, vec3(0), plot(1., p, d2));
+
+    color = mix(color, vec3(1), plot(1., p, db));
+    color = mix(color, vec3(0), plot(1., p, db2));
+
+    color = mix(color, vec3(1), plot(1., p, dc));
+    color = mix(color, vec3(0), plot(1., p, dc2));
+
+    color = mix(color, vec3(1,0,0), plot(.5, p, 0.));
+    color = pow(color, vec3(1. / 2.2)); // Gamma
+
     gl_FragColor = vec4(color, 1);
 }
