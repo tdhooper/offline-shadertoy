@@ -12,6 +12,7 @@ varying vec3 cameraForward;
 uniform float guiColorScale;
 uniform float guiColorOffset;
 uniform bool guiColorFlip;
+uniform int guiMethod;
 
 #pragma glslify: distanceMeter = require(./distance-meter.glsl)
 
@@ -141,7 +142,6 @@ vec4 inverseStereographic(vec3 p, out float k) {
 // 0 - original
 // 1 - MLA 1
 // 2 - MLA 2
-#define DIST_FN 0
 
 float fixDistance(vec3 p, float d, float k) {
 
@@ -158,19 +158,19 @@ float fixDistance(vec3 p, float d, float k) {
     float sn = sign(d);
     d = abs(d);
 
-    #if DIST_FN == 0
+    if (guiMethod == 1) {
         d = d / k;
         d += 1.;
         d = pow(d, .425);
         d -= 1.;
         d *= 3.7;
-    #else
+    } else {
         float e = .485;
         d = d / k * pow(2., 1./e) * .93;
         d += 1.;
         d = pow(d, e);
         d -= 1.;
-    #endif
+    }
 
     d *= sn;
 
@@ -184,26 +184,29 @@ float fixDistance(vec3 p, float d, float k) {
 }
 
 float fTorus(vec4 p4, out vec2 uv) {
+
+    float d;
+
     // Torus distance
-    #if DIST_FN == 1
+    if (guiMethod == 0) {
         // Distance from surface x^2 + y^2 = 0.5
         float d1 = length(p4.xy)-.707;
         float d2 = length(p4.zw)-.707;
-        float d = d1 < 0. ? d1 : -d2;
+        d = d1 < 0. ? d1 : -d2;
         d /= 1.275;
-    #elif DIST_FN == 2
+    } else if (guiMethod == 1) {
         //vec4 q4 = vec4(0.707*p4.xy/length(p4.xy), p4.zw);
         vec4 q4 = vec4(p4.xy,sqrt(.5)*p4.zw/length(p4.zw));
         q4 = normalize(q4);
-        float d = distance(p4, q4);
+        d = distance(p4, q4);
         if (length(p4.xy) - .707 < 0.) {
             q4 = vec4(p4.zw,sqrt(.5)*p4.xy/length(p4.xy));
             q4 = normalize(q4);
             d = -distance(p4, q4.zwxy);
         }
         d /= .94;
-    #else
-        float d = length(p4.xy) / length(p4.zw) - 1.;
+    } else {
+        d = length(p4.xy) / length(p4.zw) - 1.;
         if (d > 0.) {
             // The distance outside the torus gets exponentially large
             // because of the stereographic projection. So use the inside
@@ -211,7 +214,7 @@ float fTorus(vec4 p4, out vec2 uv) {
             d = 1. - length(p4.zw) / length(p4.xy);
         }
         d /= PI;
-    #endif
+    }
     
     // Because of the projection, distances aren't lipschitz continuous,
     // so scale down the distance at the most warped point - the inside
