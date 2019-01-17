@@ -255,20 +255,20 @@ float map(vec3 p) {
     // d = min(d, -d3);
 
 
-    return d;
+    // return d;
 
-    float n = sqrt(2.) * 20.;
+    float n = sqrt(2.) * 10.;
     float repeat = uvScale / n;
 
     pR45(p.xy);
 
-    p.xy += repeat / 2.;
+    // p.xy += repeat * time * 4.;
 
     // p.z = abs(p.z) - .15;
     // pMod1(p.z, .2);
     pMod2(p.xy, vec2(repeat));
 
-    float ww = repeat * mix(.1, .6, smoothstep(3., 1., length(pp)));
+    float ww = repeat * mix(.1, .6, smoothstep(5., -1., length(pp)));
     // d = length(p) - ww;
     d = fBox(p, vec3(ww,ww,ww*.5));
 
@@ -276,7 +276,7 @@ float map(vec3 p) {
     // d = fBox(p.xz, vec2(ww));
     // d = min(d, fBox(p.yz, vec2(ww)));
     // d = max(d, abs(p.z) - .1);
-    d = fixDistance(pp, d, .01);
+    d = fixDistance(pp, d, .001);
 
     // d = max(d, -d2);
     return d;
@@ -309,10 +309,10 @@ vec3 calcNormal(vec3 p) {
   return normalize(n);
 }
 
-const float ITER = 150.;
-const float INTERSECTION_PRECISION = .001;
-const float MAX_DIST = 20.;
-const float FUDGE_FACTORR = .2;
+const float ITER = 250.;
+const float INTERSECTION_PRECISION = .0001;
+const float MAX_DIST = 30.;
+const float FUDGE_FACTORR = .1;
 
 mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
     vec3 ww = normalize(ta - ro);
@@ -334,7 +334,7 @@ void main() {
     float distance = 0.;
     vec3 color = vec3(0);
 
-    vec3 camPos = vec3(1.8, 5.5, -5.5) * 1.75;
+    vec3 camPos = vec3(1.8, 5.5, -5.5) * 2.5;
     vec3 camTar = vec3(.0,0,.0);
     vec3 camUp = vec3(-1,0,-1.5);
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
@@ -364,7 +364,7 @@ void main() {
         color += c * ee;
 
 
-        // if (distance < .001) {
+        if (distance < .001) {
         //     vec3 normal = calcNormal(rayPosition);
         //     color = normal * .5 + .5;
         //     color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
@@ -383,8 +383,8 @@ void main() {
         //             color -= color * vec3(1,0,0) * smoothstep(0., .001, abs(modelUv.y) - repeat * .4);
         //         }
         //     #endif
-        //     break;
-        // }
+            break;
+        }
         if (rayLength > MAX_DIST) {
             break;
         }
