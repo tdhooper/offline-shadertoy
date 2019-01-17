@@ -323,7 +323,7 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 
 void main() {
 
-    time = mod(iTime / 2., 100.);
+    time = mod(iTime / 2., 1.);
     // time = .5;
 
     vec3 rayOrigin = eye;
