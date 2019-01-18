@@ -1,5 +1,5 @@
 {
-  "id": "clifford-torus-mla-7",
+  "id": "clifford-torus-mla-8",
   "camera": {
     "rotation": [
       0.8296586275100708,
@@ -22,6 +22,10 @@
       "value": 1,
       "step": 1,
       "controller": 18
+    },
+    "debug": {
+      "type": "toggle",
+      "value": false
     },
     "s": {
       "type": "range",

@@ -17,12 +17,11 @@ uniform int guiMethod;
 uniform float guiS;
 uniform float guiE;
 uniform float guiF;
+uniform bool guiDebug;
 
 #pragma glslify: distanceMeter = require(./distance-meter.glsl)
 
 /* SHADERTOY FROM HERE */
-
-// #define DEBUG
 
 #define PI 3.14159265359
 
@@ -162,24 +161,24 @@ float fixDistance(vec3 p, float d, float k) {
     float sn = sign(d);
     d = abs(d);
 
-    if (guiMethod == 1) {
-        d = d / k * 4.468;
-        d += 1.;
-        d = pow(d, .5);
-        d -= 1.;
-        d *= .831;
-    } else if (guiMethod == 2) {
+    if (guiMethod == 0) {
         d = d / k * 2.;
         d += 1.;
         d = pow(d, .5);
         d -= 1.;
         d *= 1.73;
-    } else {
+    } else if (guiMethod == 1) {
         d = d / k * 3.607;
         d += 1.;
         d = pow(d, .5);
         d -= 1.;
-        d *= .85;
+        // d *= .85;
+    } else {
+        d = d / k * 4.468;
+        d += 1.;
+        d = pow(d, .5);
+        d -= 1.;
+        d *= .831;
     }
 
     d *= sn;
@@ -199,12 +198,17 @@ float fTorus(vec4 p4, out vec2 uv) {
 
     // Torus distance
     if (guiMethod == 0) {
+        d1 = length(p4.xy) / length(p4.zw) - 1.;
+        d2 = length(p4.zw) / length(p4.xy) - 1.;
+        d = d1 < 0. ? d1 : -d2;
+        d /= PI;
+    } else if (guiMethod == 1) {
         // Distance from surface x^2 + y^2 = 0.5
         d1 = length(p4.xy)-.707;
         d2 = length(p4.zw)-.707;
         d = d1 < 0. ? d1 : -d2;
         d /= 1.275;
-    } else if (guiMethod == 1) {
+    } else {
         //vec4 q4 = vec4(0.707*p4.xy/length(p4.xy), p4.zw);
         vec4 q4 = vec4(p4.xy,sqrt(.5)*p4.zw/length(p4.zw));
         q4 = normalize(q4);
@@ -215,11 +219,6 @@ float fTorus(vec4 p4, out vec2 uv) {
             d = -distance(p4, q4.zwxy);
         }
         d /= .94;
-    } else {
-        d1 = length(p4.xy) / length(p4.zw) - 1.;
-        d2 = length(p4.zw) / length(p4.xy) - 1.;
-        d = d1 < 0. ? d1 : -d2;
-        d /= PI;
     }
     
     // Because of the projection, distances aren't lipschitz continuous,
@@ -240,12 +239,12 @@ bool hit3DTorus = false;
 
 float map(vec3 p) {
 
-    #ifdef DEBUG
-        if (p.x < 0.) {
-            hit3DTorus = true;
-            return fTorus(p.xzy, 1.000, 1.4145);
-        }
-    #endif
+    if (guiDebug) {
+        // if (p.x < 0.) {
+        //     hit3DTorus = true;
+        //     return fTorus(p.xzy, 1.000, 1.4145);
+        // }
+    }
 
     float k;
     vec4 p4 = inverseStereographic(p,k);
@@ -253,7 +252,7 @@ float map(vec3 p) {
     // The inside-out rotation puts the torus at a different
     // orientation, so rotate to point it at back in the same
     // direction
-    pR(p4.zy, time * -PI / 2. + PI/2.);
+    // pR(p4.zy, time * -PI / 2. + PI/2.);
 
     // Rotate in 4D, turning the torus inside-out
     pR(p4.xw, time * -PI / 2. + PI/2.);
@@ -262,11 +261,11 @@ float map(vec3 p) {
     float d = fTorus(p4, uv);
     modelUv = uv;
 
-    #ifdef DEBUG
+    if (guiDebug) {
         // d = abs(d);
         d = fixDistance(p, d, k);
         return d;
-    #endif
+    }
 
     // Recreate domain to be wrapped around the torus surface
     // xy = surface / face, z = depth / distance
@@ -306,9 +305,9 @@ bool hitDebugPlane = false;
 float mapDebug(vec3 p) {
     float d = map(p);
     // return d;
-    #ifndef DEBUG
+    if ( ! guiDebug) {
         return d;
-    #endif
+    }
     float plane = min(abs(p.z), abs(p.y));
     // plane= abs(p.y);
     hitDebugPlane = plane < abs(d);
@@ -347,8 +346,8 @@ float plot(float height, vec2 p, float y){
 void main() {
 
     time = mod(iTime / 2., 1.);
-    time = .45;
-    time = 0.;
+    // time = .45;
+    // time = 0.;
 
     vec3 rayOrigin = eye;
     vec3 rayDirection = normalize(dir);
@@ -367,7 +366,7 @@ void main() {
             vec3 normal = calcNormal(rayPosition);
             color = normal * .5 + .5;
             color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
-            #ifdef DEBUG
+            if (guiDebug) {
                 if (hitDebugPlane) {
                     // Display distance
                     float d = map(rayPosition);
@@ -382,7 +381,7 @@ void main() {
                     // color -= color * vec3(0,1,0) * smoothstep(0., .001, abs(modelUv.x) - repeat * .4);
                     // color -= color * vec3(1,0,0) * smoothstep(0., .001, abs(modelUv.y) - repeat * .4);
                 }
-            #endif
+            }
             break;
         }
         if (rayLength > MAX_DIST) {
@@ -390,13 +389,13 @@ void main() {
         }
     }
 
-    #ifndef DEBUG
+    if ( ! guiDebug) {
         float fog = pow(smoothstep(7.25, MAX_DIST, rayLength), .25);
         color = mix(color, vec3(0), fog);
         float f = guiColorFlip ? 1. : -1.;
         color = spectrum(f * (color.r * 2. - 1.) * guiColorScale + guiColorOffset);
         color *= mix(1., .025, fog);
-    #endif
+    }
 
     color = pow(color, vec3(1. / 2.2)); // Gamma
 
