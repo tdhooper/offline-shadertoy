@@ -22,7 +22,7 @@ uniform float guiF;
 
 /* SHADERTOY FROM HERE */
 
-#define DEBUG
+// #define DEBUG
 
 #define PI 3.14159265359
 
@@ -168,11 +168,18 @@ float fixDistance(vec3 p, float d, float k) {
         d = pow(d, .5);
         d -= 1.;
         d *= .831;
+    } else if (guiMethod == 2) {
+        d = d / k * 2.;
+        d += 1.;
+        d = pow(d, .5);
+        d -= 1.;
+        d *= 1.73;
     } else {
         d = d / k * 3.607;
         d += 1.;
         d = pow(d, .5);
         d -= 1.;
+        d *= .85;
     }
 
     d *= sn;
@@ -188,13 +195,13 @@ float fixDistance(vec3 p, float d, float k) {
 
 float fTorus(vec4 p4, out vec2 uv) {
 
-    float d;
+    float d, d1, d2;
 
     // Torus distance
     if (guiMethod == 0) {
         // Distance from surface x^2 + y^2 = 0.5
-        float d1 = length(p4.xy)-.707;
-        float d2 = length(p4.zw)-.707;
+        d1 = length(p4.xy)-.707;
+        d2 = length(p4.zw)-.707;
         d = d1 < 0. ? d1 : -d2;
         d /= 1.275;
     } else if (guiMethod == 1) {
@@ -209,13 +216,9 @@ float fTorus(vec4 p4, out vec2 uv) {
         }
         d /= .94;
     } else {
-        d = length(p4.xy) / length(p4.zw) - 1.;
-        if (d > 0.) {
-            // The distance outside the torus gets exponentially large
-            // because of the stereographic projection. So use the inside
-            // of an inverted torus for the outside distance.
-            d = 1. - length(p4.zw) / length(p4.xy);
-        }
+        d1 = length(p4.xy) / length(p4.zw) - 1.;
+        d2 = length(p4.zw) / length(p4.xy) - 1.;
+        d = d1 < 0. ? d1 : -d2;
         d /= PI;
     }
     
@@ -274,19 +277,18 @@ float map(vec3 p) {
     float n = 10.;
     float repeat = uvScale / n;
 
-    // p.xy += repeat / 2.;
+    p.xy += repeat / 2.;
     pMod2(p.xy, vec2(repeat));
+    d = abs(p.z);
+    d = length(p.xy) - repeat * .4;
+    d = smax(d, abs(p.z) - .013, .01);
 
-    // d = abs(p.z);
-    // d = length(p.xy) - repeat * .4;
-    // d = smax(d, abs(p.z) - .013, .01);
+    // float sz = repeat * .2;
+    // p.z = -abs(p.z);
+    // d = fBox(p, vec3(sz));
+    // p.z += sz * 2.;
+    // d = min(d, fBox(p, vec3(sz)));
 
-    float sz = repeat * .2;
-
-    p.z = -abs(p.z);
-    d = fBox(p, vec3(sz));
-    p.z += sz * 2.;
-    d = min(d, fBox(p, vec3(sz)));
     // p.z += sz * 2.;
     // d = min(d, fBox(p, vec3(sz)));
     // p.z += .1;
@@ -330,7 +332,7 @@ vec3 calcNormal(vec3 p) {
 }
 
 const float ITER = 400.;
-const float MAX_DIST = 70.;
+const float MAX_DIST = 12.;
 
 
 float plot(float height, vec2 p, float y){
@@ -345,8 +347,8 @@ float plot(float height, vec2 p, float y){
 void main() {
 
     time = mod(iTime / 2., 1.);
-    // time = .45;
-    // time = 0.;
+    time = .45;
+    time = 0.;
 
     vec3 rayOrigin = eye;
     vec3 rayDirection = normalize(dir);
