@@ -157,37 +157,51 @@ float fixDistance(vec3 p, float d, float k) {
     //     float od = d;
     // #endif
 
-    
+    float od = d;
     float sn = sign(d);
     d = abs(d);
 
     if (guiMethod == 0) {
-        d = d / k * 2.;
+        d = d / k * 1.82;
         d += 1.;
         d = pow(d, .5);
         d -= 1.;
-        d *= 1.73;
+        d *= 1.86;
     } else if (guiMethod == 1) {
-        d = d / k * 3.607;
+        // d = d / k * 3.607;
+        // d += 1.;
+        // d = pow(d, .5);
+        // d -= 1.;
+        // // d *= .85;
+
+        d = d / k * 1.48;
         d += 1.;
         d = pow(d, .5);
         d -= 1.;
-        // d *= .85;
-    } else {
+        d *= 2.427;
+        d *= .9;
+    } else if (guiMethod == 2) {
         d = d / k * 4.468;
         d += 1.;
         d = pow(d, .5);
         d -= 1.;
         d *= .831;
+    } else {
+        d *= PI;
+        d = d * dot(p, p) / 4.2;
+        if (d > 1.) {
+            d = pow(d, .5);
+            d = (d - 1.) * 1.8 + 1.;
+        }
     }
 
     d *= sn;
 
-    // #if DIST_FN == 0
-    //     if (abs(d) < .01) {
-    //         d = od / PI;
-    //     }
-    // #endif
+    if (guiMethod == 3) {
+        if (abs(d) < .01) {
+            d = od;
+        }
+    }
 
     return d;
 }
@@ -206,9 +220,9 @@ float fTorus(vec4 p4, out vec2 uv) {
         // Distance from surface x^2 + y^2 = 0.5
         d1 = length(p4.xy)-.707;
         d2 = length(p4.zw)-.707;
-        d = d1 < 0. ? d1 : -d2;
+        d = d1 > 0. ? d1 : -d2;
         d /= 1.275;
-    } else {
+    } else if (guiMethod == 2) {
         //vec4 q4 = vec4(0.707*p4.xy/length(p4.xy), p4.zw);
         vec4 q4 = vec4(p4.xy,sqrt(.5)*p4.zw/length(p4.zw));
         q4 = normalize(q4);
@@ -219,6 +233,12 @@ float fTorus(vec4 p4, out vec2 uv) {
             d = -distance(p4, q4.zwxy);
         }
         d /= .94;
+    } else {
+        d = length(p4.xy) / length(p4.zw) - 1.;
+        if (d > 0.) {
+            d = 1. - length(p4.zw) / length(p4.xy);
+        }
+        d /= PI;
     }
     
     // Because of the projection, distances aren't lipschitz continuous,
@@ -240,10 +260,10 @@ bool hit3DTorus = false;
 float map(vec3 p) {
 
     if (guiDebug) {
-        // if (p.x < 0.) {
-        //     hit3DTorus = true;
-        //     return fTorus(p.xzy, 1.000, 1.4145);
-        // }
+        if (p.x < 0.) {
+            hit3DTorus = true;
+            return fTorus(p.xzy, 1.000, 1.4145);
+        }
     }
 
     float k;
@@ -252,7 +272,7 @@ float map(vec3 p) {
     // The inside-out rotation puts the torus at a different
     // orientation, so rotate to point it at back in the same
     // direction
-    // pR(p4.zy, time * -PI / 2. + PI/2.);
+    pR(p4.zy, time * -PI / 2. + PI/2.);
 
     // Rotate in 4D, turning the torus inside-out
     pR(p4.xw, time * -PI / 2. + PI/2.);
@@ -303,15 +323,15 @@ float map(vec3 p) {
 bool hitDebugPlane = false;
 
 float mapDebug(vec3 p) {
-    float d = map(p);
+    float d = abs(map(p));
     // return d;
     if ( ! guiDebug) {
         return d;
     }
     float plane = min(abs(p.z), abs(p.y));
-    // plane= abs(p.y);
+    plane= abs(p.z);
     hitDebugPlane = plane < abs(d);
-    hitDebugPlane = true;
+    // hitDebugPlane = true;
     return hitDebugPlane ? plane : d;
 }
 
@@ -331,7 +351,7 @@ vec3 calcNormal(vec3 p) {
 }
 
 const float ITER = 400.;
-const float MAX_DIST = 12.;
+const float MAX_DIST = 20.;
 
 
 float plot(float height, vec2 p, float y){
