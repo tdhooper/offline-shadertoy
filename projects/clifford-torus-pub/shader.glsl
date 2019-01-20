@@ -33,7 +33,7 @@ precision mediump float;
 
 */
 
-// #define DEBUG
+#define DEBUG
 
 // --------------------------------------------------------
 // HG_SDF

@@ -148,8 +148,6 @@ vec4 inverseStereographic(vec3 p, out float k) {
 
 float fixDistance(vec3 p, float d, float k) {
 
-    // return d;
-
     // return d / k;
 
     // #if DIST_FN == 0
@@ -218,8 +216,9 @@ float fTorus(vec4 p4, out vec2 uv) {
         d /= PI;
     } else if (guiMethod == 1) {
         // Distance from surface x^2 + y^2 = 0.5
-        d1 = length(p4.xy)-.707;
-        d2 = length(p4.zw)-.707;
+        float r = sqrt(2.) / 2.;
+        d1 = length(p4.xy) - r;
+        d2 = length(p4.zw) - r;
         d = d1 > 0. ? d1 : -d2;
         d /= 1.275;
     } else if (guiMethod == 2) {
@@ -323,7 +322,7 @@ float map(vec3 p) {
 bool hitDebugPlane = false;
 
 float mapDebug(vec3 p) {
-    float d = abs(map(p));
+    float d = map(p);
     // return d;
     if ( ! guiDebug) {
         return d;
