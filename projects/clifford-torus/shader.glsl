@@ -148,6 +148,8 @@ vec4 inverseStereographic(vec3 p, out float k) {
 
 float fixDistance(vec3 p, float d, float k) {
 
+    // return d;
+
     // return d / k;
 
     // #if DIST_FN == 0
@@ -160,42 +162,44 @@ float fixDistance(vec3 p, float d, float k) {
     d = abs(d);
 
     if (guiMethod == 0) {
-        d = d / k * 1.82;
-        d += 1.;
-        d = pow(d, .5);
-        d -= 1.;
-        d *= 1.86;
-    } else if (guiMethod == 1) {
-        // d = d / k * 3.607;
-        // d += 1.;
-        // d = pow(d, .5);
-        // d -= 1.;
-        // // d *= .85;
-
-        d = d / k * 1.48;
-        d += 1.;
-        d = pow(d, .5);
-        d -= 1.;
-        d *= 2.427;
-        d *= .9;
-    } else if (guiMethod == 2) {
-        d = d / k * 4.468;
-        d += 1.;
-        d = pow(d, .5);
-        d -= 1.;
-        d *= .831;
-    } else {
         d *= PI;
         d = d * dot(p, p) / 4.2;
         if (d > 1.) {
             d = pow(d, .5);
             d = (d - 1.) * 1.8 + 1.;
         }
+    } else if (guiMethod == 1) {
+        d = d / k * 1.82;
+        d += 1.;
+        d = pow(d, .5);
+        d -= 1.;
+        d *= 1.86;
+    } else if (guiMethod == 2) {
+        // d = d / k * 3.607;
+        // d += 1.;
+        // d = pow(d, .5);
+        // d -= 1.;
+        // // d *= .85;
+        d = d / k * 1.48;
+        d += 1.;
+        d = pow(d, .5);
+        d -= 1.;
+        d *= 2.427;
+        // d *= .2;
+        if (d < .01) {
+            return od;
+        }
+    } else if (guiMethod == 3) {
+        d = d / k * 4.468;
+        d += 1.;
+        d = pow(d, .5);
+        d -= 1.;
+        d *= .831;
     }
 
     d *= sn;
 
-    if (guiMethod == 3) {
+    if (guiMethod == 0) {
         if (abs(d) < .01) {
             d = od;
         }
@@ -210,18 +214,24 @@ float fTorus(vec4 p4, out vec2 uv) {
 
     // Torus distance
     if (guiMethod == 0) {
+        d = length(p4.xy) / length(p4.zw) - 1.;
+        if (d > 0.) {
+            d = 1. - length(p4.zw) / length(p4.xy);
+        }
+        d /= PI;
+    } else if (guiMethod == 1) {
         d1 = length(p4.xy) / length(p4.zw) - 1.;
         d2 = length(p4.zw) / length(p4.xy) - 1.;
         d = d1 < 0. ? d1 : -d2;
         d /= PI;
-    } else if (guiMethod == 1) {
+    } else if (guiMethod == 2) {
         // Distance from surface x^2 + y^2 = 0.5
         float r = sqrt(2.) / 2.;
         d1 = length(p4.xy) - r;
         d2 = length(p4.zw) - r;
         d = d1 > 0. ? d1 : -d2;
         d /= 1.275;
-    } else if (guiMethod == 2) {
+    } else if (guiMethod == 3) {
         //vec4 q4 = vec4(0.707*p4.xy/length(p4.xy), p4.zw);
         vec4 q4 = vec4(p4.xy,sqrt(.5)*p4.zw/length(p4.zw));
         q4 = normalize(q4);
@@ -232,12 +242,6 @@ float fTorus(vec4 p4, out vec2 uv) {
             d = -distance(p4, q4.zwxy);
         }
         d /= .94;
-    } else {
-        d = length(p4.xy) / length(p4.zw) - 1.;
-        if (d > 0.) {
-            d = 1. - length(p4.zw) / length(p4.xy);
-        }
-        d /= PI;
     }
     
     // Because of the projection, distances aren't lipschitz continuous,
@@ -260,8 +264,8 @@ float map(vec3 p) {
 
     if (guiDebug) {
         if (p.x < 0.) {
-            hit3DTorus = true;
-            return fTorus(p.xzy, 1.000, 1.4145);
+            // hit3DTorus = true;
+            // return fTorus(p.xzy, 1.000, 1.4145);
         }
     }
 
@@ -280,11 +284,11 @@ float map(vec3 p) {
     float d = fTorus(p4, uv);
     modelUv = uv;
 
-    if (guiDebug) {
-        // d = abs(d);
+    // if (guiDebug) {
+        d = abs(d);
         d = fixDistance(p, d, k);
         return d;
-    }
+    // }
 
     // Recreate domain to be wrapped around the torus surface
     // xy = surface / face, z = depth / distance
@@ -313,7 +317,6 @@ float map(vec3 p) {
     // d = min(d, fBox(p, vec3(repeat * .2)));
     // d = fBox(p, vec3(repeat * .2));
 
-    // d = abs(p.z);
 
     d = fixDistance(pp, d, k);
     return d;
