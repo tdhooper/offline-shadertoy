@@ -173,7 +173,7 @@ float fixDistance(vec3 p, float d, float k) {
         d += 1.;
         d = pow(d, .5);
         d -= 1.;
-        d *= 1.86;
+        d *= 5./3.;
     } else if (guiMethod == 2) {
         // d = d / k * 3.607;
         // d += 1.;
@@ -343,7 +343,7 @@ float mapDebug(vec3 p) {
 // --------------------------------------------------------
 
 vec3 calcNormal(vec3 p) {
-  vec3 eps = vec3(.0001,0,0);
+  vec3 eps = vec3(.00001,0,0);
   vec3 n = vec3(
     map(p + eps.xyy) - map(p - eps.xyy),
     map(p + eps.yxy) - map(p - eps.yxy),
@@ -387,7 +387,7 @@ void main() {
         if (distance < .001) {
             vec3 normal = calcNormal(rayPosition);
             color = normal * .5 + .5;
-            color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
+            //color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
             if (guiDebug) {
                 if (hitDebugPlane) {
                     // Display distance
