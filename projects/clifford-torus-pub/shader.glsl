@@ -31,6 +31,9 @@ precision mediump float;
     tricky, see the notes in 'Main SDF', or just toggle DEBUG below to
     see what's going on.
 
+    Big thanks to Matthew Arcus (mla) for providing a better torus
+    equation and improving the projection distance fix.
+
 */
 
 #define DEBUG
@@ -82,24 +85,20 @@ vec3 spectrum(float n) {
 
 // Inverse stereographic projection of p,
 // p4 lies onto the unit 3-sphere centered at 0.
-// - Syntopia https://www.shadertoy.com/view/XdfGW4
-vec4 inverseStereographic(vec3 p) {
-    float r = length(p);
-    vec4 p4 = vec4(2.*p,1.-r*r)*1./(1.+r*r);
-    return p4;
+// - mla https://www.shadertoy.com/view/lsGyzm
+vec4 inverseStereographic(vec3 p, out float k) {
+    k = 2.0/(1.0+dot(p,p));
+    return vec4(k*p,k-1.0);
 }
 
 float fTorus(vec4 p4, out vec2 uv) {
 
     // Torus distance
-    float d = length(p4.xy) / length(p4.zw) - 1.;
-
-    if (d > 0.) {
-        // The distance outside the torus gets exponentially large
-        // because of the stereographic projection. So use the inside
-        // of an inverted torus for the outside distance.
-        d = 1. - length(p4.zw) / length(p4.xy);
-    }
+    // We want the inside and outside to look the same, so use the
+    // inverted outside for the inside.
+    float d1 = length(p4.xy) / length(p4.zw) - 1.;
+    float d2 = length(p4.zw) / length(p4.xy) - 1.;
+    float d = d1 < 0. ? -d1 : d2;
 
     // Because of the projection, distances aren't lipschitz continuous,
     // so scale down the distance at the most warped point - the inside
@@ -118,41 +117,25 @@ float fTorus(vec4 p4, out vec2 uv) {
 // Distances get warped by the stereographic projection, this applies
 // some hacky adjustments which makes them lipschitz continuous.
 
-// I don't really understand why, and the numbers have been hand
-// picked by comparing our 4D torus SDF to a usual 3D torus of the
-// same size, see DEBUG.
-
-// vec3 p
-//   Original 3D domain, centered with the stereographic projection;
-//   basically it should not be scaled or translated.
+// The numbers have been hand picked by comparing our 4D torus SDF to
+// a usual 3D torus of the same size, see DEBUG.
 
 // vec3 d
 //   SDF to fix, this should be applied after the last step of
 //   modelling on the torus.
 
-// vec3 threshold
-//   The fix causes a blob artefact at the origin, so return the
-//   original SDF when below this distance to the surface. Smaller
-//   values result in a faster ray hit, but can cause more artefacts.
+// vec3 k
+//   stereographic scale factor
 
-float fixDistance(vec3 p, float d, float threshold) {
-    d *= PI;
-
-    float od = d;
+float fixDistance(float d, float k) {
     float sn = sign(d);
-
     d = abs(d);
-    d = d * dot(p, p) / 4.2;
-    if (d > 1.) {
-        d = pow(d, .5);
-        d = (d - 1.) * 1.8 + 1.;
-    }
+    d = d / k * 1.82;
+    d += 1.;
+    d = pow(d, .5);
+    d -= 1.;
+    d *= 5./3.;
     d *= sn;
-
-    if (abs(d) < threshold) {
-        d = od / PI;
-    }
-
     return d;
 }
 
@@ -165,11 +148,12 @@ float map(vec3 p) {
     #ifdef DEBUG
         if (p.x < 0.) {
             hitDebugTorus = true;
-            return abs(fTorus(p.xzy, 1.002, 1.4163));
+            return fTorus(p.xzy, 1., 1.4145);
         }
     #endif
 
-    vec4 p4 = inverseStereographic(p);
+    float k;
+    vec4 p4 = inverseStereographic(p,k);
 
     // The inside-out rotation puts the torus at a different
     // orientation, so rotate to point it at back in the same
@@ -184,14 +168,12 @@ float map(vec3 p) {
     modelUv = uv;
 
     #ifdef DEBUG
-        d = abs(d);
-        d = fixDistance(p, d, 1.);
+        d = fixDistance(d, k);
         return d;
     #endif
 
     // Recreate domain to be wrapped around the torus surface
     // xy = surface / face, z = depth / distance
-    vec3 pp = p;
     float uvScale = 2.25; // Magic number that makes xy distances the same scale as z distances
     p = vec3(uv * uvScale, d);
 
@@ -206,7 +188,7 @@ float map(vec3 p) {
     d = length(p.xy) - repeat * .4;
     d = smax(d, abs(p.z) - .013, .01);
 
-    d = fixDistance(pp, d, .01);
+    d = fixDistance(d, k);
 
     return d;
 }
@@ -220,6 +202,7 @@ float mapDebug(vec3 p) {
     #endif
     float plane = min(abs(p.z), abs(p.y));
     hitDebugPlane = plane < abs(d);
+    //hitDebugPlane = true;
     return hitDebugPlane ? plane : d;
 }
 
