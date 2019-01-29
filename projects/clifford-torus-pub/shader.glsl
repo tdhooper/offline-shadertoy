@@ -34,6 +34,13 @@ precision mediump float;
     Big thanks to Matthew Arcus (mla) for providing a better torus
     equation and improving the projection distance fix.
 
+    See also:
+
+    * Animation by Jason Hise https://www.youtube.com/watch?v=1_pzjvVixL0
+    * Clifford Torus by mla https://www.shadertoy.com/view/3ss3z4
+    * https://en.wikipedia.org/wiki/Clifford_torus
+    * http://virtualmathmuseum.org/Surface/clifford_torus/clifford_torus.html
+
 */
 
 #define DEBUG
