@@ -2,7 +2,7 @@ const Stats = require('stats.js');
 const glslify = require('glslify');
 const regl = require('regl')({
   extensions: ['ext_frag_depth'],
-  pixelRatio: .25,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -164,11 +164,11 @@ module.exports = (project) => {
 
   // Default config used by the UI
   const captureConfig = {
-    fps: 100,
-    seconds: 2, // (duration)
-    width: 800 * 2,
-    height: 800 * 2,
-    prefix: 'cliff-',
+    fps: 1,
+    seconds: 1, // (duration)
+    width: 800 * 8,
+    height: 800 * 8,
+    prefix: 'greyt-',
   };
 
   const webCapture = new WebCaptureClient(

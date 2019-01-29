@@ -221,7 +221,10 @@ float smax(float a, float b) {
     return smax(a, b, .0);
 }
 
-
+float rand(float n){return fract(sin(n) * 1e4);}
+float hash21(vec2 p) {
+    return fract(1e4 * sin(17.0 * p.x + p.y * 0.1) * (0.1 + abs(sin(p.y * 13.0 + p.x))));
+}
 
 // --------------------------------------------------------
 // Bezier
@@ -1488,6 +1491,25 @@ float backgroundMap(vec2 uv) {
     return d;
 }
 
+float blugausnoise(vec2 c1) {
+    //vec2 c0 = vec2(c1.x- 1.,c1.y);
+    //vec2 c2 = vec2(c1.x+ 1.,c1.y);
+    vec3 cx = c1.x+ vec3(-1,0,1);
+    vec4 f0 = fract(vec4(cx* .1031,c1.y* .1030));
+    vec4 f1 = fract(vec4(cx* .0973,c1.y* .0970));
+    vec4 t0 = vec4(f0.xw,f1.xw);//fract(c0.xyxy* vec4(.1031,.1030,.0973,.0970));
+    vec4 t1 = vec4(f0.yw,f1.yw);//fract(c1.xyxy* vec4(.1031,.1030,.0973,.0970));
+    vec4 t2 = vec4(f0.zw,f1.zw);//fract(c2.xyxy* vec4(.1031,.1030,.0973,.0970));
+    vec4 p0 = t0+ dot(t0,t0.wzxy+ 19.19);
+    vec4 p1 = t1+ dot(t1,t1.wzxy+ 19.19);
+    vec4 p2 = t2+ dot(t2,t2.wzxy+ 19.19);
+    vec4 n0 = fract(p0.zywx* (p0.xxyz+ p0.yzzw));
+    vec4 n1 = fract(p1.zywx* (p1.xxyz+ p1.yzzw));
+    vec4 n2 = fract(p2.zywx* (p2.xxyz+ p2.yzzw));
+    return .66666667* (n1.x+ n1.y+ n1.z+ n1.w- 1.0)
+        - 0.16666667* (n0.x+ n0.y+ n0.z+ n0.w+ n2.x+ n2.y+ n2.z+ n2.w);
+}
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = iTime;
@@ -1534,7 +1556,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     Hit hit = raymarch(camPos, rayDirection);
     vec3 color = render(hit, bg);
-    // vec3 color = bg;
+    //vec3 color = bg;
 
     vec2 uv = fragCoord/iResolution.xy;
     float vig = pow(
@@ -1548,6 +1570,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     color = mix(color, pow(color, vec3(1.,.9,.8)), .5);
 
     color = pow(color, vec3(1. / 2.5)); // Gamma
+
+    //if (hit.isBackground) {
+        color *= mix(1., blugausnoise(uv * 1000.) * 2.,  .01);
+    //}
 
     fragColor = vec4(color,1);
 }

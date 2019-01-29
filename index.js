@@ -22,6 +22,6 @@ const main = require('./main.js');
 // peel
 // rays-and-polygons
 
-const project = LOADPROJECT('clifford-torus-pub');
+const project = LOADPROJECT('trefoil-grey');
 
 main(project);
