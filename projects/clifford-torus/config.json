@@ -1,5 +1,5 @@
 {
-  "id": "clifford-torus-mla-8",
+  "id": "clifford-torus-mla-9",
   "camera": {
     "rotation": [
       0.8296586275100708,
@@ -15,41 +15,9 @@
   },
   "controls": {
     "closed": true,
-    "method": {
-      "type": "range",
-      "min": 0,
-      "max": 3,
-      "value": 1,
-      "step": 1,
-      "controller": 18
-    },
     "debug": {
       "type": "toggle",
       "value": false
-    },
-    "s": {
-      "type": "range",
-      "min": 0.5,
-      "max": 15,
-      "value": 2,
-      "step": 0.01,
-      "controller": 11
-    },
-    "e": {
-      "type": "range",
-      "min": 0.3,
-      "max": 0.6,
-      "value": 0.5015000000000001,
-      "step": 0.0001,
-      "controller": 12
-    },
-    "f": {
-      "type": "range",
-      "min": 0.0,
-      "max": 3.5,
-      "value": 1.73,
-      "step": 0.001,
-      "controller": 13
     },
     "color": {
       "scale": {
