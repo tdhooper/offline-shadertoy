@@ -22,28 +22,6 @@ precision mediump float;
 
 
 /* SHADERTOY FROM HERE */
-/*
-
-    Clifford Torus Rotation
-    -----------------------
-
-    Getting a good distance for this 4D stereographic projection was
-    tricky, see the notes in 'Main SDF', or just toggle DEBUG below to
-    see what's going on.
-
-    Big thanks to Matthew Arcus (mla) for providing a better torus
-    equation and improving the projection distance fix.
-
-    See also:
-
-    * Animation by Jason Hise https://www.youtube.com/watch?v=1_pzjvVixL0
-    * Clifford Torus by mla https://www.shadertoy.com/view/3ss3z4
-    * https://en.wikipedia.org/wiki/Clifford_torus
-    * http://virtualmathmuseum.org/Surface/clifford_torus/clifford_torus.html
-
-*/
-
-//#define DEBUG
 
 // --------------------------------------------------------
 // HG_SDF
@@ -56,19 +34,9 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
-vec2 pMod2(inout vec2 p, vec2 size) {
-    vec2 c = floor((p + size*0.5)/size);
-    p = mod(p + size*0.5,size) - size*0.5;
-    return c;
-}
-
 float smax(float a, float b, float r) {
     vec2 u = max(vec2(r + a,r + b), vec2(0));
     return min(-r, max (a, b)) + length(u);
-}
-
-float fTorus(vec3 p, float smallRadius, float largeRadius) {
-    return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
 }
 
 
@@ -90,49 +58,19 @@ vec3 spectrum(float n) {
 // Main SDF
 // --------------------------------------------------------
 
-// Inverse stereographic projection of p,
-// p4 lies onto the unit 3-sphere centered at 0.
-// - mla https://www.shadertoy.com/view/lsGyzm
 vec4 inverseStereographic(vec3 p, out float k) {
     k = 2.0/(1.0+dot(p,p));
     return vec4(k*p,k-1.0);
 }
 
-float fTorus(vec4 p4, out vec2 uv) {
-
-    // Torus distance
-    // We want the inside and outside to look the same, so use the
-    // inverted outside for the inside.
+float fTorus(vec4 p4) {
     float d1 = length(p4.xy) / length(p4.zw) - 1.;
     float d2 = length(p4.zw) / length(p4.xy) - 1.;
     float d = d1 < 0. ? -d1 : d2;
-
-    // Because of the projection, distances aren't lipschitz continuous,
-    // so scale down the distance at the most warped point - the inside
-    // edge of the torus such that it is 1:1 with the domain.
     d /= PI;
-
-    // UV coordinates over the surface, from 0 - 1
-    uv = (vec2(
-        atan(p4.y, p4.x),
-        atan(p4.z, p4.w)
-    ) / PI) * .5 + .5;
-
     return d;
 }
 
-// Distances get warped by the stereographic projection, this applies
-// some hacky adjustments which makes them lipschitz continuous.
-
-// The numbers have been hand picked by comparing our 4D torus SDF to
-// a usual 3D torus of the same size, see DEBUG.
-
-// vec3 d
-//   SDF to fix, this should be applied after the last step of
-//   modelling on the torus.
-
-// vec3 k
-//   stereographic scale factor
 
 float fixDistance(float d, float k) {
     float sn = sign(d);
@@ -147,92 +85,27 @@ float fixDistance(float d, float k) {
 }
 
 float time;
-vec2 modelUv;
-bool hitDebugTorus = false;
 
 float map(vec3 p) {
-
-    #ifdef DEBUG
-        if (p.x < 0.) {
-            hitDebugTorus = true;
-            return fTorus(p.xzy, 1., 1.4145);
-        }
-    #endif
-
     float k;
     vec4 p4 = inverseStereographic(p,k);
 
-    // The inside-out rotation puts the torus at a different
-    // orientation, so rotate to point it at back in the same
-    // direction
     pR(p4.zy, time * -PI / 2.);
-
-    // Rotate in 4D, turning the torus inside-out
     pR(p4.xw, time * -PI / 2.);
 
-    vec2 uv;
-    float d = fTorus(p4, uv);
-    modelUv = uv;
-
-    #ifdef DEBUG
-        d = fixDistance(d, k);
-        return d;
-    #endif
-
-
-    // Recreate domain to be wrapped around the torus surface
-    // xy = surface / face, z = depth / distance
-    vec3 pp = p;
-    float uvScale = 2.25; // Magic number that makes xy distances the same scale as z distances
-    p = vec3(uv * uvScale, d);
-
+    float d = fTorus(p4);
 
     d = abs(d);
-    // return d;
-
-    float d3 = fixDistance(d-.3, k);
-
-    d = fixDistance(d-.2, k);
-
-    d = smax(d, length(pp) - 1.85, .2);
-    // d = max(d, length(pp) - 2.);
-    // d = smin(-d, d3, .2);
-    float d2= -d;
-
-    // d = min(d, -d3);
-
+    d -= .2;
+    d = fixDistance(d, k);
+    d = smax(d, length(p) - 1.85, .2);
 
     return d;
-
 }
-
-bool hitDebugPlane = false;
-
-float mapDebug(vec3 p) {
-    float d = map(p);
-    #ifndef DEBUG
-        return d;
-    #endif
-    float plane = min(abs(p.z), abs(p.y));
-    hitDebugPlane = plane < abs(d);
-    //hitDebugPlane = true;
-    return hitDebugPlane ? plane : d;
-}
-
 
 // --------------------------------------------------------
 // Rendering
 // --------------------------------------------------------
-
-vec3 calcNormal(vec3 p) {
-  vec3 eps = vec3(.0001,0,0);
-  vec3 n = vec3(
-    map(p + eps.xyy) - map(p - eps.xyy),
-    map(p + eps.yxy) - map(p - eps.yxy),
-    map(p + eps.yyx) - map(p - eps.yyx)
-  );
-  return normalize(n);
-}
 
 const float ITER = 150.;
 const float INTERSECTION_PRECISION = .001;
@@ -261,8 +134,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.y;
 
     vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
-    vec3 rayOrigin = camPos;
-    vec3 rayPosition = rayOrigin;
+    vec3 rayPosition = camPos;
     float rayLength = 0.;
 
     float distance = 0.;
@@ -273,8 +145,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     for (float i = 0.; i < ITER; i++) {
         rayLength += max(INTERSECTION_PRECISION, h * FUDGE_FACTORR);
-        rayPosition = rayOrigin + rayDirection * rayLength;
-        distance = mapDebug(rayPosition);
+        rayPosition = camPos + rayDirection * rayLength;
+        distance = map(rayPosition);
 
         h = abs(distance * 2.);
         
@@ -286,33 +158,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         c *= spectrum(ee * 6. - .6);
         color += c * ee;
 
-
-        // if (distance < .001) {
-        //     vec3 normal = calcNormal(rayPosition);
-        //     color = normal * .5 + .5;
-        //     color = vec3(dot(normalize(vec3(1,.5,0)), normal) * .5 + .5);
-        //     #ifdef DEBUG
-        //         if (hitDebugPlane) {
-        //             // Display distance
-        //             float d = map(rayPosition);
-        //             color = vec3(mod(abs(d) * 10., 1.));
-        //             color *= spectrum(abs(d));
-        //             color = mix(color, vec3(1), step(0., -d) * .25);
-        //         } else if ( ! hit3DTorus) {
-        //             // Color UVs
-        //             float repeat = 1. / 20.;
-        //             pMod2(modelUv, vec2(repeat));
-        //             color -= color * vec3(0,1,0) * smoothstep(0., .001, abs(modelUv.x) - repeat * .4);
-        //             color -= color * vec3(1,0,0) * smoothstep(0., .001, abs(modelUv.y) - repeat * .4);
-        //         }
-        //     #endif
-        //     break;
-        // }
         if (rayLength > MAX_DIST) {
             break;
         }
     }
-
 
     color = pow(color, vec3(1./1.8)) * 2.;
     color = pow(color, vec3(2.));
