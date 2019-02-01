@@ -56,6 +56,7 @@ vec3 spectrum(float n) {
 
 // --------------------------------------------------------
 // Main SDF
+// https://www.shadertoy.com/view/wsfGDS
 // --------------------------------------------------------
 
 vec4 inverseStereographic(vec3 p, out float k) {
@@ -70,7 +71,6 @@ float fTorus(vec4 p4) {
     d /= PI;
     return d;
 }
-
 
 float fixDistance(float d, float k) {
     float sn = sign(d);
@@ -93,8 +93,9 @@ float map(vec3 p) {
     pR(p4.zy, time * -PI / 2.);
     pR(p4.xw, time * -PI / 2.);
 
-    float d = fTorus(p4);
+    // A thick walled clifford torus intersected with a sphere
 
+    float d = fTorus(p4);
     d = abs(d);
     d -= .2;
     d = fixDistance(d, k);
@@ -103,14 +104,10 @@ float map(vec3 p) {
     return d;
 }
 
+
 // --------------------------------------------------------
 // Rendering
 // --------------------------------------------------------
-
-const float ITER = 150.;
-const float INTERSECTION_PRECISION = .001;
-const float MAX_DIST = 20.;
-const float FUDGE_FACTORR = .2;
 
 mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
     vec3 ww = normalize(ta - ro);
@@ -122,9 +119,6 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = mod(iTime / 2., 1.);
-    #ifdef DEBUG
-        time = iTime / 6.;
-    #endif
 
     vec3 camPos = vec3(1.8, 5.5, -5.5) * 1.75;
     vec3 camTar = vec3(.0,0,.0);
@@ -140,36 +134,48 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float distance = 0.;
     vec3 color = vec3(0);
 
-    float h, t;
     vec3 c;
 
+    // Keep iteration count too low to pass through entire model,
+    // giving the effect of fogged glass
+    const float ITER = 82.;
+    const float FUDGE_FACTORR = .8;
+    const float INTERSECTION_PRECISION = .001;
+    const float MAX_DIST = 20.;
+
     for (float i = 0.; i < ITER; i++) {
-        rayLength += max(INTERSECTION_PRECISION, h * FUDGE_FACTORR);
+
+        // Step a little slower so we can accumilate glow
+        rayLength += max(INTERSECTION_PRECISION, abs(distance) * FUDGE_FACTORR);
         rayPosition = camPos + rayDirection * rayLength;
         distance = map(rayPosition);
 
-        h = abs(distance * 2.);
-        
-        c = vec3(1.4,2.1,1.7) * pow(max(0., (.02 - h)) * 19.5, 10.) * 150.;
-        c += vec3(.6,.25,.7) * .0125 * FUDGE_FACTORR;
-        c *= smoothstep(10., 5., length(rayPosition));
-        
-        float ee = smoothstep(MAX_DIST, .1, rayLength);
-        c *= spectrum(ee * 6. - .6);
-        color += c * ee;
+        // Add a lot of light when we're really close to the surface
+        c = vec3(max(0., .01 - abs(distance)) * .5);
+        c *= vec3(1.4,2.1,1.7); // blue green tint
+
+        // Accumilate some purple glow for every step
+        c += vec3(.6,.25,.7) * FUDGE_FACTORR / 160.;
+        c *= smoothstep(20., 7., length(rayPosition));
+
+        // Fade out further away from the camera
+        float rl = smoothstep(MAX_DIST, .1, rayLength);
+        c *= rl;
+
+        // Vary colour as we move through space
+        c *= spectrum(rl * 6. - .6);
+
+        color += c;
 
         if (rayLength > MAX_DIST) {
             break;
         }
     }
 
-    color = pow(color, vec3(1./1.8)) * 2.;
-    color = pow(color, vec3(2.));
-    
-    color *= 3.;
-
-    // color = 1. -color;
-    color = pow(color, vec3(1. / 2.2)); // Gamma
+    // Tonemapping and gamma
+    color = pow(color, vec3(1. / 1.8)) * 2.;
+    color = pow(color, vec3(2.)) * 3.;
+    color = pow(color, vec3(1. / 2.2));
 
     fragColor = vec4(color, 1);
 }
