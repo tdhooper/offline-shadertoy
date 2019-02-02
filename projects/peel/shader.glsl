@@ -54,9 +54,18 @@ float vmax(vec2 v) {
     return max(v.x, v.y);
 }
 
+float vmax(vec3 v) {
+    return max(max(v.x, v.y), v.z);
+}
+
 float fBox2(vec2 p, vec2 b) {
     vec2 d = abs(p) - b;
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
+}
+
+float fBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
 float smin(float a, float b, float r) {
@@ -133,28 +142,42 @@ float map(vec3 p) {
 
     modelAlbedo = vec3(.8);
 
-    float h = helix(p, 30., .05);
-
-    p.z /= 1.2;
     float d = length(p) - .5;
 
-    p.x -= .55;
-    d = smin(d, length(p) - .1, .1);
+    d = min(d, fBox(p, vec3(.4)));
 
-    p = pp;
-    p.z -= .7;
-    p.z /= 2.;
-    d = smin(d, length(p) - .25, .1);
+    d = min(d, max(length(p) - .7, abs(p.x) - .001));
+    d = min(d, max(length(p) - .7, abs(p.y) - .001));
+    d = min(d, max(length(p) - .7, abs(p.z) - .001));
 
-    p = pp;
-    p.z -= 2.2;
-    d = smin(d, length(p) - 1.5, .1);
+    p.y -= .5;
 
-    d = abs(d + .01) - .01;
-    
-    d = max(d, h);
+    d = min(d, length(p) - .2);
 
     return d;
+
+    // float h = helix(p, 30., .05);
+
+    // p.z /= 1.2;
+    // float d = length(p) - .5;
+
+    // p.x -= .55;
+    // d = smin(d, length(p) - .1, .1);
+
+    // p = pp;
+    // p.z -= .7;
+    // p.z /= 2.;
+    // d = smin(d, length(p) - .25, .1);
+
+    // p = pp;
+    // p.z -= 2.2;
+    // d = smin(d, length(p) - 1.5, .1);
+
+    // d = abs(d + .01) - .01;
+    
+    // d = max(d, h);
+
+    // return d;
 }
 
 

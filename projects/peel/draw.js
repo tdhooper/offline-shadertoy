@@ -3,10 +3,14 @@ const { mat4 } = require('gl-matrix');
 const parseOBJ = require('parse-wavefront-obj');
 
 
-const meshData = fs.readFileSync('projects/peel/model3.obj');
+const meshData = fs.readFileSync('projects/peel/model4.obj');
 const mesh = parseOBJ(meshData);
 
 const model = mat4.create();
+mat4.rotateX(model, model, -.3);
+mat4.rotateY(model, model, .56);
+mat4.rotateZ(model, model, .01);
+mat4.translate(model, model, [.225,-.5,.15]);
 mat4.scale(model, model, [50, 50, 50]);
 
 const drawPolygons = global.regl({
