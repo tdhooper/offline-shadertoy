@@ -25,6 +25,7 @@
     "key-pressed": "0.0.1",
     "mouse-change": "^1.4.0",
     "pad-number": "0.0.4",
+    "parse-wavefront-obj": "^1.0.3",
     "primitive-cube": "^2.0.1",
     "regl": "^1.3.9",
     "stats.js": "^0.17.0",
