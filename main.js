@@ -2,7 +2,7 @@ const Stats = require('stats.js');
 const glslify = require('glslify');
 const regl = require('regl')({
   extensions: ['ext_frag_depth'],
-  //pixelRatio: .25,
+  // pixelRatio: .25,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -34,7 +34,7 @@ module.exports = (project) => {
     uniforms: {
       projection: ({ viewportWidth, viewportHeight }) => mat4.perspective(
         [],
-        Math.PI / 4,
+        Math.PI / 5,
         viewportWidth / viewportHeight,
         0.01,
         1000

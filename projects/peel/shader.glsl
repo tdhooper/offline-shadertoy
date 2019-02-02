@@ -1,24 +1,18 @@
-precision highp float;
+#extension GL_EXT_frag_depth : enable
+
+precision mediump float;
 
 uniform vec2 iResolution;
 uniform vec2 iOffset;
 uniform float iTime;
 
-uniform mat4 cameraMatrix;
-uniform vec3 cameraPosition;
-
-void mainImage(out vec4 a, in vec2 b);
-
-void main() {
-    mainImage(gl_FragColor, gl_FragCoord.xy + iOffset.xy);
-}
-
-#ifdef GL_ES
-precision mediump float;
-#endif
-
+uniform mat4 projection;
+varying vec3 eye;
+varying vec3 dir;
+varying vec3 cameraForward;
 
 /* SHADERTOY FROM HERE */
+
 
 const float EDGE_THICKNESS = .2;
 const float WIDTH = 1.;
@@ -132,8 +126,12 @@ float helix(vec3 p, float lead, float thick) {
     return d;
 }
 
-Model map(vec3 p) {
+vec3 modelAlbedo;
+
+float map(vec3 p) {
     vec3 pp = p;
+
+    modelAlbedo = vec3(.8);
 
     float h = helix(p, 30., .05);
 
@@ -156,7 +154,7 @@ Model map(vec3 p) {
     
     d = max(d, h);
 
-    return Model(d, vec3(.8));
+    return d;
 }
 
 
@@ -182,7 +180,7 @@ float calcAO( in vec3 pos, in vec3 nor )
     {
         float hr = 0.01 + 0.12*float(i)/4.0;
         vec3 aopos =  nor * hr + pos;
-        float dd = map( aopos ).dist;
+        float dd = map( aopos );
         occ += -(dd-hr)*sca;
         sca *= 0.95;
     }
@@ -222,7 +220,7 @@ vec3 calcNormal(vec3 pos){
     vec3 nor = vec3(0);
     float invert = 1.;
     for (int i = 0; i < NORMAL_STEPS; i++){
-        nor += map(pos + eps * invert).dist * eps * invert;
+        nor += map(pos + eps * invert) * eps * invert;
         eps = eps.zxy;
         invert *= -1.;
     }
@@ -233,14 +231,12 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
 
     float currentDist = INTERSECTION_PRECISION * 2.0;
     float rayLength = 0.;
-    Model model;
 
     for(int i = 0; i < NUM_OF_TRACE_STEPS; i++){
         if (currentDist < INTERSECTION_PRECISION || rayLength > MAX_TRACE_DISTANCE) {
             break;
         }
-        model = map(rayOrigin + rayDirection * rayLength);
-        currentDist = model.dist;
+        currentDist = map(rayOrigin + rayDirection * rayLength);
         rayLength += currentDist * (1. - .5);
     }
 
@@ -254,6 +250,8 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         pos = rayOrigin + rayDirection * rayLength;
         normal = calcNormal(pos);
     }
+
+    Model model = Model(currentDist, modelAlbedo);
 
     return Hit(
         model,
@@ -273,29 +271,31 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
     return mat3(uu, vv, ww);
 }
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+void main() {
 
     float time = iTime;
     // time *= .333;
     time = mod(time, 1.);
 
-    vec2 p = (-iResolution.xy + 2.0*fragCoord.xy)/iResolution.y;
 
-
-    vec3 camPos = cameraPosition;
-    mat4 camMat = cameraMatrix;
-    float focalLength = 3.;
-    vec3 rd = normalize(
-        (vec4(p, -focalLength, 1) * camMat).xyz
-    );
-    vec3 rayDirection = rd;
+    vec3 rayOrigin = eye;
+    vec3 rayDirection = normalize(dir);
+    vec3 rayPosition = rayOrigin;
 
     vec3 bg = vec3(.7,.8,.9) * 1.1;
 
-    Hit hit = raymarch(camPos, rayDirection);
+    Hit hit = raymarch(rayOrigin, rayDirection);
     vec3 color = render(hit, bg);
 
     color = pow(color, vec3(1. / 2.2)); // Gamma
 
-    fragColor = vec4(color,1);
+    float eyeHitZ = -hit.rayLength * dot(rayDirection, cameraForward);
+
+    vec3 eyeSpace = vec3(0, 0, eyeHitZ);
+    float zc = ( projection * vec4(eyeSpace, 1)).z;
+    float wc = ( projection * vec4(eyeSpace, 1)).w;
+    float depth = (zc/wc + 1.) / 2.;
+
+    gl_FragColor = vec4(color, 1);
+    gl_FragDepthEXT = depth;
 }
