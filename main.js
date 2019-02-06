@@ -1,8 +1,12 @@
 const Stats = require('stats.js');
 const glslify = require('glslify');
 const regl = require('regl')({
-  extensions: ['ext_frag_depth'],
-  // pixelRatio: .25,
+  extensions: [
+    'webgl_depth_texture',
+    'ext_frag_depth',
+    'oes_standard_derivatives',
+  ],
+  pixelRatio: .5,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -43,6 +47,16 @@ module.exports = (project) => {
     },
   });
 
+
+  const buffer = regl.framebuffer({
+    color: regl.texture({
+      width: 1024,
+      height: 1024,
+    }),
+    depthTexture: true,
+  });
+
+
   const uniforms = {
     model: mat4.identity([]),
     iResolution: (context, props) => {
@@ -61,6 +75,8 @@ module.exports = (project) => {
       // console.log(mouse[1] / context.viewportHeight)
       return mouseProp;
     },
+    uDepth: buffer.depthStencil,
+    uSource: buffer,
   };
 
   const controls = defaultState && defaultState.controls
@@ -130,11 +146,24 @@ module.exports = (project) => {
         color: [0, 0, 0, 1],
         depth: 1,
       });
-      setup(stateStore.state, () => {
-        drawRaymarch(stateStore.state);
-        if (project.draw) {
-          project.draw(stateStore.state);
+      regl.clear({
+        color: [0, 0, 0, 1],
+        depth: 1,
+        framebuffer: buffer,
+      });
+      setup(stateStore.state, (context) => {
+        if (
+          buffer.width !== context.viewportWidth
+          || buffer.height !== context.viewportHeight
+        ) {
+          buffer.resize(context.viewportWidth, context.viewportHeight);
         }
+        if (project.draw) {
+          buffer.use(function() {
+            project.draw(stateStore.state);
+          });
+        }
+        drawRaymarch(stateStore.state);
       });
     }
     stats.end();

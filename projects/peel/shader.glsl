@@ -6,6 +6,10 @@ uniform vec2 iResolution;
 uniform vec2 iOffset;
 uniform float iTime;
 
+uniform sampler2D uSource;
+uniform sampler2D uDepth;
+
+
 uniform mat4 projection;
 varying vec3 eye;
 varying vec3 dir;
@@ -138,21 +142,75 @@ float helix(vec3 p, float lead, float thick) {
 vec3 modelAlbedo;
 
 float map(vec3 p) {
+    p.x = abs(p.x);
+
     vec3 pp = p;
 
     modelAlbedo = vec3(.8);
 
-    float d = length(p) - .5;
+    float d = 1e12;
 
-    d = min(d, fBox(p, vec3(.4)));
+    p.y -= .2;
+    p.z -= .03;
+    pR(p.yz, .2);
+    p.z *= .77;
+    d = length(p) - .4;
 
-    d = min(d, max(length(p) - .7, abs(p.x) - .001));
-    d = min(d, max(length(p) - .7, abs(p.y) - .001));
-    d = min(d, max(length(p) - .7, abs(p.z) - .001));
+    p = pp;
 
-    p.y -= .5;
+    p.y += .12;
+    p.z -= .18;
+    p.x -= .145;
+    pR(p.xy, -.15);
+    pR(p.yz, -.2);
+    p.y *= .6;
+    p.z *= .8;
+    d = smin(d, length(p) - .2, .05);
 
-    d = min(d, length(p) - .2);
+    p = pp;
+
+    p.x -= .1;
+    p.y += .35;
+    p.z -= .1;
+    pR(p.xy, -.5);
+    pR(p.xz, .15);
+    pR(p.yz, 1.);
+    p.y *= .6;
+    p.z *= .5;
+    float jawline = length(p) - .2;
+
+    p = pp;
+
+    p.x -= .1;
+    p.y += .34;
+    p.z -= .25;
+    pR(p.xy, -.9);
+    pR(p.yz, -.7);
+    p.y *= .4;
+    // d = min(d, length(p) - .2);
+
+    jawline = smax(jawline, length(p) - .2, .05);
+    d = smin(d, jawline, .05);
+
+    // d = min(d, length(p) - .2);
+
+    // p.y += .07;
+    // p.z -= .53;
+    // p.x -= .16;
+    // pR(p.xy, -.2);
+    // pR(p.xz, -.5);
+    // p.x *= .5;
+    // d = smax(d, -(length(p) - .1), .05);
+
+    // d = min(d, fBox(p, vec3(.4)));
+
+    // d = min(d, max(length(p) - .7, abs(p.x) - .001));
+    // d = min(d, max(length(p) - .7, abs(p.y) - .001));
+    // d = min(d, max(length(p) - .7, abs(p.z) - .001));
+
+    // p.y -= .5;
+
+    // d = min(d, length(p) - .2);
 
     return d;
 
@@ -223,6 +281,7 @@ vec3 render(Hit hit, vec3 col) {
         float diff = light * ao;
         vec3 diffuse = mix(vec3(.5,.5,.6) * .7, vec3(1), diff);
         col = hit.model.material * diffuse;
+        col = hit.normal * .5 + .5;
     }
     return col;
 }
@@ -294,6 +353,11 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
     return mat3(uu, vv, ww);
 }
 
+float getDepth(float depth) {
+    depth = projection[3].z / (depth * -2. + 1. - projection[2].z);
+    return depth;
+}
+
 void main() {
 
     float time = iTime;
@@ -310,7 +374,8 @@ void main() {
     Hit hit = raymarch(rayOrigin, rayDirection);
     vec3 color = render(hit, bg);
 
-    color = pow(color, vec3(1. / 2.2)); // Gamma
+    // color = vec3(0,0,1);
+    // color = pow(color, vec3(1. / 2.2)); // Gamma
 
     float eyeHitZ = -hit.rayLength * dot(rayDirection, cameraForward);
 
@@ -318,6 +383,26 @@ void main() {
     float zc = ( projection * vec4(eyeSpace, 1)).z;
     float wc = ( projection * vec4(eyeSpace, 1)).w;
     float depth = (zc/wc + 1.) / 2.;
+
+
+    float polyD = getDepth(texture2D(uDepth, gl_FragCoord.xy / iResolution.xy).r);
+    float rayD = getDepth(depth);
+
+    float alpha = smoothstep(.03, -.03, polyD - rayD);
+    alpha = alpha * .5 + .5;
+
+    vec3 polyColor = texture2D(uSource, gl_FragCoord.xy / iResolution.xy).rgb;
+    color = mix(polyColor, color, alpha);
+
+    if (abs(polyD - rayD) < .001) {
+        // color = vec3(1);
+    }
+
+    if (polyD < rayD) {
+        // color *= 1.1;
+    } else {
+        color *= .9;
+    }
 
     gl_FragColor = vec4(color, 1);
     gl_FragDepthEXT = depth;
