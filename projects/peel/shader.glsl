@@ -153,26 +153,42 @@ float map(vec3 p) {
 
     float d = 1e12;
 
-    float r = .5;
+    float r = .515;
 
-    d = length(p) - r;
-    
+    p.yz *= .9;
 
-    pR(p.xz, .175);
+    d = length(p) - r * .9;
+
+    p = pp;
+
+    pR(p.xz, .35);
     float o = sqrt(r * r - (2./9.) * r);
-    d = max(d, p.x - o);
+    float sideR = r * 6.;
+    p -= vec3(o - sideR + .07, 0, r * 1.1);
+    float side = length(p) - sideR;
+    d = smax(d, side, .1);
 
     p = pp;
-    d = min(d, abs(p.y) - .002);
-
-    p.y += 2./3. * r;
-    d = min(d, abs(p.y) - .002);
-
-    p.y += 2./3. * r;
-    d = min(d, abs(p.y) - .002);
+    p -= vec3(o - sideR + .2, r * 1.3, r * 1.1);
+    side = length(p) - sideR;
+    d = smax(d, side, .15);
 
     p = pp;
-    d = max(d, length(p.xz) - r * 1.5);
+    p -= vec3(o + .1, .01, .26);
+    float temple = length(p) - .01;
+    d = smax(d, -temple, .25);
+
+    // p = pp;
+    // d = min(d, abs(p.y) - .002);
+
+    // p.y += 2./3. * r;
+    // d = min(d, abs(p.y) - .002);
+
+    // p.y += 2./3. * r;
+    // d = min(d, abs(p.y) - .002);
+
+    // p = pp;
+    // d = max(d, length(p.xz) - r * 1.5);
 
     return d;
 
@@ -373,7 +389,8 @@ void main() {
     float rayD = getDepth(depth);
 
     float alpha = smoothstep(.03, -.03, polyD - rayD);
-    alpha = alpha * .5 + .5;
+    alpha = mix(alpha, 1., .2);
+    // alpha = 1.;
 
     vec3 polyColor = texture2D(uSource, gl_FragCoord.xy / iResolution.xy).rgb;
     color = mix(polyColor, color, alpha);
