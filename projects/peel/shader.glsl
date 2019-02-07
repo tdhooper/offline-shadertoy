@@ -144,53 +144,37 @@ vec3 modelAlbedo;
 float map(vec3 p) {
     p.x = abs(p.x);
 
+    p.z -= .01;
+    p.y -= .08;
+
     vec3 pp = p;
 
     modelAlbedo = vec3(.8);
 
     float d = 1e12;
 
-    p.y -= .2;
-    p.z -= .03;
-    pR(p.yz, .2);
-    p.z *= .77;
-    d = length(p) - .4;
+    float r = .5;
+
+    d = length(p) - r;
+    
+
+    pR(p.xz, .175);
+    float o = sqrt(r * r - (2./9.) * r);
+    d = max(d, p.x - o);
 
     p = pp;
+    d = min(d, abs(p.y) - .002);
 
-    p.y += .12;
-    p.z -= .18;
-    p.x -= .145;
-    pR(p.xy, -.15);
-    pR(p.yz, -.2);
-    p.y *= .6;
-    p.z *= .8;
-    d = smin(d, length(p) - .2, .05);
+    p.y += 2./3. * r;
+    d = min(d, abs(p.y) - .002);
+
+    p.y += 2./3. * r;
+    d = min(d, abs(p.y) - .002);
 
     p = pp;
+    d = max(d, length(p.xz) - r * 1.5);
 
-    p.x -= .1;
-    p.y += .35;
-    p.z -= .1;
-    pR(p.xy, -.5);
-    pR(p.xz, .15);
-    pR(p.yz, 1.);
-    p.y *= .6;
-    p.z *= .5;
-    float jawline = length(p) - .2;
-
-    p = pp;
-
-    p.x -= .1;
-    p.y += .34;
-    p.z -= .25;
-    pR(p.xy, -.9);
-    pR(p.yz, -.7);
-    p.y *= .4;
-    // d = min(d, length(p) - .2);
-
-    jawline = smax(jawline, length(p) - .2, .05);
-    d = smin(d, jawline, .05);
+    return d;
 
     // d = min(d, length(p) - .2);
 

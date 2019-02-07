@@ -16,7 +16,7 @@ mesh = solidWireframe(mesh, {
 });
 
 const model = mat4.create();
-mat4.rotateX(model, model, -.3);
+mat4.rotateX(model, model, -.38);
 mat4.rotateY(model, model, .56);
 mat4.rotateZ(model, model, .01);
 mat4.translate(model, model, [.225,-.5,.15]);
