@@ -72,14 +72,23 @@ float fBox(vec3 p, vec3 b) {
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
-float smin(float a, float b, float r) {
-    vec2 u = max(vec2(r - a,r - b), vec2(0));
-    return max(r, min (a, b)) - length(u);
+// float smin(float a, float b, float r) {
+//     vec2 u = max(vec2(r - a,r - b), vec2(0));
+//     return max(r, min (a, b)) - length(u);
+// }
+
+// float smax(float a, float b, float r) {
+//     vec2 u = max(vec2(r + a,r + b), vec2(0));
+//     return min(-r, max (a, b)) + length(u);
+// }
+
+float smin(float a, float b, float k){
+    float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
+    return (1. - f) * a + f  * b - f * (1. - f) * k;
 }
 
-float smax(float a, float b, float r) {
-    vec2 u = max(vec2(r + a,r + b), vec2(0));
-    return min(-r, max (a, b)) + length(u);
+float smax(float a, float b, float k) {
+    return -smin(-a, -b, k);
 }
 
 float smin(float a, float b) {
@@ -153,6 +162,35 @@ float map(vec3 p) {
 
     float d = 1e12;
 
+    p += vec3(0,-.12,.09);
+    d = length(p) - .39;
+
+    p += vec3(0,.07,-.02);
+    p.yz *= .8;
+    d = smin(d, length(p) - .36, .05);
+
+    p = pp;
+    p += vec3(0,-.12,-.18);
+    d = smin(d, length(p) - .32, .15);
+
+    // cheek
+    p = pp;
+    p += vec3(-.2,.2,-.31);
+    d = smin(d, length(p) - .02, .36);
+
+    // jaw
+    p = pp;
+    p += vec3(-.15,.38,-.09);
+    d = smin(d, length(p) - .02, .45);
+
+    // chin
+    p = pp;
+    p += vec3(0,.56,-.35);
+    d = smin(d, length(p) - .04, .5);
+
+
+/*
+
     float r = .515;
 
     p.yz *= .9;
@@ -177,6 +215,7 @@ float map(vec3 p) {
     p -= vec3(o + .1, .01, .26);
     float temple = length(p) - .01;
     d = smax(d, -temple, .25);
+*/
 
     // p = pp;
     // d = min(d, abs(p.y) - .002);
