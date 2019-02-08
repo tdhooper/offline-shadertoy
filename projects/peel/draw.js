@@ -48,7 +48,7 @@ const drawPolygons = global.regl({
       color = vec3(1);
       color *= dot(vec3(1,-1,0), vnormal) * .5 + .5;
       float line = bary_wire_scaled(b, .2);
-      // color *= line;
+      color *= line;
       // color = vec3(0,1,0);
       gl_FragColor = vec4(color, 1);
     }

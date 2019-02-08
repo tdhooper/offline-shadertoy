@@ -173,20 +173,36 @@ float map(vec3 p) {
     p += vec3(0,-.12,-.18);
     d = smin(d, length(p) - .32, .15);
 
+    // cheekbone
+    p = pp;
+    p += vec3(-.2,.23,-.32);
+    d = smin(d, length(p) - .02, .3);
+
     // cheek
     p = pp;
-    p += vec3(-.2,.2,-.31);
-    d = smin(d, length(p) - .02, .36);
+    p += vec3(-.1,.38,-.3);
+    d = smin(d, length(p) - .001, .25);
 
-    // jaw
+    // jaw line
     p = pp;
-    p += vec3(-.15,.38,-.09);
+    p += vec3(-.1,.45,-.22);
+    d = smin(d, length(p) - .001, .15);
+
+    // jaw point
+    p = pp;
+    p += vec3(-.18,.38,-.09);
     d = smin(d, length(p) - .02, .45);
 
     // chin
     p = pp;
-    p += vec3(0,.56,-.35);
-    d = smin(d, length(p) - .04, .5);
+    p += vec3(0,.58,-.37);
+    d = smin(d, length(p) - .001, .45);
+
+    // lips
+    p = pp;
+    p.x *= .7; 
+    p += vec3(0,.39,-.42);
+    d = smin(d, length(p) - .08, .05);
 
 
 /*
