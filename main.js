@@ -49,10 +49,8 @@ module.exports = (project) => {
 
 
   const buffer = regl.framebuffer({
-    color: regl.texture({
-      width: 1024,
-      height: 1024,
-    }),
+    width: 1024,
+    height: 1024,
     depthTexture: true,
   });
 

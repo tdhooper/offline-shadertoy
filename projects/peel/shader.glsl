@@ -15,6 +15,8 @@ varying vec3 eye;
 varying vec3 dir;
 varying vec3 cameraForward;
 
+uniform bool guiBlend;
+
 /* SHADERTOY FROM HERE */
 
 
@@ -62,6 +64,10 @@ float vmax(vec3 v) {
     return max(max(v.x, v.y), v.z);
 }
 
+float vmin(vec3 v) {
+    return min(min(v.x, v.y), v.z);
+}
+
 float fBox2(vec2 p, vec2 b) {
     vec2 d = abs(p) - b;
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
@@ -70,6 +76,19 @@ float fBox2(vec2 p, vec2 b) {
 float fBox(vec3 p, vec3 b) {
     vec3 d = abs(p) - b;
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
+
+// Capsule: A Cylinder with round caps on both sides
+float fCapsule(vec3 p, float r, float c) {
+    return mix(length(p.xz) - r, length(vec3(p.x, abs(p.y) - c, p.z)) - r, step(c, abs(p.y)));
+}
+
+float fHalfCapsule(vec3 p, float r) {
+    return mix(length(p.xz) - r, length(p) - r, step(0., p.y));
+}
+
+float fHalfCapsule(vec2 p, float r) {
+    return mix(length(p.x) - r, length(p) - r, step(0., p.y));
 }
 
 // float smin(float a, float b, float r) {
@@ -148,38 +167,95 @@ float helix(vec3 p, float lead, float thick) {
     return d;
 }
 
+float ellip(vec3 p, vec3 s) {
+    float r = vmin(s);
+    p *= r / s;
+    return length(p) - r;
+}
+
 vec3 modelAlbedo;
 
 float map(vec3 p) {
+    vec3 pp = p;
+
+    p += vec3(0,.25,.1);
+    pR(p.xy, -.05);
+    pR(p.yz, -.05);
+    p.x *= .95;
+    float neck = fHalfCapsule(p, .235);
+    p = pp;
+
     p.x = abs(p.x);
 
     p.z -= .01;
     p.y -= .08;
 
-    vec3 pp = p;
+    pp = p;
 
     modelAlbedo = vec3(.8);
 
     float d = 1e12;
 
     // skull back
-    p += vec3(0,-.12,.09);
-    d = length(p) - .39;
+    p += vec3(0,-.135,.09);
+    d = ellip(p, vec3(.39, .38, .39));
 
     // skull base
-    p += vec3(0,.07,-.02);
-    p.yz *= .8;
-    d = smin(d, length(p) - .36, .05);
+    p += vec3(0,.1,.07);
+    d = smin(d, ellip(p, vec3(.38, .36, .35)), .05);
+
+    p = pp;
+    p += vec3(-.12,.14,.2);
+    // d = smin(d, length(p) - .2, .0);
 
     // forehead
     p = pp;
-    p += vec3(0,-.12,-.21);
-    d = smin(d, length(p) - .3, .18);
+    p += vec3(0,-.145,-.175);
+    d = smin(d, ellip(p, vec3(.315, .3, .33)), .18);
 
-    // face
+    // face base
     p = pp;
-    p += vec3(0,.3,-.15);
-    d = smin(d, length(p) - .2, .3);
+    p += vec3(0,.25,-.15);
+    d = smin(d, length(p) - .28, .1);
+
+    // behind ear
+    p = pp;
+    p += vec3(-.15,.13,.06);
+    d = smin(d, ellip(p, vec3(.15,.15,.15)), .15);
+
+    // ear base
+    p = pp;
+    p += vec3(-.057,.14,-.09);
+    // d = smin(d, length(p) - .3, .12);
+
+    // brow
+    p = pp;
+    p += vec3(0,-.0,-.215);
+    float brow = fHalfCapsule(p * vec3(.65,1,.9), .27);
+    brow = smax(brow, p.x - .4, .26);
+    float sb = length(p + vec3(0,-.02,-.25));
+    pR(p.yz, -.5);
+    brow = smax(brow, -p.y - .145, mix(.05, .3, smoothstep(.3, .6, sb)));
+    d = smin(d, brow, .06);
+
+    // cheekbone
+    p = pp;
+    p += vec3(-.15,.15,-.1);
+    // d = smin(d, length(p) - .25, .0);
+
+
+    // d = square;
+
+    // d = min(d, sb - .59);
+
+    
+    
+
+    // p = pp;
+    // d = min(d, abs(p.x) - .001);
+    // d = max(d, length(p) - .7);
+
+    // d = min(d, square);
 
     // eye socket
     p = pp;
@@ -187,7 +263,7 @@ float map(vec3 p) {
     // pR(p.xy, -.2);
     // pR(p.xz, -.2);
     p.x *= .5;
-    d = smax(d, -length(p.yz) + .001, .2);
+    // d = smax(d, -length(p.yz) + .001, .2);
     // d = smin(d, length(p.yz) - .05, .0);
 
     // brow
@@ -209,18 +285,18 @@ float map(vec3 p) {
     // pR(p.yz, -.1);
     p.x *= .15;
     p.z *= .3;
-    d = smin(d, length(p) - .0001, .12);
+    // d = smin(d, length(p) - .0001, .12);
     // d = smin(d, length(p) - .05, .0);
 
     // chin
     p = pp;
     p += vec3(0,.5,-.25);
-    d = smin(d, length(p) - .06, .3);
+    // d = smin(d, length(p) - .06, .3);
 
     p = pp;
     p += vec3(0,.59,-.38);
     p.x *= .8;
-    d = smin(d, length(p) - .02, .25);
+    // d = smin(d, length(p) - .02, .25);
 
     // jaw line
     p = pp;
@@ -228,23 +304,23 @@ float map(vec3 p) {
     pR(p.yz, .7);
     pR(p.xz, .4);
     p.z *= .5;
-    d = smin(d, length(p) - .005, .2);
+    // d = smin(d, length(p) - .005, .2);
 
     // jaw point
     p = pp;
     p += vec3(-.15,.33,-.1);
-    d = smin(d, length(p) - .06, .28);
+    // d = smin(d, length(p) - .06, .28);
 
     // cheek
     p = pp;
     p += vec3(0,.3,-.21);
-    d = smin(d, length(p) - .2, .2);
+    // d = smin(d, length(p) - .2, .2);
 
     // cheekbone
     p = pp;
     p += vec3(-.18,.21,-.26);
     // p.xz *= .9;
-    d = smin(d, length(p) - .06, .2);
+    // d = smin(d, length(p) - .06, .2);
     // d = smin(d, length(p) - .12, .0);
 
     // lips
@@ -306,6 +382,8 @@ float map(vec3 p) {
 
     // p = pp;
     // d = max(d, length(p.xz) - r * 1.5);
+
+    d = smin(d, neck, .2);
 
     return d;
 
@@ -400,8 +478,9 @@ vec3 render(Hit hit, vec3 col) {
         col = hit.model.material * diffuse;
         col = hit.normal * .5 + .5;
 
-        col = vec3(1);
-        col *= dot(vec3(0,3,1), hit.normal) * .5 + .5;
+        // col = vec3(1) * pow(clamp(dot(vec3(0,1.5,.5), hit.normal) * .5 + .5, 0., 1.), 1./2.2);
+        // col = vec3(1,0,0);
+
     }
     return col;
 }
@@ -508,10 +587,23 @@ void main() {
     float polyD = getDepth(texture2D(uDepth, gl_FragCoord.xy / iResolution.xy).r);
     float rayD = getDepth(depth);
 
-    float alpha = smoothstep(.03, -.03, polyD - rayD);
-    alpha = mix(alpha, 1., .5);
-    alpha = 1.;
+    if (!hit.isBackground) {
+        color = spectrum(smoothstep(.03, -.03, polyD - rayD));
+    }
 
+    float alpha = smoothstep(.06, -.06, polyD - rayD);
+
+    if (polyD > rayD) {
+        alpha = max(0., alpha - .1);
+    }
+
+    // alpha = .5;
+
+    if ( ! guiBlend) {
+        alpha = 1.;
+    }
+
+    // alpha = 0.;
     if (hit.pos.x < 0.) {
         // alpha = 1.;
     }
@@ -523,11 +615,7 @@ void main() {
         // color = vec3(1);
     }
 
-    if (polyD < rayD) {
-        // color *= 1.1;
-    } else {
-        // color *= .9;
-    }
+
 
     gl_FragColor = vec4(color, 1);
     gl_FragDepthEXT = depth;

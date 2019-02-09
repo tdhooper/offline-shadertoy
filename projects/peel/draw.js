@@ -19,7 +19,7 @@ const model = mat4.create();
 mat4.rotateX(model, model, -.38);
 mat4.rotateY(model, model, .56);
 mat4.rotateZ(model, model, .01);
-mat4.translate(model, model, [.225,-.5,.15]);
+mat4.translate(model, model, [.222,-.5,.15]);
 mat4.scale(model, model, [50, 50, 50]);
 
 const drawPolygons = global.regl({
@@ -45,10 +45,10 @@ const drawPolygons = global.regl({
     varying vec2 b;
     void main() {
       vec3 color = vnormal * .5 + .5;
-      color = vec3(1);
-      color *= dot(vec3(0,3,1), vnormal) * .5 + .5;
+      color = vec3(1) * pow(clamp(dot(vec3(0,1.5,.5), vnormal) * .5 + .5, 0., 1.), 1./2.2);
       // float line = bary_wire_scaled(b, .2);
       // color *= line;
+      // color = vec3(1);
       gl_FragColor = vec4(color, 1);
     }
   `,

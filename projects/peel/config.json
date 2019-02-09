@@ -1,3 +1,9 @@
 {
-    "id": "peel9"
+    "id": "peel10",
+    "controls": {
+        "blend": {
+            "type": "toggle",
+            "value": true
+        }
+    }
 }
