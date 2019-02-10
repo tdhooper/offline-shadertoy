@@ -186,11 +186,11 @@ float map(vec3 p) {
     float neck = fHalfCapsule(p, .235);
     p = pp;
 
-    p.x = abs(p.x);
-
     p.z -= .01;
     p.y -= .08;
 
+    vec3 pa = p;
+    p.x = abs(p.x);
     pp = p;
 
     modelAlbedo = vec3(.8);
@@ -227,33 +227,38 @@ float map(vec3 p) {
     // cheek base
     p = pp;
     p += vec3(-.2,.14,-.14);
-    // d = smin(d, ellip(p, vec3(.15,.22,.2) * .8), .15);
+    d = smin(d, ellip(p, vec3(.15,.22,.2) * .8), .15);
 
-    // jaw
-    p = pp;
-    pR(p.yz, .14);
-    float jaw = p.z - .48;
-    pR(p.xz, .5);
-    jaw = smax(jaw, p.x - .35, .08);
-    p = pp;
-    pR(p.yz, .5);
-    jaw = smax(jaw, -p.y - .438, .2);
-    p = pp;
-    pR(p.yz, -.0);
-    jaw = smax(jaw, -p.z - .05, .15);
-    p = pp;
-    jaw = smax(jaw, p.y + .1, .25);
-    p = pp;
-    p += vec3(0,.35,-.2);
-    jaw = smin(jaw, length(p) - .23, .1);
+    // // jaw
+    // p = pp;
+    // pR(p.yz, .14);
+    // float jaw = p.z - .48;
+    // pR(p.xz, .5);
+    // jaw = smax(jaw, p.x - .35, .08);
+    // p = pp;
+    // pR(p.yz, .5);
+    // jaw = smax(jaw, -p.y - .438, .2);
+    // p = pp;
+    // pR(p.yz, -.0);
+    // jaw = smax(jaw, -p.z - .05, .15);
+    // p = pp;
+    // jaw = smax(jaw, p.y + .1, .25);
+    // p = pp;
+    // p += vec3(0,.35,-.2);
+    // jaw = smin(jaw, length(p) - .23, .1);
+    // d = smin(d, jaw, .1);
 
-    d = smin(d, jaw, .1);
+    // jaw base
+    p = pp;
+    p += vec3(0,.49,-.2);
+    pR(p.yz, .6);
+    d = smin(d, ellip(p, vec3(.2,.1,.2)), .1);
 
     // chin
     p = pp;
-    p += vec3(0,.58,-.395);
+    p += vec3(0,.56,-.38);
     p.x *= .8;
-    d = smin(d, length(p) - .043, .1);
+    d = smin(d, length(p) - .04, .15);
 
 
 
@@ -413,7 +418,11 @@ float map(vec3 p) {
     // d = max(d, length(p.xz) - r * 1.5);
 
     if (guiNeck) {
-        d = smin(d, neck, .2);
+        p = pa;
+        p += vec3(.18,.57,-.1);
+        float nb = length(p);
+        d = smin(d, neck, mix(.13, .2, smoothstep(.1, .3, nb)));
+        // d = min(d, nb - .05);
     }
 
     return d;

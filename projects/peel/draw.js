@@ -45,7 +45,7 @@ const drawPolygons = global.regl({
     varying vec2 b;
     void main() {
       vec3 color = vnormal * .5 + .5;
-      color = vec3(1) * pow(clamp(dot(vec3(0,1.5,.5), vnormal) * .5 + .5, 0., 1.), 1./2.2);
+      color = vec3(1) * pow(clamp(dot(vec3(0,.5,1.5), vnormal) * .5 + .5, 0., 1.), 1./2.2);
       // float line = bary_wire_scaled(b, .2);
       // color *= line;
       // color = vec3(1);
