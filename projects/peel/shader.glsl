@@ -16,6 +16,7 @@ varying vec3 dir;
 varying vec3 cameraForward;
 
 uniform bool guiBlend;
+uniform bool guiNeck;
 
 /* SHADERTOY FROM HERE */
 
@@ -204,8 +205,8 @@ float map(vec3 p) {
     p += vec3(0,.1,.07);
     d = smin(d, ellip(p, vec3(.38, .36, .35)), .05);
 
-    p = pp;
-    p += vec3(-.12,.14,.2);
+    // p = pp;
+    // p += vec3(-.12,.14,.2);
     // d = smin(d, length(p) - .2, .0);
 
     // forehead
@@ -223,10 +224,38 @@ float map(vec3 p) {
     p += vec3(-.15,.13,.06);
     d = smin(d, ellip(p, vec3(.15,.15,.15)), .15);
 
-    // ear base
+    // cheek base
     p = pp;
-    p += vec3(-.057,.14,-.09);
-    // d = smin(d, length(p) - .3, .12);
+    p += vec3(-.2,.14,-.14);
+    // d = smin(d, ellip(p, vec3(.15,.22,.2) * .8), .15);
+
+    // jaw
+    p = pp;
+    pR(p.yz, .14);
+    float jaw = p.z - .48;
+    pR(p.xz, .5);
+    jaw = smax(jaw, p.x - .35, .08);
+    p = pp;
+    pR(p.yz, .5);
+    jaw = smax(jaw, -p.y - .438, .2);
+    p = pp;
+    pR(p.yz, -.0);
+    jaw = smax(jaw, -p.z - .05, .15);
+    p = pp;
+    jaw = smax(jaw, p.y + .1, .25);
+    p = pp;
+    p += vec3(0,.35,-.2);
+    jaw = smin(jaw, length(p) - .23, .1);
+
+    d = smin(d, jaw, .1);
+
+    // chin
+    p = pp;
+    p += vec3(0,.58,-.395);
+    p.x *= .8;
+    d = smin(d, length(p) - .043, .1);
+
+
 
     // brow
     p = pp;
@@ -383,7 +412,9 @@ float map(vec3 p) {
     // p = pp;
     // d = max(d, length(p.xz) - r * 1.5);
 
-    d = smin(d, neck, .2);
+    if (guiNeck) {
+        d = smin(d, neck, .2);
+    }
 
     return d;
 
@@ -587,11 +618,13 @@ void main() {
     float polyD = getDepth(texture2D(uDepth, gl_FragCoord.xy / iResolution.xy).r);
     float rayD = getDepth(depth);
 
-    if (!hit.isBackground) {
+    if (guiBlend && ! hit.isBackground) {
         color = spectrum(smoothstep(.03, -.03, polyD - rayD));
     }
 
     float alpha = smoothstep(.06, -.06, polyD - rayD);
+
+    // alpha = .5;
 
     if (polyD > rayD) {
         alpha = max(0., alpha - .1);

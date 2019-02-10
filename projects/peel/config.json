@@ -1,7 +1,11 @@
 {
-    "id": "peel10",
+    "id": "peel11",
     "controls": {
         "blend": {
+            "type": "toggle",
+            "value": true
+        },
+        "neck": {
             "type": "toggle",
             "value": true
         }
