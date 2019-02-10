@@ -53,6 +53,8 @@ vec3 spectrum(float n) {
 
 #define PI 3.14159265359
 
+#define saturate(x) clamp(x, 0., 1.)
+
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
@@ -91,6 +93,19 @@ float fHalfCapsule(vec3 p, float r) {
 float fHalfCapsule(vec2 p, float r) {
     return mix(length(p.x) - r, length(p) - r, step(0., p.y));
 }
+
+// Distance to line segment between <a> and <b>, used for fCapsule() version 2below
+float fLineSegment(vec3 p, vec3 a, vec3 b) {
+    vec3 ab = b - a;
+    float t = saturate(dot(p - a, ab) / dot(ab, ab));
+    return length((ab*t + a) - p);
+}
+
+// Capsule version 2: between two end points <a> and <b> with radius r 
+float fCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    return fLineSegment(p, a, b) - r;
+}
+
 
 // float smin(float a, float b, float r) {
 //     vec2 u = max(vec2(r - a,r - b), vec2(0));
@@ -260,8 +275,6 @@ float map(vec3 p) {
     p.x *= .8;
     d = smin(d, length(p) - .04, .15);
 
-
-
     // brow
     p = pp;
     p += vec3(0,-.0,-.215);
@@ -276,6 +289,39 @@ float map(vec3 p) {
     p = pp;
     p += vec3(-.15,.15,-.1);
     // d = smin(d, length(p) - .25, .0);
+
+    if (guiNeck) {
+        p = pa;
+        p += vec3(.18,.57,-.1);
+        float nb = length(p);
+        d = smin(d, neck, mix(.13, .2, smoothstep(.1, .3, nb)));
+        // d = min(d, nb - .05);
+        // d = neck;
+    }
+
+    // jaw
+    p = pp;
+    vec3 jv = vec3(.25,-.4,.03);
+    float jaw = fCapsule(p, vec3(.25,-.3,.03), jv, .02);
+    jaw = smin(jaw, fCapsule(p, jv, vec3(.08,-.58,.3), .02), .01);
+    // d = smin(d, jaw, .15);
+
+    p = pp;
+    p += vec3(-.25,.4,-.07);
+    pR(p.yz, .9);
+    pR(p.xz, .2);
+    d = smin(d, ellip(p, vec3(.03,.03,.07)), .1);
+
+    p = pp;
+    p += vec3(-.12,.53,-.24);
+    pR(p.yz, .5);
+    pR(p.xz, .5);
+    d = smin(d, ellip(p, vec3(.02,.02,.04)), .1);
+
+    // d = jaw;
+
+
+    return d;
 
 
     // d = square;
@@ -417,15 +463,6 @@ float map(vec3 p) {
     // p = pp;
     // d = max(d, length(p.xz) - r * 1.5);
 
-    if (guiNeck) {
-        p = pa;
-        p += vec3(.18,.57,-.1);
-        float nb = length(p);
-        d = smin(d, neck, mix(.13, .2, smoothstep(.1, .3, nb)));
-        // d = min(d, nb - .05);
-    }
-
-    return d;
 
     // d = min(d, length(p) - .2);
 
@@ -532,8 +569,8 @@ vec3 render(Hit hit, vec3 col) {
 // --------------------------------------------------------
 
 const float MAX_TRACE_DISTANCE = 10.;
-const float INTERSECTION_PRECISION = .00001;
-const int NUM_OF_TRACE_STEPS = 1500;
+const float INTERSECTION_PRECISION = .0001;
+const int NUM_OF_TRACE_STEPS = 150;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
