@@ -357,14 +357,15 @@ float map(vec3 p) {
 
     // seam
     p = pp;
-    p += vec3(0,.425,-.43);
+    p += vec3(0,.425,-.425);
     lb = length(p);
     float lr = mix(.03, .025, smoothstep(.05, .12, lb));
     float lm = mix(.65, .4, smoothstep(.05, .12, lb));
     pR(p.yz, .1);
-    p.y -= sin(p.x * 43.) * .004;
-    float seam = smax(d, -fHalfCapsule(-p.yz, .0), lr);
-    d = mix(d, seam, lm);
+    p.y -= smoothstep(0., .03, p.x) * .003 - .0005;
+    p.y += smoothstep(.03, .12, p.x) * .01;
+    float seam = fHalfCapsule(-p.yz, .0);
+    d = mix(d, smax(d, -seam, lr), lm);
 
     return d;
 
