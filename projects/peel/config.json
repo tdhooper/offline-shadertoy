@@ -1,9 +1,13 @@
 {
-    "id": "peel11",
+    "id": "peel12",
     "controls": {
         "blend": {
             "type": "toggle",
             "value": true
+        },
+        "split": {
+            "type": "toggle",
+            "value": false
         },
         "neck": {
             "type": "toggle",

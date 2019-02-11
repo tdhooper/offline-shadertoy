@@ -94,6 +94,10 @@ module.exports = (project) => {
     uniforms,
   });
 
+  if (project.draw) {
+    var projectDraw = project.draw(uniforms);
+  }
+
   const camera = createCamera(canvas, {
     position: [0, 0, 5],
   });
@@ -156,9 +160,9 @@ module.exports = (project) => {
         ) {
           buffer.resize(context.viewportWidth, context.viewportHeight);
         }
-        if (project.draw) {
+        if (projectDraw) {
           buffer.use(function() {
-            project.draw(stateStore.state);
+            projectDraw(stateStore.state);
           });
         }
         drawRaymarch(stateStore.state);

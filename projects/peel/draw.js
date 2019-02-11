@@ -1,19 +1,11 @@
 const fs = require('fs');
 const { mat4 } = require('gl-matrix');
 const parseOBJ = require('parse-wavefront-obj');
-// const wireframe = require('gl-wireframe');
-const solidWireframe = require('glsl-solid-wireframe');
 const glslify = require('glslify');
 
 
-const meshData = fs.readFileSync('projects/peel/model4.obj');
+const meshData = fs.readFileSync('projects/peel/model2.obj');
 var mesh = parseOBJ(meshData);
-// mesh.cells = wireframe(mesh.cells);
-mesh = solidWireframe(mesh, {
-  attributes: {
-    vertexNormals: mesh.vertexNormals,
-  },
-});
 
 const model = mat4.create();
 mat4.rotateX(model, model, -.38);
@@ -22,49 +14,45 @@ mat4.rotateZ(model, model, .01);
 mat4.translate(model, model, [.222,-.5,.15]);
 mat4.scale(model, model, [50, 50, 50]);
 
-const drawPolygons = global.regl({
-  // primitive: 'lines',
-  vert: `
-    precision mediump float;
-    attribute vec3 position, normal;
-    uniform mat4 model, view, projection;
-    attribute vec2 barycentric;
-    varying vec2 b;
-    varying vec3 vnormal;
-    void main() {
-      b = barycentric;
-      vnormal = normalize((model * vec4(normal, 1)).xyz);
-      gl_Position = projection * view * model * vec4(position, 1);
-    }
-  `,
-  frag: glslify`
-    #extension GL_OES_standard_derivatives : enable
-    precision mediump float;
-    varying vec3 vnormal;
-    #pragma glslify: bary_wire_scaled = require(glsl-solid-wireframe/barycentric/scaled)
-    varying vec2 b;
-    void main() {
-      vec3 color = vnormal * .5 + .5;
-      color = vec3(1) * pow(clamp(dot(vec3(0,.5,1.5), vnormal) * .5 + .5, 0., 1.), 1./2.2);
-      // float line = bary_wire_scaled(b, .2);
-      // color *= line;
-      // color = vec3(1);
-      gl_FragColor = vec4(color, 1);
-    }
-  `,
-  attributes: {
-    position: mesh.positions,
-    barycentric: mesh.barycentric,
-    normal: mesh.attributes.vertexNormals,
-  },
-  elements: mesh.cells,
-  uniforms: {
-    // model: function(context, props) {
-    //   return mat4.fromTranslation([], props.camera.position);
-    // }
-    model: model,
-  },
-});
+const init = function(uniforms) {
+  const uu = Object.assign({}, uniforms);
+  uu.model = model;
 
-module.exports = drawPolygons;
+  const drawPolygons = global.regl({
+    // primitive: 'lines',
+    vert: `
+      precision mediump float;
+      attribute vec3 position, normal;
+      uniform mat4 model, view, projection;
+      varying vec3 vnormal;
+      void main() {
+        vnormal = normalize((model * vec4(normal, 1)).xyz);
+        gl_Position = projection * view * model * vec4(position, 1);
+      }
+    `,
+    frag: glslify`
+      #extension GL_OES_standard_derivatives : enable
+      precision mediump float;
+      uniform bool guiSplit;
+      varying vec3 vnormal;
+      void main() {
+        vec3 color = vnormal * .5 + .5;
+        if ( ! guiSplit) {
+          color = vec3(1) * pow(clamp(dot(vec3(0,.5,1.5), vnormal) * .5 + .5, 0., 1.), 1./2.2);
+        }
+        gl_FragColor = vec4(color, 1);
+      }
+    `,
+    attributes: {
+      position: mesh.positions,
+      normal: mesh.vertexNormals,
+    },
+    elements: mesh.cells,
+    uniforms: uu,
+  });
+
+  return drawPolygons;
+}
+
+module.exports = init;
 // module.exports = function(){};

@@ -16,6 +16,7 @@ varying vec3 dir;
 varying vec3 cameraForward;
 
 uniform bool guiBlend;
+uniform bool guiSplit;
 uniform bool guiNeck;
 
 /* SHADERTOY FROM HERE */
@@ -285,11 +286,6 @@ float map(vec3 p) {
     brow = smax(brow, -p.y - .145, mix(.05, .3, smoothstep(.3, .6, sb)));
     d = smin(d, brow, .06);
 
-    // cheekbone
-    p = pp;
-    p += vec3(-.15,.15,-.1);
-    // d = smin(d, length(p) - .25, .0);
-
     if (guiNeck) {
         p = pa;
         p += vec3(.18,.57,-.1);
@@ -300,12 +296,6 @@ float map(vec3 p) {
     }
 
     // jaw
-    p = pp;
-    vec3 jv = vec3(.25,-.4,.03);
-    float jaw = fCapsule(p, vec3(.25,-.3,.03), jv, .02);
-    jaw = smin(jaw, fCapsule(p, jv, vec3(.08,-.58,.3), .02), .01);
-    // d = smin(d, jaw, .15);
-
     p = pp;
     p += vec3(-.25,.4,-.07);
     pR(p.yz, .9);
@@ -318,8 +308,63 @@ float map(vec3 p) {
     pR(p.xz, .5);
     d = smin(d, ellip(p, vec3(.02,.02,.04)), .1);
 
-    // d = jaw;
+    // temple
+    p = pp;
+    p += vec3(-.24,.08,-.07);
+    // pR(p.yz, -.8);
+    d = smin(d, ellip(p, vec3(.1,.19,.16)), .1);
 
+    // cheek
+    p = pp;
+    p += vec3(-.15,.33,-.17);
+    pR(p.yz, .9);
+    pR(p.xz, .3);
+    d = smin(d, ellip(p, vec3(.14,.15,.19)), .1);
+
+    p = pp;
+    p += vec3(-.13,.2,-.26);
+    d = smin(d, ellip(p, vec3(.13,.1,.1)), .15);
+
+    p = pp;
+    p += vec3(-.0,.29,-.29);
+    pR(p.yz, -.3);
+    d = smin(d, ellip(p, vec3(.13,.15,.1)), .18);
+
+    // mouth base
+    p = pp;
+    p += vec3(0,.41,-.35);
+    d = smin(d, ellip(p, vec3(.055,.03,.02) * .5), .13);
+
+    // bottom lip
+    p = pp;
+    p += vec3(0,.46,-.46);
+    float lb = mix(.04, .06, smoothstep(.05, .12, length(p)));
+    float bottomlip = ellip(p, vec3(.052,.025,.02));
+    d = smin(d, bottomlip, lb);
+
+    // top lip
+    p = pp;
+    p += vec3(0,.38,-.45);
+    pR(p.xz, -.3);
+    float toplip = ellip(p, vec3(.065,.03,.05));
+    p = pp;
+    p += vec3(0,.36,-.45);
+    pR(p.yz, .3);
+    p.y -= smoothstep(0., .04, p.x) * .015;
+    p.y += smoothstep(.04, .13, p.x) * .08;
+    toplip = smax(toplip, p.y, .04);
+    d = smin(d, toplip, .07);
+
+    // seam
+    p = pp;
+    p += vec3(0,.425,-.43);
+    lb = length(p);
+    float lr = mix(.03, .025, smoothstep(.05, .12, lb));
+    float lm = mix(.65, .4, smoothstep(.05, .12, lb));
+    pR(p.yz, .1);
+    p.y -= sin(p.x * 43.) * .004;
+    float seam = smax(d, -fHalfCapsule(-p.yz, .0), lr);
+    d = mix(d, seam, lm);
 
     return d;
 
@@ -556,6 +601,7 @@ vec3 render(Hit hit, vec3 col) {
         col = hit.normal * .5 + .5;
 
         // col = vec3(1) * pow(clamp(dot(vec3(0,1.5,.5), hit.normal) * .5 + .5, 0., 1.), 1./2.2);
+        // col = vec3(1) * pow(clamp(dot(vec3(0,.5,1.5), hit.normal) * .5 + .5, 0., 1.), 1./2.2);
         // col = vec3(1,0,0);
 
     }
@@ -602,10 +648,11 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
     vec3 pos = vec3(0);
     vec3 normal = vec3(0);
 
+    pos = rayOrigin + rayDirection * rayLength;
+
     if (rayLength > MAX_TRACE_DISTANCE) {
         isBackground = true;
     } else {
-        pos = rayOrigin + rayDirection * rayLength;
         normal = calcNormal(pos);
     }
 
@@ -664,7 +711,7 @@ void main() {
     float polyD = getDepth(texture2D(uDepth, gl_FragCoord.xy / iResolution.xy).r);
     float rayD = getDepth(depth);
 
-    if (guiBlend && ! hit.isBackground) {
+    if (guiBlend && ! hit.isBackground && ! guiSplit) {
         color = spectrum(smoothstep(.03, -.03, polyD - rayD));
     }
 
@@ -682,9 +729,9 @@ void main() {
         alpha = 1.;
     }
 
-    // alpha = 0.;
-    if (hit.pos.x < 0.) {
-        // alpha = 1.;
+    if (guiSplit) {
+        alpha = hit.pos.x < 0. ? 0. : 1.;
+
     }
 
     vec3 polyColor = texture2D(uSource, gl_FragCoord.xy / iResolution.xy).rgb;
