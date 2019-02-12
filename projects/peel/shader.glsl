@@ -107,6 +107,20 @@ float fCapsule(vec3 p, vec3 a, vec3 b, float r) {
     return fLineSegment(p, a, b) - r;
 }
 
+// IQ https://www.shadertoy.com/view/Xds3zN
+float sdRoundCone( in vec3 p, in float r1, float r2, float h )
+{
+    vec2 q = vec2( length(p.xz), p.y );
+    
+    float b = (r1-r2)/h;
+    float a = sqrt(1.0-b*b);
+    float k = dot(q,vec2(-b,a));
+    
+    if( k < 0.0 ) return length(q) - r1;
+    if( k > a*h ) return length(q-vec2(0.0,h)) - r2;
+        
+    return dot(q, vec2(a,b) ) - r1;
+}
 
 // float smin(float a, float b, float r) {
 //     vec2 u = max(vec2(r - a,r - b), vec2(0));
@@ -333,13 +347,20 @@ float map(vec3 p) {
     // mouth base
     p = pp;
     p += vec3(0,.41,-.35);
-    d = smin(d, ellip(p, vec3(.055,.03,.02) * .5), .13);
+    d = smin(d, ellip(p, vec3(.055,.03,.02) * .5), .12);
+
+    // top lip base
+    p = pp;
+    p += vec3(0,.38,-.44);
+    pR(p.yz, .5);
+    // d = smin(d, ellip(p, vec3(.02)), .15);
 
     // bottom lip
     p = pp;
-    p += vec3(0,.46,-.46);
-    float lb = mix(.04, .06, smoothstep(.05, .12, length(p)));
-    float bottomlip = ellip(p, vec3(.052,.025,.02));
+    p += vec3(0,.455,-.455);
+    p.z += smoothstep(.0, .2, p.x) * .05;
+    float lb = mix(.035, .03, smoothstep(.05, .15, length(p)));
+    float bottomlip = ellip(p, vec3(.055,.028,.022) * 1.25);
     d = smin(d, bottomlip, lb);
 
     // top lip
@@ -348,11 +369,11 @@ float map(vec3 p) {
     pR(p.xz, -.3);
     float toplip = ellip(p, vec3(.065,.03,.05));
     p = pp;
-    p += vec3(0,.36,-.45);
-    pR(p.yz, .3);
-    p.y -= smoothstep(0., .04, p.x) * .015;
-    p.y += smoothstep(.04, .13, p.x) * .08;
-    toplip = smax(toplip, p.y, .04);
+    p += vec3(0,.33,-.45);
+    pR(p.yz, .7);
+    p.y -= smoothstep(0., .03, p.x) * .015;
+    p.y += smoothstep(.03, .15, p.x) * .13;
+    toplip = smax(toplip, p.y, .03);
     d = smin(d, toplip, .07);
 
     // seam
@@ -367,6 +388,63 @@ float map(vec3 p) {
     float seam = fHalfCapsule(-p.yz, .0);
     d = mix(d, smax(d, -seam, lr), lm);
 
+    // nose
+    p = pp;
+    p += vec3(0,.07,-.465);
+    pR(p.yz, -.5);
+    // d = smin(d, ellip(p, vec3(.02,.02,.02)), .1);
+
+    p = pp;
+    p += vec3(0,.15,-.45);
+    pR(p.yz, -.5);
+    // d = smin(d, ellip(p, vec3(.02,.03,.02)), .15);
+
+    p = pp;
+    p += vec3(0,.03,-.45);
+    pR(p.yz, 3.);
+    d = smin(d, sdRoundCone(p, .01, .05, .18), .1);
+
+    p = pp;
+    p += vec3(0,.1,-.45);
+    pR(p.yz, 2.5);
+    // d = smin(d, sdRoundCone(p, .005, .02, .18), .05);
+
+    // nostrils base
+    p = pp;
+    p += vec3(0,.3,-.43);
+    d = smin(d, length(p) - .05, .07);
+
+    // nostrils
+    vec3 no = vec3(-.03,.28,-.51);
+    float nr = .55;
+    vec3 ns = vec3(.04,.055,.08);
+    p = pa;
+    p += no;
+    pR(p.xz, nr);
+    float nostrils = ellip(p, ns);
+    p = pa * vec3(-1,1,1);
+    p += no;
+    pR(p.xz, nr);
+    nostrils = smin(nostrils, ellip(p, ns), .003);
+
+    p = pp;
+    p += vec3(0,.26,-.5);
+    pR(p.yz, .2);
+    nostrils = ellip(p, vec3(.06,.06,.09));
+
+    p = pp;
+    p += vec3(-.048,.285,-.5);
+    pR(p.xz, .2);
+    pR(p.xy, .4);
+    nostrils = smin(nostrils, ellip(p, vec3(.033,.04,.05)), .02);
+
+    p = pp;
+    p += vec3(-.03,.3,-.5);
+    pR(p.xy, .5);
+    nostrils = smax(nostrils, -ellip(p, vec3(.015,.03,.03)*1.2), .025);
+
+    d = smin(d, nostrils, .02);
+
     return d;
 
 
@@ -374,8 +452,7 @@ float map(vec3 p) {
 
     // d = min(d, sb - .59);
 
-    
-    
+    /*
 
     // p = pp;
     // d = min(d, abs(p.x) - .001);
@@ -467,7 +544,7 @@ float map(vec3 p) {
     p.z *= .7;
     // d = smin(d, length(p) - .05, .06);
 
-
+*/
 
 /*
 
@@ -530,30 +607,23 @@ float map(vec3 p) {
 
     // d = min(d, length(p) - .2);
 
-    return d;
 
-    // float h = helix(p, 30., .05);
 
-    // p.z /= 1.2;
-    // float d = length(p) - .5;
-
-    // p.x -= .55;
-    // d = smin(d, length(p) - .1, .1);
-
-    // p = pp;
-    // p.z -= .7;
-    // p.z /= 2.;
-    // d = smin(d, length(p) - .25, .1);
-
-    // p = pp;
-    // p.z -= 2.2;
-    // d = smin(d, length(p) - 1.5, .1);
-
-    // d = abs(d + .01) - .01;
-    
-    // d = max(d, h);
 
     // return d;
+
+
+
+
+
+    p = pa;
+    float h = helix(p.xzy, 30., .07);
+
+    d = abs(d + .01) - .01;
+    
+    d = max(d, h);
+
+    return d;
 }
 
 
