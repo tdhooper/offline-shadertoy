@@ -405,9 +405,9 @@ float map(vec3 p) {
     d = smin(d, sdRoundCone(p, .01, .05, .18), .1);
 
     p = pp;
-    p += vec3(0,.1,-.45);
-    pR(p.yz, 2.5);
-    // d = smin(d, sdRoundCone(p, .005, .02, .18), .05);
+    p += vec3(0,.1,-.48);
+    pR(p.yz, 2.75);
+    d = smin(d, sdRoundCone(p, .005, .04, .18), .05);
 
     // nostrils base
     p = pp;
@@ -415,35 +415,37 @@ float map(vec3 p) {
     d = smin(d, length(p) - .05, .07);
 
     // nostrils
-    vec3 no = vec3(-.03,.28,-.51);
-    float nr = .55;
-    vec3 ns = vec3(.04,.055,.08);
-    p = pa;
-    p += no;
-    pR(p.xz, nr);
-    float nostrils = ellip(p, ns);
-    p = pa * vec3(-1,1,1);
-    p += no;
-    pR(p.xz, nr);
-    nostrils = smin(nostrils, ellip(p, ns), .003);
+    // vec3 no = vec3(-.03,.28,-.51);
+    // float nr = .55;
+    // vec3 ns = vec3(.04,.055,.08);
+    // p = pa;
+    // p += no;
+    // pR(p.xz, nr);
+    // float nostrils = ellip(p, ns);
+    // p = pa * vec3(-1,1,1);
+    // p += no;
+    // pR(p.xz, nr);
+    // nostrils = smin(nostrils, ellip(p, ns), .003);
 
     p = pp;
-    p += vec3(0,.26,-.5);
+    p += vec3(0,.27,-.52);
     pR(p.yz, .2);
-    nostrils = ellip(p, vec3(.06,.06,.09));
+    // float nostrils = ellip(p, vec3(.06,.06,.09));
+    float nostrils = ellip(p, vec3(.055,.05,.06));
 
     p = pp;
-    p += vec3(-.048,.285,-.5);
-    pR(p.xz, .2);
-    pR(p.xy, .4);
-    nostrils = smin(nostrils, ellip(p, vec3(.033,.04,.05)), .02);
-
-    p = pp;
-    p += vec3(-.03,.3,-.5);
-    pR(p.xy, .5);
-    nostrils = smax(nostrils, -ellip(p, vec3(.015,.03,.03)*1.2), .025);
+    p += vec3(-.043,.28,-.48);
+    pR(p.xy, .15);
+    p.z *= .8;
+    nostrils = smin(nostrils, sdRoundCone(p, .042, .0, .12), .02);
 
     d = smin(d, nostrils, .02);
+
+    p = pp;
+    p += vec3(-.033,.3,-.515);
+    // pR(p.xy, .5);
+    pR(p.xz, .5);
+    d = smax(d, -ellip(p, vec3(.011,.03,.025)), .015);
 
     return d;
 
@@ -783,7 +785,7 @@ void main() {
     float rayD = getDepth(depth);
 
     if (guiBlend && ! hit.isBackground && ! guiSplit) {
-        color = spectrum(smoothstep(.03, -.03, polyD - rayD));
+        color = spectrum(smoothstep(.01, -.01, polyD - rayD));
     }
 
     float alpha = smoothstep(.06, -.06, polyD - rayD);
