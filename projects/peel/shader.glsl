@@ -371,9 +371,9 @@ float map(vec3 p) {
     p = pp;
     p += vec3(0,.33,-.45);
     pR(p.yz, .7);
-    p.y -= smoothstep(0., .03, p.x) * .015;
-    p.y += smoothstep(.03, .15, p.x) * .13;
-    toplip = smax(toplip, p.y, .03);
+    float cut = p.y - smoothstep(0., .03, p.x) * .015;
+    cut += smoothstep(.03, .18, p.x) * .2;
+    toplip = smax(toplip, cut, .03);
     d = smin(d, toplip, .07);
 
     // seam
@@ -673,7 +673,7 @@ vec3 render(Hit hit, vec3 col) {
         col = hit.model.material * diffuse;
         col = hit.normal * .5 + .5;
 
-        // col = vec3(1) * pow(clamp(dot(vec3(0,1.5,.5), hit.normal) * .5 + .5, 0., 1.), 1./2.2);
+        col = vec3(1) * pow(clamp(dot(vec3(0,1.5,.5), hit.normal) * .5 + .5, 0., 1.), 1./2.2);
         // col = vec3(1) * pow(clamp(dot(vec3(0,.5,1.5), hit.normal) * .5 + .5, 0., 1.), 1./2.2);
         // col = vec3(1,0,0);
 
