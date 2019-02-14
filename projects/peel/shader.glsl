@@ -447,11 +447,44 @@ float map(vec3 p) {
     pR(p.xz, .5);
     d = smax(d, -ellip(p, vec3(.011,.03,.025)), .015);
 
+    // eyelids
+    p = pp;
+    p += vec3(-.15,.07,-.34);
+    pR(p.xy, -.9);
+    float eyelids = ellip(p, vec3(.1,.08,.1));
+    d = smin(d, eyelids, .04);
+
+    // edge top
+    p = pp;
+    p += vec3(-.172,.156,-.43);
+    p.x *= .95;
+    float et = length(p.xy) - .1;
+
+    // edge bottom
+    p = pp;
+    p += vec3(-.168,.005,-.43);
+    pR(p.xz, -.2);
+    p.x *= .9;
+    float eb = length(p.xy) - .1;
+
+    p = pp;
+    p += vec3(-.08,-.004,-.43);
+    pR(p.xz, -.2);
+    p.x *= .9;
+    eb = smin(eb, length(p.xy) - .1, .01);
+
+    float ee = max(eb, et);
+    d = smax(d, -ee, .01);
+
     // eyeball
     p = pp;
     p += vec3(-.165,.0715,-.346);
-    float eyeball = length(p) - .088;
-    d = min(d, eyeball);
+    d = min(d, length(p) - .088);
+
+    // tear duct
+    p = pp;
+    p += vec3(-.075,.1,-.37);
+    d = min(d, length(p) - .05);
 
     return d;
 
@@ -810,6 +843,7 @@ void main() {
 
     if (guiSplit) {
         alpha = hit.pos.x < 0. ? 0. : 1.;
+        alpha = 0.;
 
     }
 

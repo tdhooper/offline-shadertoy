@@ -38,7 +38,7 @@ const init = function(uniforms) {
       void main() {
         vec3 color = vnormal * .5 + .5;
         if ( ! guiSplit) {
-          color = vec3(1) * pow(clamp(dot(vec3(0,.5,1.5), vnormal) * .5 + .5, 0., 1.), 1./2.2);
+          color = vec3(1) * pow(clamp(dot(vec3(0,1.5,.5), vnormal) * .5 + .5, 0., 1.), 1./2.2);
         }
         gl_FragColor = vec4(color, 1);
       }
