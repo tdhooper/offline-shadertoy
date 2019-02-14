@@ -447,6 +447,12 @@ float map(vec3 p) {
     pR(p.xz, .5);
     d = smax(d, -ellip(p, vec3(.011,.03,.025)), .015);
 
+    // eyeball
+    p = pp;
+    p += vec3(-.165,.0715,-.346);
+    float eyeball = length(p) - .088;
+    d = min(d, eyeball);
+
     return d;
 
 
