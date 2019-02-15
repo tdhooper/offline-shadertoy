@@ -235,10 +235,6 @@ float map(vec3 p) {
     p += vec3(0,.1,.07);
     d = smin(d, ellip(p, vec3(.38, .36, .35)), .05);
 
-    // p = pp;
-    // p += vec3(-.12,.14,.2);
-    // d = smin(d, length(p) - .2, .0);
-
     // forehead
     p = pp;
     p += vec3(0,-.145,-.175);
@@ -258,25 +254,6 @@ float map(vec3 p) {
     p = pp;
     p += vec3(-.2,.14,-.14);
     d = smin(d, ellip(p, vec3(.15,.22,.2) * .8), .15);
-
-    // // jaw
-    // p = pp;
-    // pR(p.yz, .14);
-    // float jaw = p.z - .48;
-    // pR(p.xz, .5);
-    // jaw = smax(jaw, p.x - .35, .08);
-    // p = pp;
-    // pR(p.yz, .5);
-    // jaw = smax(jaw, -p.y - .438, .2);
-    // p = pp;
-    // pR(p.yz, -.0);
-    // jaw = smax(jaw, -p.z - .05, .15);
-    // p = pp;
-    // jaw = smax(jaw, p.y + .1, .25);
-    // p = pp;
-    // p += vec3(0,.35,-.2);
-    // jaw = smin(jaw, length(p) - .23, .1);
-    // d = smin(d, jaw, .1);
 
     // jaw base
     p = pp;
@@ -305,8 +282,6 @@ float map(vec3 p) {
         p += vec3(.18,.57,-.1);
         float nb = length(p);
         d = smin(d, neck, mix(.13, .2, smoothstep(.1, .3, nb)));
-        // d = min(d, nb - .05);
-        // d = neck;
     }
 
     // jaw
@@ -325,7 +300,6 @@ float map(vec3 p) {
     // temple
     p = pp;
     p += vec3(-.24,.08,-.07);
-    // pR(p.yz, -.8);
     d = smin(d, ellip(p, vec3(.1,.19,.16)), .1);
 
     // cheek
@@ -348,12 +322,6 @@ float map(vec3 p) {
     p = pp;
     p += vec3(0,.41,-.35);
     d = smin(d, ellip(p, vec3(.055,.03,.02) * .5), .12);
-
-    // top lip base
-    p = pp;
-    p += vec3(0,.38,-.44);
-    pR(p.yz, .5);
-    // d = smin(d, ellip(p, vec3(.02)), .15);
 
     // bottom lip
     p = pp;
@@ -390,16 +358,6 @@ float map(vec3 p) {
 
     // nose
     p = pp;
-    p += vec3(0,.07,-.465);
-    pR(p.yz, -.5);
-    // d = smin(d, ellip(p, vec3(.02,.02,.02)), .1);
-
-    p = pp;
-    p += vec3(0,.15,-.45);
-    pR(p.yz, -.5);
-    // d = smin(d, ellip(p, vec3(.02,.03,.02)), .15);
-
-    p = pp;
     p += vec3(0,.03,-.45);
     pR(p.yz, 3.);
     d = smin(d, sdRoundCone(p, .01, .05, .18), .1);
@@ -415,22 +373,9 @@ float map(vec3 p) {
     d = smin(d, length(p) - .05, .07);
 
     // nostrils
-    // vec3 no = vec3(-.03,.28,-.51);
-    // float nr = .55;
-    // vec3 ns = vec3(.04,.055,.08);
-    // p = pa;
-    // p += no;
-    // pR(p.xz, nr);
-    // float nostrils = ellip(p, ns);
-    // p = pa * vec3(-1,1,1);
-    // p += no;
-    // pR(p.xz, nr);
-    // nostrils = smin(nostrils, ellip(p, ns), .003);
-
     p = pp;
     p += vec3(0,.27,-.52);
     pR(p.yz, .2);
-    // float nostrils = ellip(p, vec3(.06,.06,.09));
     float nostrils = ellip(p, vec3(.055,.05,.06));
 
     p = pp;
@@ -443,7 +388,6 @@ float map(vec3 p) {
 
     p = pp;
     p += vec3(-.033,.3,-.515);
-    // pR(p.xy, .5);
     pR(p.xz, .5);
     d = smax(d, -ellip(p, vec3(.011,.03,.025)), .015);
 
