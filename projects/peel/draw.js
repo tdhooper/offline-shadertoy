@@ -37,9 +37,11 @@ const init = function(uniforms) {
       varying vec3 vnormal;
       void main() {
         vec3 color = vnormal * .5 + .5;
-        if ( ! guiSplit) {
-          color = vec3(1) * pow(clamp(dot(vec3(0,1.5,.5), vnormal) * .5 + .5, 0., 1.), 1./2.2);
-        }
+        vec3 lig = vec3(0,1.5,.5);
+        lig = vec3(0,1,0);
+        // if ( ! guiSplit) {
+          color = vec3(1) * pow(clamp(dot(lig, vnormal) * .5 + .5, 0., 1.), 1./2.2);
+        // }
         gl_FragColor = vec4(color, 1);
       }
     `,

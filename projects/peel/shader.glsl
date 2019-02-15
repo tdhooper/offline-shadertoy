@@ -447,12 +447,12 @@ float map(vec3 p) {
     pR(p.xz, .5);
     d = smax(d, -ellip(p, vec3(.011,.03,.025)), .015);
 
+
     // eyelids
     p = pp;
     p += vec3(-.15,.07,-.34);
     pR(p.xy, -.9);
     float eyelids = ellip(p, vec3(.1,.08,.1));
-    d = smin(d, eyelids, .04);
 
     // edge top
     p = pp;
@@ -473,8 +473,10 @@ float map(vec3 p) {
     p.x *= .9;
     eb = smin(eb, length(p.xy) - .1, .01);
 
-    float ee = max(eb, et);
-    d = smax(d, -ee, .01);
+    float edge = max(max(eb, et), -d);
+
+    d = smin(d, eyelids, .04);
+    d = max(d, -edge);
 
     // eyeball
     p = pp;
@@ -485,6 +487,7 @@ float map(vec3 p) {
     p = pp;
     p += vec3(-.075,.1,-.37);
     d = min(d, length(p) - .05);
+
 
     return d;
 
@@ -712,8 +715,10 @@ vec3 render(Hit hit, vec3 col) {
         col = hit.model.material * diffuse;
         col = hit.normal * .5 + .5;
 
-        col = vec3(1) * pow(clamp(dot(vec3(0,1.5,.5), hit.normal) * .5 + .5, 0., 1.), 1./2.2);
-        // col = vec3(1) * pow(clamp(dot(vec3(0,.5,1.5), hit.normal) * .5 + .5, 0., 1.), 1./2.2);
+        vec3 lig = vec3(0,1.5,.5);
+        // lig = vec3(0,.5,1.5);
+        lig = vec3(0,1,0);
+        col = vec3(1) * pow(clamp(dot(lig, hit.normal) * .5 + .5, 0., 1.), 1./2.2);
         // col = vec3(1,0,0);
 
     }
@@ -843,7 +848,6 @@ void main() {
 
     if (guiSplit) {
         alpha = hit.pos.x < 0. ? 0. : 1.;
-        alpha = 0.;
 
     }
 
