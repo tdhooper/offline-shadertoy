@@ -4,7 +4,7 @@ const parseOBJ = require('parse-wavefront-obj');
 const glslify = require('glslify');
 
 
-const meshData = fs.readFileSync('projects/peel/model4.obj');
+const meshData = fs.readFileSync('projects/peel/model2.obj');
 var mesh = parseOBJ(meshData);
 
 const model = mat4.create();

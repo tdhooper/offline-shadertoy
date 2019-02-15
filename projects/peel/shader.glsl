@@ -229,10 +229,11 @@ float map(vec3 p) {
 
     // skull back
     p += vec3(0,-.135,.09);
-    d = ellip(p, vec3(.39, .38, .39));
+    d = ellip(p, vec3(.395, .385, .395));
 
     // skull base
-    p += vec3(0,.1,.07);
+    p = pp;
+    p += vec3(0,-.135,.09) + vec3(0,.1,.07);
     d = smin(d, ellip(p, vec3(.38, .36, .35)), .05);
 
     // forehead
@@ -240,9 +241,14 @@ float map(vec3 p) {
     p += vec3(0,-.145,-.175);
     d = smin(d, ellip(p, vec3(.315, .3, .33)), .18);
 
+    p = pp;
+    pR(p.yz, -.5);
+    float bb = fBox(p, vec3(.5,.67,.7));
+    d = smax(d, bb, .2);
+
     // face base
     p = pp;
-    p += vec3(0,.25,-.15);
+    p += vec3(0,.25,-.13);
     d = smin(d, length(p) - .28, .1);
 
     // behind ear
@@ -269,13 +275,26 @@ float map(vec3 p) {
 
     // brow
     p = pp;
-    p += vec3(0,-.0,-.215);
+    p += vec3(0,-.0,-.18);
+    vec3 bp = p;
     float brow = fHalfCapsule(p * vec3(.65,1,.9), .27);
-    brow = smax(brow, p.x - .4, .26);
-    float sb = length(p + vec3(0,-.02,-.25));
+    brow = length(p) - .36;
+    p.x -= .37;
+    brow = smax(brow, dot(p, normalize(vec3(1,.2,-.2))), .2);
+    p = bp;
+    brow = smax(brow, dot(p, normalize(vec3(0,.6,1))) - .43, .25);
+    p = bp;
     pR(p.yz, -.5);
-    brow = smax(brow, -p.y - .145, mix(.05, .3, smoothstep(.3, .6, sb)));
+    float peak = -p.y - .165;
+    peak += smoothstep(.0, .2, p.x) * .01;
+    peak -= smoothstep(.12, .29, p.x) * .025;
+    brow = smax(brow, peak, .07);
+    p = bp;
+    pR(p.yz, .5);
+    brow = smax(brow, -p.y - .1, .2);
     d = smin(d, brow, .06);
+
+    // return brow;
 
     if (guiNeck) {
         p = pa;
@@ -283,6 +302,17 @@ float map(vec3 p) {
         float nb = length(p);
         d = smin(d, neck, mix(.13, .2, smoothstep(.1, .3, nb)));
     }
+
+    // nose
+    p = pp;
+    p += vec3(0,.03,-.45);
+    pR(p.yz, 3.);
+    d = smin(d, sdRoundCone(p, .01, .05, .18), .1);
+
+    p = pp;
+    p += vec3(0,.1,-.48);
+    pR(p.yz, 2.75);
+    d = smin(d, sdRoundCone(p, .005, .04, .18), .05);
 
     // jaw
     p = pp;
@@ -300,7 +330,12 @@ float map(vec3 p) {
     // temple
     p = pp;
     p += vec3(-.24,.08,-.07);
-    d = smin(d, ellip(p, vec3(.1,.19,.16)), .1);
+    float temple = ellip(p, vec3(.19,.19,.16));
+    pR(p.xz, .1);
+    temple = smax(temple, p.x - .07, .1);
+    d = smin(d, temple, .1);
+
+    // return d;
 
     // cheek
     p = pp;
@@ -311,12 +346,17 @@ float map(vec3 p) {
 
     p = pp;
     p += vec3(-.13,.2,-.26);
-    d = smin(d, ellip(p, vec3(.13,.1,.1)), .15);
+    // d = smin(d, ellip(p, vec3(.13,.1,.1)), .15);
+
+    return d;
+
 
     p = pp;
     p += vec3(-.0,.29,-.29);
     pR(p.yz, -.3);
     d = smin(d, ellip(p, vec3(.13,.15,.1)), .18);
+
+    // return d;
 
     // mouth base
     p = pp;
@@ -356,16 +396,6 @@ float map(vec3 p) {
     float seam = fHalfCapsule(-p.yz, .0);
     d = mix(d, smax(d, -seam, lr), lm);
 
-    // nose
-    p = pp;
-    p += vec3(0,.03,-.45);
-    pR(p.yz, 3.);
-    d = smin(d, sdRoundCone(p, .01, .05, .18), .1);
-
-    p = pp;
-    p += vec3(0,.1,-.48);
-    pR(p.yz, 2.75);
-    d = smin(d, sdRoundCone(p, .005, .04, .18), .05);
 
     // nostrils base
     p = pp;
@@ -390,7 +420,6 @@ float map(vec3 p) {
     p += vec3(-.033,.3,-.515);
     pR(p.xz, .5);
     d = smax(d, -ellip(p, vec3(.011,.03,.025)), .015);
-
 
     // eyelids
     p = pp;
