@@ -207,6 +207,11 @@ float ellip(vec3 p, vec3 s) {
 vec3 modelAlbedo;
 
 float map(vec3 p) {
+
+    // float cc = length(p - vec3(0,.18,.52));
+    // p.z += sin(cc * 100. - iTime) * smoothstep(.3, .0, cc) * .01;
+    // p.x += sin(cc * 8. - iTime * 10.) * .1;
+
     vec3 pp = p;
 
     p += vec3(0,.25,.1);
@@ -312,22 +317,17 @@ float map(vec3 p) {
     d = smin(d, sdRoundCone(p, .005, .04, .18), .05);
 
     // jaw
-    // p = pp;
-    // p += vec3(-.25,.4,-.07);
-    // pR(p.yz, .9);
-    // pR(p.xz, .2);
-    // d = smin(d, ellip(p, vec3(.03,.03,.07)), .1);
 
     p = pp;
-    p += vec3(0,.45,-.15);
-    float jawc = length(p) - .7;
     vec3 jo = vec3(-.25,.4,-.07);
     p = pp + jo;
-    // return jaw;
     float jaw = dot(p, normalize(vec3(1,-.2,-.05))) - .069;
     jaw = smax(jaw, dot(p, normalize(vec3(.5,-.25,.35))) - .13, .12);
     jaw = smax(jaw, dot(p, normalize(vec3(-.0,-1.,-.8))) - .12, .15);
     jaw = smax(jaw, dot(p, normalize(vec3(.98,-1.,.15))) - .13, .08);
+    jaw = smax(jaw, dot(p, normalize(vec3(.6,-.2,-.45))) - .19, .15);
+    jaw = smax(jaw, dot(p, normalize(vec3(.5,.1,-.5))) - .26, .15);
+    jaw = smax(jaw, dot(p, normalize(vec3(1,.2,-.3))) - .22, .15);
 
     p = pp;
     p += vec3(0,.63,-.2);
@@ -338,14 +338,15 @@ float map(vec3 p) {
     p = pp + jo;
     jaw = smax(jaw, dot(p, normalize(vec3(0,-.4,1))) - .35, .1);
     jaw = smax(jaw, dot(p, normalize(vec3(0,1.5,2))) - .3, .2);
-    jaw = max(jaw, jawc);
-    // return jaw;
+    jaw = max(jaw, length(pp + vec3(0,.6,-.3)) - .7);
 
     p = pa;
-    p += vec3(-.12,.56,-.13);
+    p += vec3(.2,.5,-.1);
     float jb = length(p);
-    float js = mix(-.01, .0, smoothstep(.0, .4, jb));
-    jb = mix(.04, .01, smoothstep(.0, .4, jb));
+    jb = smoothstep(.0, .4, jb);
+    float js = mix(0., -.01, jb);
+    jb = mix(.01, .04, jb);
+
     d = smin(d, jaw - js, jb);
 
     // return d;
@@ -355,6 +356,7 @@ float map(vec3 p) {
     p += vec3(0,.585,-.395);
     p.x *= .7;
     d = smin(d, ellip(p, vec3(.028,.028,.028)*1.2), .15);
+
 
     p = pp;
     p += vec3(-.12,.53,-.24);
@@ -500,6 +502,11 @@ float map(vec3 p) {
     p += vec3(-.075,.1,-.37);
     d = min(d, length(p) - .05);
 
+
+    // p = pa;
+    // d += length(sin(p * 60. + vec3(0,iTime*3.,0).zxy)) * .005 - .005;
+
+    // d += sin(cc * 100. - iTime) * smoothstep(.5, .0, cc) * .01;
 
     return d;
 
