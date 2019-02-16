@@ -263,9 +263,9 @@ float map(vec3 p) {
 
     // jaw base
     p = pp;
-    p += vec3(0,.508,-.2);
-    pR(p.yz, .6);
-    d = smin(d, ellip(p, vec3(.17,.1,.2)), .1);
+    p += vec3(0,.475,-.16);
+    pR(p.yz, .8);
+    d = smin(d, ellip(p, vec3(.19,.1,.2)), .1);
 
     // brow
     p = pp;
@@ -321,28 +321,40 @@ float map(vec3 p) {
     p = pp;
     p += vec3(0,.45,-.15);
     float jawc = length(p) - .7;
-    p = pp;
-    p += vec3(-.25,.4,-.07);
+    vec3 jo = vec3(-.25,.4,-.07);
+    p = pp + jo;
     // return jaw;
     float jaw = dot(p, normalize(vec3(1,-.2,-.05))) - .069;
-    jaw = smax(jaw, dot(p, normalize(vec3(.5,-.25,.35))) - .135, .12);
-    jaw = smax(jaw, dot(p, normalize(vec3(.5,-.25,.35))) - .13, .01);
+    jaw = smax(jaw, dot(p, normalize(vec3(.5,-.25,.35))) - .13, .12);
     jaw = smax(jaw, dot(p, normalize(vec3(-.0,-1.,-.8))) - .12, .15);
-    jaw = smax(jaw, dot(p, normalize(vec3(.7,-.9,.15))) - .15, .1); //yoo
-    jaw = smax(jaw, dot(p, normalize(vec3(.0,-1.,-.0))) - .31, .15);
+    jaw = smax(jaw, dot(p, normalize(vec3(.98,-1.,.15))) - .13, .08);
 
+    p = pp;
+    p += vec3(0,.63,-.2);
+    pR(p.yz, .15);
+    float cr = .5;
+    jaw = smax(jaw, length(p.xy - vec2(0,cr)) - cr, .05);
 
+    p = pp + jo;
     jaw = smax(jaw, dot(p, normalize(vec3(0,-.4,1))) - .35, .1);
     jaw = smax(jaw, dot(p, normalize(vec3(0,1.5,2))) - .3, .2);
     jaw = max(jaw, jawc);
     // return jaw;
-    d = smin(d, jaw, .01);
+
+    p = pa;
+    p += vec3(-.12,.56,-.13);
+    float jb = length(p);
+    float js = mix(-.01, .0, smoothstep(.0, .4, jb));
+    jb = mix(.04, .01, smoothstep(.0, .4, jb));
+    d = smin(d, jaw - js, jb);
+
+    // return d;
 
     // chin
     p = pp;
-    p += vec3(0,.575,-.388);
-    p.x *= .8;
-    d = smin(d, ellip(p, vec3(.028,.028,.028)), .14);
+    p += vec3(0,.585,-.395);
+    p.x *= .7;
+    d = smin(d, ellip(p, vec3(.028,.028,.028)*1.2), .15);
 
     p = pp;
     p += vec3(-.12,.53,-.24);
