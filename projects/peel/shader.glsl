@@ -263,15 +263,9 @@ float map(vec3 p) {
 
     // jaw base
     p = pp;
-    p += vec3(0,.49,-.2);
+    p += vec3(0,.508,-.2);
     pR(p.yz, .6);
-    d = smin(d, ellip(p, vec3(.2,.1,.2)), .1);
-
-    // chin
-    p = pp;
-    p += vec3(0,.56,-.38);
-    p.x *= .8;
-    d = smin(d, length(p) - .04, .15);
+    d = smin(d, ellip(p, vec3(.17,.1,.2)), .1);
 
     // brow
     p = pp;
@@ -300,8 +294,11 @@ float map(vec3 p) {
         p = pa;
         p += vec3(.18,.57,-.1);
         float nb = length(p);
-        d = smin(d, neck, mix(.13, .2, smoothstep(.1, .3, nb)));
+        nb = mix(.11, .17, smoothstep(.1, .3, nb));
+        d = smin(d, neck, nb);
     }
+
+    // return d;
 
     // nose
     p = pp;
@@ -315,17 +312,52 @@ float map(vec3 p) {
     d = smin(d, sdRoundCone(p, .005, .04, .18), .05);
 
     // jaw
+    // p = pp;
+    // p += vec3(-.25,.4,-.07);
+    // pR(p.yz, .9);
+    // pR(p.xz, .2);
+    // d = smin(d, ellip(p, vec3(.03,.03,.07)), .1);
+
+    p = pp;
+    p += vec3(0,.45,-.15);
+    float jawc = length(p) - .7;
     p = pp;
     p += vec3(-.25,.4,-.07);
-    pR(p.yz, .9);
-    pR(p.xz, .2);
-    d = smin(d, ellip(p, vec3(.03,.03,.07)), .1);
+    // return jaw;
+    float jaw = dot(p, normalize(vec3(1,-.2,-.05))) - .069;
+    jaw = smax(jaw, dot(p, normalize(vec3(.5,-.25,.35))) - .135, .12);
+    jaw = smax(jaw, dot(p, normalize(vec3(.5,-.25,.35))) - .13, .01);
+    jaw = smax(jaw, dot(p, normalize(vec3(-.0,-1.,-.8))) - .12, .15);
+    jaw = smax(jaw, dot(p, normalize(vec3(.7,-.9,.15))) - .15, .1); //yoo
+    jaw = smax(jaw, dot(p, normalize(vec3(.0,-1.,-.0))) - .31, .15);
+
+
+    jaw = smax(jaw, dot(p, normalize(vec3(0,-.4,1))) - .35, .1);
+    jaw = smax(jaw, dot(p, normalize(vec3(0,1.5,2))) - .3, .2);
+    jaw = max(jaw, jawc);
+    // return jaw;
+    d = smin(d, jaw, .01);
+
+    // chin
+    p = pp;
+    p += vec3(0,.575,-.388);
+    p.x *= .8;
+    d = smin(d, ellip(p, vec3(.028,.028,.028)), .14);
 
     p = pp;
     p += vec3(-.12,.53,-.24);
     pR(p.yz, .5);
     pR(p.xz, .5);
-    d = smin(d, ellip(p, vec3(.02,.02,.04)), .1);
+    // d = smin(d, ellip(p, vec3(.02,.02,.04)), .1);
+
+    p = pp;
+    p += vec3(-.19,.32,-.15);
+    pR(p.yz, .9);
+    pR(p.xz, .3);
+    pR(p.xy, .3);
+    float ch = ellip(p, vec3(.11,.15,.19));
+    // d = smin(d, ch, .05);
+    // d = ch;
 
     // temple
     p = pp;
@@ -338,17 +370,12 @@ float map(vec3 p) {
     // return d;
 
     // cheek
-    p = pp;
-    p += vec3(-.15,.33,-.17);
-    pR(p.yz, .9);
-    pR(p.xz, .3);
-    d = smin(d, ellip(p, vec3(.14,.15,.19)), .1);
 
     p = pp;
     p += vec3(-.13,.2,-.26);
     // d = smin(d, ellip(p, vec3(.13,.1,.1)), .15);
 
-    return d;
+    // return d;
 
 
     p = pp;
@@ -653,7 +680,7 @@ void main() {
 
     if (guiSplit) {
         alpha = hit.pos.x < 0. ? 0. : 1.;
-
+        alpha = 0.;
     }
 
     vec3 polyColor = texture2D(uSource, gl_FragCoord.xy / iResolution.xy).rgb;
