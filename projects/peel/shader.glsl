@@ -82,6 +82,11 @@ float fBox(vec3 p, vec3 b) {
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
+float fDisc(vec3 p, float r) {
+    float l = length(p.xz) - r;
+    return l < 0. ? abs(p.y) : length(vec2(p.y, l));
+}
+
 // Capsule: A Cylinder with round caps on both sides
 float fCapsule(vec3 p, float r, float c) {
     return mix(length(p.xz) - r, length(vec3(p.x, abs(p.y) - c, p.z)) - r, step(c, abs(p.y)));
@@ -427,15 +432,18 @@ float map(vec3 p) {
 
     // seam
     p = pp;
-    p += vec3(0,.425,-.425);
+    p += vec3(0,.425,-.44);
     lb = length(p);
-    float lr = mix(.03, .025, smoothstep(.05, .12, lb));
-    float lm = mix(.65, .4, smoothstep(.05, .12, lb));
+    float lr = mix(.04, .03, smoothstep(.05, .12, lb));
     pR(p.yz, .1);
-    p.y -= smoothstep(0., .03, p.x) * .003 - .0005;
-    p.y += smoothstep(.03, .12, p.x) * .01;
-    float seam = fHalfCapsule(-p.yz, .0);
-    d = mix(d, smax(d, -seam, lr), lm);
+    p.y -= smoothstep(0., .03, p.x) * .002;
+    p.y += smoothstep(.03, .1, p.x) * .01;
+    // TODO: use a circle instead to help with corner blending
+    p.z -= .12;
+    float seam = fDisc(p, .2);
+    d = mix(d, smax(d, -seam, lr), .65);
+    // d = min(d, seam);
+    // return d;
 
 
     // nostrils base
