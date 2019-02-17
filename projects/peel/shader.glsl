@@ -314,12 +314,12 @@ float map(vec3 p) {
     p = pp;
     p += vec3(0,.03,-.45);
     pR(p.yz, 3.);
-    d = smin(d, sdRoundCone(p, .01, .05, .18), .1);
+    d = smin(d, sdRoundCone(p, .008, .05, .18), .1);
 
     p = pp;
-    p += vec3(0,.1,-.48);
-    pR(p.yz, 2.75);
-    d = smin(d, sdRoundCone(p, .005, .04, .18), .05);
+    p += vec3(0,.06,-.47);
+    pR(p.yz, 2.77);
+    d = smin(d, sdRoundCone(p, .005, .04, .225), .05);
 
     // jaw
 
@@ -349,7 +349,7 @@ float map(vec3 p) {
     p += vec3(.2,.5,-.1);
     float jb = length(p);
     jb = smoothstep(.0, .4, jb);
-    float js = mix(0., -.01, jb);
+    float js = mix(0., -.005, jb);
     jb = mix(.01, .04, jb);
 
     d = smin(d, jaw - js, jb);
@@ -363,29 +363,35 @@ float map(vec3 p) {
     d = smin(d, ellip(p, vec3(.028,.028,.028)*1.2), .15);
 
 
+    // cheek
+
     p = pp;
-    p += vec3(-.12,.53,-.24);
-    pR(p.yz, .5);
+    p += vec3(-.2,.2,-.28);
     pR(p.xz, .5);
-    // d = smin(d, ellip(p, vec3(.02,.02,.04)), .1);
+    pR(p.yz, .4);
+    float ch = ellip(p, vec3(.1,.1,.12)*1.05);
+    d = smin(d, ch, .1);
 
     p = pp;
-    p += vec3(-.19,.32,-.15);
-    pR(p.yz, .9);
-    pR(p.xz, .3);
-    pR(p.xy, .3);
-    float ch = ellip(p, vec3(.11,.15,.19));
-    // d = smin(d, ch, .05);
-    // d = ch;
+    p += vec3(.0,.2,-.32);
+    ch = ellip(p, vec3(.1,.08,.1));
+    d = smin(d, ch, .1);
 
-    // temple
     p = pp;
-    p += vec3(-.24,.08,-.07);
-    float temple = ellip(p, vec3(.19,.19,.16));
-    pR(p.xz, .1);
+    p += vec3(-.17,.31,-.17);
+    ch = ellip(p, vec3(.1));
+    d = smin(d, ch, .1);
+    // return ch;
+
+    p = pp;
+    p += vec3(-.26,.02,-.1);
+    pR(p.xz, .13);
+    pR(p.yz, .5);
+    float temple = ellip(p, vec3(.1,.1,.15));
     temple = smax(temple, p.x - .07, .1);
     d = smin(d, temple, .1);
-
+    
+    // return temple;
     // return d;
 
     // cheek
@@ -397,17 +403,20 @@ float map(vec3 p) {
     // return d;
 
 
+
+    // mouth base
     p = pp;
     p += vec3(-.0,.29,-.29);
     pR(p.yz, -.3);
     d = smin(d, ellip(p, vec3(.13,.15,.1)), .18);
 
-    // return d;
-
-    // mouth base
     p = pp;
-    p += vec3(0,.41,-.35);
-    d = smin(d, ellip(p, vec3(.055,.03,.02) * .5), .12);
+    p += vec3(0,.37,-.4);
+    d = smin(d, ellip(p, vec3(.03,.03,.02) * .5), .1);
+
+    p = pp;
+    p += vec3(-.09,.37,-.31);
+    d = smin(d, ellip(p, vec3(.04)), .18);
 
     // bottom lip
     p = pp;
@@ -434,12 +443,12 @@ float map(vec3 p) {
     p = pp;
     p += vec3(0,.425,-.44);
     lb = length(p);
-    float lr = mix(.04, .03, smoothstep(.05, .12, lb));
+    float lr = mix(.04, .02, smoothstep(.05, .12, lb));
     pR(p.yz, .1);
     p.y -= smoothstep(0., .03, p.x) * .002;
-    p.y += smoothstep(.03, .1, p.x) * .01;
+    p.y += smoothstep(.03, .1, p.x) * .007;
     // TODO: use a circle instead to help with corner blending
-    p.z -= .12;
+    p.z -= .133;
     float seam = fDisc(p, .2);
     d = mix(d, smax(d, -seam, lr), .65);
     // d = min(d, seam);
@@ -470,11 +479,20 @@ float map(vec3 p) {
     pR(p.xz, .5);
     d = smax(d, -ellip(p, vec3(.011,.03,.025)), .015);
 
+    // return d;
+
     // eyelids
     p = pp;
-    p += vec3(-.15,.07,-.34);
-    pR(p.xy, -.9);
-    float eyelids = ellip(p, vec3(.1,.08,.1));
+    p += vec3(-.16,.07,-.34);
+    // pR(p.xy, -.9);
+    float eyelids = ellip(p, vec3(.1,.1,.1));
+
+    p = pp;
+    p += vec3(-.16,.09,-.35);
+    // pR(p.xy, -.9);
+    float eyelids2 = ellip(p, vec3(.09,.1,.07));
+
+    // return eyelids;
 
     // edge top
     p = pp;
@@ -497,13 +515,16 @@ float map(vec3 p) {
 
     float edge = max(max(eb, et), -d);
 
-    d = smin(d, eyelids, .04);
+    d = smin(d, eyelids, .01);
+    d = smin(d, eyelids2, .03);
     d = max(d, -edge);
 
     // eyeball
     p = pp;
     p += vec3(-.165,.0715,-.346);
     d = min(d, length(p) - .088);
+
+    return d;
 
     // tear duct
     p = pp;
@@ -516,7 +537,6 @@ float map(vec3 p) {
 
     // d += sin(cc * 100. - iTime) * smoothstep(.5, .0, cc) * .01;
 
-    return d;
 
 
     p = pa;
