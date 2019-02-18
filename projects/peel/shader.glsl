@@ -292,11 +292,14 @@ float map(vec3 p) {
     float peak = -p.y - .165;
     peak += smoothstep(.0, .2, p.x) * .01;
     peak -= smoothstep(.12, .29, p.x) * .025;
+    // peak += smoothstep(.2, .4, p.x) * .025;
     brow = smax(brow, peak, .07);
     p = bp;
     pR(p.yz, .5);
-    brow = smax(brow, -p.y - .1, .2);
+    brow = smax(brow, -p.y - .06, .15);
     d = smin(d, brow, .06);
+
+    // return d;
 
     // return brow;
 
@@ -362,7 +365,6 @@ float map(vec3 p) {
     p.x *= .7;
     d = smin(d, ellip(p, vec3(.028,.028,.028)*1.2), .15);
 
-
     // cheek
 
     p = pp;
@@ -371,6 +373,14 @@ float map(vec3 p) {
     pR(p.yz, .4);
     float ch = ellip(p, vec3(.1,.1,.12)*1.05);
     d = smin(d, ch, .1);
+
+    p = pp;
+    p += vec3(-.26,.02,-.1);
+    pR(p.xz, .13);
+    pR(p.yz, .5);
+    float temple = ellip(p, vec3(.1,.1,.15));
+    temple = smax(temple, p.x - .07, .1);
+    d = smin(d, temple, .1);
 
     p = pp;
     p += vec3(.0,.2,-.32);
@@ -382,14 +392,6 @@ float map(vec3 p) {
     ch = ellip(p, vec3(.1));
     d = smin(d, ch, .1);
     // return ch;
-
-    p = pp;
-    p += vec3(-.26,.02,-.1);
-    pR(p.xz, .13);
-    pR(p.yz, .5);
-    float temple = ellip(p, vec3(.1,.1,.15));
-    temple = smax(temple, p.x - .07, .1);
-    d = smin(d, temple, .1);
     
     // return temple;
     // return d;
@@ -485,7 +487,7 @@ float map(vec3 p) {
     p = pp;
     p += vec3(-.16,.07,-.34);
     // pR(p.xy, -.9);
-    float eyelids = ellip(p, vec3(.1,.1,.1));
+    float eyelids = ellip(p, vec3(.08,.1,.1));
 
     p = pp;
     p += vec3(-.16,.09,-.35);
@@ -496,41 +498,41 @@ float map(vec3 p) {
 
     // edge top
     p = pp;
-    p += vec3(-.172,.156,-.43);
-    p.x *= .95;
-    float et = length(p.xy) - .1;
+    p += vec3(-.173,.148,-.43);
+    p.x *= .97;
+    float et = length(p.xy) - .09;
 
     // edge bottom
     p = pp;
-    p += vec3(-.168,.005,-.43);
-    pR(p.xz, -.2);
+    p += vec3(-.168,.105,-.43);
     p.x *= .9;
-    float eb = length(p.xy) - .1;
+    float eb = dot(p, normalize(vec3(-.1,-1,-.2))) + .001;
+    eb = smin(eb, dot(p, normalize(vec3(-.3,-1,0))) - .006, .01);
+    eb = smax(eb, dot(p, normalize(vec3(.5,-1,-.5))) - .018, .05);
 
-    p = pp;
-    p += vec3(-.08,-.004,-.43);
-    pR(p.xz, -.2);
-    p.x *= .9;
-    eb = smin(eb, length(p.xy) - .1, .01);
+    // p = pp;
+    // p += vec3(-.08,-.004,-.43);
+    // pR(p.xz, -.2);
+    // p.x *= .9;
+    // eb = smin(eb, length(p.xy) - .1, .01);
 
     float edge = max(max(eb, et), -d);
 
     d = smin(d, eyelids, .01);
     d = smin(d, eyelids2, .03);
-    d = max(d, -edge);
+    d = smax(d, -edge, .005);
 
     // eyeball
     p = pp;
     p += vec3(-.165,.0715,-.346);
     d = min(d, length(p) - .088);
 
-    return d;
-
     // tear duct
     p = pp;
     p += vec3(-.075,.1,-.37);
     d = min(d, length(p) - .05);
 
+    return d;
 
     // p = pa;
     // d += length(sin(p * 60. + vec3(0,iTime*3.,0).zxy)) * .005 - .005;
