@@ -229,11 +229,21 @@ float map(vec3 p) {
     p.z -= .01;
     p.y -= .08;
 
+    float bound = length(p - vec3(0,.03,0)) - .53;
+    bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
+    bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
+    bound = smax(bound, abs(p.x) - .4, .2);
+    bound = smin(bound, neck - .02, .1);
+
+    if (bound > .01) {
+        return bound;
+    }
+
     vec3 pa = p;
     p.x = abs(p.x);
     pp = p;
 
-    modelAlbedo = vec3(.8);
+    modelAlbedo = vec3(.9);
 
     float d = 1e12;
 
@@ -276,6 +286,8 @@ float map(vec3 p) {
     p += vec3(0,.475,-.16);
     pR(p.yz, .8);
     d = smin(d, ellip(p, vec3(.19,.1,.2)), .1);
+
+    // return d;
 
     // brow
     p = pp;
@@ -532,6 +544,10 @@ float map(vec3 p) {
     p += vec3(-.075,.1,-.37);
     d = min(d, length(p) - .05);
 
+    p = pp;
+
+    // d = min(d, bound);
+
     return d;
 
     // p = pa;
@@ -539,10 +555,14 @@ float map(vec3 p) {
 
     // d += sin(cc * 100. - iTime) * smoothstep(.5, .0, cc) * .01;
 
-
+    if (d < -.01) {
+        modelAlbedo = vec3(.2,.25,.3);
+        modelAlbedo = mix(modelAlbedo, vec3(.7,.8,.9), .5);
+        modelAlbedo = vec3(0,1,0);
+    }
 
     p = pa;
-    float h = helix(p.xzy, 30., .07);
+    float h = helix(p.xzy, 35., .06);
 
     d = abs(d + .01) - .01;
     
@@ -594,7 +614,7 @@ vec3 render(Hit hit, vec3 col) {
         float diff = light * ao;
         vec3 diffuse = mix(vec3(.5,.5,.6) * .7, vec3(1), diff);
         col = hit.model.material * diffuse;
-        col = hit.normal * .5 + .5;
+        // col = hit.normal * .5 + .5;
 
         vec3 lig = vec3(0,1.5,.5);
         // lig = vec3(0,.5,1.5);
@@ -691,6 +711,7 @@ void main() {
     vec3 rayPosition = rayOrigin;
 
     vec3 bg = vec3(.7,.8,.9) * 1.1;
+    bg *= .8;
 
     Hit hit = raymarch(rayOrigin, rayDirection);
     vec3 color = render(hit, bg);
