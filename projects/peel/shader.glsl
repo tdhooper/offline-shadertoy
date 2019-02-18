@@ -172,6 +172,213 @@ vec3 polarToCart(vec3 p) {
 
 
 // --------------------------------------------------------
+// Icosahedron domain mirroring
+// Adapted from knighty https://www.shadertoy.com/view/MsKGzw
+// --------------------------------------------------------
+
+
+float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
+    float t = dot(p, planeNormal)+offset;
+    if (t < 0.) {
+        p = p - (2.*t)*planeNormal;
+    }
+    return sign(t);
+}
+
+
+#define PI 3.14159265359
+
+vec3 facePlane;
+vec3 uPlane;
+vec3 vPlane;
+
+int Type=5;
+vec3 nc;
+vec3 pab;
+vec3 pbc;
+vec3 pca;
+
+void initIcosahedron() {//setup folding planes and vertex
+    float cospin=cos(PI/float(Type)), scospin=sqrt(0.75-cospin*cospin);
+    nc=vec3(-0.5,-cospin,scospin);//3rd folding plane. The two others are xz and yz planes
+    pbc=vec3(scospin,0.,0.5);//No normalization in order to have 'barycentric' coordinates work evenly
+    pca=vec3(0.,scospin,cospin);
+    pbc=normalize(pbc); pca=normalize(pca);//for slightly better DE. In reality it's not necesary to apply normalization :)
+    pab=vec3(0,0,1);
+    
+    facePlane = pca;
+    uPlane = cross(vec3(1,0,0), facePlane);
+    vPlane = vec3(1,0,0);
+}
+
+void pModIcosahedron(inout vec3 p) {
+    p = abs(p);
+    pReflect(p, nc, 0.);
+    p.xy = abs(p.xy);
+    pReflect(p, nc, 0.);
+    p.xy = abs(p.xy);
+    pReflect(p, nc, 0.);
+}
+
+
+// --------------------------------------------------------
+// Triangle tiling
+// Adapted from mattz https://www.shadertoy.com/view/4d2GzV
+// --------------------------------------------------------
+
+const float sqrt3 = 1.7320508075688772;
+const float i3 = 0.5773502691896258;
+
+const mat2 cart2hex = mat2(1, 0, i3, 2. * i3);
+const mat2 hex2cart = mat2(1, 0, -.5, .5 * sqrt3);
+
+#define PHI (1.618033988749895)
+#define TAU 6.283185307179586
+
+struct TriPoints {
+    vec2 a;
+    vec2 b;
+    vec2 c;
+    vec2 center;
+    vec2 ab;
+    vec2 bc;
+    vec2 ca;
+};
+
+TriPoints closestTriPoints(vec2 p) {    
+    vec2 pTri = cart2hex * p;
+    vec2 pi = floor(pTri);
+    vec2 pf = fract(pTri);
+    
+    float split1 = step(pf.y, pf.x);
+    float split2 = step(pf.x, pf.y);
+    
+    vec2 a = vec2(split1, 1);
+    vec2 b = vec2(1, split2);
+    vec2 c = vec2(0, 0);
+
+    a += pi;
+    b += pi;
+    c += pi;
+
+    a = hex2cart * a;
+    b = hex2cart * b;
+    c = hex2cart * c;
+    
+    vec2 center = (a + b + c) / 3.;
+    
+    vec2 ab = (a + b) / 2.;
+    vec2 bc = (b + c) / 2.;
+    vec2 ca = (c + a) / 2.;
+
+    return TriPoints(a, b, c, center, ab, bc, ca);
+}
+
+
+// --------------------------------------------------------
+// Geodesic tiling
+// --------------------------------------------------------
+
+struct TriPoints3D {
+    vec3 a;
+    vec3 b;
+    vec3 c;
+    vec3 center;
+    vec3 ab;
+    vec3 bc;
+    vec3 ca;
+};
+
+vec3 intersection(vec3 n, vec3 planeNormal, float planeOffset) {
+    float denominator = dot(planeNormal, n);
+    float t = (dot(vec3(0), planeNormal ) + planeOffset) / -denominator;
+    return n * t;
+}
+
+//// Edge length of an icosahedron with an inscribed sphere of radius of 1
+//float edgeLength = 1. / ((sqrt(3.) / 12.) * (3. + sqrt(5.)));
+//// Inner radius of the icosahedron's face
+//float faceRadius = (1./6.) * sqrt(3.) * edgeLength;
+float faceRadius = 0.3819660112501051;
+
+// 2D coordinates on the icosahedron face
+vec2 icosahedronFaceCoordinates(vec3 p) {
+    vec3 pn = normalize(p);
+    vec3 i = intersection(pn, facePlane, -1.);
+    return vec2(dot(i, uPlane), dot(i, vPlane));
+}
+
+// Project 2D icosahedron face coordinates onto a sphere
+vec3 faceToSphere(vec2 facePoint) {
+    return normalize(facePlane + (uPlane * facePoint.x) + (vPlane * facePoint.y));
+}
+
+TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
+    // Get 2D cartesian coordiantes on that face
+    vec2 uv = icosahedronFaceCoordinates(p);
+    
+    // Get points on the nearest triangle tile
+    float uvScale = subdivisions / faceRadius / 2.;
+    TriPoints points = closestTriPoints(uv * uvScale);
+    
+    // Project 2D triangle coordinates onto a sphere 
+    vec3 a = faceToSphere(points.a / uvScale);
+    vec3 b = faceToSphere(points.b / uvScale);
+    vec3 c = faceToSphere(points.c / uvScale);
+    vec3 center = faceToSphere(points.center / uvScale);
+    vec3 ab = faceToSphere(points.ab / uvScale);
+    vec3 bc = faceToSphere(points.bc / uvScale);
+    vec3 ca = faceToSphere(points.ca / uvScale);
+    
+    return TriPoints3D(a, b, c, center, ab, bc, ca);
+}
+
+float hexModel(
+    vec3 p,
+    vec3 hexCenter,
+    vec3 edgeA,
+    vec3 edgeB
+) {
+    float d;
+
+    float gap = .005;
+    float roundCorner = .01;
+    float height = .5;
+    float thickness = .2;
+    float roundTop = .0;
+
+    float edgeADist = dot(p, edgeA) + gap;
+    float edgeBDist = dot(p, edgeB) - gap;
+    float edgeDist = smax(edgeADist, -edgeBDist, roundCorner);
+
+    return edgeDist;
+}
+
+float hexModel2(vec3 p) {
+    pModIcosahedron(p);
+
+    float subdivisions = 3.5;
+    TriPoints3D points = geodesicTriPoints(p, subdivisions);
+        
+    vec3 edgeAB = normalize(cross(points.center, points.ab));
+    vec3 edgeBC = normalize(cross(points.center, points.bc));
+    vec3 edgeCA = normalize(cross(points.center, points.ca));
+
+    float model, part;
+
+    part = hexModel(p, points.b, edgeAB, edgeBC);
+    model = part;
+
+    part = hexModel(p, points.c, edgeBC, edgeCA);
+    model = min(model, part);
+    
+    part = hexModel(p, points.a, edgeCA, edgeAB);
+    model = min(model, part);
+   
+    return model;
+}
+
+// --------------------------------------------------------
 // Model
 // --------------------------------------------------------
 
@@ -548,7 +755,15 @@ float map(vec3 p) {
 
     // d = min(d, bound);
 
+    p = pa;
+    pR(p.yz, -iTime);
+    float hex = hexModel2(p);
+
+    d = abs(d + .01) - .01;
+    d = max(d, hex);
+
     return d;
+
 
     // p = pa;
     // d += length(sin(p * 60. + vec3(0,iTime*3.,0).zxy)) * .005 - .005;
@@ -700,6 +915,7 @@ float getDepth(float depth) {
 }
 
 void main() {
+    initIcosahedron();
 
     float time = iTime;
     // time *= .333;
