@@ -172,52 +172,44 @@ vec3 polarToCart(vec3 p) {
 
 
 // --------------------------------------------------------
-// Icosahedron domain mirroring
-// Adapted from knighty https://www.shadertoy.com/view/MsKGzw
+// Icosahedron faces and vertices
 // --------------------------------------------------------
 
+#define PHI (1.618033988749895)
 
-float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
-    float t = dot(p, planeNormal)+offset;
-    if (t < 0.) {
-        p = p - (2.*t)*planeNormal;
-    }
-    return sign(t);
+// Return a or b, depending if p is in front of,
+// or behind the plane normal
+vec3 splitPlane(vec3 a, vec3 b, vec3 p, vec3 plane) {
+    float split = max(sign(dot(p, plane)), 0.);
+    return mix(a, b, split);
 }
 
-
-#define PI 3.14159265359
-
-vec3 facePlane;
-vec3 uPlane;
-vec3 vPlane;
-
-int Type=5;
-vec3 nc;
-vec3 pab;
-vec3 pbc;
-vec3 pca;
-
-void initIcosahedron() {//setup folding planes and vertex
-    float cospin=cos(PI/float(Type)), scospin=sqrt(0.75-cospin*cospin);
-    nc=vec3(-0.5,-cospin,scospin);//3rd folding plane. The two others are xz and yz planes
-    pbc=vec3(scospin,0.,0.5);//No normalization in order to have 'barycentric' coordinates work evenly
-    pca=vec3(0.,scospin,cospin);
-    pbc=normalize(pbc); pca=normalize(pca);//for slightly better DE. In reality it's not necesary to apply normalization :)
-    pab=vec3(0,0,1);
-    
-    facePlane = pca;
-    uPlane = cross(vec3(1,0,0), facePlane);
-    vPlane = vec3(1,0,0);
+// An icosahedron vertex for the nearest face,
+// a bit like finding the nearest icosahedron vertex,
+// except we only need one per face
+vec3 icosahedronVertex(vec3 p) {
+    vec3 sp, v1, v2, result, plane;
+    sp = sign(p);
+    v1 = vec3(PHI, 1, 0) * sp;
+    v2 = vec3(1, 0, PHI) * sp;
+    plane = vec3(1, PHI, -PHI - 1.) * sp;
+    result = splitPlane(v2, v1, p, plane);
+    return normalize(result);
 }
 
-void pModIcosahedron(inout vec3 p) {
-    p = abs(p);
-    pReflect(p, nc, 0.);
-    p.xy = abs(p.xy);
-    pReflect(p, nc, 0.);
-    p.xy = abs(p.xy);
-    pReflect(p, nc, 0.);
+// Nearest dodecahedron vertex (nearest icosahrdron face)
+vec3 dodecahedronVertex(vec3 p) {
+    vec3 sp, v1, v2, v3, v4, result, plane;
+    sp = sign(p);
+    v1 = sp;
+    v2 = vec3(0, 1, PHI + 1.) * sp;
+    v3 = vec3(1, PHI + 1., 0) * sp;
+    v4 = vec3(PHI + 1., 0, 1) * sp;
+    plane = vec3(-1. - PHI, -1, PHI);
+    result = splitPlane(v1, v2, p, plane * sp);
+    result = splitPlane(result, v3, p, plane.yzx * sp);
+    result = splitPlane(result, v4, p, plane.zxy * sp);
+    return normalize(result);
 }
 
 
@@ -300,6 +292,11 @@ vec3 intersection(vec3 n, vec3 planeNormal, float planeOffset) {
 //// Inner radius of the icosahedron's face
 //float faceRadius = (1./6.) * sqrt(3.) * edgeLength;
 float faceRadius = 0.3819660112501051;
+// float faceRadius = 0.4472;
+
+vec3 facePlane = vec3(0);
+vec3 uPlane = vec3(0);
+vec3 vPlane = vec3(0);
 
 // 2D coordinates on the icosahedron face
 vec2 icosahedronFaceCoordinates(vec3 p) {
@@ -314,6 +311,14 @@ vec3 faceToSphere(vec2 facePoint) {
 }
 
 TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
+
+    vec3 dv = dodecahedronVertex(p);
+    vec3 iv = icosahedronVertex(p);
+
+    facePlane = dv;
+    vPlane = normalize(cross(iv, dv));
+    uPlane = normalize(cross(vPlane, dv));
+
     // Get 2D cartesian coordiantes on that face
     vec2 uv = icosahedronFaceCoordinates(p);
     
@@ -354,10 +359,14 @@ float hexModel(
     return edgeDist;
 }
 
-float hexModel2(vec3 p) {
-    pModIcosahedron(p);
+vec3 modelAlbedo;
 
-    float subdivisions = 3.5;
+vec3 HexCenter;
+
+float hexModel2(vec3 p) {
+    // pModIcosahedron(p);
+
+    float subdivisions = 2.;
     TriPoints3D points = geodesicTriPoints(p, subdivisions);
         
     vec3 edgeAB = normalize(cross(points.center, points.ab));
@@ -374,6 +383,18 @@ float hexModel2(vec3 p) {
     
     part = hexModel(p, points.a, edgeCA, edgeAB);
     model = min(model, part);
+
+    vec3 center = points.a;
+    if (distance(p, points.b) < distance(p, center)) {
+        center = points.b;
+    }
+    if (distance(p, points.c) < distance(p, center)) {
+        center = points.c;
+    }
+
+    HexCenter = center;
+
+    // modelAlbedo = fract(center * 5.);
    
     return model;
 }
@@ -416,8 +437,6 @@ float ellip(vec3 p, vec3 s) {
     return length(p) - r;
 }
 
-vec3 modelAlbedo;
-
 float map(vec3 p) {
 
     // float cc = length(p - vec3(0,.18,.52));
@@ -441,10 +460,25 @@ float map(vec3 p) {
     bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
     bound = smax(bound, abs(p.x) - .4, .2);
     bound = smin(bound, neck - .02, .1);
+    bound -= .01;
 
     if (bound > .01) {
         return bound;
     }
+
+    pp = p;
+
+    pR(p.yz, -iTime * .2);
+    float hex = hexModel2(p);
+    pR(HexCenter.yz, iTime * .2);
+
+    p = pp;
+
+    p += HexCenter * sin((abs(HexCenter.x*3.) + HexCenter.y* 2.) * 50. - iTime * 5.) * .01;
+
+    // modelAlbedo = fract(HexCenter);
+
+    // return length(p) - .3;
 
     vec3 pa = p;
     p.x = abs(p.x);
@@ -755,10 +789,6 @@ float map(vec3 p) {
 
     // d = min(d, bound);
 
-    p = pa;
-    pR(p.yz, -iTime);
-    float hex = hexModel2(p);
-
     d = abs(d + .01) - .01;
     d = max(d, hex);
 
@@ -834,7 +864,7 @@ vec3 render(Hit hit, vec3 col) {
         vec3 lig = vec3(0,1.5,.5);
         // lig = vec3(0,.5,1.5);
         lig = vec3(0,1,0);
-        col = vec3(1) * pow(clamp(dot(lig, hit.normal) * .5 + .5, 0., 1.), 1./2.2);
+        col = hit.model.material * pow(clamp(dot(lig, hit.normal) * .5 + .5, 0., 1.), 1./2.2);
         // col = vec3(1,0,0);
 
     }
@@ -915,7 +945,7 @@ float getDepth(float depth) {
 }
 
 void main() {
-    initIcosahedron();
+    // initIcosahedron();
 
     float time = iTime;
     // time *= .333;
