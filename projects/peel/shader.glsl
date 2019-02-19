@@ -211,37 +211,11 @@ float ellip(vec3 p, vec3 s) {
 
 vec3 modelAlbedo;
 
-float map(vec3 p) {
-
-    // float cc = length(p - vec3(0,.18,.52));
-    // p.z += sin(cc * 100. - iTime) * smoothstep(.3, .0, cc) * .01;
-    // p.x += sin(cc * 8. - iTime * 10.) * .1;
-
-    vec3 pp = p;
-
-    p += vec3(0,.25,.1);
-    pR(p.xy, -.05);
-    pR(p.yz, -.05);
-    p.x *= .95;
-    float neck = fHalfCapsule(p, .235);
-    p = pp;
-
-    p.z -= .01;
-    p.y -= .08;
-
-    float bound = length(p - vec3(0,.03,0)) - .53;
-    bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
-    bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
-    bound = smax(bound, abs(p.x) - .4, .2);
-    bound = smin(bound, neck - .02, .1);
-
-    if (bound > .01) {
-        return bound;
-    }
+float mHead(vec3 p) {
 
     vec3 pa = p;
     p.x = abs(p.x);
-    pp = p;
+    vec3 pp = p;
 
     modelAlbedo = vec3(.9);
 
@@ -315,13 +289,13 @@ float map(vec3 p) {
 
     // return brow;
 
-    if (guiNeck) {
-        p = pa;
-        p += vec3(.18,.57,-.1);
-        float nb = length(p);
-        nb = mix(.11, .17, smoothstep(.1, .3, nb));
-        d = smin(d, neck, nb);
-    }
+    // if (guiNeck) {
+    //     p = pa;
+    //     p += vec3(.18,.57,-.1);
+    //     float nb = length(p);
+    //     nb = mix(.11, .17, smoothstep(.1, .3, nb));
+    //     d = smin(d, neck, nb);
+    // }
 
     // return d;
 
@@ -569,6 +543,33 @@ float map(vec3 p) {
     d = max(d, h);
 
     return d;
+}
+
+
+float map(vec3 p) {
+    vec3 pp = p;
+
+    p += vec3(0,.25,.1);
+    pR(p.xy, -.05);
+    pR(p.yz, -.05);
+    p.x *= .95;
+    float neck = fHalfCapsule(p, .235);
+    p = pp;
+
+    p.z -= .01;
+    p.y -= .08;
+
+    float bound = length(p - vec3(0,.03,0)) - .53;
+    bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
+    bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
+    bound = smax(bound, abs(p.x) - .4, .2);
+    bound = smin(bound, neck - .02, .1);
+
+    if (bound > .01) {
+        return bound;
+    }
+
+    return mHead(p);
 }
 
 
