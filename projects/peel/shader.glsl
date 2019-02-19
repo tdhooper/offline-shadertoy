@@ -213,6 +213,13 @@ vec3 modelAlbedo;
 
 float mHead(vec3 p) {
 
+    float bound = length(p - vec3(0,.03,0)) - .53;
+    bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
+    bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
+    bound = smax(bound, abs(p.x) - .4, .2);
+
+    return bound + .05;
+
     vec3 pa = p;
     p.x = abs(p.x);
     vec3 pp = p;
@@ -547,29 +554,79 @@ float mHead(vec3 p) {
 
 
 float map(vec3 p) {
-    vec3 pp = p;
+    // vec3 pp = p;
 
-    p += vec3(0,.25,.1);
-    pR(p.xy, -.05);
-    pR(p.yz, -.05);
-    p.x *= .95;
-    float neck = fHalfCapsule(p, .235);
-    p = pp;
+    // p += vec3(0,.25,.1);
+    // pR(p.xy, -.05);
+    // pR(p.yz, -.05);
+    // p.x *= .95;
+    // float neck = fHalfCapsule(p, .235);
+    // p = pp;
 
-    p.z -= .01;
-    p.y -= .08;
+    // p.z -= .01;
+    // p.y -= .08;
 
-    float bound = length(p - vec3(0,.03,0)) - .53;
-    bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
-    bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
-    bound = smax(bound, abs(p.x) - .4, .2);
-    bound = smin(bound, neck - .02, .1);
+    // float bound = length(p - vec3(0,.03,0)) - .53;
+    // bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
+    // bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
+    // bound = smax(bound, abs(p.x) - .4, .2);
+    // bound = smin(bound, neck - .02, .1);
 
-    if (bound > .01) {
-        return bound;
+    // if (bound > .01) {
+    //     return bound;
+    // }
+
+    p.z *= -1.;
+
+    vec2 sp = vec2(
+        atan(p.x, p.z),
+        atan(p.y, length(p.xz))
+    );
+
+    float s = 1. + floor(pow(iTime * 2., 2.)) / 2.;
+    s = 2.5;
+
+    vec2 rep = vec2(10. * s, 10. * s) / (PI * 2.);
+
+    sp = floor(sp * rep) / rep + .5 / rep;
+
+    vec3 dir = vec3(
+        sin(sp.x) * cos(sp.y),
+        sin(sp.y),
+        cos(sp.x) * cos(sp.y)
+    );
+
+    dir.z *= -1.;
+    p.z *= -1.;
+
+    vec3 ray = vec3(0);
+    float dist = 0.;
+
+    const int STEPS = 20;
+    for(int i = 0; i < STEPS; i++ ) {
+        dist = mHead(ray) * -1.;
+        if (dist < .0001) {
+            break;
+        }
+        ray += dist * dir;
     }
 
-    return mHead(p);
+    // p -= dir;
+
+    float dots = length(p - ray) - .1 / s;
+
+    float head = mHead(p);
+
+    head = abs(head + .01) - .01;
+
+    float headd = smin(head, dots, .1 / s);
+
+
+    return mix(head, mix(headd, dots, smoothstep(.33, 1., iTime)), smoothstep(0., .33, iTime));
+
+    return smin(head, dots, .1 / s);
+
+    return mHead(p) - iTime;
 }
 
 
