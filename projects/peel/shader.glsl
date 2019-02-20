@@ -166,6 +166,12 @@ TriPoints closestTriPoints(vec2 p) {
     pR(b, -rot);
     pR(c, -rot);
 
+    pR(center, -rot);
+
+    pR(ab, -rot);
+    pR(bc, -rot);
+    pR(ca, -rot);
+
     return TriPoints(a, b, c, center, ab, bc, ca);
 }
 
@@ -225,7 +231,7 @@ vec3 faceToSphere(vec2 facePoint) {
 // Inner radius of the icosahedron's face
 // const float faceRadius = (1./6.) * sqrt(3.) * edgeLength;
 // float faceRadius = 1./3.;
-float faceRadius = 2./9.;
+float faceRadius = .2205;
 
 // Closest geodesic point (triangle center) on unit sphere's surface
 TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
@@ -793,7 +799,7 @@ vec3 _projectSurface(vec3 dir, vec3 origin) {
     return ray - origin;
 }
 
-float map(vec3 p) {
+float _map(vec3 p) {
 
     vec3 origin = vec3(cos(iTime * 2.) * .25,sin(iTime * 2.) * .25 + .1,0);
     origin = vec3(0,.1,0);
@@ -825,6 +831,46 @@ float map(vec3 p) {
 
     // return mHead(p) - iTime;
 }
+
+float map(vec3 p) {
+
+    TriPoints3D points = geodesicTriPoints(p, 2.);
+
+    vec3 edgeAB = normalize(cross(points.center, points.ab));
+    vec3 edgeBC = normalize(cross(points.center, points.bc));
+    vec3 edgeCA = normalize(cross(points.center, points.ca));
+
+    float edge = abs(min(
+        max(dot(p, edgeAB), -dot(p, edgeBC)),
+        max(dot(p, edgeBC), -dot(p, edgeCA))
+    ));
+
+    float r = .5;
+    float model = length(p) - r;
+    model = mHead(p);
+    model = abs(model + .03) - .03;
+
+    modelAlbedo = vec3(1);
+    // modelAlbedo = spectrum(edge * 20.) * (sign(edge) * .25 + .75);
+
+    float sep = smoothstep(0., .5, iTime) * .02;
+
+    return max(model, -edge + sep);
+
+    return model;
+
+    float sz = .02;
+    float dotsA = length(p - points.a * r) - sz;
+    float dotsB = length(p - points.b * r) - sz;
+    float dotsC = length(p - points.c * r) - sz;
+    float dots = min(dotsA, min(dotsB, dotsC));
+
+
+    return mix(model, smin(model, dots, sz / 2.), iTime);
+
+    return dots;
+}
+
 
 
 // --------------------------------------------------------
@@ -874,7 +920,7 @@ vec3 render(Hit hit, vec3 col) {
         vec3 lig = vec3(0,1.5,.5);
         // lig = vec3(0,.5,1.5);
         lig = vec3(0,1,0);
-        col = vec3(1) * pow(clamp(dot(lig, hit.normal) * .5 + .5, 0., 1.), 1./2.2);
+        col = modelAlbedo * pow(clamp(dot(lig, hit.normal) * .5 + .5, 0., 1.), 1./2.2);
         // col = vec3(1,0,0);
 
     }
