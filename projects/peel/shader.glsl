@@ -127,6 +127,7 @@ struct TriPoints {
     vec2 b;
     vec2 c;
     vec2 center;
+    vec2 hexCenter;
     vec2 ab;
     vec2 bc;
     vec2 ca;
@@ -158,21 +159,41 @@ TriPoints closestTriPoints(vec2 p) {
     
     vec2 center = (a + b + c) / 3.;
     
-    vec2 ab = (a + b) / 2.;
-    vec2 bc = (b + c) / 2.;
-    vec2 ca = (c + a) / 2.;
+    vec2 ab0 = (a + b) / 2.;
+    vec2 bc0 = (b + c) / 2.;
+    vec2 ca0 = (c + a) / 2.;
+
+    vec2 ab, bc, ca;
+
+    vec2 hexCenter = a;
+    ab = ab0;
+    bc = ca0;
+    ca = bc0;
+    if (distance(p, b) < distance(p, hexCenter)) {
+        hexCenter = b;
+        ab = bc0;
+        bc = ab0;
+        ca = ca0;
+    }
+    if (distance(p, c) < distance(p, hexCenter)) {
+        hexCenter = c;
+        ab = ca0;
+        bc = bc0;
+        ca = ab0;
+    }
 
     pR(a, -rot);
     pR(b, -rot);
     pR(c, -rot);
 
     pR(center, -rot);
+    pR(hexCenter, -rot);
 
     pR(ab, -rot);
     pR(bc, -rot);
     pR(ca, -rot);
 
-    return TriPoints(a, b, c, center, ab, bc, ca);
+    return TriPoints(a, b, c, center, hexCenter, ab, bc, ca);
 }
 
 
@@ -198,6 +219,7 @@ struct TriPoints3D {
     vec3 b;
     vec3 c;
     vec3 center;
+    vec3 hexCenter;
     vec3 ab;
     vec3 bc;
     vec3 ca;
@@ -257,11 +279,12 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     vec3 b = faceToSphere(points.b / uvScale);
     vec3 c = faceToSphere(points.c / uvScale);
     vec3 center = faceToSphere(points.center / uvScale);
+    vec3 hexCenter = faceToSphere(points.hexCenter / uvScale);
     vec3 ab = faceToSphere(points.ab / uvScale);
     vec3 bc = faceToSphere(points.bc / uvScale);
     vec3 ca = faceToSphere(points.ca / uvScale);
 
-    return TriPoints3D(a, b, c, center, ab, bc, ca);
+    return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca);
 }
 
 
@@ -834,26 +857,30 @@ float _map(vec3 p) {
 
 float map(vec3 p) {
 
-    TriPoints3D points = geodesicTriPoints(p, 2.);
+    TriPoints3D points = geodesicTriPoints(p, 1.);
+
+    float plode = cos(iTime * 2. - PI) * .5 + .5;
+    plode = pow(plode, 2.) * 1.5;
+    p -= points.hexCenter * plode;
+
+    // points = geodesicTriPoints(p, 2.);
 
     vec3 edgeAB = normalize(cross(points.center, points.ab));
     vec3 edgeBC = normalize(cross(points.center, points.bc));
     vec3 edgeCA = normalize(cross(points.center, points.ca));
 
-    float edge = abs(min(
-        max(dot(p, edgeAB), -dot(p, edgeBC)),
-        max(dot(p, edgeBC), -dot(p, edgeCA))
-    ));
+    float edge = min(dot(p, edgeAB), -dot(p, edgeBC));
 
     float r = .5;
     float model = length(p) - r;
     model = mHead(p);
-    model = abs(model + .03) - .03;
+    model = abs(model + .06) - .06;
 
     modelAlbedo = vec3(1);
     // modelAlbedo = spectrum(edge * 20.) * (sign(edge) * .25 + .75);
 
     float sep = smoothstep(0., .5, iTime) * .02;
+    sep = .00;
 
     return max(model, -edge + sep);
 
