@@ -213,6 +213,8 @@ vec3 modelAlbedo;
 
 float mHead(vec3 p) {
 
+    p.y -= .1;
+
     float bound = length(p - vec3(0,.03,0)) - .53;
     bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
     bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
@@ -577,6 +579,7 @@ float map(vec3 p) {
     // }
 
     p.z *= -1.;
+    p.y += 1.;
 
     vec2 sp = vec2(
         atan(p.x, p.z),
@@ -599,16 +602,20 @@ float map(vec3 p) {
     dir.z *= -1.;
     p.z *= -1.;
 
-    vec3 ray = vec3(0);
+    // p += dir * -iTime;
+
+    // return mHead(p);
+
+    vec3 ray = dir;
     float dist = 0.;
 
-    const int STEPS = 20;
+    const int STEPS = 5;
     for(int i = 0; i < STEPS; i++ ) {
-        dist = mHead(ray) * -1.;
+        dist = mHead(ray);
         if (dist < .0001) {
             break;
         }
-        ray += dist * dir;
+        ray += dist * -dir;
     }
 
     // p -= dir;
@@ -616,6 +623,8 @@ float map(vec3 p) {
     float dots = length(p - ray) - .1 / s;
 
     float head = mHead(p);
+
+    return min(head, dots);
 
     head = abs(head + .01) - .01;
 
