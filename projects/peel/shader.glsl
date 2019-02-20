@@ -33,6 +33,14 @@ const float TWISTS = .5;
 const float TWIST_SPEED = 1.;
 
 
+#define PI 3.14159265359
+
+void pR(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+
+
 // --------------------------------------------------------
 // IQ
 // https://www.shadertoy.com/view/ll2GD3
@@ -47,18 +55,218 @@ vec3 spectrum(float n) {
 }
 
 
+/*
+
+    Geodesic tiling, with absolute positions
+    ----------------------------------------
+
+    Similar to https://www.shadertoy.com/view/llGXWc
+    except with the full absolute position of each
+    point.
+
+*/
+
+
+// --------------------------------------------------------
+// Icosahedron faces and vertices
+// --------------------------------------------------------
+
+#define PHI (1.618033988749895)
+
+// Return a or b, depending if p is in front of,
+// or behind the plane normal
+vec3 splitPlane(vec3 a, vec3 b, vec3 p, vec3 plane) {
+    float split = max(sign(dot(p, plane)), 0.);
+    return mix(a, b, split);
+}
+
+// An icosahedron vertex for the nearest face,
+// a bit like finding the nearest icosahedron vertex,
+// except we only need one per face
+vec3 icosahedronVertex(vec3 p) {
+    vec3 sp, v1, v2, result, plane;
+    sp = sign(p);
+    v1 = vec3(PHI, 1, 0) * sp;
+    v2 = vec3(1, 0, PHI) * sp;
+    plane = vec3(1, PHI, -PHI - 1.) * sp;
+    result = splitPlane(v2, v1, p, plane);
+    return normalize(result);
+}
+
+// Nearest dodecahedron vertex (nearest icosahrdron face)
+vec3 dodecahedronVertex(vec3 p) {
+    vec3 sp, v1, v2, v3, v4, result, plane;
+    sp = sign(p);
+    v1 = sp;
+    v2 = vec3(0, 1, PHI + 1.) * sp;
+    v3 = vec3(1, PHI + 1., 0) * sp;
+    v4 = vec3(PHI + 1., 0, 1) * sp;
+    plane = vec3(-1. - PHI, -1, PHI);
+    result = splitPlane(v1, v2, p, plane * sp);
+    result = splitPlane(result, v3, p, plane.yzx * sp);
+    result = splitPlane(result, v4, p, plane.zxy * sp);
+    return normalize(result);
+}
+
+
+// --------------------------------------------------------
+// Triangle tiling
+// Adapted from mattz https://www.shadertoy.com/view/4d2GzV
+//
+// Finds the closest triangle center on a 2D plane 
+// --------------------------------------------------------
+
+const float sqrt3 = 1.7320508075688772;
+const float i3 = 0.5773502691896258;
+
+const mat2 cart2hex = mat2(1, 0, i3, 2. * i3);
+const mat2 hex2cart = mat2(1, 0, -.5, .5 * sqrt3);
+
+struct TriPoints {
+    vec2 a;
+    vec2 b;
+    vec2 c;
+    vec2 center;
+    vec2 ab;
+    vec2 bc;
+    vec2 ca;
+};
+
+TriPoints closestTriPoints(vec2 p) {
+
+    float rot = PI / 2.;
+    pR(p, rot);
+
+    vec2 pTri = cart2hex * p;
+    vec2 pi = floor(pTri);
+    vec2 pf = fract(pTri);
+    
+    float split1 = step(pf.y, pf.x);
+    float split2 = step(pf.x, pf.y);
+    
+    vec2 a = vec2(split1, 1);
+    vec2 b = vec2(1, split2);
+    vec2 c = vec2(0, 0);
+
+    a += pi;
+    b += pi;
+    c += pi;
+
+    a = hex2cart * a;
+    b = hex2cart * b;
+    c = hex2cart * c;
+    
+    vec2 center = (a + b + c) / 3.;
+    
+    vec2 ab = (a + b) / 2.;
+    vec2 bc = (b + c) / 2.;
+    vec2 ca = (c + a) / 2.;
+
+    pR(a, -rot);
+    pR(b, -rot);
+    pR(c, -rot);
+
+    return TriPoints(a, b, c, center, ab, bc, ca);
+}
+
+
+// --------------------------------------------------------
+// Geodesic tiling
+//
+// Finds the closest triangle center on the surface of a
+// sphere:
+// 
+// 1. Intersect position with the face plane
+// 2. Convert that into 2D uv coordinates
+// 3. Find the closest triangle center (tile the plane)
+// 4. Convert back into 3D coordinates
+// 5. Project onto a unit sphere (normalize)
+//
+// You can use any tiling method, such as one that returns
+// hex centers or adjacent cells, so you can create more
+// interesting geometry later.
+// --------------------------------------------------------
+
+struct TriPoints3D {
+    vec3 a;
+    vec3 b;
+    vec3 c;
+    vec3 center;
+    vec3 ab;
+    vec3 bc;
+    vec3 ca;
+};
+
+
+vec3 facePlane = vec3(0);
+vec3 uPlane = vec3(0);
+vec3 vPlane = vec3(0);
+
+// Intersection point of vector and plane
+vec3 intersection(vec3 n, vec3 planeNormal, float planeOffset) {
+    float denominator = dot(planeNormal, n);
+    float t = (dot(vec3(0), planeNormal) + planeOffset) / -denominator;
+    return n * t;
+}
+
+// 3D position -> 2D (uv) coordinates on the icosahedron face
+vec2 icosahedronFaceCoordinates(vec3 p) {
+    vec3 i = intersection(normalize(p), facePlane, -1.);
+    return vec2(dot(i, uPlane), dot(i, vPlane));
+}
+
+// 2D (uv) coordinates -> 3D point on a unit sphere
+vec3 faceToSphere(vec2 facePoint) {
+    return normalize(facePlane + (uPlane * facePoint.x) + (vPlane * facePoint.y));
+}
+
+// Edge length of an icosahedron with an inscribed sphere of radius of 1
+// const float edgeLength = 1. / ((sqrt(3.) / 12.) * (3. + sqrt(5.)));
+// Inner radius of the icosahedron's face
+// const float faceRadius = (1./6.) * sqrt(3.) * edgeLength;
+// float faceRadius = 1./3.;
+float faceRadius = 2./9.;
+
+// Closest geodesic point (triangle center) on unit sphere's surface
+TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
+    
+    vec3 dv = dodecahedronVertex(p);
+    vec3 iv = icosahedronVertex(p);
+    
+    facePlane = dv;
+    vPlane = normalize(cross(iv, dv));
+    uPlane = normalize(cross(vPlane, dv));
+
+    vec2 uv = icosahedronFaceCoordinates(p);
+    
+    // faceRadius is used as a scale multiplier so that our triangles
+    // always stop at the edge of the face
+    float uvScale = subdivisions / faceRadius / 2.;
+
+    // Get points on the nearest triangle tile
+    TriPoints points = closestTriPoints(uv * uvScale);
+
+    // Project 2D triangle coordinates onto a sphere 
+    vec3 a = faceToSphere(points.a / uvScale);
+    vec3 b = faceToSphere(points.b / uvScale);
+    vec3 c = faceToSphere(points.c / uvScale);
+    vec3 center = faceToSphere(points.center / uvScale);
+    vec3 ab = faceToSphere(points.ab / uvScale);
+    vec3 bc = faceToSphere(points.bc / uvScale);
+    vec3 ca = faceToSphere(points.ca / uvScale);
+
+    return TriPoints3D(a, b, c, center, ab, bc, ca);
+}
+
+
+
 // --------------------------------------------------------
 // Modelling utilities
 // hg_sdf https://www.shadertoy.com/view/Xs3GRB
 // --------------------------------------------------------
 
-#define PI 3.14159265359
-
 #define saturate(x) clamp(x, 0., 1.)
 
-void pR(inout vec2 p, float a) {
-    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
-}
 
 float vmax(vec2 v) {
     return max(v.x, v.y);
@@ -213,14 +421,20 @@ vec3 modelAlbedo;
 
 float mHead(vec3 p) {
 
-    p.y -= .1;
+    // return length(p) - .5;
+
+    // p.y -= .1;
 
     float bound = length(p - vec3(0,.03,0)) - .53;
     bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
     bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
     bound = smax(bound, abs(p.x) - .4, .2);
 
-    return bound + .05;
+    // return bound + .05;
+
+    if (bound > .01) {
+        return bound;
+    }
 
     vec3 pa = p;
     p.x = abs(p.x);
@@ -554,88 +768,62 @@ float mHead(vec3 p) {
     return d;
 }
 
-
-float map(vec3 p) {
-    // vec3 pp = p;
-
-    // p += vec3(0,.25,.1);
-    // pR(p.xy, -.05);
-    // pR(p.yz, -.05);
-    // p.x *= .95;
-    // float neck = fHalfCapsule(p, .235);
-    // p = pp;
-
-    // p.z -= .01;
-    // p.y -= .08;
-
-    // float bound = length(p - vec3(0,.03,0)) - .53;
-    // bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
-    // bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
-    // bound = smax(bound, abs(p.x) - .4, .2);
-    // bound = smin(bound, neck - .02, .1);
-
-    // if (bound > .01) {
-    //     return bound;
-    // }
-
-    p.z *= -1.;
-    p.y += 1.;
-
-    vec2 sp = vec2(
-        atan(p.x, p.z),
-        atan(p.y, length(p.xz))
-    );
-
-    float s = 1. + floor(pow(iTime * 2., 2.)) / 2.;
-    s = 2.5;
-
-    vec2 rep = vec2(10. * s, 10. * s) / (PI * 2.);
-
-    sp = floor(sp * rep) / rep + .5 / rep;
-
-    vec3 dir = vec3(
-        sin(sp.x) * cos(sp.y),
-        sin(sp.y),
-        cos(sp.x) * cos(sp.y)
-    );
-
-    dir.z *= -1.;
-    p.z *= -1.;
-
-    // p += dir * -iTime;
-
-    // return mHead(p);
-
+vec3 projectSurface(vec3 dir, vec3 origin) {
     vec3 ray = dir;
     float dist = 0.;
-
     const int STEPS = 5;
     for(int i = 0; i < STEPS; i++ ) {
-        dist = mHead(ray);
-        if (dist < .0001) {
+        dist = mHead(ray - origin);
+        if (dist < .001) {
             break;
         }
         ray += dist * -dir;
     }
+    return ray - origin;
+}
 
-    // p -= dir;
+vec3 _projectSurface(vec3 dir, vec3 origin) {
+    vec3 ray = dir;
+    float dist = 0.;
+    dist = mHead(ray - origin); ray += dist * -dir;
+    dist = mHead(ray - origin); ray += dist * -dir;
+    dist = mHead(ray - origin); ray += dist * -dir;
+    dist = mHead(ray - origin); ray += dist * -dir;
+    dist = mHead(ray - origin); ray += dist * -dir;
+    return ray - origin;
+}
 
-    float dots = length(p - ray) - .1 / s;
+float map(vec3 p) {
+
+    vec3 origin = vec3(cos(iTime * 2.) * .25,sin(iTime * 2.) * .25 + .1,0);
+    origin = vec3(0,.1,0);
+
+    TriPoints3D points = geodesicTriPoints(p + origin, 3.);
+
+    vec3 psA = projectSurface(points.a, origin);
+    vec3 psB = projectSurface(points.b, origin);
+    vec3 psC = projectSurface(points.c, origin);
+
+    float sz = .02;
+    float dotsA = length(p - psA) - sz;
+    float dotsB = length(p - psB) - sz;
+    float dotsC = length(p - psC) - sz;
+    float dots = min(dotsA, min(dotsB, dotsC));
 
     float head = mHead(p);
 
-    return min(head, dots);
+    return smin(head, dots, .015);
 
-    head = abs(head + .01) - .01;
+    // head = abs(head + .01) - .01;
 
-    float headd = smin(head, dots, .1 / s);
+    // float headd = smin(head, dots, .1 / s);
 
 
-    return mix(head, mix(headd, dots, smoothstep(.33, 1., iTime)), smoothstep(0., .33, iTime));
+    // return mix(head, mix(headd, dots, smoothstep(.33, 1., iTime)), smoothstep(0., .33, iTime));
 
-    return smin(head, dots, .1 / s);
+    // return smin(head, dots, .1 / s);
 
-    return mHead(p) - iTime;
+    // return mHead(p) - iTime;
 }
 
 
