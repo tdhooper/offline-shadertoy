@@ -39,7 +39,7 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
-float hash( const in vec3 p ) {
+float hash(const in vec3 p) {
     return fract(sin(dot(p,vec3(127.1,311.7,758.5453123)))*43758.5453123);
 }
 
@@ -862,7 +862,8 @@ float map(vec3 p) {
 
     TriPoints3D points = geodesicTriPoints(p, 1.);
 
-    float delay = hash(points.hexCenter) * .2;
+    float id = hash(vec3(int(points.hexCenter * 1000.)) / 1000.);
+    float delay = id * .2;
     float start = delay;
     float end = 1. + delay;
     float plode = smoothstep(start, end, cos(iTime + PI) * .5 + .5);
@@ -883,6 +884,7 @@ float map(vec3 p) {
     model = abs(model + .06) - .06;
 
     modelAlbedo = vec3(1);
+    // modelAlbedo = spectrum(id);
     // modelAlbedo = spectrum(edge * 20.) * (sign(edge) * .25 + .75);
 
     float sep = smoothstep(0., .5, iTime) * .02;
