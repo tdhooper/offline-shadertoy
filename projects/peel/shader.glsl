@@ -455,7 +455,7 @@ float mHead(vec3 p) {
 
     // return length(p) - .5;
 
-    // p.y -= .1;
+    pR(p.yz, -.1);
 
     float bound = length(p - vec3(0,.03,0)) - .53;
     bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
@@ -858,52 +858,42 @@ float _map(vec3 p) {
     // return mHead(p) - iTime;
 }
 
+float range(float vmin, float vmax, float value) {
+  return clamp((value - vmin) / (vmax - vmin), 0., 1.);
+}
+
+float sinstep(float a) {
+    return sin(a * PI - PI * .5) * .5 + .5;
+}
+
+float mHexHead(vec3 p, TriPoints3D points) {
+    vec3 edgeAB = normalize(cross(points.center, points.ab));
+    vec3 edgeBC = normalize(cross(points.center, points.bc));
+    float edge = min(dot(p, edgeAB), -dot(p, edgeBC));
+    float d = mHead(p);
+    d = abs(d + .06) - .06;
+    return max(d, -edge);
+}
+
+float time;
+
+float animPlode(vec3 hexCenter, float startOffset) {
+    float duration = 1.;
+    float id = hash(vec3(int(hexCenter * 1000.)) / 1000.);
+    float delay = id * .2;
+    float start = delay + startOffset * duration;
+    float end = duration;
+    float plode = range(start, end, time);
+    plode = sinstep(sinstep(plode)) * (1. - delay);
+    return plode;
+}
+
 float map(vec3 p) {
 
     TriPoints3D points = geodesicTriPoints(p, 1.);
+    p -= points.hexCenter * animPlode(points.hexCenter, 0.);
 
-    float id = hash(vec3(int(points.hexCenter * 1000.)) / 1000.);
-    float delay = id * .2;
-    float start = delay;
-    float end = 1. + delay;
-    float plode = smoothstep(start, end, cos(iTime + PI) * .5 + .5);
-    plode = pow(plode, 2.) * 1.5;
-    p -= points.hexCenter * plode;
-
-    // points = geodesicTriPoints(p, 2.);
-
-    vec3 edgeAB = normalize(cross(points.center, points.ab));
-    vec3 edgeBC = normalize(cross(points.center, points.bc));
-    vec3 edgeCA = normalize(cross(points.center, points.ca));
-
-    float edge = min(dot(p, edgeAB), -dot(p, edgeBC));
-
-    float r = .5;
-    float model = length(p) - r;
-    model = mHead(p);
-    model = abs(model + .06) - .06;
-
-    modelAlbedo = vec3(1);
-    // modelAlbedo = spectrum(id);
-    // modelAlbedo = spectrum(edge * 20.) * (sign(edge) * .25 + .75);
-
-    float sep = smoothstep(0., .5, iTime) * .02;
-    sep = .00;
-
-    return max(model, -edge + sep);
-
-    return model;
-
-    float sz = .02;
-    float dotsA = length(p - points.a * r) - sz;
-    float dotsB = length(p - points.b * r) - sz;
-    float dotsC = length(p - points.c * r) - sz;
-    float dots = min(dotsA, min(dotsB, dotsC));
-
-
-    return mix(model, smin(model, dots, sz / 2.), iTime);
-
-    return dots;
+    return mHexHead(p, points);
 }
 
 
@@ -1037,9 +1027,9 @@ float getDepth(float depth) {
 
 void main() {
 
-    float time = iTime;
+    time = iTime;
     // time *= .333;
-    time = mod(time, 1.);
+    time = mod(time, 2.);
 
 
     vec3 rayOrigin = eye;
