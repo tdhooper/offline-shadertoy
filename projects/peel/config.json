@@ -1,9 +1,9 @@
 {
-    "id": "peel12",
+    "id": "peelfractal02",
     "controls": {
         "blend": {
             "type": "toggle",
-            "value": true
+            "value": false
         },
         "split": {
             "type": "toggle",
@@ -11,7 +11,11 @@
         },
         "neck": {
             "type": "toggle",
-            "value": true
+            "value": false
+        },
+        "debug": {
+            "type": "toggle",
+            "value": false
         }
     }
 }

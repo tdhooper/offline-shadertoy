@@ -18,6 +18,7 @@ varying vec3 cameraForward;
 uniform bool guiBlend;
 uniform bool guiSplit;
 uniform bool guiNeck;
+uniform bool guiDebug;
 
 /* SHADERTOY FROM HERE */
 
@@ -226,6 +227,7 @@ struct TriPoints3D {
     vec3 ab;
     vec3 bc;
     vec3 ca;
+    float id;
 };
 
 
@@ -287,7 +289,9 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     vec3 bc = faceToSphere(points.bc / uvScale);
     vec3 ca = faceToSphere(points.ca / uvScale);
 
-    return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca);
+    float id = hash(vec3(int(hexCenter * 1000.)) / 1000.);
+
+    return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca, id);
 }
 
 
@@ -453,6 +457,8 @@ vec3 modelAlbedo;
 
 float mHead(vec3 p) {
 
+    modelAlbedo = vec3(.9);
+
     // return length(p) - .5;
 
     pR(p.yz, -.1);
@@ -462,7 +468,7 @@ float mHead(vec3 p) {
     bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
     bound = smax(bound, abs(p.x) - .4, .2);
 
-    // return bound + .05;
+    return bound + .05;
 
     if (bound > .01) {
         return bound;
@@ -472,7 +478,6 @@ float mHead(vec3 p) {
     p.x = abs(p.x);
     vec3 pp = p;
 
-    modelAlbedo = vec3(.9);
 
     float d = 1e12;
 
@@ -814,6 +819,10 @@ vec3 projectSurface(vec3 dir, vec3 origin) {
     return ray - origin;
 }
 
+vec3 projectSurface(vec3 dir) {
+    return projectSurface(dir, vec3(0));
+}
+
 vec3 _projectSurface(vec3 dir, vec3 origin) {
     vec3 ray = dir;
     float dist = 0.;
@@ -866,34 +875,46 @@ float sinstep(float a) {
     return sin(a * PI - PI * .5) * .5 + .5;
 }
 
+const float shell = .08;
+const float stepScale = .15;
+
 float mHexHead(vec3 p, TriPoints3D points) {
     vec3 edgeAB = normalize(cross(points.center, points.ab));
     vec3 edgeBC = normalize(cross(points.center, points.bc));
     float edge = min(dot(p, edgeAB), -dot(p, edgeBC));
     float d = mHead(p);
-    d = abs(d + .06) - .06;
+    d = abs(d + shell) - shell;
     return max(d, -edge);
 }
 
 float time;
 
-float animPlode(vec3 hexCenter, float startOffset) {
+float animPlode(float id, float startOffset) {
     float duration = 1.;
-    float id = hash(vec3(int(hexCenter * 1000.)) / 1000.);
     float delay = id * .2;
-    float start = delay + startOffset * duration;
+    float start = delay;
     float end = duration;
-    float plode = range(start, end, time);
+    float plode = range(start, end, time - startOffset * duration);
     plode = sinstep(sinstep(plode)) * (1. - delay);
     return plode;
 }
 
 float map(vec3 p) {
 
-    TriPoints3D points = geodesicTriPoints(p, 1.);
-    p -= points.hexCenter * animPlode(points.hexCenter, 0.);
+    TriPoints3D points;
 
-    return mHexHead(p, points);
+    points = geodesicTriPoints(p, 1.);
+    p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
+    p -= points.hexCenter * animPlode(points.id, -.65);
+
+    p /= stepScale;
+    points = geodesicTriPoints(p, 1.);
+    p -= points.hexCenter * animPlode(points.id, 0.);
+
+    // return (length(p) - 1.) * stepScale;
+
+    return mHexHead(p, points) * stepScale;
+
 }
 
 
