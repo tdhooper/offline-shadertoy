@@ -880,6 +880,9 @@ float sinstep(float a) {
 
 const float shell = .08;
 const float stepScale = .15;
+const float plodeDuration = 1.;
+const float plodeOverlap = .35;
+const float blendDuration = .5;
 
 float mEdge(vec3 p, TriPoints3D points) {
     vec3 edgeAB = normalize(cross(points.center, points.ab));
@@ -897,12 +900,12 @@ float mHeadShell(vec3 p) {
 float time;
 
 float animPlode(float id, float startOffset) {
-    float duration = 1.;
     float delay = id * .2;
     float start = delay;
-    float end = duration;
-    float plode = range(start, end, time - startOffset * duration);
-    plode = sinstep(sinstep(plode)) * (1. - delay);
+    float end = plodeDuration;
+    float plode = range(start, end, time - startOffset);
+    plode = sinstep(sinstep(plode));
+    plode *= (1. - delay);
     return plode;
 }
 
@@ -910,12 +913,10 @@ bool animPlodeStarted(float startOffset) {
     return time > startOffset;
 }
 
-float animBlend(float id, float startOffset) {
-    float duration = .5;
-    float delay = id * .2;
-    float start = delay;
-    float end = start + duration;
-    float blend = range(start, end, time - startOffset * duration);
+float animBlend(float startOffset) {
+    float start = 0.;
+    float end = start + blendDuration;
+    float blend = range(start, end, time - startOffset);
     return blend;
 }
 
@@ -924,14 +925,13 @@ float map(vec3 p) {
     float sectionEdge0, sectionEdge1;
     float plodeEdge0;
     float d, d2;
-    float stepScale2 = stepScale * stepScale;
 
     modelAlbedo = vec3(.9);
 
     points = geodesicTriPoints(p, 1.);
     sectionEdge0 = mEdge(p, points);
 
-    p -= points.hexCenter * animPlode(points.id, -.65);
+    p -= points.hexCenter * animPlode(points.id, plodeOverlap - plodeDuration);
 
     if (guiStep0) {
         p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
@@ -967,9 +967,9 @@ float map(vec3 p) {
 
         if (guiStep1) {
             p /= stepScale;
-            d2 = mHead(p, false) * stepScale2;
+            d2 = mHead(p, false) * stepScale * stepScale;
             d2 = min(d2, sectionEdge1 + .02 * stepScale);
-            d = mix(d, d2, animBlend(points.id, .3));
+            d = mix(d, d2, animBlend(plodeDuration - plodeOverlap - blendDuration));
         }
     }
 
@@ -1113,7 +1113,7 @@ void main() {
 
     time = iTime;
     // time *= .333;
-    time = mod(time, 2.);
+    time = mod(time, plodeDuration - plodeOverlap);
 
 
     vec3 rayOrigin = eye;
