@@ -19,6 +19,8 @@ uniform bool guiBlend;
 uniform bool guiSplit;
 uniform bool guiNeck;
 uniform bool guiDebug;
+uniform bool guiStep0;
+uniform bool guiStep1;
 
 /* SHADERTOY FROM HERE */
 
@@ -469,7 +471,7 @@ float mHead(vec3 p, bool bounded) {
     bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
     bound = smax(bound, abs(p.x) - .4, .2);
 
-    // return bound + .05;
+    return bound + .05;
 
     if (bounded && bound > .01) {
         return bound;
@@ -929,23 +931,19 @@ float map(vec3 p) {
     points = geodesicTriPoints(p, 1.);
     sectionEdge0 = mEdge(p, points);
 
-    // if (guiDebug) {
-    //     sectionEdge1 = mEdge(p, points);
-    // }
-
-    // if ( ! guiDebug) {
-        p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
-    // }
-
     p -= points.hexCenter * animPlode(points.id, -.65);
 
-    // if (guiDebug) {
-    //     plodeEdge0 = mEdge(p, points);
-    //     d = mHeadShell(p);
-    //     d = max(d, -plodeEdge0);
-    //     d = min(d, sectionEdge1+.02);
-    //     return d;
-    // }
+    if (guiStep0) {
+        p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
+    }
+
+    if ( ! guiStep0) {
+        plodeEdge0 = mEdge(p, points);
+        d = mHeadShell(p);
+        d = max(d, -plodeEdge0);
+        d = min(d, sectionEdge1+.02);
+        return d;
+    }
 
     float idA = points.id;
 
@@ -964,19 +962,15 @@ float map(vec3 p) {
         d = max(d, -plodeEdge0);
         sectionEdge1 = max(sectionEdge1, d - .2 * stepScale);
         d = min(d, sectionEdge1 + .02 * stepScale);
-    }
 
-    p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
+        p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
 
-    // return max(sectionEdge1, (length(p) - .1) * stepScale);
-
-    if (guiDebug) {
-        p /= stepScale;
-        d2 = mHead(p, false) * stepScale2;
-        d2 = min(d2, sectionEdge1 + .02 * stepScale);
-        d = mix(d, d2, animBlend(points.id, .3));
-        // return d2;
-        // return (length(p) - .05) * stepScale;
+        if (guiStep1) {
+            p /= stepScale;
+            d2 = mHead(p, false) * stepScale2;
+            d2 = min(d2, sectionEdge1 + .02 * stepScale);
+            d = mix(d, d2, animBlend(points.id, .3));
+        }
     }
 
     d = min(d, sectionEdge0 + .02);

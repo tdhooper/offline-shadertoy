@@ -1,5 +1,5 @@
 {
-    "id": "peelfractal02",
+    "id": "peelfractal05",
     "controls": {
         "blend": {
             "type": "toggle",
@@ -16,6 +16,14 @@
         "debug": {
             "type": "toggle",
             "value": false
+        },
+        "step0": {
+            "type": "toggle",
+            "value": true
+        },
+        "step1": {
+            "type": "toggle",
+            "value": true
         }
     }
 }
