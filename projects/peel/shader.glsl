@@ -905,40 +905,41 @@ float animPlode(float id, float startOffset) {
 
 float map(vec3 p) {
     TriPoints3D points;
-    float edge1, edge0, edge;
+    float edge0, edge1;
     float d;
 
     modelAlbedo = vec3(.9);
 
     points = geodesicTriPoints(p, 1.);
-    edge1 = mEdge(p, points);
-    if ( ! guiDebug) {
-        p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
-    }
-    p -= points.hexCenter * animPlode(points.id, -.65);
 
     if (guiDebug) {
         edge0 = mEdge(p, points);
+    }
+
+    if ( ! guiDebug) {
+        p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
+    }
+
+    p -= points.hexCenter * animPlode(points.id, -.65);
+
+    if (guiDebug) {
+        edge1 = mEdge(p, points);
         d = mHeadShell(p);
-        d = max(d, -edge0);
-        d = min(d, edge1+.02);
+        d = max(d, -edge1);
+        d = min(d, edge0+.02);
         return d;
     }
 
     p /= stepScale;
     points = geodesicTriPoints(p, 1.);
-    edge1 = mEdge(p, points);
-    p -= points.hexCenter * animPlode(points.id, 1.);
     edge0 = mEdge(p, points);
+    p -= points.hexCenter * animPlode(points.id, 0.);
+    edge1 = mEdge(p, points);
 
-    // edge = min(edge, edge0);
-    // return max(length(p) - shell / stepScale, -edge) * stepScale;
     d = mHeadShell(p);
-    d = max(d, -edge0); // inner hex
-    d = min(d, edge1+(.02/stepScale)); // outer (section) hex
+    d = max(d, -edge1); // inner hex
+    d = min(d, edge0+(.02/stepScale)); // outer (section) hex
     d *= stepScale;
-    // d = min(d, edge1+.02);
-    // d = min(d, edge0+.02);
     return d;
 }
 
