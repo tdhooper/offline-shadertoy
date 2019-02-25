@@ -878,13 +878,17 @@ float sinstep(float a) {
 const float shell = .08;
 const float stepScale = .15;
 
-float mHexHead(vec3 p, TriPoints3D points) {
+float mEdge(vec3 p, TriPoints3D points) {
     vec3 edgeAB = normalize(cross(points.center, points.ab));
     vec3 edgeBC = normalize(cross(points.center, points.bc));
     float edge = min(dot(p, edgeAB), -dot(p, edgeBC));
+    return edge;
+}
+
+float mHeadShell(vec3 p) {
     float d = mHead(p);
     d = abs(d + shell) - shell;
-    return max(d, -edge);
+    return d;
 }
 
 float time;
@@ -900,21 +904,42 @@ float animPlode(float id, float startOffset) {
 }
 
 float map(vec3 p) {
-
     TriPoints3D points;
+    float edge1, edge0, edge;
+    float d;
+
+    modelAlbedo = vec3(.9);
 
     points = geodesicTriPoints(p, 1.);
-    p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
+    edge1 = mEdge(p, points);
+    if ( ! guiDebug) {
+        p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
+    }
     p -= points.hexCenter * animPlode(points.id, -.65);
+
+    if (guiDebug) {
+        edge0 = mEdge(p, points);
+        d = mHeadShell(p);
+        d = max(d, -edge0);
+        d = min(d, edge1+.02);
+        return d;
+    }
 
     p /= stepScale;
     points = geodesicTriPoints(p, 1.);
-    p -= points.hexCenter * animPlode(points.id, 0.);
+    edge1 = mEdge(p, points);
+    p -= points.hexCenter * animPlode(points.id, 1.);
+    edge0 = mEdge(p, points);
 
-    // return (length(p) - 1.) * stepScale;
-
-    return mHexHead(p, points) * stepScale;
-
+    // edge = min(edge, edge0);
+    // return max(length(p) - shell / stepScale, -edge) * stepScale;
+    d = mHeadShell(p);
+    d = max(d, -edge0); // inner hex
+    d = min(d, edge1+(.02/stepScale)); // outer (section) hex
+    d *= stepScale;
+    // d = min(d, edge1+.02);
+    // d = min(d, edge0+.02);
+    return d;
 }
 
 
@@ -981,7 +1006,7 @@ vec3 render(Hit hit, vec3 col) {
 
 const float MAX_TRACE_DISTANCE = 10.;
 const float INTERSECTION_PRECISION = .0001;
-const int NUM_OF_TRACE_STEPS = 150;
+const int NUM_OF_TRACE_STEPS = 200;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
@@ -1000,24 +1025,26 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
 
     float currentDist = INTERSECTION_PRECISION * 2.0;
     float rayLength = 0.;
+    bool isBackground = true;
 
     for(int i = 0; i < NUM_OF_TRACE_STEPS; i++){
-        if (currentDist < INTERSECTION_PRECISION || rayLength > MAX_TRACE_DISTANCE) {
+        if (currentDist < INTERSECTION_PRECISION) {
+            isBackground = false;
+            break;
+        }
+        if (rayLength > MAX_TRACE_DISTANCE) {
             break;
         }
         currentDist = map(rayOrigin + rayDirection * rayLength);
-        rayLength += currentDist * (1. - .5);
+        rayLength += currentDist;
     }
 
-    bool isBackground = false;
     vec3 pos = vec3(0);
     vec3 normal = vec3(0);
 
     pos = rayOrigin + rayDirection * rayLength;
 
-    if (rayLength > MAX_TRACE_DISTANCE) {
-        isBackground = true;
-    } else {
+    if ( ! isBackground) {
         normal = calcNormal(pos);
     }
 
