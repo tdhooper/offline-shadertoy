@@ -455,7 +455,8 @@ float ellip(vec3 p, vec3 s) {
 
 vec3 modelAlbedo;
 
-float mHead(vec3 p) {
+
+float mHead(vec3 p, bool bounded) {
 
     modelAlbedo = vec3(.9);
 
@@ -468,9 +469,9 @@ float mHead(vec3 p) {
     bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
     bound = smax(bound, abs(p.x) - .4, .2);
 
-    return bound + .05;
+    // return bound + .05;
 
-    if (bound > .01) {
+    if (bounded && bound > .01) {
         return bound;
     }
 
@@ -810,7 +811,7 @@ vec3 projectSurface(vec3 dir, vec3 origin) {
     float dist = 0.;
     const int STEPS = 5;
     for(int i = 0; i < STEPS; i++ ) {
-        dist = mHead(ray - origin);
+        dist = mHead(ray - origin, true);
         if (dist < .001) {
             break;
         }
@@ -826,11 +827,11 @@ vec3 projectSurface(vec3 dir) {
 vec3 _projectSurface(vec3 dir, vec3 origin) {
     vec3 ray = dir;
     float dist = 0.;
-    dist = mHead(ray - origin); ray += dist * -dir;
-    dist = mHead(ray - origin); ray += dist * -dir;
-    dist = mHead(ray - origin); ray += dist * -dir;
-    dist = mHead(ray - origin); ray += dist * -dir;
-    dist = mHead(ray - origin); ray += dist * -dir;
+    dist = mHead(ray - origin, true); ray += dist * -dir;
+    dist = mHead(ray - origin, true); ray += dist * -dir;
+    dist = mHead(ray - origin, true); ray += dist * -dir;
+    dist = mHead(ray - origin, true); ray += dist * -dir;
+    dist = mHead(ray - origin, true); ray += dist * -dir;
     return ray - origin;
 }
 
@@ -851,7 +852,7 @@ float _map(vec3 p) {
     float dotsC = length(p - psC) - sz;
     float dots = min(dotsA, min(dotsB, dotsC));
 
-    float head = mHead(p);
+    float head = mHead(p, true);
 
     return smin(head, dots, .015);
 
@@ -886,7 +887,7 @@ float mEdge(vec3 p, TriPoints3D points) {
 }
 
 float mHeadShell(vec3 p) {
-    float d = mHead(p);
+    float d = mHead(p, true);
     d = abs(d + shell) - shell;
     return d;
 }
@@ -903,43 +904,83 @@ float animPlode(float id, float startOffset) {
     return plode;
 }
 
+bool animPlodeStarted(float startOffset) {
+    return time > startOffset;
+}
+
+float animBlend(float id, float startOffset) {
+    float duration = .5;
+    float delay = id * .2;
+    float start = delay;
+    float end = start + duration;
+    float blend = range(start, end, time - startOffset * duration);
+    return blend;
+}
+
 float map(vec3 p) {
     TriPoints3D points;
-    float edge0, edge1;
-    float d;
+    float sectionEdge0, sectionEdge1;
+    float plodeEdge0;
+    float d, d2;
+    float stepScale2 = stepScale * stepScale;
 
     modelAlbedo = vec3(.9);
 
     points = geodesicTriPoints(p, 1.);
+    sectionEdge0 = mEdge(p, points);
 
-    if (guiDebug) {
-        edge0 = mEdge(p, points);
-    }
+    // if (guiDebug) {
+    //     sectionEdge1 = mEdge(p, points);
+    // }
 
-    if ( ! guiDebug) {
+    // if ( ! guiDebug) {
         p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
-    }
+    // }
 
     p -= points.hexCenter * animPlode(points.id, -.65);
 
-    if (guiDebug) {
-        edge1 = mEdge(p, points);
-        d = mHeadShell(p);
-        d = max(d, -edge1);
-        d = min(d, edge0+.02);
-        return d;
-    }
+    // if (guiDebug) {
+    //     plodeEdge0 = mEdge(p, points);
+    //     d = mHeadShell(p);
+    //     d = max(d, -plodeEdge0);
+    //     d = min(d, sectionEdge1+.02);
+    //     return d;
+    // }
+
+    float idA = points.id;
 
     p /= stepScale;
     points = geodesicTriPoints(p, 1.);
-    edge0 = mEdge(p, points);
-    p -= points.hexCenter * animPlode(points.id, 0.);
-    edge1 = mEdge(p, points);
+    sectionEdge1 = mEdge(p, points) * stepScale;
 
-    d = mHeadShell(p);
-    d = max(d, -edge1); // inner hex
-    d = min(d, edge0+(.02/stepScale)); // outer (section) hex
-    d *= stepScale;
+    if (animPlodeStarted(0.)) {
+        p -= points.hexCenter * animPlode(points.id, 0.);
+    }
+
+    d = mHeadShell(p) * stepScale;
+
+    if (animPlodeStarted(0.)) {
+        plodeEdge0 = mEdge(p, points) * stepScale;
+        d = max(d, -plodeEdge0);
+        sectionEdge1 = max(sectionEdge1, d - .2 * stepScale);
+        d = min(d, sectionEdge1 + .02 * stepScale);
+    }
+
+    p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
+
+    // return max(sectionEdge1, (length(p) - .1) * stepScale);
+
+    if (guiDebug) {
+        p /= stepScale;
+        d2 = mHead(p, false) * stepScale2;
+        d2 = min(d2, sectionEdge1 + .02 * stepScale);
+        d = mix(d, d2, animBlend(points.id, .3));
+        // return d2;
+        // return (length(p) - .05) * stepScale;
+    }
+
+    d = min(d, sectionEdge0 + .02);
+
     return d;
 }
 
