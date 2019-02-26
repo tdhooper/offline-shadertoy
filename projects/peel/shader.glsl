@@ -922,7 +922,10 @@ float animBlend(float startOffset) {
 
 float map(vec3 p) {
 
-    float focusScale = 1. + range(0., plodeDuration - plodeOverlap, time) / stepScale;
+    float focusScale = range(.2, plodeDuration - plodeOverlap, time);
+    focusScale = sinstep(sinstep(focusScale));
+    focusScale *= .85;
+    focusScale = 1. + focusScale / stepScale;
     p /= focusScale;
 
     TriPoints3D points, focusPoints;
@@ -941,7 +944,7 @@ float map(vec3 p) {
 
     focusHexCenter += focusP; // or minus?
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
-    focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell * stepScale;
+    focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell * (stepScale*.85);
     focusP2 += focusPoints.hexCenter * animPlode(focusPoints.id, 0.);
     focusP2 *= stepScale;
 
@@ -1064,7 +1067,7 @@ vec3 render(Hit hit, vec3 col) {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 5.;
+const float MAX_TRACE_DISTANCE = 4.;
 const float INTERSECTION_PRECISION = .0001;
 const int NUM_OF_TRACE_STEPS = 250;
 
@@ -1135,7 +1138,7 @@ float getDepth(float depth) {
 
 void main() {
 
-    time = iTime;
+    time = iTime / 3.;
     // time *= .333;
     time = mod(time, plodeDuration - plodeOverlap);
 
@@ -1193,6 +1196,8 @@ void main() {
     if (abs(polyD - rayD) < .001) {
         // color = vec3(1);
     }
+
+    color = mix(color, bg, smoothstep(MAX_TRACE_DISTANCE / 2., MAX_TRACE_DISTANCE, hit.rayLength));
 
 
 
