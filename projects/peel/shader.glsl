@@ -921,6 +921,10 @@ float animBlend(float startOffset) {
 }
 
 float map(vec3 p) {
+
+    float focusScale = 1. + range(0., plodeDuration - plodeOverlap, time) / stepScale;
+    p /= focusScale;
+
     TriPoints3D points, focusPoints;
     vec3 focusHexCenter;
     vec3 focusP, focusP2;
@@ -937,7 +941,7 @@ float map(vec3 p) {
 
     focusHexCenter += focusP; // or minus?
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
-    focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
+    focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell * stepScale;
     focusP2 += focusPoints.hexCenter * animPlode(focusPoints.id, 0.);
     focusP2 *= stepScale;
 
@@ -995,7 +999,7 @@ float map(vec3 p) {
 
     d = min(d, sectionEdge0 + .02);
 
-    return d;
+    return d * focusScale;
 }
 
 
