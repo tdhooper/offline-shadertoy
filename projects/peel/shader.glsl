@@ -921,10 +921,29 @@ float animBlend(float startOffset) {
 }
 
 float map(vec3 p) {
-    TriPoints3D points;
+    TriPoints3D points, focusPoints;
+    vec3 focusHexCenter;
+    vec3 focusP, focusP2;
     float sectionEdge0, sectionEdge1;
     float plodeEdge0;
     float d, d2;
+
+    focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
+    focusPoints = geodesicTriPoints(focusHexCenter, 1.);
+    focusP = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
+    focusP += focusPoints.hexCenter * animPlode(focusPoints.id, plodeOverlap - plodeDuration);
+
+    p += focusP;
+
+    focusHexCenter += focusP; // or minus?
+    focusPoints = geodesicTriPoints(focusHexCenter, 1.);
+    focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
+    focusP2 += focusPoints.hexCenter * animPlode(focusPoints.id, 0.);
+    focusP2 *= stepScale;
+
+    p += focusP2;
+
+    float focusDebug = length(p - focusP - focusP2) - .1;
 
     modelAlbedo = vec3(.9);
 
@@ -942,6 +961,7 @@ float map(vec3 p) {
         d = mHeadShell(p);
         d = max(d, -plodeEdge0);
         d = min(d, sectionEdge1+.02);
+        return min(d, focusDebug);
         return d;
     }
 
@@ -1040,9 +1060,9 @@ vec3 render(Hit hit, vec3 col) {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 10.;
+const float MAX_TRACE_DISTANCE = 5.;
 const float INTERSECTION_PRECISION = .0001;
-const int NUM_OF_TRACE_STEPS = 200;
+const int NUM_OF_TRACE_STEPS = 250;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
