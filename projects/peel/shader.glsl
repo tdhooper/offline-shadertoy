@@ -462,6 +462,8 @@ float mHead(vec3 p, bool bounded) {
 
     modelAlbedo = vec3(.9);
 
+    // return fBox(p, vec3(.4));
+
     // return length(p) - .5;
 
     pR(p.yz, -.1);
@@ -922,15 +924,15 @@ float animBlend(float startOffset) {
 
 float map(vec3 p) {
 
-    float focusScale = range(.2, plodeDuration - plodeOverlap, time);
-    focusScale = sinstep(sinstep(focusScale));
-    focusScale *= .85;
-    focusScale = 1. + focusScale / stepScale;
+    float animTime = range(.0, plodeDuration - plodeOverlap, time);
+    animTime = sinstep(sinstep(animTime));
+    // animTime = pow(animTime, 2.);
+    float focusScale = 1. + (animTime / stepScale) * (1. - stepScale);
     p /= focusScale;
 
     TriPoints3D points, focusPoints;
     vec3 focusHexCenter;
-    vec3 focusP, focusP2;
+    vec3 focusP, focusP2, focusP3;
     float sectionEdge0, sectionEdge1;
     float plodeEdge0;
     float d, d2;
@@ -938,19 +940,24 @@ float map(vec3 p) {
     focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
     focusP = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
-    focusP += focusPoints.hexCenter * animPlode(focusPoints.id, plodeOverlap - plodeDuration);
+    focusP += focusPoints.hexCenter;// * animPlode(focusPoints.id, plodeOverlap - plodeDuration);
 
+    vec3 pp = p;
     p += focusP;
 
     focusHexCenter += focusP; // or minus?
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
-    focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell * (stepScale*.85);
-    focusP2 += focusPoints.hexCenter * animPlode(focusPoints.id, 0.);
+    focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
+    focusP2 += focusPoints.hexCenter;// * animPlode(focusPoints.id, 0.);
     focusP2 *= stepScale;
 
-    p += focusP2;
+    // p = pp;
+    // p += focusP2;
 
-    float focusDebug = length(p - focusP - focusP2) - .1;
+    p += focusP2 * animTime;
+
+    float focusDebug = length(p - focusP) - .07;
+    focusDebug = min(focusDebug, length(p - focusP - focusP2) - .07 * stepScale);
 
     modelAlbedo = vec3(.9);
 
@@ -1001,6 +1008,7 @@ float map(vec3 p) {
     }
 
     d = min(d, sectionEdge0 + .02);
+    // return min(d, focusDebug);
 
     return d * focusScale;
 }
