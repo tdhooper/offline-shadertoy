@@ -885,6 +885,7 @@ const float stepScale = .15;
 const float plodeDuration = 1.;
 const float plodeOverlap = .35;
 const float blendDuration = .5;
+const float plodeDistance = .75;
 
 float mEdge(vec3 p, TriPoints3D points) {
     vec3 edgeAB = normalize(cross(points.center, points.ab));
@@ -902,6 +903,7 @@ float mHeadShell(vec3 p) {
 float time;
 
 float animPlode(float id, float startOffset) {
+    id = 0.;
     float delay = id * .2;
     float start = delay;
     float end = plodeDuration;
@@ -924,10 +926,13 @@ float animBlend(float startOffset) {
 
 float map(vec3 p) {
 
-    float animTime = range(.0, plodeDuration - plodeOverlap, time);
-    animTime = sinstep(sinstep(animTime));
+    float animTime = range(.0, (plodeDuration - plodeOverlap) - .0, time);
+    float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
+    // animTime = sinstep(sinstep(animTime));
     // animTime = pow(animTime, 2.);
-    float focusScale = 1. + (animTime / stepScale) * (1. - stepScale);
+    // float focusScale = 1. + (animTime / stepScale) * (1. - stepScale);
+    float focusScale = 1. / pow(stepScale, animTime);
+    // float focusScale = mix(1., 1./stepScale, at);
     p /= focusScale;
 
     TriPoints3D points, focusPoints;
@@ -940,7 +945,7 @@ float map(vec3 p) {
     focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
     focusP = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
-    focusP += focusPoints.hexCenter;// * animPlode(focusPoints.id, plodeOverlap - plodeDuration);
+    focusP += focusPoints.hexCenter * plodeDistance;// * animPlode(focusPoints.id, plodeOverlap - plodeDuration);
 
     vec3 pp = p;
     p += focusP;
@@ -948,13 +953,14 @@ float map(vec3 p) {
     focusHexCenter += focusP; // or minus?
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
     focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
-    focusP2 += focusPoints.hexCenter;// * animPlode(focusPoints.id, 0.);
+    focusP2 += focusPoints.hexCenter * plodeDistance;// * animPlode(focusPoints.id, 0.);
     focusP2 *= stepScale;
 
     // p = pp;
     // p += focusP2;
 
-    p += focusP2 * animTime;
+    // float focusD = focusP / focusP2;
+    p += focusP2 * ar;
 
     float focusDebug = length(p - focusP) - .07;
     focusDebug = min(focusDebug, length(p - focusP - focusP2) - .07 * stepScale);
@@ -964,7 +970,7 @@ float map(vec3 p) {
     points = geodesicTriPoints(p, 1.);
     sectionEdge0 = mEdge(p, points);
 
-    p -= points.hexCenter * animPlode(points.id, plodeOverlap - plodeDuration);
+    p -= points.hexCenter * animPlode(points.id, plodeOverlap - plodeDuration) * plodeDistance;
 
     if (guiStep0) {
         p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
@@ -986,7 +992,7 @@ float map(vec3 p) {
     sectionEdge1 = mEdge(p, points) * stepScale;
 
     if (animPlodeStarted(0.)) {
-        p -= points.hexCenter * animPlode(points.id, 0.);
+        p -= points.hexCenter * animPlode(points.id, 0.) * plodeDistance;
     }
 
     d = mHeadShell(p) * stepScale;
@@ -1008,6 +1014,7 @@ float map(vec3 p) {
     }
 
     d = min(d, sectionEdge0 + .02);
+    // return focusDebug;
     // return min(d, focusDebug);
 
     return d * focusScale;
