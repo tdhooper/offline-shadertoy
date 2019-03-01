@@ -416,6 +416,13 @@ vec3 polarToCart(vec3 p) {
     );
 }
 
+mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(ww,up));
+    vec3 vv = normalize(cross(uu,ww));
+    return mat3(uu, vv, ww);
+}
+
 
 // --------------------------------------------------------
 // Model
@@ -924,7 +931,14 @@ float animBlend(float startOffset) {
     return blend;
 }
 
-float map(vec3 p) {
+vec3 wayTrans0;
+vec3 wayTrans1;
+float wayScale0;
+float wayScale1;
+mat3 wayRot0;
+mat3 wayRot1;
+
+void calcWaypoints() {
 
     float animTime = range(.0, (plodeDuration - plodeOverlap) - .0, time);
     float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
@@ -933,7 +947,9 @@ float map(vec3 p) {
     // float focusScale = 1. + (animTime / stepScale) * (1. - stepScale);
     float focusScale = 1. / pow(stepScale, animTime);
     // float focusScale = mix(1., 1./stepScale, at);
-    p /= focusScale;
+
+    wayScale0 = 1.;
+    wayScale1 = 1. / stepScale;
 
     TriPoints3D points, focusPoints;
     vec3 focusHexCenter;
@@ -947,23 +963,38 @@ float map(vec3 p) {
     focusP = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
     focusP += focusPoints.hexCenter * plodeDistance;// * animPlode(focusPoints.id, plodeOverlap - plodeDuration);
 
-    vec3 pp = p;
-    p += focusP;
+    wayTrans0 = focusP;
 
     focusHexCenter += focusP; // or minus?
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
+    // focusPoints.hexCenter = calcLookAtMatrix(vec3(0), focusPoints.hexCenter, vec3(0,1,0)) * focusPoints.hexCenter;
     focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
     focusP2 += focusPoints.hexCenter * plodeDistance;// * animPlode(focusPoints.id, 0.);
     focusP2 *= stepScale;
 
-    // p = pp;
-    // p += focusP2;
+    wayTrans1 = focusP + focusP2;
 
-    // float focusD = focusP / focusP2;
-    p += focusP2 * ar;
+}
 
-    float focusDebug = length(p - focusP) - .07;
-    focusDebug = min(focusDebug, length(p - focusP - focusP2) - .07 * stepScale);
+float map(vec3 p) {
+
+    float animTime = range(.0, (plodeDuration - plodeOverlap) - .0, time);
+    float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
+    float aj = (pow(1./stepScale, animTime) - 1.) / (1./stepScale - 1.);
+    float focusScale = mix(wayScale0, wayScale1, aj);
+    p /= focusScale;
+
+    TriPoints3D points;
+    float sectionEdge0, sectionEdge1;
+    float plodeEdge0;
+    float d, d2;
+
+    p += mix(wayTrans0, wayTrans1, ar);
+
+    // p = calcLookAtMatrix(vec3(0), mix(vec3(0,0,1), focusPoints.hexCenter, vec3(ar)), vec3(0,1,0)) * p;
+
+    float focusDebug = length(p - wayTrans0) - .07 / wayScale0;
+    focusDebug = min(focusDebug, length(p - wayTrans1) - .07 / wayScale1);
 
     modelAlbedo = vec3(.9);
 
@@ -988,6 +1019,9 @@ float map(vec3 p) {
     float idA = points.id;
 
     p /= stepScale;
+
+    // p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
+
     points = geodesicTriPoints(p, 1.);
     sectionEdge1 = mEdge(p, points) * stepScale;
 
@@ -1007,6 +1041,7 @@ float map(vec3 p) {
 
         if (guiStep1) {
             p /= stepScale;
+            // p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
             d2 = mHead(p, false) * stepScale * stepScale;
             d2 = min(d2, sectionEdge1 + .02 * stepScale);
             d = mix(d, d2, animBlend(plodeDuration - plodeOverlap - blendDuration));
@@ -1015,7 +1050,7 @@ float map(vec3 p) {
 
     d = min(d, sectionEdge0 + .02);
     // return focusDebug;
-    // return min(d, focusDebug);
+    return min(d * focusScale, focusDebug);
 
     return d * focusScale;
 }
@@ -1139,19 +1174,14 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
     );
 }
 
-mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
-    vec3 ww = normalize(ta - ro);
-    vec3 uu = normalize(cross(ww,up));
-    vec3 vv = normalize(cross(uu,ww));
-    return mat3(uu, vv, ww);
-}
-
 float getDepth(float depth) {
     depth = projection[3].z / (depth * -2. + 1. - projection[2].z);
     return depth;
 }
 
 void main() {
+
+    calcWaypoints();
 
     time = iTime / 3.;
     // time *= .333;
