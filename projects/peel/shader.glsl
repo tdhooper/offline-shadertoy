@@ -892,7 +892,7 @@ const float stepScale = .15;
 const float plodeDuration = 1.;
 const float plodeOverlap = .35;
 const float blendDuration = .5;
-const float plodeDistance = .75;
+const float plodeDistance = .25;
 
 float mEdge(vec3 p, TriPoints3D points) {
     vec3 edgeAB = normalize(cross(points.center, points.ab));
@@ -931,12 +931,18 @@ float animBlend(float startOffset) {
     return blend;
 }
 
+float fWaypoint(vec3 p, vec3 trans, mat3 rot, float scale) {
+    p -= trans;
+    p *= rot;
+    return fBox(p, vec3(scale * 0.05));
+}
+
 vec3 wayTrans0;
 vec3 wayTrans1;
-float wayScale0;
-float wayScale1;
 mat3 wayRot0;
 mat3 wayRot1;
+float wayScale0;
+float wayScale1;
 
 void calcWaypoints() {
 
@@ -953,9 +959,14 @@ void calcWaypoints() {
     focusP += focusPoints.hexCenter * plodeDistance;// * animPlode(focusPoints.id, plodeOverlap - plodeDuration);
 
     wayTrans0 = focusP;
+    wayRot0 = calcLookAtMatrix(vec3(0), focusPoints.hexCenter, vec3(0,1,0));
+    // wayRot0 = mat3(1,0,0,0,1,0,0,0,1);
 
-    focusHexCenter += focusP; // or minus?
+
+    focusPoints.hexCenter += focusP; // or minus?
+    // focusHexCenter = wayRot0 * focusHexCenter;
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
+    focusPoints.hexCenter = wayRot0 * focusPoints.hexCenter;
     // focusPoints.hexCenter = calcLookAtMatrix(vec3(0), focusPoints.hexCenter, vec3(0,1,0)) * focusPoints.hexCenter;
     focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
     focusP2 += focusPoints.hexCenter * plodeDistance;// * animPlode(focusPoints.id, 0.);
@@ -963,14 +974,27 @@ void calcWaypoints() {
 
     wayTrans1 = focusP + focusP2;
 
+    
+    wayRot1 = calcLookAtMatrix(vec3(0), focusPoints.hexCenter, vec3(0,1,0));;
+    // wayRot1 = mat3(1,0,0,0,1,0,0,0,1);
+    
+
 }
 
 float map(vec3 p) {
 
     float animTime = range(.0, (plodeDuration - plodeOverlap) - .0, time);
     float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
+    float ak = (pow(1./stepScale, animTime) - 1.) / (1./stepScale - 1.);
+
     float focusScale = mix(wayScale0, wayScale1, ar);
     p *= focusScale;
+
+    p = mix(
+        wayRot0 * p,
+        wayRot1 * p,
+        animTime
+    );
 
     TriPoints3D points;
     float sectionEdge0, sectionEdge1;
@@ -979,10 +1003,10 @@ float map(vec3 p) {
 
     p += mix(wayTrans0, wayTrans1, ar);
 
-    // p = calcLookAtMatrix(vec3(0), mix(vec3(0,0,1), focusPoints.hexCenter, vec3(ar)), vec3(0,1,0)) * p;
-
-    float focusDebug = length(p - wayTrans0) - .07 * wayScale0;
-    focusDebug = min(focusDebug, length(p - wayTrans1) - .07 * wayScale1);
+    float focusDebug = min(
+        fWaypoint(p, wayTrans0, wayRot0, wayScale0),
+        fWaypoint(p, wayTrans1, wayRot1, wayScale1)
+    );
 
     modelAlbedo = vec3(.9);
 
@@ -1008,7 +1032,7 @@ float map(vec3 p) {
 
     p /= stepScale;
 
-    // p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
+    p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
 
     points = geodesicTriPoints(p, 1.);
     sectionEdge1 = mEdge(p, points) * stepScale;
@@ -1029,7 +1053,7 @@ float map(vec3 p) {
 
         if (guiStep1) {
             p /= stepScale;
-            // p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
+            p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
             d2 = mHead(p, false) * stepScale * stepScale;
             d2 = min(d2, sectionEdge1 + .02 * stepScale);
             d = mix(d, d2, animBlend(plodeDuration - plodeOverlap - blendDuration));
@@ -1038,7 +1062,7 @@ float map(vec3 p) {
 
     d = min(d, sectionEdge0 + .02);
     // return focusDebug;
-    return min(d / focusScale, focusDebug);
+    // return min(d / focusScale, focusDebug);
 
     return d / focusScale;
 }
