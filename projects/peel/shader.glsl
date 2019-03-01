@@ -949,7 +949,7 @@ void calcWaypoints() {
     // float focusScale = mix(1., 1./stepScale, at);
 
     wayScale0 = 1.;
-    wayScale1 = 1. / stepScale;
+    wayScale1 = stepScale;
 
     TriPoints3D points, focusPoints;
     vec3 focusHexCenter;
@@ -981,8 +981,8 @@ float map(vec3 p) {
     float animTime = range(.0, (plodeDuration - plodeOverlap) - .0, time);
     float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
     float aj = (pow(1./stepScale, animTime) - 1.) / (1./stepScale - 1.);
-    float focusScale = mix(wayScale0, wayScale1, aj);
-    p /= focusScale;
+    float focusScale = mix(wayScale0, wayScale1, ar);
+    p *= focusScale;
 
     TriPoints3D points;
     float sectionEdge0, sectionEdge1;
@@ -993,8 +993,8 @@ float map(vec3 p) {
 
     // p = calcLookAtMatrix(vec3(0), mix(vec3(0,0,1), focusPoints.hexCenter, vec3(ar)), vec3(0,1,0)) * p;
 
-    float focusDebug = length(p - wayTrans0) - .07 / wayScale0;
-    focusDebug = min(focusDebug, length(p - wayTrans1) - .07 / wayScale1);
+    float focusDebug = length(p - wayTrans0) - .07 * wayScale0;
+    focusDebug = min(focusDebug, length(p - wayTrans1) - .07 * wayScale1);
 
     modelAlbedo = vec3(.9);
 
@@ -1050,9 +1050,9 @@ float map(vec3 p) {
 
     d = min(d, sectionEdge0 + .02);
     // return focusDebug;
-    return min(d * focusScale, focusDebug);
+    return min(d / focusScale, focusDebug);
 
-    return d * focusScale;
+    return d / focusScale;
 }
 
 
