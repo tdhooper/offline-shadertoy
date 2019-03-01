@@ -21,6 +21,7 @@ uniform bool guiNeck;
 uniform bool guiDebug;
 uniform bool guiStep0;
 uniform bool guiStep1;
+uniform bool guiStep2;
 
 /* SHADERTOY FROM HERE */
 
@@ -892,7 +893,7 @@ const float stepScale = .15;
 const float plodeDuration = 1.;
 const float plodeOverlap = .35;
 const float blendDuration = .5;
-const float plodeDistance = .25;
+const float plodeDistance = 1.;
 
 float mEdge(vec3 p, TriPoints3D points) {
     vec3 edgeAB = normalize(cross(points.center, points.ab));
@@ -962,12 +963,7 @@ void calcWaypoints() {
     wayRot0 = calcLookAtMatrix(vec3(0), focusPoints.hexCenter, vec3(0,1,0));
     // wayRot0 = mat3(1,0,0,0,1,0,0,0,1);
 
-
-    focusPoints.hexCenter += focusP; // or minus?
-    // focusHexCenter = wayRot0 * focusHexCenter;
-    focusPoints = geodesicTriPoints(focusHexCenter, 1.);
     focusPoints.hexCenter = wayRot0 * focusPoints.hexCenter;
-    // focusPoints.hexCenter = calcLookAtMatrix(vec3(0), focusPoints.hexCenter, vec3(0,1,0)) * focusPoints.hexCenter;
     focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
     focusP2 += focusPoints.hexCenter * plodeDistance;// * animPlode(focusPoints.id, 0.);
     focusP2 *= stepScale;
@@ -1024,6 +1020,7 @@ float map(vec3 p) {
         d = mHeadShell(p);
         d = max(d, -plodeEdge0);
         d = min(d, sectionEdge1+.02);
+        d /= focusScale;
         return min(d, focusDebug);
         return d;
     }
@@ -1037,11 +1034,16 @@ float map(vec3 p) {
     points = geodesicTriPoints(p, 1.);
     sectionEdge1 = mEdge(p, points) * stepScale;
 
-    if (animPlodeStarted(0.)) {
+    if (animPlodeStarted(0.) && guiStep1) {
         p -= points.hexCenter * animPlode(points.id, 0.) * plodeDistance;
     }
 
     d = mHeadShell(p) * stepScale;
+
+    if ( ! guiStep1) {
+        d /= focusScale;
+        return min(d, focusDebug);
+    }
 
     if (animPlodeStarted(0.)) {
         plodeEdge0 = mEdge(p, points) * stepScale;
@@ -1051,7 +1053,7 @@ float map(vec3 p) {
 
         p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
 
-        if (guiStep1) {
+        if (guiStep2) {
             p /= stepScale;
             p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
             d2 = mHead(p, false) * stepScale * stepScale;

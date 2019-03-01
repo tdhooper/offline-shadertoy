@@ -1,5 +1,5 @@
 {
-    "id": "peelfractal08",
+    "id": "peelfractal10",
   "camera": {
     "rotation": [
       -0.27573806047439575,
@@ -35,6 +35,10 @@
             "value": true
         },
         "step1": {
+            "type": "toggle",
+            "value": true
+        },
+        "step2": {
             "type": "toggle",
             "value": true
         }
