@@ -940,23 +940,12 @@ mat3 wayRot1;
 
 void calcWaypoints() {
 
-    float animTime = range(.0, (plodeDuration - plodeOverlap) - .0, time);
-    float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
-    // animTime = sinstep(sinstep(animTime));
-    // animTime = pow(animTime, 2.);
-    // float focusScale = 1. + (animTime / stepScale) * (1. - stepScale);
-    float focusScale = 1. / pow(stepScale, animTime);
-    // float focusScale = mix(1., 1./stepScale, at);
-
     wayScale0 = 1.;
     wayScale1 = stepScale;
 
-    TriPoints3D points, focusPoints;
+    TriPoints3D focusPoints;
     vec3 focusHexCenter;
-    vec3 focusP, focusP2, focusP3;
-    float sectionEdge0, sectionEdge1;
-    float plodeEdge0;
-    float d, d2;
+    vec3 focusP, focusP2;
 
     focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
@@ -980,7 +969,6 @@ float map(vec3 p) {
 
     float animTime = range(.0, (plodeDuration - plodeOverlap) - .0, time);
     float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
-    float aj = (pow(1./stepScale, animTime) - 1.) / (1./stepScale - 1.);
     float focusScale = mix(wayScale0, wayScale1, ar);
     p *= focusScale;
 
