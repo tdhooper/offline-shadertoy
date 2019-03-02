@@ -6,7 +6,8 @@ const regl = require('regl')({
     'ext_frag_depth',
     'oes_standard_derivatives',
   ],
-  pixelRatio: .5,
+  // pixelRatio: .5,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -195,11 +196,11 @@ module.exports = (project) => {
 
   // Default config used by the UI
   const captureConfig = {
-    fps: 1,
+    fps: 40,
     seconds: 1, // (duration)
-    width: 800 * 8,
-    height: 800 * 8,
-    prefix: 'greyt-',
+    width: 640 * 2,
+    height: 360 * 2,
+    prefix: 'plode-',
   };
 
   const webCapture = new WebCaptureClient(

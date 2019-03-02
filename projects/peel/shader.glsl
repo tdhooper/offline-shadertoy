@@ -481,7 +481,7 @@ float mHead(vec3 p, bool bounded) {
     bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
     bound = smax(bound, abs(p.x) - .4, .2);
 
-    return bound + .05;
+    // return bound + .05;
 
     if (bounded && bound > .01) {
         return bound;
@@ -892,7 +892,7 @@ const float shell = .08;
 const float stepScale = .15;
 const float plodeDuration = 1.;
 const float plodeOverlap = .35;
-const float blendDuration = .1;
+const float blendDuration = .4;
 const float plodeDistance = .4;
 
 float mEdge(vec3 p, TriPoints3D points) {
@@ -912,6 +912,7 @@ float time;
 
 float animPlode(float id, float startOffset) {
     float delay = id * .2;
+    delay = 0.;
     float start = delay;
     float end = plodeDuration;
     float plode = range(start, end, time - startOffset);
@@ -1051,6 +1052,7 @@ float map(vec3 p) {
             p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
             d2 = mHead(p, false) * stepScale * stepScale;
             d2 = min(d2, sectionEdge1 + .02 * stepScale);
+
             d = mix(d, d2, animBlend(plodeDuration - plodeOverlap - blendDuration));
         }
     }
@@ -1190,9 +1192,11 @@ void main() {
 
     calcWaypoints();
 
-    time = iTime / 3.;
+    // time = iTime / 3.;
+    time = iTime;
     // time *= .333;
-    time = mod(time, plodeDuration - plodeOverlap);
+    time = mod(time, 1.);
+    time *= plodeDuration - plodeOverlap;
 
 
     vec3 rayOrigin = eye;
