@@ -911,7 +911,7 @@ float mHeadShell(vec3 p) {
 float time;
 
 float animPlode(float id, float startOffset) {
-    id = 0.;
+    // id = 0.;
     float delay = id * .2;
     float start = delay;
     float end = plodeDuration;
@@ -1031,6 +1031,7 @@ float map(vec3 p) {
     p /= stepScale;
 
     p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
+    p.x *= -1.; // somehow look at flips this
 
     points = geodesicTriPoints(p, 1.);
     sectionEdge1 = mEdge(p, points) * stepScale;
