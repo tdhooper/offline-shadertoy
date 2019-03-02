@@ -963,15 +963,16 @@ void calcWaypoints() {
     wayRot0 = calcLookAtMatrix(vec3(0), focusPoints.hexCenter, vec3(0,1,0));
     // wayRot0 = mat3(1,0,0,0,1,0,0,0,1);
 
-    focusPoints.hexCenter = wayRot0 * focusPoints.hexCenter;
+    focusPoints.hexCenter = focusPoints.hexCenter;
     focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
     focusP2 += focusPoints.hexCenter * plodeDistance;// * animPlode(focusPoints.id, 0.);
     focusP2 *= stepScale;
+    focusP2 = wayRot0 * focusP2;
 
     wayTrans1 = focusP + focusP2;
 
     
-    wayRot1 = calcLookAtMatrix(vec3(0), focusPoints.hexCenter, vec3(0,1,0));;
+    wayRot1 = calcLookAtMatrix(vec3(0), wayRot0 * focusPoints.hexCenter, vec3(0,1,0));;
     // wayRot1 = mat3(1,0,0,0,1,0,0,0,1);
     
 
