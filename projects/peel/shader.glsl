@@ -952,41 +952,29 @@ float wayScale2;
 
 void calcWaypoints() {
 
-    wayScale0 = 1.;
-    wayScale1 = stepScale;
-    wayScale2 = stepScale * stepScale;
-
     TriPoints3D focusPoints;
     vec3 focusHexCenter;
-    vec3 focusP, focusP2, focusP3;
+    vec3 focusP;
 
     focusHexCenter = normalize(vec3(0, 2, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
-    focusP = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
-    focusP += focusPoints.hexCenter * plodeDistance;
+    vec3 hexCenter = focusPoints.hexCenter;
+    vec3 projected = projectSurface(hexCenter) - hexCenter * shell;
+    projected += hexCenter * plodeDistance;
 
-    wayTrans0 = focusP;
-    wayRot0 = calcLookAtMatrix(vec3(0), focusPoints.hexCenter, vec3(0,1,0));
+    wayScale0 = 1.;
+    wayTrans0 = projected * wayScale0;
+    wayRot0 = calcLookAtMatrix(vec3(0), hexCenter, vec3(0,1,0));
     // wayRot0 = mat3(1,0,0,0,1,0,0,0,1);
 
-    focusPoints.hexCenter = focusPoints.hexCenter;
-    focusP2 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
-    focusP2 += focusPoints.hexCenter * plodeDistance;
-    focusP2 *= stepScale;
-    focusP2 = wayRot0 * focusP2;
-
-    wayTrans1 = focusP + focusP2;
-    wayRot1 = calcLookAtMatrix(vec3(0), wayRot0 * focusPoints.hexCenter, wayRot0 * vec3(0,1,0));;
+    wayScale1 = wayScale0 * stepScale;
+    wayTrans1 = wayTrans0 + wayRot0 * (projected * wayScale1);
+    wayRot1 = calcLookAtMatrix(vec3(0), wayRot0 * hexCenter, wayRot0 * vec3(0,1,0));;
     // wayRot1 = mat3(1,0,0,0,1,0,0,0,1);
 
-    focusPoints.hexCenter = focusPoints.hexCenter;
-    focusP3 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
-    focusP3 += focusPoints.hexCenter * plodeDistance;
-    focusP3 *= stepScale * stepScale;
-    focusP3 = wayRot1 * focusP3;
-
-    wayTrans2 = focusP + focusP2 + focusP3;
-    wayRot2 = calcLookAtMatrix(vec3(0), wayRot1 * focusPoints.hexCenter, wayRot1 * vec3(0,1,0));;
+    wayScale2 = wayScale1 * stepScale;
+    wayTrans2 = wayTrans1 + wayRot1 * (projected * wayScale2);
+    wayRot2 = calcLookAtMatrix(vec3(0), wayRot1 * hexCenter, wayRot1 * vec3(0,1,0));;
     // wayRot2 = mat3(1,0,0,0,1,0,0,0,1);
 }
 
@@ -1031,18 +1019,23 @@ float map(vec3 p) {
             fWaypoint(p, wayTrans0, wayRot0, wayScale0),
             fWaypoint(p, wayTrans1, wayRot1, wayScale1)
         ),
-        fWaypoint(p, wayTrans2, wayRot2, wayScale2)
+        min(
+            fWaypoint(p, wayTrans2, wayRot2, wayScale2),
+            fWaypoint(p, vec3(0), mat3(1,0,0,0,1,0,0,0,1), 1./stepScale)
+        )
     );
+
+
 
     // focusDebug = 1e12;
     float fs = 1.;
 
-    vec3 ppp;
+    // vec3 ppp;
     // const float PT = 30.;
     // for(float i = 0.; i < PT; i++ ) {
     //     ppp = p;
     //     fs = tweenCameraI(ppp, i/PT*2.);
-    //     focusDebug = min(focusDebug, fBox(ppp, vec3(.01)) * fs);
+    //     focusDebug = min(focusDebug, fBox(ppp, vec3(.02, .05, .03) * .2) * fs);
     // }
 
     // focusDebug = min(focusDebug, fBox(pp, vec3(.05)));
@@ -1082,8 +1075,9 @@ float map(vec3 p) {
 
     p /= stepScale;
 
-    p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
-    p.x *= -1.; // somehow look at flips this
+    mat3 rot = calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
+    p *= rot;
+    // p.x *= -1.; // somehow look at flips this
 
     points = geodesicTriPoints(p, 1.);
     sectionEdge1 = mEdge(p, points) * stepScale;
