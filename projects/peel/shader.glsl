@@ -472,7 +472,7 @@ float mHead(vec3 p, bool bounded) {
 
     // return fBox(p, vec3(.4));
 
-    // return length(p) - .5;
+    return length(p) - .5;
 
     pR(p.yz, -.1);
 
@@ -481,7 +481,7 @@ float mHead(vec3 p, bool bounded) {
     bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
     bound = smax(bound, abs(p.x) - .4, .2);
 
-    // return bound + .05;
+    return bound + .05;
 
     if (bounded && bound > .01) {
         return bound;
@@ -939,20 +939,26 @@ float fWaypoint(vec3 p, vec3 trans, mat3 rot, float scale) {
 }
 
 vec3 wayTrans0;
-vec3 wayTrans1;
 mat3 wayRot0;
-mat3 wayRot1;
 float wayScale0;
+
+vec3 wayTrans1;
+mat3 wayRot1;
 float wayScale1;
+
+vec3 wayTrans2;
+mat3 wayRot2;
+float wayScale2;
 
 void calcWaypoints() {
 
     wayScale0 = 1.;
     wayScale1 = stepScale;
+    wayScale2 = stepScale * stepScale;
 
     TriPoints3D focusPoints;
     vec3 focusHexCenter;
-    vec3 focusP, focusP2;
+    vec3 focusP, focusP2, focusP3;
 
     focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
@@ -972,6 +978,16 @@ void calcWaypoints() {
     wayTrans1 = focusP + focusP2;
     wayRot1 = calcLookAtMatrix(vec3(0), wayRot0 * focusPoints.hexCenter, vec3(0,1,0));;
     // wayRot1 = mat3(1,0,0,0,1,0,0,0,1);
+
+    focusPoints.hexCenter = focusPoints.hexCenter;
+    focusP3 = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
+    focusP3 += focusPoints.hexCenter * plodeDistance;
+    focusP3 *= stepScale * stepScale;
+    focusP3 = wayRot1 * focusP3;
+
+    wayTrans2 = focusP + focusP2 + focusP3;
+    wayRot2 = calcLookAtMatrix(vec3(0), wayRot1 * focusPoints.hexCenter, vec3(0,1,0));;
+    // wayRot2 = mat3(1,0,0,0,1,0,0,0,1);
 }
 
 float map(vec3 p) {
@@ -993,8 +1009,11 @@ float map(vec3 p) {
     float d, d2;
 
     float focusDebug = min(
-        fWaypoint(p, wayTrans0, wayRot0, wayScale0),
-        fWaypoint(p, wayTrans1, wayRot1, wayScale1)
+        min(
+            fWaypoint(p, wayTrans0, wayRot0, wayScale0),
+            fWaypoint(p, wayTrans1, wayRot1, wayScale1)
+        ),
+        fWaypoint(p, wayTrans2, wayRot2, wayScale2)
     );
 
     modelAlbedo = vec3(.9);
@@ -1059,7 +1078,7 @@ float map(vec3 p) {
 
     d = min(d, sectionEdge0 + .02);
     // return focusDebug;
-    // return min(d / focusScale, focusDebug);
+    return min(d / focusScale, focusDebug);
 
     return d / focusScale;
 }
@@ -1192,8 +1211,8 @@ void main() {
 
     calcWaypoints();
 
-    // time = iTime / 3.;
     time = iTime;
+    time /= 2.;
     // time *= .333;
     time = mod(time, 1.);
     time *= plodeDuration - plodeOverlap;
