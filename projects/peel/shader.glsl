@@ -990,23 +990,41 @@ void calcWaypoints() {
     // wayRot2 = mat3(1,0,0,0,1,0,0,0,1);
 }
 
-float map(vec3 p) {
-
-    // Camera
-
-    float animTime = range(.0, (plodeDuration - plodeOverlap) - .0, time);
+float tweenCamera(inout vec3 p, float animTime) {
     float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
     float focusScale = mix(wayScale0, wayScale1, ar);
     p *= focusScale;
     p = mix(wayRot0 * p, wayRot1 * p, animTime);
     p += mix(wayTrans0, wayTrans1, ar);
+    return focusScale;
+}
 
-    // Model
 
-    TriPoints3D points;
-    float sectionEdge0, sectionEdge1;
-    float plodeEdge0;
-    float d, d2;
+float tweenCameraI(inout vec3 p, float animTime) {
+    float ar = (pow(stepScale, mod(animTime, 1.)) - 1.) / (stepScale - 1.);
+    float focusScale;
+    if (animTime < 1.) {
+        focusScale = mix(wayScale0, wayScale1, ar);
+        p -= mix(wayTrans0, wayTrans1, ar);
+        p = mix(p * wayRot0, p * wayRot1, animTime);
+    } else {
+        focusScale = mix(wayScale1, wayScale2, ar);
+        p -= mix(wayTrans1, wayTrans2, ar);
+        p = mix(p * wayRot1, p * wayRot2, mod(animTime, 1.));
+    }
+    p /= focusScale;
+    return focusScale;
+}
+
+float map(vec3 p) {
+
+    // Camera
+
+    vec3 pp = p;
+
+    float animTime = range(.0, (plodeDuration - plodeOverlap) - .0, time);
+    float focusScale = tweenCamera(p, animTime);
+    // float focusScale = 1.;
 
     float focusDebug = min(
         min(
@@ -1015,6 +1033,29 @@ float map(vec3 p) {
         ),
         fWaypoint(p, wayTrans2, wayRot2, wayScale2)
     );
+
+    focusDebug = 1e12;
+    float fs = 1.;
+
+    vec3 ppp;
+    const float PT = 30.;
+    for(float i = 0.; i < PT; i++ ) {
+        ppp = p;
+        fs = tweenCameraI(ppp, i/PT*2.);
+        focusDebug = min(focusDebug, fBox(ppp, vec3(.01)) * fs);
+    }
+
+    // focusDebug = min(focusDebug, fBox(pp, vec3(.05)));
+
+    // return focusDebug;
+
+
+    // Model
+
+    TriPoints3D points;
+    float sectionEdge0, sectionEdge1;
+    float plodeEdge0;
+    float d, d2;
 
     modelAlbedo = vec3(.9);
 
@@ -1131,7 +1172,7 @@ vec3 render(Hit hit, vec3 col) {
 
         vec3 lig = vec3(0,1.5,.5);
         // lig = vec3(0,.5,1.5);
-        lig = vec3(0,1,0);
+        lig = vec3(0,1,.2);
         col = modelAlbedo * pow(clamp(dot(lig, hit.normal) * .5 + .5, 0., 1.), 1./2.2);
         // col = vec3(1,0,0);
 
