@@ -967,6 +967,10 @@ void calcWaypoints() {
     wayRot0 = calcLookAtMatrix(vec3(0), hexCenter, vec3(0,1,0));
     // wayRot0 = mat3(1,0,0,0,1,0,0,0,1);
 
+    // idunno
+    hexCenter.x *= -1.;
+    projected.x *= -1.;
+
     wayScale1 = wayScale0 * stepScale;
     wayTrans1 = wayTrans0 + wayRot0 * (projected * wayScale1);
     wayRot1 = calcLookAtMatrix(vec3(0), wayRot0 * hexCenter, wayRot0 * vec3(0,1,0));;
