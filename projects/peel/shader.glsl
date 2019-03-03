@@ -1003,18 +1003,18 @@ float tweenCamera(inout vec3 p, float animTime) {
     return focusScale;
 }
 
-
 float tweenCameraI(inout vec3 p, float animTime) {
     float ar = (pow(stepScale, mod(animTime, 1.)) - 1.) / (stepScale - 1.);
     float focusScale;
     if (animTime < 1.) {
         focusScale = mix(wayScale1, wayScale2, ar);
-        p -= mix(wayTrans1, wayTrans2, ar);
+        // p -= mix(wayTrans1, wayTrans2, ar);
+        p -= Catmull(wayTrans0, wayTrans1, wayTrans2, wayTrans3, ar);
         p = mix(p * wayRot1, p * wayRot2, animTime);
     } else {
         focusScale = mix(wayScale2, wayScale3, ar);
-        p -= mix(wayTrans2, wayTrans3, ar);
-        p = mix(p * wayRot2, p * wayRot3, mod(animTime, 1.));
+        // p -= mix(wayTrans2, wayTrans3, ar);
+        // p = mix(p * wayRot2, p * wayRot3, mod(animTime, 1.));
     }
     p /= focusScale;
     return focusScale;
