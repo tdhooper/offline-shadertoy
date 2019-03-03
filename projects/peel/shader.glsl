@@ -950,6 +950,10 @@ vec3 wayTrans2;
 mat3 wayRot2;
 float wayScale2;
 
+vec3 wayTrans3;
+mat3 wayRot3;
+float wayScale3;
+
 void calcWaypoints() {
 
     TriPoints3D focusPoints;
@@ -962,32 +966,40 @@ void calcWaypoints() {
     vec3 projected = projectSurface(hexCenter) - hexCenter * shell;
     projected += hexCenter * plodeDistance;
 
-    wayScale0 = 1.;
-    wayTrans0 = projected * wayScale0;
-    wayRot0 = calcLookAtMatrix(vec3(0), hexCenter, vec3(0,1,0));
-    // wayRot0 = mat3(1,0,0,0,1,0,0,0,1);
+    wayScale0 = 1. / stepScale;
+    wayTrans0 = vec3(0);
+    wayRot0 = mat3(1,0,0,0,1,0,0,0,1);
+
+    wayScale1 = wayScale0 * stepScale;
+    wayTrans1 = projected * wayScale1;
+    wayRot1 = calcLookAtMatrix(vec3(0), hexCenter, vec3(0,1,0));
+    // wayRot1 = mat3(1,0,0,0,1,0,0,0,1);
 
     // idunno
     hexCenter.x *= -1.;
     projected.x *= -1.;
 
-    wayScale1 = wayScale0 * stepScale;
-    wayTrans1 = wayTrans0 + wayRot0 * (projected * wayScale1);
-    wayRot1 = calcLookAtMatrix(vec3(0), wayRot0 * hexCenter, wayRot0 * vec3(0,1,0));;
-    // wayRot1 = mat3(1,0,0,0,1,0,0,0,1);
-
     wayScale2 = wayScale1 * stepScale;
     wayTrans2 = wayTrans1 + wayRot1 * (projected * wayScale2);
     wayRot2 = calcLookAtMatrix(vec3(0), wayRot1 * hexCenter, wayRot1 * vec3(0,1,0));;
     // wayRot2 = mat3(1,0,0,0,1,0,0,0,1);
+
+    wayScale3 = wayScale2 * stepScale;
+    wayTrans3 = wayTrans2 + wayRot2 * (projected * wayScale3);
+    wayRot3 = calcLookAtMatrix(vec3(0), wayRot2 * hexCenter, wayRot2 * vec3(0,1,0));;
+    // wayRot3 = mat3(1,0,0,0,1,0,0,0,1);
+}
+
+vec3 Catmull(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t){
+    return (((-p0 + p1*3. - p2*3. + p3)*t*t*t + (p0*2. - p1*5. + p2*4. - p3)*t*t + (-p0 + p2)*t + p1*2.)*.5);
 }
 
 float tweenCamera(inout vec3 p, float animTime) {
     float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
-    float focusScale = mix(wayScale0, wayScale1, ar);
+    float focusScale = mix(wayScale1, wayScale2, ar);
     p *= focusScale;
-    p = mix(wayRot0 * p, wayRot1 * p, animTime);
-    p += mix(wayTrans0, wayTrans1, ar);
+    p = mix(wayRot1 * p, wayRot2 * p, animTime);
+    p += mix(wayTrans1, wayTrans2, ar);
     return focusScale;
 }
 
@@ -996,13 +1008,13 @@ float tweenCameraI(inout vec3 p, float animTime) {
     float ar = (pow(stepScale, mod(animTime, 1.)) - 1.) / (stepScale - 1.);
     float focusScale;
     if (animTime < 1.) {
-        focusScale = mix(wayScale0, wayScale1, ar);
-        p -= mix(wayTrans0, wayTrans1, ar);
-        p = mix(p * wayRot0, p * wayRot1, animTime);
-    } else {
         focusScale = mix(wayScale1, wayScale2, ar);
         p -= mix(wayTrans1, wayTrans2, ar);
-        p = mix(p * wayRot1, p * wayRot2, mod(animTime, 1.));
+        p = mix(p * wayRot1, p * wayRot2, animTime);
+    } else {
+        focusScale = mix(wayScale2, wayScale3, ar);
+        p -= mix(wayTrans2, wayTrans3, ar);
+        p = mix(p * wayRot2, p * wayRot3, mod(animTime, 1.));
     }
     p /= focusScale;
     return focusScale;
@@ -1025,26 +1037,24 @@ float map(vec3 p) {
         ),
         min(
             fWaypoint(p, wayTrans2, wayRot2, wayScale2),
-            fWaypoint(p, vec3(0), mat3(1,0,0,0,1,0,0,0,1), 1./stepScale)
+            fWaypoint(p, wayTrans3, wayRot3, wayScale3)
         )
     );
-
-
 
     // focusDebug = 1e12;
     float fs = 1.;
 
-    // vec3 ppp;
-    // const float PT = 30.;
-    // for(float i = 0.; i < PT; i++ ) {
-    //     ppp = p;
-    //     fs = tweenCameraI(ppp, i/PT*2.);
-    //     focusDebug = min(focusDebug, fBox(ppp, vec3(.02, .05, .03) * .2) * fs);
-    // }
+    vec3 ppp;
+    const float PT = 30.;
+    for(float i = 0.; i < PT; i++ ) {
+        ppp = p;
+        fs = tweenCameraI(ppp, i/PT*2.);
+        focusDebug = min(focusDebug, fBox(ppp, vec3(.02, .05, .03) * .2) * fs);
+    }
 
     // focusDebug = min(focusDebug, fBox(pp, vec3(.05)));
 
-    // return focusDebug;
+    return focusDebug;
 
 
     // Model
