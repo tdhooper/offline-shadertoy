@@ -472,7 +472,7 @@ float mHead(vec3 p, bool bounded) {
 
     // return fBox(p, vec3(.4));
 
-    return length(p) - .5;
+    // return length(p) - .5;
 
     pR(p.yz, -.1);
 
@@ -935,7 +935,7 @@ float animBlend(float startOffset) {
 float fWaypoint(vec3 p, vec3 trans, mat3 rot, float scale) {
     p -= trans;
     p *= rot;
-    return fBox(p, vec3(scale * 0.05));
+    return fBox(p, scale * vec3(.02, .05, .03));
 }
 
 vec3 wayTrans0;
@@ -960,7 +960,7 @@ void calcWaypoints() {
     vec3 focusHexCenter;
     vec3 focusP, focusP2, focusP3;
 
-    focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
+    focusHexCenter = normalize(vec3(0, 2, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
     focusP = projectSurface(focusPoints.hexCenter) - focusPoints.hexCenter * shell;
     focusP += focusPoints.hexCenter * plodeDistance;
@@ -976,7 +976,7 @@ void calcWaypoints() {
     focusP2 = wayRot0 * focusP2;
 
     wayTrans1 = focusP + focusP2;
-    wayRot1 = calcLookAtMatrix(vec3(0), wayRot0 * focusPoints.hexCenter, vec3(0,1,0));;
+    wayRot1 = calcLookAtMatrix(vec3(0), wayRot0 * focusPoints.hexCenter, wayRot0 * vec3(0,1,0));;
     // wayRot1 = mat3(1,0,0,0,1,0,0,0,1);
 
     focusPoints.hexCenter = focusPoints.hexCenter;
@@ -986,7 +986,7 @@ void calcWaypoints() {
     focusP3 = wayRot1 * focusP3;
 
     wayTrans2 = focusP + focusP2 + focusP3;
-    wayRot2 = calcLookAtMatrix(vec3(0), wayRot1 * focusPoints.hexCenter, vec3(0,1,0));;
+    wayRot2 = calcLookAtMatrix(vec3(0), wayRot1 * focusPoints.hexCenter, wayRot1 * vec3(0,1,0));;
     // wayRot2 = mat3(1,0,0,0,1,0,0,0,1);
 }
 
@@ -1034,16 +1034,16 @@ float map(vec3 p) {
         fWaypoint(p, wayTrans2, wayRot2, wayScale2)
     );
 
-    focusDebug = 1e12;
+    // focusDebug = 1e12;
     float fs = 1.;
 
     vec3 ppp;
-    const float PT = 30.;
-    for(float i = 0.; i < PT; i++ ) {
-        ppp = p;
-        fs = tweenCameraI(ppp, i/PT*2.);
-        focusDebug = min(focusDebug, fBox(ppp, vec3(.01)) * fs);
-    }
+    // const float PT = 30.;
+    // for(float i = 0.; i < PT; i++ ) {
+    //     ppp = p;
+    //     fs = tweenCameraI(ppp, i/PT*2.);
+    //     focusDebug = min(focusDebug, fBox(ppp, vec3(.01)) * fs);
+    // }
 
     // focusDebug = min(focusDebug, fBox(pp, vec3(.05)));
 
