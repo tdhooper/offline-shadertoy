@@ -472,7 +472,7 @@ float mHead(vec3 p, bool bounded) {
 
     // return fBox(p, vec3(.4));
 
-    // return length(p) - .5;
+    return length(p) - .5;
 
     pR(p.yz, -.1);
 
@@ -935,7 +935,7 @@ float animBlend(float startOffset) {
 float fWaypoint(vec3 p, vec3 trans, mat3 rot, float scale) {
     p -= trans;
     p *= rot;
-    return fBox(p, scale * vec3(.02, .05, .03));
+    return fBox(p, scale * vec3(.02, .05, .03) * 1.);
 }
 
 vec3 wayTrans0;
@@ -994,12 +994,47 @@ vec3 Catmull(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t){
     return (((-p0 + p1*3. - p2*3. + p3)*t*t*t + (p0*2. - p1*5. + p2*4. - p3)*t*t + (-p0 + p2)*t + p1*2.)*.5);
 }
 
+vec3 bezier(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
+    vec3 a0 = mix(p0, p1, t);
+    vec3 a1 = mix(p1, p2, t);
+    vec3 a2 = mix(p2, p3, t);
+    vec3 b0 = mix(a0, a1, t);
+    vec3 b1 = mix(a1, a2, t);
+    return mix(a0, b1, t);
+}
+
+vec3 midpointNormal(vec3 a, vec3 b, vec3 c) {
+    vec3 an = normalize(a - b);
+    vec3 cn = normalize(c - b);
+    vec3 mid = mix(an, cn, .5);
+    return normalize(-mid);
+}
+
+vec3 planeNormal(vec3 a, vec3 b, vec3 c) {
+    return normalize(cross(b - a, c - a));
+}
+
+vec3 controlDir(vec3 a, vec3 b, vec3 c) {
+    return cross(
+        midpointNormal(a, b, c),
+        planeNormal(a, b, c)
+    );
+}
+
+vec3 tweenCameraPos(float t) {
+    vec3 c1 = wayTrans1 - controlDir(wayTrans0, wayTrans1, wayTrans2) * distance(wayTrans1, wayTrans2) * .6;
+    vec3 c2 = wayTrans2 + controlDir(wayTrans1, wayTrans2, wayTrans3) * distance(wayTrans1, wayTrans2) * .2;
+    vec3 p = bezier(wayTrans1, c1, c2, wayTrans2, t);
+    return p;
+}
+
 float tweenCamera(inout vec3 p, float animTime) {
     float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
     float focusScale = mix(wayScale1, wayScale2, ar);
     p *= focusScale;
     p = mix(wayRot1 * p, wayRot2 * p, animTime);
-    p += mix(wayTrans1, wayTrans2, ar);
+    // p += mix(wayTrans1, wayTrans2, ar);
+    p += tweenCameraPos(ar);
     return focusScale;
 }
 
@@ -1008,13 +1043,14 @@ float tweenCameraI(inout vec3 p, float animTime) {
     float focusScale;
     if (animTime < 1.) {
         focusScale = mix(wayScale1, wayScale2, ar);
-        // p -= mix(wayTrans1, wayTrans2, ar);
-        p -= Catmull(wayTrans0, wayTrans1, wayTrans2, wayTrans3, ar);
+        //p -= mix(wayTrans1, wayTrans2, ar);
+        // p -= Catmull(wayTrans0, wayTrans1, wayTrans2, wayTrans3, ar);
+        p -= tweenCameraPos(ar);
         p = mix(p * wayRot1, p * wayRot2, animTime);
     } else {
         focusScale = mix(wayScale2, wayScale3, ar);
-        // p -= mix(wayTrans2, wayTrans3, ar);
-        // p = mix(p * wayRot2, p * wayRot3, mod(animTime, 1.));
+        p -= mix(wayTrans2, wayTrans3, ar);
+        p = mix(p * wayRot2, p * wayRot3, mod(animTime, 1.));
     }
     p /= focusScale;
     return focusScale;
@@ -1045,14 +1081,21 @@ float map(vec3 p) {
     float fs = 1.;
 
     vec3 ppp;
-    const float PT = 30.;
+    const float PT = 10.;
     for(float i = 0.; i < PT; i++ ) {
         ppp = p;
-        fs = tweenCameraI(ppp, i/PT*2.);
+        fs = tweenCameraI(ppp, i/PT);
         focusDebug = min(focusDebug, fBox(ppp, vec3(.02, .05, .03) * .2) * fs);
     }
 
     // focusDebug = min(focusDebug, fBox(pp, vec3(.05)));
+
+    // vec3 c1 = wayTrans1 - controlDir(wayTrans0, wayTrans1, wayTrans2) * distance(wayTrans1, wayTrans2) * .5;
+    // vec3 c2 = wayTrans2 + controlDir(wayTrans1, wayTrans2, wayTrans3) * distance(wayTrans1, wayTrans2) * .25;
+
+    // c1 = wayTrans1 + midpointNormal(wayTrans0, wayTrans1, wayTrans2) * .05;
+
+    // focusDebug = min(focusDebug, length(p - c2) - .01);
 
     return focusDebug;
 
@@ -1195,7 +1238,7 @@ vec3 render(Hit hit, vec3 col) {
 // --------------------------------------------------------
 
 const float MAX_TRACE_DISTANCE = 4.;
-const float INTERSECTION_PRECISION = .0001;
+const float INTERSECTION_PRECISION = .00001;
 const int NUM_OF_TRACE_STEPS = 250;
 
 const int NORMAL_STEPS = 6;
