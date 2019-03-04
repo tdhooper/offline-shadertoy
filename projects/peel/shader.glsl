@@ -472,7 +472,7 @@ float mHead(vec3 p, bool bounded) {
 
     // return fBox(p, vec3(.4));
 
-    return length(p) - .5;
+    // return length(p) - .5;
 
     pR(p.yz, -.1);
 
@@ -960,7 +960,7 @@ void calcWaypoints() {
     vec3 focusHexCenter;
     vec3 focusP;
 
-    focusHexCenter = normalize(vec3(0, 2, PHI + 1.));
+    focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
     vec3 hexCenter = focusPoints.hexCenter;
     vec3 projected = projectSurface(hexCenter) - hexCenter * shell;
@@ -1078,26 +1078,17 @@ float map(vec3 p) {
     );
 
     // focusDebug = 1e12;
-    float fs = 1.;
+    // float fs = 1.;
 
-    vec3 ppp;
-    const float PT = 10.;
-    for(float i = 0.; i < PT; i++ ) {
-        ppp = p;
-        fs = tweenCameraI(ppp, i/PT);
-        focusDebug = min(focusDebug, fBox(ppp, vec3(.02, .05, .03) * .2) * fs);
-    }
+    // vec3 ppp;
+    // const float PT = 20.;
+    // for(float i = 0.; i < PT; i++ ) {
+    //     ppp = p;
+    //     fs = tweenCameraI(ppp, i/PT);
+    //     focusDebug = min(focusDebug, fBox(ppp, vec3(.02, .05, .03) * .2) * fs);
+    // }
 
-    // focusDebug = min(focusDebug, fBox(pp, vec3(.05)));
-
-    // vec3 c1 = wayTrans1 - controlDir(wayTrans0, wayTrans1, wayTrans2) * distance(wayTrans1, wayTrans2) * .5;
-    // vec3 c2 = wayTrans2 + controlDir(wayTrans1, wayTrans2, wayTrans3) * distance(wayTrans1, wayTrans2) * .25;
-
-    // c1 = wayTrans1 + midpointNormal(wayTrans0, wayTrans1, wayTrans2) * .05;
-
-    // focusDebug = min(focusDebug, length(p - c2) - .01);
-
-    return focusDebug;
+    // return focusDebug;
 
 
     // Model
@@ -1170,7 +1161,7 @@ float map(vec3 p) {
 
     d = min(d, sectionEdge0 + .02);
     // return focusDebug;
-    return min(d / focusScale, focusDebug);
+    // return min(d / focusScale, focusDebug);
 
     return d / focusScale;
 }
@@ -1238,7 +1229,7 @@ vec3 render(Hit hit, vec3 col) {
 // --------------------------------------------------------
 
 const float MAX_TRACE_DISTANCE = 4.;
-const float INTERSECTION_PRECISION = .00001;
+const float INTERSECTION_PRECISION = .0001;
 const int NUM_OF_TRACE_STEPS = 250;
 
 const int NORMAL_STEPS = 6;
