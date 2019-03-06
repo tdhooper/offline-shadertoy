@@ -19,6 +19,7 @@ uniform bool guiBlend;
 uniform bool guiSplit;
 uniform bool guiNeck;
 uniform bool guiDebug;
+uniform bool guiEdit;
 uniform bool guiStep0;
 uniform bool guiStep1;
 uniform bool guiStep2;
@@ -473,15 +474,20 @@ float mHead(vec3 p, bool bounded) {
     // return fBox(p, vec3(.4));
 
     // return length(p) - .5;
-
-    pR(p.yz, -.1);
+    
+    if (guiEdit) {
+        p.z -= .01;
+        p.y -= .08;
+    } else {
+        pR(p.yz, -.1);
+    }
 
     float bound = length(p - vec3(0,.03,0)) - .53;
     bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
     bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
     bound = smax(bound, abs(p.x) - .4, .2);
 
-    return bound + .05;
+    // return bound + .05;
 
     if (bounded && bound > .01) {
         return bound;
@@ -1064,7 +1070,7 @@ float tweenCameraI(inout vec3 p, float animTime) {
     return focusScale;
 }
 
-float map(vec3 p) {
+float mapAnim(vec3 p) {
 
     // Camera
 
@@ -1183,7 +1189,11 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
 }
 
 
-float mapxx(vec3 p) {
+float map(vec3 p) {
+
+    if ( ! guiEdit) {
+        return mapAnim(p);
+    }
 
     float a = clamp(iTime, 0., 1.);
     float d = fHexagonCircumcircle(p.yzx + vec3(.1,-.1,0), vec2(.5,.5));
@@ -1374,7 +1384,7 @@ void main() {
 
     if (guiSplit) {
         alpha = hit.pos.x < 0. ? 0. : 1.;
-        alpha = 0.;
+        // alpha = 0.;
     }
 
     vec3 polyColor = texture2D(uSource, gl_FragCoord.xy / iResolution.xy).rgb;
