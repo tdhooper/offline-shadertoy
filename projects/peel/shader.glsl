@@ -695,9 +695,16 @@ float mHead(vec3 p, bool bounded) {
     p = pp;
     p += vec3(0,.33,-.45);
     pR(p.yz, .7);
-    float cut = p.y - smoothstep(0., .03, p.x) * .015;
-    cut += smoothstep(.03, .18, p.x) * .2;
-    toplip = smax(toplip, cut, .03);
+    float cut;
+    cut = dot(p, normalize(vec3(.5,.25,0))) - .056;
+    float dip = smin(
+        dot(p, normalize(vec3(-.5,.5,0))) + .005,
+        dot(p, normalize(vec3(.5,.5,0))) + .005,
+        .025
+    );
+    cut = smax(cut, dip, .04);
+    cut = smax(cut, p.x - .1, .05);
+    toplip = smax(toplip, cut, .02);
     d = smin(d, toplip, .07);
 
     // seam
