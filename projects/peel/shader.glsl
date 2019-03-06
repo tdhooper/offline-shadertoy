@@ -889,6 +889,7 @@ float sinstep(float a) {
 }
 
 const float shell = .08;
+const float surfaceOffset = .1;
 const float stepScale = .15;
 const float plodeDuration = 1.;
 const float plodeOverlap = .35;
@@ -963,7 +964,7 @@ void calcWaypoints() {
     focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
     vec3 hexCenter = focusPoints.hexCenter;
-    vec3 projected = projectSurface(hexCenter) - hexCenter * shell;
+    vec3 projected = projectSurface(hexCenter) - hexCenter * surfaceOffset;
     projected += hexCenter * plodeDistance;
 
     wayScale0 = 1. / stepScale;
@@ -1106,7 +1107,7 @@ float map(vec3 p) {
     p -= points.hexCenter * animPlode(points.id, plodeOverlap - plodeDuration) * plodeDistance;
 
     if (guiStep0) {
-        p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
+        p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
     }
 
     if ( ! guiStep0) {
@@ -1147,7 +1148,7 @@ float map(vec3 p) {
         sectionEdge1 = max(sectionEdge1, d - .2 * stepScale);
         d = min(d, sectionEdge1 + .02 * stepScale);
 
-        p -= projectSurface(points.hexCenter) - points.hexCenter * shell;
+        p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
 
         if (guiStep2) {
             p /= stepScale;
@@ -1166,6 +1167,27 @@ float map(vec3 p) {
     return d / focusScale;
 }
 
+// Hexagonal prism, circumcircle variant
+float fHexagonCircumcircle(vec3 p, vec2 h) {
+    vec3 q = abs(p);
+    return max(q.y - h.y, max(q.x*sqrt(3.)*0.5 + q.z*0.5, q.z) - h.x);
+    //this is mathematically equivalent to this line, but less efficient:
+    //return max(q.y - h.y, max(dot(vec2(cos(PI/3), sin(PI/3)), q.zx), q.z) - h.x);
+}
+
+
+float mapxx(vec3 p) {
+
+    float a = clamp(iTime, 0., 1.);
+    float d = fHexagonCircumcircle(p.yzx + vec3(.1,-.1,0), vec2(.5,.5));
+    // float d = fBox(p + vec3(0,.1,0), vec3(.45));
+    float s = mix(.5, 1., a);
+    float d2 = mHead(p, false);
+    float d3 = smin(d, d2, .3);
+    // d = mix(d, d3, range(0., .5, a));
+    d = mix(d, d2, range(0., 1., a));
+    return d;
+}
 
 
 // --------------------------------------------------------
