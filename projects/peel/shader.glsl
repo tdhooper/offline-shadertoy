@@ -44,6 +44,11 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+vec2 pRi(vec2 p, float a) {
+    pR(p, a);
+    return p;
+}
+
 float hash(const in vec3 p) {
     return fract(sin(dot(p,vec3(127.1,311.7,758.5453123)))*43758.5453123);
 }
@@ -320,6 +325,10 @@ float vmin(vec3 v) {
     return min(min(v.x, v.y), v.z);
 }
 
+float vmin(vec2 v) {
+    return min(v.x, v.y);
+}
+
 float fBox2(vec2 p, vec2 b) {
     vec2 d = abs(p) - b;
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
@@ -459,6 +468,12 @@ float helix(vec3 p, float lead, float thick) {
 }
 
 float ellip(vec3 p, vec3 s) {
+    float r = vmin(s);
+    p *= r / s;
+    return length(p) - r;
+}
+
+float ellip(vec2 p, vec2 s) {
     float r = vmin(s);
     p *= r / s;
     return length(p) - r;
@@ -804,8 +819,23 @@ float mHead(vec3 p, bool bounded) {
     p += vec3(-.075,.1,-.37);
     d = min(d, length(p) - .05);
 
-    p = pp;
+    
 
+    // Ear
+    
+    p = pp;
+    p += vec3(-.405,.12,.10);
+    pR(p.xy, -.12);
+    pR(p.xz, .35);
+    pR(p.yz, -.3);
+    p.x += smoothstep(-.0, -.2, p.y) * .01;
+    float ear = abs(p.x) - .015;
+    float outline = ellip(pRi(p.yz, .2), vec2(.12,.09));
+    outline = smin(outline, ellip(p.yz + vec2(.155,-.02), vec2(.035, .03)), .14);
+    ear = smax(ear, outline, .015);
+    d = smin(d, ear, .02);
+
+    // d = ear;
     // d = min(d, bound);
 
     return d;
