@@ -501,6 +501,7 @@ float mHead(vec3 p, bool bounded) {
     bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
     bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
     bound = smax(bound, abs(p.x) - .4, .2);
+    bound -= .05;
 
     // return bound + .05;
 
@@ -819,21 +820,36 @@ float mHead(vec3 p, bool bounded) {
     p += vec3(-.075,.1,-.37);
     d = min(d, length(p) - .05);
 
-    
+
+    // Ear base
+    // p = pp;
+    // p += vec3(-.33,.18,.04);
+    // d = smin(d, ellip(p, vec3(.01,.015,.02)), .075);
 
     // Ear
-    
     p = pp;
     p += vec3(-.405,.12,.10);
     pR(p.xy, -.12);
     pR(p.xz, .35);
     pR(p.yz, -.3);
-    p.x += smoothstep(-.0, -.2, p.y) * .01;
-    float ear = abs(p.x) - .015;
+    p.x += smoothstep(-.0, -.2, p.y) * .01; // bend in bottom
+    p.x += smoothstep(.17, .02, ellip(p.zy - vec2(.1,-.06), vec2(.001,.001))) * .03; // bend in front
+    float ear = abs(p.x) - mix(.02, .013, smoothstep(.2, -.2, p.y));
     float outline = ellip(pRi(p.yz, .2), vec2(.12,.09));
     outline = smin(outline, ellip(p.yz + vec2(.155,-.02), vec2(.035, .03)), .14);
+    // outline = smin(outline, ellip(p.yz + vec2(.11,-.07), vec2(.06)), .04);
     ear = smax(ear, outline, .015);
-    d = smin(d, ear, .02);
+
+    float earc = smax(-p.x + smoothstep(-.0, -.3, p.y) * .05, outline + .016, .01);
+    ear = smax(ear, -earc, .01);
+
+    d = smin(d, ear, .015);
+
+    // bottom bump
+    p = pp;
+    p += vec3(-.35,.19,.06);
+    d = smin(d, ellip(p, vec3(.015,.015,.02)), .09);
+
 
     // d = ear;
     // d = min(d, bound);
@@ -1221,9 +1237,9 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
 
 float map(vec3 p) {
 
-    if ( ! guiEdit) {
-        return mapAnim(p);
-    }
+    // if ( ! guiEdit) {
+        // return mapAnim(p);
+    // }
 
     float a = clamp(iTime, 0., 1.);
     float d = fHexagonCircumcircle(p.yzx + vec3(.1,-.1,0), vec2(.5,.5));
