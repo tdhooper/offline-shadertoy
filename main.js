@@ -6,8 +6,8 @@ const regl = require('regl')({
     'ext_frag_depth',
     'oes_standard_derivatives',
   ],
-  pixelRatio: .5,
-  // pixelRatio: 1,
+  pixelRatio: .25,
+  // pixelRatio: 2,
   attributes: {
     preserveDrawingBuffer: true,
   },

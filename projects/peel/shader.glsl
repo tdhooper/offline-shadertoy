@@ -827,28 +827,56 @@ float mHead(vec3 p, bool bounded) {
     // d = smin(d, ellip(p, vec3(.01,.015,.02)), .075);
 
     // Ear
+
+    // position
     p = pp;
     p += vec3(-.405,.12,.10);
     pR(p.xy, -.12);
     pR(p.xz, .35);
     pR(p.yz, -.3);
+
+    // warp
     p.x += smoothstep(-.0, -.2, p.y) * .01; // bend in bottom
     p.x += smoothstep(.17, .02, ellip(p.zy - vec2(.1,-.06), vec2(.001,.001))) * .03; // bend in front
-    float ear = abs(p.x) - mix(.02, .013, smoothstep(.2, -.2, p.y));
+
+    // base
+    float earthick = mix(.01, .01, smoothstep(.2, -.2, p.y));
+    float ear = p.x - earthick;
+
+    // inner
+    float iear = ellip(p.zy - vec2(.01,-.035), vec2(.045,.055));
+    iear = smin(iear, length(p.zy - vec2(.04,-.11)) - .02, .03);
+    iear = smin(iear, length(p.zy - vec2(.1,-.03)) - .06, .07);
+    ear = smax(ear, -iear, .015);
+
+    float earback = -ear - .02;
+
+    // outline
     float outline = ellip(pRi(p.yz, .2), vec2(.12,.09));
     outline = smin(outline, ellip(p.yz + vec2(.155,-.02), vec2(.035, .03)), .14);
     // outline = smin(outline, ellip(p.yz + vec2(.11,-.07), vec2(.06)), .04);
+
+    // float earback = -p.x - earthick;
+
+    // edge
+    float eedge = p.x + smoothstep(.1, -.4, p.y) * .05 - .03;
+    eedge = smax(eedge, -outline - .016, .01);
+    ear = smin(ear, eedge, .01);
+    ear = max(ear, earback);
+
+    // return eedge;
+
     ear = smax(ear, outline, .015);
 
-    float earc = smax(-p.x + smoothstep(-.0, -.3, p.y) * .05, outline + .016, .01);
-    ear = smax(ear, -earc, .01);
+    // float earc = smax(-p.x + smoothstep(-.0, -.3, p.y) * .05, outline + .016, .01);
+    // ear = smax(ear, -earc, .01);
 
     d = smin(d, ear, .015);
 
-    // bottom bump
-    p = pp;
-    p += vec3(-.35,.19,.06);
-    d = smin(d, ellip(p, vec3(.015,.015,.02)), .09);
+    // // bottom bump
+    // p = pp;
+    // p += vec3(-.35,.19,.06);
+    // d = smin(d, ellip(p, vec3(.015,.015,.02)), .09);
 
 
     // d = ear;
@@ -953,7 +981,7 @@ const float stepScale = .15;
 const float plodeDuration = 1.;
 const float plodeOverlap = .35;
 const float blendDuration = .4;
-const float plodeDistance = .4;
+const float plodeDistance = .3;
 
 float mEdge(vec3 p, TriPoints3D points) {
     vec3 edgeAB = normalize(cross(points.center, points.ab));
@@ -1313,7 +1341,7 @@ vec3 render(Hit hit, vec3 col) {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 4.;
+const float MAX_TRACE_DISTANCE = 4.5;
 const float INTERSECTION_PRECISION = .0001;
 const int NUM_OF_TRACE_STEPS = 250;
 
