@@ -384,15 +384,15 @@ float sdRoundCone( in vec3 p, in float r1, float r2, float h )
     return dot(q, vec2(a,b) ) - r1;
 }
 
-// float smin(float a, float b, float r) {
-//     vec2 u = max(vec2(r - a,r - b), vec2(0));
-//     return max(r, min (a, b)) - length(u);
-// }
+float smin2(float a, float b, float r) {
+    vec2 u = max(vec2(r - a,r - b), vec2(0));
+    return max(r, min (a, b)) - length(u);
+}
 
-// float smax(float a, float b, float r) {
-//     vec2 u = max(vec2(r + a,r + b), vec2(0));
-//     return min(-r, max (a, b)) + length(u);
-// }
+float smax2(float a, float b, float r) {
+    vec2 u = max(vec2(r + a,r + b), vec2(0));
+    return min(-r, max (a, b)) + length(u);
+}
 
 float smin(float a, float b, float k){
     float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
@@ -836,37 +836,40 @@ float mHead(vec3 p, bool bounded) {
     pR(p.yz, -.3);
 
     // warp
-    p.x += smoothstep(-.0, -.2, p.y) * .01; // bend in bottom
-    p.x += smoothstep(.17, .02, ellip(p.zy - vec2(.1,-.06), vec2(.001,.001))) * .03; // bend in front
+    p.x += smoothstep(-.05, .1, p.y) * .015; // bend in top
+    // p.x += smoothstep(.17, .02, ellip(p.zy - vec2(.1,-.06), vec2(.001,.001))) * .01; // bend in front
 
     // base
-    float earthick = mix(.01, .01, smoothstep(.2, -.2, p.y));
-    float ear = p.x - earthick;
+    float ear = p.x - .005;
 
     // inner
-    float iear = ellip(p.zy - vec2(.01,-.035), vec2(.045,.055));
+    float iear = ellip(p.zy - vec2(.01,-.03), vec2(.045,.05));
     iear = smin(iear, length(p.zy - vec2(.04,-.11)) - .02, .03);
     iear = smin(iear, length(p.zy - vec2(.1,-.03)) - .06, .07);
-    ear = smax(ear, -iear, .015);
+    ear = smax2(ear, -iear, .02);
 
-    float earback = -ear - .02;
+    float earback = -ear - mix(.001, .025, smoothstep(.3, -.2, p.y));
 
     // outline
     float outline = ellip(pRi(p.yz, .2), vec2(.12,.09));
     outline = smin(outline, ellip(p.yz + vec2(.155,-.02), vec2(.035, .03)), .14);
     // outline = smin(outline, ellip(p.yz + vec2(.11,-.07), vec2(.06)), .04);
 
-    // float earback = -p.x - earthick;
-
     // edge
-    float eedge = p.x + smoothstep(.1, -.4, p.y) * .05 - .03;
-    eedge = smax(eedge, -outline - .016, .01);
+    float edgeo = outline + smoothstep(-.5, .2, dot(p.zy, normalize(vec2(1,3)))) * .02;
+    edgeo = ellip(pRi(p.yz, .1), vec2(.095,.065));
+    edgeo = smin(edgeo, length(p.zy - vec2(0,-.1)) - .03, .1);
+    float edgeoin = smax(abs(pRi(p.zy, .15).y + .025) - .01, -p.z-.035, .01);
+    edgeo = smax(edgeo, -edgeoin, .05);
+    float eedge = p.x + smoothstep(.1, -.4, p.y) * .06 - .03;
+    eedge += smoothstep(.15, .0, length(p.zy - vec2(-.03,-.02))) * .05;
+    eedge = smax(eedge, -edgeo, .01);
     ear = smin(ear, eedge, .01);
     ear = max(ear, earback);
 
     // return eedge;
 
-    ear = smax(ear, outline, .015);
+    ear = smax2(ear, outline, .015);
 
     // float earc = smax(-p.x + smoothstep(-.0, -.3, p.y) * .05, outline + .016, .01);
     // ear = smax(ear, -earc, .01);
@@ -1269,11 +1272,14 @@ float map(vec3 p) {
         // return mapAnim(p);
     // }
 
-    float a = clamp(iTime, 0., 1.);
+    float a = clamp(mod(iTime, 1.5), 0., 1.);
+    a = sinstep(sinstep(a));
     float d = fHexagonCircumcircle(p.yzx + vec3(.1,-.1,0), vec2(.5,.5));
     // float d = fBox(p + vec3(0,.1,0), vec3(.45));
     float s = mix(.5, 1., a);
     float d2 = mHead(p, false);
+    d2 = smin(d2, d2, range(1., .5, a)) + range(1., .5, a) * .2;
+    // return d2;
     float d3 = smin(d, d2, .3);
     // d = mix(d, d3, range(0., .5, a));
     d = mix(d, d2, range(0., 1., a));
