@@ -339,6 +339,10 @@ float fBox(vec3 p, vec3 b) {
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
+float fCorner2(vec2 p) {
+    return length(max(p, vec2(0))) + vmax(min(p, vec2(0)));
+}
+
 float fDisc(vec3 p, float r) {
     float l = length(p.xz) - r;
     return l < 0. ? abs(p.y) : length(vec2(p.y, l));
@@ -545,9 +549,13 @@ float mHead(vec3 p, bool bounded) {
     p += vec3(-.15,.13,.06);
     d = smin(d, ellip(p, vec3(.15,.15,.15)), .15);
 
+    p = pp;
+    p += vec3(-.07,.18,.1);
+    d = smin(d, length(p) - .2, .18);
+
     // cheek base
     p = pp;
-    p += vec3(-.2,.14,-.14);
+    p += vec3(-.2,.12,-.14);
     d = smin(d, ellip(p, vec3(.15,.22,.2) * .8), .15);
 
     // jaw base
@@ -828,27 +836,48 @@ float mHead(vec3 p, bool bounded) {
 
     // Ear
 
+    // bottom bump
+    // p = pp;
+    // p += vec3(-.35,.19,.06);
+    // d = smin(d, ellip(p, vec3(.015,.015,.02)), .09);
+
+
     // position
     p = pp;
     p += vec3(-.405,.12,.10);
     pR(p.xy, -.12);
     pR(p.xz, .35);
     pR(p.yz, -.3);
-
-    // warp
-    p.x += smoothstep(-.05, .1, p.y) * .015; // bend in top
-    // p.x += smoothstep(.17, .02, ellip(p.zy - vec2(.1,-.06), vec2(.001,.001))) * .01; // bend in front
+    vec3 pe = p;
 
     // base
-    float ear = p.x - .005;
+    float ear = p.s + smoothstep(-.05, .1, p.y) * .015 - .005;
+    float earback = -ear - mix(.001, .025, smoothstep(.3, -.2, p.y));
 
     // inner
+    pR(p.xz, -.5);
     float iear = ellip(p.zy - vec2(.01,-.03), vec2(.045,.05));
-    iear = smin(iear, length(p.zy - vec2(.04,-.11)) - .02, .03);
+    iear = smin(iear, length(p.zy - vec2(.04,-.09)) - .02, .09);
+    float ridge = iear;
     iear = smin(iear, length(p.zy - vec2(.1,-.03)) - .06, .07);
-    ear = smax2(ear, -iear, .02);
+    ear = smax2(ear, -iear, .04);
+    earback = smin(earback, iear - .04, .02);
 
-    float earback = -ear - mix(.001, .025, smoothstep(.3, -.2, p.y));
+    p = pe;
+    pR(p.xz, .2);
+    ridge = ellip(p.zy - vec2(.01,-.03), vec2(.045,.05));
+    ridge = smin(ridge, ellip(pRi(p.zy - vec2(.025,-.1), .2), vec2(.01,.015)), .025);
+    ridge = smin(ridge, length(p.zy - vec2(.06,-.0)) - .03, .025);
+    ridge = max(-ridge, ridge - .01);
+    ridge = smax2(ridge, abs(p.x) - .005, .005);
+
+    // d = min(d, ridge);
+    ear = smin(ear, ridge, .045);
+
+    // return p.x;
+
+    p = pe;
+    // return earback;
 
     // outline
     float outline = ellip(pRi(p.yz, .2), vec2(.12,.09));
@@ -856,30 +885,46 @@ float mHead(vec3 p, bool bounded) {
     // outline = smin(outline, ellip(p.yz + vec2(.11,-.07), vec2(.06)), .04);
 
     // edge
-    float edgeo = outline + smoothstep(-.5, .2, dot(p.zy, normalize(vec2(1,3)))) * .02;
-    edgeo = ellip(pRi(p.yz, .1), vec2(.095,.065));
+    float eedge = p.x + smoothstep(.2, -.4, p.y) * .06 - .03;
+
+    float edgeo = ellip(pRi(p.yz, .1), vec2(.095,.065));
     edgeo = smin(edgeo, length(p.zy - vec2(0,-.1)) - .03, .1);
-    float edgeoin = smax(abs(pRi(p.zy, .15).y + .025) - .01, -p.z-.035, .01);
+    float edgeoin = smax(abs(pRi(p.zy, .15).y + .035) - .01, -p.z-.00035, .01);
     edgeo = smax(edgeo, -edgeoin, .05);
-    float eedge = p.x + smoothstep(.1, -.4, p.y) * .06 - .03;
-    eedge += smoothstep(.15, .0, length(p.zy - vec2(-.03,-.02))) * .05;
+
+    float eedent = smoothstep(-.05, .05, -p.z) * step(fCorner2(vec2(-p.z, p.y)), .04);
+    eedent += smoothstep(.1, -.1, -p.z) * .2;
+    eedent += smoothstep(.1, -.1, p.y) * step(-0.03, p.z) * .3;
+    eedent = min(eedent, 1.);
+    eedge += eedent * .06;
+
     eedge = smax(eedge, -edgeo, .01);
     ear = smin(ear, eedge, .01);
     ear = max(ear, earback);
+    // ear = smin2(iear, earback, .01);
+
+    // return ear;
+    // return p.x;
 
     // return eedge;
 
     ear = smax2(ear, outline, .015);
+
+    // return ear;
 
     // float earc = smax(-p.x + smoothstep(-.0, -.3, p.y) * .05, outline + .016, .01);
     // ear = smax(ear, -earc, .01);
 
     d = smin(d, ear, .015);
 
-    // // bottom bump
-    // p = pp;
-    // p += vec3(-.35,.19,.06);
-    // d = smin(d, ellip(p, vec3(.015,.015,.02)), .09);
+    // hole
+    p = pp;
+    p += vec3(-.36,.19,.06);
+    pR(p.xz, -.5);
+    pR(p.xy, -.2);
+    p.x += .02;
+    d = smax(d, -fHalfCapsule(p.zxy, .02), .04);
+
 
 
     // d = ear;
