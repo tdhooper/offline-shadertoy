@@ -415,6 +415,20 @@ float smax(float a, float b) {
     return smax(a, b, 0.);
 }
 
+float smin3(float a, float b, float k){
+    return min(
+        smin(a, b, k),
+        smin2(a, b, k)
+    );
+}
+
+float smax3(float a, float b, float k){
+    return max(
+        smax(a, b, k),
+        smax2(a, b, k)
+    );
+}
+
 
 vec3 cartToPolar(vec3 p) {
     float x = p.x; // distance from the plane it lies on
@@ -863,18 +877,36 @@ float mHead(vec3 p, bool bounded) {
     ear = smax2(ear, -iear, .04);
     earback = smin(earback, iear - .04, .02);
 
+    // ridge
     p = pe;
     pR(p.xz, .2);
-    ridge = ellip(p.zy - vec2(.01,-.03), vec2(.045,.05));
-    ridge = smin(ridge, ellip(pRi(p.zy - vec2(.025,-.1), .2), vec2(.01,.015)), .025);
-    ridge = smin(ridge, length(p.zy - vec2(.06,-.0)) - .03, .025);
-    ridge = max(-ridge, ridge - .01);
-    ridge = smax2(ridge, abs(p.x) - .005, .005);
+    ridge = ellip(p.zy - vec2(.01,-.03), vec2(.045,.055));
+
+    ridge = smin3(ridge, -pRi(p.zy, .2).x - .01, .015);
+    // ridge = smin(ridge, ellip(pRi(p.zy - vec2(.025,-.1), .2), vec2(.02,.03)), .025);
+    // ridge = smin(ridge, length(p.zy - vec2(.06,-.0)) - .03, .025);
+    // ridge = smax2(ridge, -(fBox2(pRi(p.zy - vec2(-.085,.135), .2), vec2(.1)) - .03), .015);
+    ridge = smax3(ridge, -ellip(p.zy - vec2(-.01,.1), vec2(.12,.08)), .02);
+    float ridger = .01;
+    ridge = max(-ridge, ridge - ridger);
+
+    
+    // modelAlbedo = mix(modelAlbedo, vec3(1,0,0), mod(ridge*50.,1.));
+    // modelAlbedo = mix(modelAlbedo, modelAlbedo.brg, step(ridge,0.));
+    // return p.x;
+
+    ridge = smax2(ridge, abs(p.x) - ridger/2., ridger/2.);
 
     // d = min(d, ridge);
     ear = smin(ear, ridge, .045);
 
-    // return p.x;
+    // ear = mix(ear, p.x, smoothstep(.0, .06, p.x));
+    // ear = max(ear, p.x- .03);
+
+    // return ridge;
+
+
+    
 
     p = pe;
     // return earback;
@@ -914,6 +946,8 @@ float mHead(vec3 p, bool bounded) {
 
     // float earc = smax(-p.x + smoothstep(-.0, -.3, p.y) * .05, outline + .016, .01);
     // ear = smax(ear, -earc, .01);
+
+    // return ear;
 
     d = smin(d, ear, .015);
 
