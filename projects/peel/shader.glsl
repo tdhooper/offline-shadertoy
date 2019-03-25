@@ -921,13 +921,18 @@ float mHead(vec3 p, bool bounded) {
 
     float edgeo = ellip(pRi(p.yz, .1), vec2(.095,.065));
     edgeo = smin(edgeo, length(p.zy - vec2(0,-.1)) - .03, .1);
-    float edgeoin = smax(abs(pRi(p.zy, .15).y + .035) - .01, -p.z-.00035, .01);
+    float edgeoin = smax(abs(pRi(p.zy, .15).y + .035) - .01, -p.z-.01, .01);
     edgeo = smax(edgeo, -edgeoin, .05);
 
-    float eedent = smoothstep(-.05, .05, -p.z) * step(fCorner2(vec2(-p.z, p.y)), .04);
+    float eedent = smoothstep(-.05, .05, -p.z) * smoothstep(.06, 0., fCorner2(vec2(-p.z, p.y)));
     eedent += smoothstep(.1, -.1, -p.z) * .2;
-    eedent += smoothstep(.1, -.1, p.y) * step(-0.03, p.z) * .3;
+    eedent += smoothstep(.1, -.1, p.y) * smoothstep(-.03, .0, p.z) * .3;
     eedent = min(eedent, 1.);
+
+    // modelAlbedo = mix(modelAlbedo, vec3(1,0,0), eedent);
+    // return p.x;
+
+
     eedge += eedent * .06;
 
     eedge = smax(eedge, -edgeo, .01);
