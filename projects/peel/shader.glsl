@@ -857,6 +857,7 @@ float mHead(vec3 p, bool bounded) {
 
 
     // position
+
     p = pp;
     p += vec3(-.405,.12,.10);
     pR(p.xy, -.12);
@@ -864,128 +865,125 @@ float mHead(vec3 p, bool bounded) {
     pR(p.yz, -.3);
     vec3 pe = p;
 
-    // base
-    float ear = p.s + smoothstep(-.05, .1, p.y) * .015 - .005;
-    float earback = -ear - mix(.001, .025, smoothstep(.3, -.2, p.y));
+    float earBound = fBox(p - vec3(-.01,-.045,0), vec3(.02,.16,.1) - .05) - .1;
+    float earEps = .01;
 
-    // inner
-    pR(p.xz, -.5);
-    float iear = ellip(p.zy - vec2(.01,-.03), vec2(.045,.05));
-    iear = smin(iear, length(p.zy - vec2(.04,-.09)) - .02, .09);
-    float ridge = iear;
-    iear = smin(iear, length(p.zy - vec2(.1,-.03)) - .06, .07);
-    ear = smax2(ear, -iear, .04);
-    earback = smin(earback, iear - .04, .02);
+    if (bounded && earBound > earEps) {
 
-    // ridge
-    p = pe;
-    pR(p.xz, .2);
-    ridge = ellip(p.zy - vec2(.01,-.03), vec2(.045,.055));
-    ridge = smin3(ridge, -pRi(p.zy, .2).x - .01, .015);
-    // ridge = smin(ridge, ellip(pRi(p.zy - vec2(.025,-.1), .2), vec2(.02,.03)), .025);
-    // ridge = smin(ridge, length(p.zy - vec2(.06,-.0)) - .03, .025);
-    // ridge = smax2(ridge, -(fBox2(pRi(p.zy - vec2(-.085,.135), .2), vec2(.1)) - .03), .015);
-    ridge = smax3(ridge, -ellip(p.zy - vec2(-.01,.1), vec2(.12,.08)), .02);
+        d = min(d, earBound);
 
-    float ridger = .01;
-    // ridger = ridger * smoothstep(-.15, -.05, p.y);
+    } else {
 
-    ridge = max(-ridge, ridge - ridger);
-    // ridge = smax2(ridge, -p.y - .15, .0);
+        // base
+        float ear = p.s + smoothstep(-.05, .1, p.y) * .015 - .005;
+        float earback = -ear - mix(.001, .025, smoothstep(.3, -.2, p.y));
 
+        // inner
+        pR(p.xz, -.5);
+        float iear = ellip(p.zy - vec2(.01,-.03), vec2(.045,.05));
+        iear = smin(iear, length(p.zy - vec2(.04,-.09)) - .02, .09);
+        float ridge = iear;
+        iear = smin(iear, length(p.zy - vec2(.1,-.03)) - .06, .07);
+        ear = smax2(ear, -iear, .04);
+        earback = smin(earback, iear - .04, .02);
 
-    // modelAlbedo = mix(modelAlbedo, vec3(1,0,0), mod(ridge*50.,1.));
-    // modelAlbedo = mix(modelAlbedo, modelAlbedo.brg, step(ridge,0.));
-    // return p.x;
+        // ridge
+        p = pe;
+        pR(p.xz, .2);
+        ridge = ellip(p.zy - vec2(.01,-.03), vec2(.045,.055));
+        ridge = smin3(ridge, -pRi(p.zy, .2).x - .01, .015);
+        // ridge = smin(ridge, ellip(pRi(p.zy - vec2(.025,-.1), .2), vec2(.02,.03)), .025);
+        // ridge = smin(ridge, length(p.zy - vec2(.06,-.0)) - .03, .025);
+        // ridge = smax2(ridge, -(fBox2(pRi(p.zy - vec2(-.085,.135), .2), vec2(.1)) - .03), .015);
+        ridge = smax3(ridge, -ellip(p.zy - vec2(-.01,.1), vec2(.12,.08)), .02);
 
-    ridge = smax2(ridge, abs(p.x) - ridger/2., ridger/2.);
+        float ridger = .01;
+        // ridger = ridger * smoothstep(-.15, -.05, p.y);
 
-    // d = min(d, ridge);
-    ear = smin(ear, ridge, .045);
-
-    // ear = mix(ear, p.x, smoothstep(.0, .06, p.x));
-    // ear = max(ear, p.x- .03);
-
-    // return ridge;
-
-    p = pe;
-    // return earback;
-
-    // outline
-    float outline = ellip(pRi(p.yz, .2), vec2(.12,.09));
-    outline = smin(outline, ellip(p.yz + vec2(.155,-.02), vec2(.035, .03)), .14);
-    // outline = smin(outline, ellip(p.yz + vec2(.11,-.07), vec2(.06)), .04);
-
-    // edge
-    float eedge = p.x + smoothstep(.2, -.4, p.y) * .06 - .03;
-
-    float edgeo = ellip(pRi(p.yz, .1), vec2(.095,.065));
-    edgeo = smin(edgeo, length(p.zy - vec2(0,-.1)) - .03, .1);
-    float edgeoin = smax(abs(pRi(p.zy, .15).y + .035) - .01, -p.z-.01, .01);
-    edgeo = smax(edgeo, -edgeoin, .05);
-
-    float eedent = smoothstep(-.05, .05, -p.z) * smoothstep(.06, 0., fCorner2(vec2(-p.z, p.y)));
-    eedent += smoothstep(.1, -.1, -p.z) * .2;
-    eedent += smoothstep(.1, -.1, p.y) * smoothstep(-.03, .0, p.z) * .3;
-    eedent = min(eedent, 1.);
-
-    // modelAlbedo = mix(modelAlbedo, vec3(1,0,0), eedent);
-    // return p.x;
+        ridge = max(-ridge, ridge - ridger);
+        // ridge = smax2(ridge, -p.y - .15, .0);
 
 
-    eedge += eedent * .06;
+        // modelAlbedo = mix(modelAlbedo, vec3(1,0,0), mod(ridge*50.,1.));
+        // modelAlbedo = mix(modelAlbedo, modelAlbedo.brg, step(ridge,0.));
+        // return p.x;
 
-    eedge = smax(eedge, -edgeo, .01);
-    ear = smin(ear, eedge, .01);
-    ear = max(ear, earback);
-    // ear = smin2(iear, earback, .01);
+        ridge = smax2(ridge, abs(p.x) - ridger/2., ridger/2.);
 
-    // return ear;
-    // return p.x;
+        // d = min(d, ridge);
+        ear = smin(ear, ridge, .045);
 
-    // return eedge;
+        // ear = mix(ear, p.x, smoothstep(.0, .06, p.x));
+        // ear = max(ear, p.x- .03);
 
-    ear = smax2(ear, outline, .015);
+        // return ridge;
 
-    // return ear;
+        p = pe;
+        // return earback;
 
-    // float earc = smax(-p.x + smoothstep(-.0, -.3, p.y) * .05, outline + .016, .01);
-    // ear = smax(ear, -earc, .01);
+        // outline
+        float outline = ellip(pRi(p.yz, .2), vec2(.12,.09));
+        outline = smin(outline, ellip(p.yz + vec2(.155,-.02), vec2(.035, .03)), .14);
+        // outline = smin(outline, ellip(p.yz + vec2(.11,-.07), vec2(.06)), .04);
 
-    // return ear;
+        // edge
+        float eedge = p.x + smoothstep(.2, -.4, p.y) * .06 - .03;
 
-    d = smin(d, ear, .015);
+        float edgeo = ellip(pRi(p.yz, .1), vec2(.095,.065));
+        edgeo = smin(edgeo, length(p.zy - vec2(0,-.1)) - .03, .1);
+        float edgeoin = smax(abs(pRi(p.zy, .15).y + .035) - .01, -p.z-.01, .01);
+        edgeo = smax(edgeo, -edgeoin, .05);
 
-    // hole
-    p = pp;
-    p += vec3(-.36,.19,.06);
-    pR(p.xz, -.5);
-    pR(p.xy, -.2);
-    p.x += .02;
-    d = smax(d, -fHalfCapsule(p.zxy, .02), .04);
+        float eedent = smoothstep(-.05, .05, -p.z) * smoothstep(.06, 0., fCorner2(vec2(-p.z, p.y)));
+        eedent += smoothstep(.1, -.1, -p.z) * .2;
+        eedent += smoothstep(.1, -.1, p.y) * smoothstep(-.03, .0, p.z) * .3;
+        eedent = min(eedent, 1.);
 
-    // targus
-    // p = pp;
-    // p += vec3(-.34,.22,.02);
-    // pR(p.yz, -.3);
-    // pR(p.xy, -.5);
-    // p.y -= .03;
-    // d = smin2(d, fCapsule(p, .005, .03), .035);
-
-    p = pp;
-    p += vec3(-.34,.2,.02);
-    d = smin2(d, ellip(p, vec3(.015,.025,.015)), .035);
-
-    p = pp;
-    p += vec3(-.37,.18,.03);
-    pR(p.xz, .5);
-    pR(p.yz, -.4);
-    d = smin(d, ellip(p, vec3(.01,.03,.015)), .015);
+        // modelAlbedo = mix(modelAlbedo, vec3(1,0,0), eedent);
+        // return p.x;
 
 
+        eedge += eedent * .06;
 
-    // d = ear;
-    // d = min(d, bound);
+        eedge = smax(eedge, -edgeo, .01);
+        ear = smin(ear, eedge, .01);
+        ear = max(ear, earback);
+        // ear = smin2(iear, earback, .01);
+
+        // return ear;
+        // return p.x;
+
+        // return eedge;
+
+        ear = smax2(ear, outline, .015);
+
+        // return ear;
+
+        // float earc = smax(-p.x + smoothstep(-.0, -.3, p.y) * .05, outline + .016, .01);
+        // ear = smax(ear, -earc, .01);
+
+        // return ear;
+
+        d = smin(d, ear, .015);
+
+        // hole
+        p = pp;
+        p += vec3(-.36,.19,.06);
+        pR(p.xz, -.5);
+        pR(p.xy, -.2);
+        p.x += .02;
+        d = smax(d, -fHalfCapsule(p.zxy, .02), .04);
+
+        // targus
+        p = pp;
+        p += vec3(-.34,.2,.02);
+        d = smin2(d, ellip(p, vec3(.015,.025,.015)), .035);
+        p = pp;
+        p += vec3(-.37,.18,.03);
+        pR(p.xz, .5);
+        pR(p.yz, -.4);
+        d = smin(d, ellip(p, vec3(.01,.03,.015)), .015);
+    }
 
     return d;
 
