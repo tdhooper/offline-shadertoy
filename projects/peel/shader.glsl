@@ -881,16 +881,19 @@ float mHead(vec3 p, bool bounded) {
     p = pe;
     pR(p.xz, .2);
     ridge = ellip(p.zy - vec2(.01,-.03), vec2(.045,.055));
-
     ridge = smin3(ridge, -pRi(p.zy, .2).x - .01, .015);
     // ridge = smin(ridge, ellip(pRi(p.zy - vec2(.025,-.1), .2), vec2(.02,.03)), .025);
     // ridge = smin(ridge, length(p.zy - vec2(.06,-.0)) - .03, .025);
     // ridge = smax2(ridge, -(fBox2(pRi(p.zy - vec2(-.085,.135), .2), vec2(.1)) - .03), .015);
     ridge = smax3(ridge, -ellip(p.zy - vec2(-.01,.1), vec2(.12,.08)), .02);
-    float ridger = .01;
-    ridge = max(-ridge, ridge - ridger);
 
-    
+    float ridger = .01;
+    // ridger = ridger * smoothstep(-.15, -.05, p.y);
+
+    ridge = max(-ridge, ridge - ridger);
+    // ridge = smax2(ridge, -p.y - .15, .0);
+
+
     // modelAlbedo = mix(modelAlbedo, vec3(1,0,0), mod(ridge*50.,1.));
     // modelAlbedo = mix(modelAlbedo, modelAlbedo.brg, step(ridge,0.));
     // return p.x;
@@ -904,9 +907,6 @@ float mHead(vec3 p, bool bounded) {
     // ear = max(ear, p.x- .03);
 
     // return ridge;
-
-
-    
 
     p = pe;
     // return earback;
@@ -963,6 +963,24 @@ float mHead(vec3 p, bool bounded) {
     pR(p.xy, -.2);
     p.x += .02;
     d = smax(d, -fHalfCapsule(p.zxy, .02), .04);
+
+    // targus
+    // p = pp;
+    // p += vec3(-.34,.22,.02);
+    // pR(p.yz, -.3);
+    // pR(p.xy, -.5);
+    // p.y -= .03;
+    // d = smin2(d, fCapsule(p, .005, .03), .035);
+
+    p = pp;
+    p += vec3(-.34,.2,.02);
+    d = smin2(d, ellip(p, vec3(.015,.025,.015)), .035);
+
+    p = pp;
+    p += vec3(-.37,.18,.03);
+    pR(p.xz, .5);
+    pR(p.yz, -.4);
+    d = smin(d, ellip(p, vec3(.01,.03,.015)), .015);
 
 
 
