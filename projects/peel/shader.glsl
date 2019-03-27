@@ -1384,6 +1384,15 @@ float mapD(vec3 p) {
     return d;
 }
 
+float blobs(vec3 p, vec3 dir) {
+    float rep = 1.;
+    float anim = iTime + hash(dir / 21.317897);
+    float off = (floor(length(p) * rep - anim) + .5 + anim) / rep;
+    vec3 dirp = dir * off;
+    float shape = length(p - dirp) - mix(.05, .0, smoothstep(.5, 1., length(dirp)));
+    return shape;
+}
+
 float map(vec3 p) {
     float d = mHead(p, false);
 
@@ -1393,18 +1402,25 @@ float map(vec3 p) {
     // d = max(d, p.y - .1);
 
     // p.y -= sin(iTime) * .1;
-    pR(p.xy, iTime/2.);
-    pR(p.xz, iTime/3.);
-    pR(p.yz, -iTime);
+    // pR(p.xy, iTime/2.);
+    // pR(p.xz, iTime/3.);
+    // pR(p.yz, -iTime);
+
+    pR(p.xz, .6);
+    pR(p.xz, .5);
+    pR(p.yz, .2);
     vec3 iv = icosahedronVertexComplete(p);
     vec3 dv = dodecahedronVertex(p);
-    if (length(p - iv) > length(p - dv)) {
-        // iv = dv;
-    }
+    // if (length(p - iv) > length(p - dv)) {
+    //     // iv = dv;
+    // }
 
-    float shape = dot(p, iv) + .3;
-    shape = length(p - iv * mix(.4, .6, cos(iTime / 2.) * .5 + .5)) - .05;
-    
+    float shape;
+
+    shape = blobs(p, iv);
+    d = smin2(d, shape, 0.2);
+
+    shape = blobs(p, dv);
     d = smin2(d, shape, 0.2);
 
     return d;
