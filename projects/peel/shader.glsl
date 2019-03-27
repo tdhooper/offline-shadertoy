@@ -106,6 +106,23 @@ vec3 icosahedronVertex(vec3 p) {
     return normalize(result);
 }
 
+vec3 icosahedronVertexComplete(vec3 p) {
+    vec3 sp, v1, v2, v3, result, plane;
+    float split;
+    sp = sign(p);
+    v1 = vec3(PHI, 1, 0) * sp;
+    v2 = vec3(1, 0, PHI) * sp;
+    v3 = vec3(0, PHI, 1) * sp;
+    plane = cross(cross(v1, v2), v1 + v2);
+    split = max(sign(dot(p, plane)), 0.);
+    result = mix(v1, v2, split);
+    plane = cross(cross(result, v3), v3 + result);
+    split = max(sign(dot(p, plane)), 0.);
+    result = mix(result, v3, split);
+    return normalize(result);
+}
+
+
 // Nearest dodecahedron vertex (nearest icosahrdron face)
 vec3 dodecahedronVertex(vec3 p) {
     vec3 sp, v1, v2, v3, v4, result, plane;
@@ -972,7 +989,7 @@ float mHead(vec3 p, bool bounded) {
         pR(p.xz, -.5);
         pR(p.xy, -.2);
         p.x += .02;
-        d = smax(d, -fHalfCapsule(p.zxy, .02), .04);
+        // d = smax(d, -fHalfCapsule(p.zxy, .02), .04);
 
         // targus
         p = pp;
@@ -984,26 +1001,6 @@ float mHead(vec3 p, bool bounded) {
         pR(p.yz, -.4);
         d = smin(d, ellip(p, vec3(.01,.03,.015)), .015);
     }
-
-    return d;
-
-    // p = pa;
-    // d += length(sin(p * 60. + vec3(0,iTime*3.,0).zxy)) * .005 - .005;
-
-    // d += sin(cc * 100. - iTime) * smoothstep(.5, .0, cc) * .01;
-
-    if (d < -.01) {
-        modelAlbedo = vec3(.2,.25,.3);
-        modelAlbedo = mix(modelAlbedo, vec3(.7,.8,.9), .5);
-        modelAlbedo = vec3(0,1,0);
-    }
-
-    p = pa;
-    float h = helix(p.xzy, 35., .06);
-
-    d = abs(d + .01) - .01;
-    
-    d = max(d, h);
 
     return d;
 }
@@ -1366,7 +1363,7 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
 }
 
 
-float map(vec3 p) {
+float mapD(vec3 p) {
 
     // if ( ! guiEdit) {
         // return mapAnim(p);
@@ -1375,6 +1372,7 @@ float map(vec3 p) {
     float a = clamp(mod(iTime, 1.5), 0., 1.);
     a = sinstep(sinstep(a));
     float d = fHexagonCircumcircle(p.yzx + vec3(.1,-.1,0), vec2(.5,.5));
+
     // float d = fBox(p + vec3(0,.1,0), vec3(.45));
     float s = mix(.5, 1., a);
     float d2 = mHead(p, false);
@@ -1383,6 +1381,51 @@ float map(vec3 p) {
     float d3 = smin(d, d2, .3);
     // d = mix(d, d3, range(0., .5, a));
     d = mix(d, d2, range(0., 1., a));
+    return d;
+}
+
+float map(vec3 p) {
+    float d = mHead(p, false);
+
+    // return d;
+
+    // d = abs(d + .03) - .03;
+    // d = max(d, p.y - .1);
+
+    // p.y -= sin(iTime) * .1;
+    pR(p.xy, iTime/2.);
+    pR(p.xz, iTime/3.);
+    pR(p.yz, -iTime);
+    vec3 iv = icosahedronVertexComplete(p);
+    vec3 dv = dodecahedronVertex(p);
+    if (length(p - iv) > length(p - dv)) {
+        // iv = dv;
+    }
+
+    float shape = dot(p, iv) + .3;
+    shape = length(p - iv * mix(.4, .6, cos(iTime / 2.) * .5 + .5)) - .05;
+    
+    d = smin2(d, shape, 0.2);
+
+    return d;
+
+    // p = pa;
+    // d += length(sin(p * 60. + vec3(0,iTime*3.,0).zxy)) * .005 - .005;
+
+    // d += sin(cc * 100. - iTime) * smoothstep(.5, .0, cc) * .01;
+
+    if (d < -.01) {
+        modelAlbedo = vec3(.2,.25,.3);
+        modelAlbedo = mix(modelAlbedo, vec3(.7,.8,.9), .5);
+        modelAlbedo = vec3(0,1,0);
+    }
+
+    float h = helix(p.xzy, 35., .06);
+
+    d = abs(d + .01) - .01;
+    
+    d = max(d, h);
+
     return d;
 }
 
