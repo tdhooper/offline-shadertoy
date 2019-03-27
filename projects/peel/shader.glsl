@@ -1384,17 +1384,70 @@ float mapD(vec3 p) {
     return d;
 }
 
+// Shortcut for 45-degrees rotation
+void pR45(inout vec2 p) {
+    p = (p + vec2(p.y, -p.x))*sqrt(0.5);
+}
+// Repeat space along one axis. Use like this to repeat along the x axis:
+// <float cell = pMod1(p.x,5);> - using the return value is optional.
+float pMod1(inout float p, float size) {
+    float halfsize = size*0.5;
+    float c = floor((p + halfsize)/size);
+    p = mod(p + halfsize, size) - halfsize;
+    return c;
+}
+
+// The "Columns" flavour makes n-1 circular columns at a 45 degree angle:
+float fOpUnionColumns(float a, float b, float r, float n) {
+    if ((a < r) && (b < r)) {
+        vec2 p = vec2(a, b);
+        float columnradius = r*sqrt(2.)/((n-1.)*2.+sqrt(2.));
+        pR45(p);
+        p.x -= sqrt(2.)/2.*r;
+        p.x += columnradius*sqrt(2.);
+        if (mod(n,2.) == 1.) {
+            p.y += columnradius;
+        }
+        // At this point, we have turned 45 degrees and moved at a point on the
+        // diagonal that we want to place the columns on.
+        // Now, repeat the domain along this direction and place a circle.
+        pMod1(p.y, columnradius*2.);
+        float result = length(p) - columnradius;
+        result = min(result, p.x);
+        result = min(result, a);
+        return min(result, b);
+    } else {
+        return min(a, b);
+    }
+}
+
 float blobs(vec3 p, vec3 dir) {
     float rep = 1.;
-    float anim = iTime + hash(dir / 21.317897);
+    float anim = iTime/2.;
+    anim += hash(dir * 21.317897) * 10.;
+    // anim = 0.;
     float off = (floor(length(p) * rep - anim) + .5 + anim) / rep;
     vec3 dirp = dir * off;
-    float shape = length(p - dirp) - mix(.05, .0, smoothstep(.5, 1., length(dirp)));
+    p -= dirp;
+    pR(p.xy, hash(dir) * 3.);
+    pR(p.yz, hash(dir / 20.) * 3.);
+    float size = mix(.1, .0, smoothstep(.4, 1., length(dirp)));
+    float shape = length(p) - size;
+    // shape = fBox(p, vec3(size));
     return shape;
+}
+
+void addblob(inout float d, vec3 p, vec3 dir) {
+    float b = blobs(p, normalize(dir));
+    // d = smax(d, -b, .05);
+    // d = min(d, b);
+    // d = fOpUnionColumns(d, b, .15, 3.);
+    d = smin2(d, b, .2);
 }
 
 float map(vec3 p) {
     float d = mHead(p, false);
+    pR(p.yz, -iTime/2.);
 
     // return d;
 
@@ -1409,19 +1462,50 @@ float map(vec3 p) {
     pR(p.xz, .6);
     pR(p.xz, .5);
     pR(p.yz, .2);
-    vec3 iv = icosahedronVertexComplete(p);
-    vec3 dv = dodecahedronVertex(p);
-    // if (length(p - iv) > length(p - dv)) {
-    //     // iv = dv;
-    // }
 
-    float shape;
+    addblob(d, p, vec3(PHI, 1, 0));
+    addblob(d, p, vec3(0, PHI, 1));
+    addblob(d, p, vec3(1, 0, PHI));
 
-    shape = blobs(p, iv);
-    d = smin2(d, shape, 0.2);
+    addblob(d, p, vec3(-PHI, 1, 0));
+    addblob(d, p, vec3(0, -PHI, 1));
+    addblob(d, p, vec3(1, 0, -PHI));
 
-    shape = blobs(p, dv);
-    d = smin2(d, shape, 0.2);
+    addblob(d, p, vec3(PHI, -1, 0));
+    addblob(d, p, vec3(0, PHI, -1));
+    addblob(d, p, vec3(-1, 0, PHI));
+
+    addblob(d, p, vec3(-PHI, -1, 0));
+    addblob(d, p, vec3(0, -PHI, -1));
+    addblob(d, p, vec3(-1, 0, -PHI));
+
+
+    addblob(d, p, vec3(1, 1, 1));
+    addblob(d, p, vec3(-1, 1, 1));
+    addblob(d, p, vec3(1, -1, 1));
+    addblob(d, p, vec3(1, 1, -1));
+
+    addblob(d, p, vec3(-1, -1, -1));
+    addblob(d, p, vec3(1, -1, -1));
+    addblob(d, p, vec3(-1, 1, -1));
+    addblob(d, p, vec3(-1, -1, 1));
+
+    addblob(d, p, vec3(PHI + 1., 0, 1));
+    addblob(d, p, vec3(1, PHI + 1., 0));
+    addblob(d, p, vec3(0, 1, PHI + 1.));
+
+    addblob(d, p, vec3(-PHI - 1., 0, 1));
+    addblob(d, p, vec3(1, -PHI - 1., 0));
+    addblob(d, p, vec3(0, 1, -PHI - 1.));
+
+    addblob(d, p, vec3(PHI + 1., 0, -1));
+    addblob(d, p, vec3(-1, PHI + 1., 0));
+    addblob(d, p, vec3(0, -1, PHI + 1.));
+
+    addblob(d, p, vec3(-PHI - 1., 0, -1));
+    addblob(d, p, vec3(-1, -PHI - 1., 0));
+    addblob(d, p, vec3(0, -1, -PHI -1.));
+
 
     return d;
 
