@@ -23,6 +23,7 @@ uniform bool guiEdit;
 uniform bool guiStep0;
 uniform bool guiStep1;
 uniform bool guiStep2;
+uniform bool guiFixedCamera;
 
 /* SHADERTOY FROM HERE */
 
@@ -1244,7 +1245,7 @@ float tweenCameraI(inout vec3 p, float animTime) {
     return focusScale;
 }
 
-float mapAnim(vec3 p) {
+float map(vec3 p) {
 
     // Camera
 
@@ -1363,7 +1364,7 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
 }
 
 
-float mapD(vec3 p) {
+float mapEdit(vec3 p) {
 
     // if ( ! guiEdit) {
         // return mapAnim(p);
@@ -1384,7 +1385,7 @@ float mapD(vec3 p) {
     return d;
 }
 
-float map(vec3 p) {
+float mapPlayground(vec3 p) {
     float d = mHead(p, false);
 
     // return d;
@@ -1552,6 +1553,7 @@ float getDepth(float depth) {
     return depth;
 }
 
+
 void main() {
 
     calcWaypoints();
@@ -1565,7 +1567,20 @@ void main() {
 
     vec3 rayOrigin = eye;
     vec3 rayDirection = normalize(dir);
+
+    if (guiFixedCamera) {
+        vec3 camPos = vec3(.0001,-.1,.5);
+        vec3 camTar = vec3(0,-.05,0);
+        vec3 camUp = vec3(0,1,0);
+        mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
+        float focalLength = 2.4;
+        vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.y;
+        rayDirection = normalize(camMat * vec3(p, focalLength));
+        rayOrigin = camPos;
+    }
+
     vec3 rayPosition = rayOrigin;
+
 
     vec3 bg = vec3(.7,.8,.9) * 1.1;
     bg *= .8;
@@ -1573,54 +1588,56 @@ void main() {
     Hit hit = raymarch(rayOrigin, rayDirection);
     vec3 color = render(hit, bg);
 
-    // color = vec3(0,0,1);
-    // color = pow(color, vec3(1. / 2.2)); // Gamma
+    if ( ! guiFixedCamera) {
+        // color = vec3(0,0,1);
+        // color = pow(color, vec3(1. / 2.2)); // Gamma
 
-    float eyeHitZ = -hit.rayLength * dot(rayDirection, cameraForward);
+        float eyeHitZ = -hit.rayLength * dot(rayDirection, cameraForward);
 
-    vec3 eyeSpace = vec3(0, 0, eyeHitZ);
-    float zc = ( projection * vec4(eyeSpace, 1)).z;
-    float wc = ( projection * vec4(eyeSpace, 1)).w;
-    float depth = (zc/wc + 1.) / 2.;
+        vec3 eyeSpace = vec3(0, 0, eyeHitZ);
+        float zc = ( projection * vec4(eyeSpace, 1)).z;
+        float wc = ( projection * vec4(eyeSpace, 1)).w;
+        float depth = (zc/wc + 1.) / 2.;
 
 
-    float polyD = getDepth(texture2D(uDepth, gl_FragCoord.xy / iResolution.xy).r);
-    float rayD = getDepth(depth);
+        float polyD = getDepth(texture2D(uDepth, gl_FragCoord.xy / iResolution.xy).r);
+        float rayD = getDepth(depth);
 
-    if (guiBlend && ! hit.isBackground && ! guiSplit) {
-        color = spectrum(smoothstep(.01, -.01, polyD - rayD));
-    }
+        if (guiBlend && ! hit.isBackground && ! guiSplit) {
+            color = spectrum(smoothstep(.01, -.01, polyD - rayD));
+        }
 
-    float alpha = smoothstep(.06, -.06, polyD - rayD);
+        float alpha = smoothstep(.06, -.06, polyD - rayD);
 
-    // alpha = .5;
+        // alpha = .5;
 
-    if (polyD > rayD) {
-        alpha = max(0., alpha - .1);
-    }
+        if (polyD > rayD) {
+            alpha = max(0., alpha - .1);
+        }
 
-    // alpha = .5;
+        // alpha = .5;
 
-    if ( ! guiBlend) {
-        alpha = 1.;
-    }
+        if ( ! guiBlend) {
+            alpha = 1.;
+        }
 
-    if (guiSplit) {
-        alpha = hit.pos.x < 0. ? 0. : 1.;
-        // alpha = 0.;
-    }
+        if (guiSplit) {
+            alpha = hit.pos.x < 0. ? 0. : 1.;
+            // alpha = 0.;
+        }
 
-    vec3 polyColor = texture2D(uSource, gl_FragCoord.xy / iResolution.xy).rgb;
-    color = mix(polyColor, color, alpha);
+        vec3 polyColor = texture2D(uSource, gl_FragCoord.xy / iResolution.xy).rgb;
+        color = mix(polyColor, color, alpha);
 
-    if (abs(polyD - rayD) < .001) {
-        // color = vec3(1);
+        if (abs(polyD - rayD) < .001) {
+            // color = vec3(1);
+        }
+
+        gl_FragDepthEXT = depth;
     }
 
     color = mix(color, bg, smoothstep(MAX_TRACE_DISTANCE / 2., MAX_TRACE_DISTANCE, hit.rayLength));
 
-
-
     gl_FragColor = vec4(color, 1);
-    gl_FragDepthEXT = depth;
+    
 }
