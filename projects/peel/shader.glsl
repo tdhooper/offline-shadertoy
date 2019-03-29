@@ -780,6 +780,7 @@ float mHead(vec3 p, bool bounded) {
     // TODO: use a circle instead to help with corner blending
     p.z -= .133;
     float seam = fDisc(p, .2);
+    seam = smax(seam, -d - .015, .01); // fix inside shape
     d = mix(d, smax(d, -seam, lr), .65);
     // d = min(d, seam);
     // return d;
@@ -1076,8 +1077,8 @@ float sinstep(float a) {
     return sin(a * PI - PI * .5) * .5 + .5;
 }
 
-const float shell = .08;
-const float surfaceOffset = .1;
+const float shell = .07;
+const float surfaceOffset = .12;
 const float stepScale = .15;
 const float plodeDuration = 1.;
 const float plodeOverlap = .35;
@@ -1118,6 +1119,7 @@ float animBlend(float startOffset) {
     float start = 0.;
     float end = start + blendDuration;
     float blend = range(start, end, time - startOffset);
+    // t = sinstep(sinstep(t));
     return blend;
 }
 
@@ -1245,7 +1247,13 @@ float tweenCameraI(inout vec3 p, float animTime) {
     return focusScale;
 }
 
-float map(vec3 p) {
+float blendHeadPrepare(float head, float t) {
+    float blendExpand = range(1., .5, t) * stepScale * stepScale;
+    head = smin(head, head, blendExpand) + blendExpand * .2;
+    return head;
+}
+
+float mapAnim(vec3 p) {
 
     // Camera
 
@@ -1342,9 +1350,10 @@ float map(vec3 p) {
             p /= stepScale;
             p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
             d2 = mHead(p, false) * stepScale * stepScale;
-            d2 = min(d2, sectionEdge1 + .02 * stepScale);
-
-            d = mix(d, d2, animBlend(plodeDuration - plodeOverlap - blendDuration));
+            float blend = animBlend(plodeDuration - plodeOverlap - blendDuration);
+            d2 = blendHeadPrepare(d2, blend);
+            d = mix(d, d2, blend);
+            d = min(d, sectionEdge1 + .02 * stepScale);
         }
     }
 
@@ -1363,25 +1372,22 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
     //return max(q.y - h.y, max(dot(vec2(cos(PI/3), sin(PI/3)), q.zx), q.z) - h.x);
 }
 
-
-float mapEdit(vec3 p) {
+float map(vec3 p) {
 
     // if ( ! guiEdit) {
-        // return mapAnim(p);
+        return mapAnim(p);
     // }
 
-    float a = clamp(mod(iTime, 1.5), 0., 1.);
-    a = sinstep(sinstep(a));
+    float t = clamp(mod(iTime, 1.5), 0., 1.);
     float d = fHexagonCircumcircle(p.yzx + vec3(.1,-.1,0), vec2(.5,.5));
+    float head = mHead(p, false);
+    head = blendHeadPrepare(head, t);
+    d = mix(d, head, t);
 
-    // float d = fBox(p + vec3(0,.1,0), vec3(.45));
-    float s = mix(.5, 1., a);
-    float d2 = mHead(p, false);
-    d2 = smin(d2, d2, range(1., .5, a)) + range(1., .5, a) * .2;
-    // return d2;
-    float d3 = smin(d, d2, .3);
-    // d = mix(d, d3, range(0., .5, a));
-    d = mix(d, d2, range(0., 1., a));
+    float w = .02;
+    d = abs(d + w) - w;
+    d = max(d, p.y - .1);
+
     return d;
 }
 
