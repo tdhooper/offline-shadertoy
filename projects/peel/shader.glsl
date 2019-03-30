@@ -1312,93 +1312,84 @@ float mapAnim(vec3 p) {
 
     TriPoints3D points;
     float sectionEdge0, sectionEdge1;
-    float plodeEdge0;
+    float plodeEdge;
     float d, d2;
     float blend;
+
+    float sectionEps = .001;
+    float delayMag = .5;
 
     modelAlbedo = vec3(.9);
 
     points = geodesicTriPoints(p, 1.);
+    float delay = points.id * delayMag;
+
     sectionEdge0 = mEdge(p, points);
-
-    float delay = points.id * .5;
-
     p -= points.hexCenter * animPlode(delay, plodeOverlap - plodeDuration) * plodeDistance;
-
     d = mHeadShell(p);
-
-    plodeEdge0 = mEdge(p, points);
-    d = max(d, -plodeEdge0);
     sectionEdge0 = max(sectionEdge0, d - .2);
-    d = min(d, sectionEdge0 + .02);
+
+    plodeEdge = mEdge(p, points);
+    d = max(d, -plodeEdge);
 
     if ( ! guiStep0) {
-        return d;
+        d = min(d, sectionEdge0 + sectionEps);
+        return d / focusScale;
     }
 
-    if (guiStep0) {
-        p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
-    }
-
-    float idA = points.id;
-
+    p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
     p /= stepScale;
-
-    mat3 rot = calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
-    p *= rot;
+    p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
     p.x *= -1.; // somehow look at flips this
 
     points = geodesicTriPoints(p, 1.);
-    sectionEdge1 = mEdge(p, points) * stepScale;
+    float delay2 = delay + points.id * delayMag;
 
-    float delay2 = delay + points.id * .5;
+    if ( ! animPlodeStarted(delay, 0.) || ! guiStep1) {
 
-    if (animPlodeStarted(delay2, 0.) && guiStep1) {
-        p -= points.hexCenter * animPlode(delay2, 0.) * plodeDistance;
-        d = mHeadShell(p) * stepScale;
-    } else {
         d2 = mHead(p, false) * stepScale;
         blend = animBlend(
            -blendDuration + delay
         );
         d2 = blendHeadPrepare(d2, blend);
         d = mix(d, d2, blend);
-        d = min(d, sectionEdge0 + .02);
+        d = min(d, sectionEdge0 + sectionEps);
+        return d / focusScale;
+
     }
 
-    if ( ! guiStep1) {
-        d /= focusScale;
-        return d;
-        return min(d, focusDebug);
+    sectionEdge1 = mEdge(p, points) * stepScale;
+    p -= points.hexCenter * animPlode(delay2, 0.) * plodeDistance;
+    d = mHeadShell(p) * stepScale;
+    sectionEdge1 = max(sectionEdge1, d - .2 * stepScale);
+
+    plodeEdge = mEdge(p, points) * stepScale;
+    d = max(d, -plodeEdge);
+
+    if ( ! guiStep2) {
+        d = min(d, sectionEdge0 + sectionEps);
+        d = min(d, sectionEdge1 + sectionEps * stepScale);
+        return d / focusScale;
     }
 
-    if (animPlodeStarted(delay2, 0.)) {
-        plodeEdge0 = mEdge(p, points) * stepScale;
-        d = max(d, -plodeEdge0);
-        sectionEdge1 = max(sectionEdge1, d - .2 * stepScale);
-        d = min(d, sectionEdge1 + .02 * stepScale);
+    p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
+    p /= stepScale;
+    p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
+    p.x *= -1.; // somehow look at flips this
 
-        p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
+    d2 = mHead(p, false) * stepScale * stepScale;
+    blend = animBlend(
+        plodeDuration - plodeOverlap - blendDuration + delay2
+    );
+    d2 = blendHeadPrepare(d2, blend);
+    d = mix(d, d2, blend);
+    d = min(d, sectionEdge0 + sectionEps);
+    d = min(d, sectionEdge1 + sectionEps * stepScale);
 
-        if (guiStep2) {
-            p /= stepScale;
-            p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
-            d2 = mHead(p, false) * stepScale * stepScale;
-            blend = animBlend(
-                plodeDuration - plodeOverlap - blendDuration + delay2
-            );
-            d2 = blendHeadPrepare(d2, blend);
-            d = mix(d, d2, blend);
-            d = min(d, sectionEdge1 + .02 * stepScale);
-        }
-    }
-
-    d = min(d, sectionEdge0 + .02);
     // return focusDebug;
     // return min(d / focusScale, focusDebug);
 
-    d = d / focusScale;
-    return d;
+    return d / focusScale;
     // return focusDebug;
     // return min(d, focusDebug);
 }
