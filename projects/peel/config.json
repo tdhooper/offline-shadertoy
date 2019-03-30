@@ -1,5 +1,5 @@
 {
-    "id": "peelfractal13",
+    "id": "peelfractal16",
   "camera": {
     "rotation": [
       -0.27573806047439575,
@@ -14,6 +14,27 @@
     ]
   },
     "controls": {
+        "plodeDistance": {
+            "type": "range",
+            "step": 0.01,
+            "min": 0,
+            "max": 0.8,
+            "value": 0.3
+        },
+        "camDistance": {
+            "type": "range",
+            "step": 0.01,
+            "min": 0,
+            "max": 2,
+            "value": 1
+        },
+        "camLookDown": {
+            "type": "range",
+            "step": 0.01,
+            "min": 0,
+            "max": 2,
+            "value": 1
+        },
         "blend": {
             "type": "toggle",
             "value": false
@@ -36,7 +57,7 @@
         },
         "fixedCamera": {
             "type": "toggle",
-            "value": false
+            "value": true
         },
         "step0": {
             "type": "toggle",

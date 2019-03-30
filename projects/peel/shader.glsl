@@ -25,6 +25,10 @@ uniform bool guiStep1;
 uniform bool guiStep2;
 uniform bool guiFixedCamera;
 
+uniform float guiPlodeDistance;
+uniform float guiCamDistance;
+uniform float guiCamLookDown;
+
 /* SHADERTOY FROM HERE */
 
 
@@ -1090,7 +1094,7 @@ const float stepScale = .15;
 const float plodeDuration = 1.;
 const float plodeOverlap = .35;
 const float blendDuration = .4;
-const float plodeDistance = .3;
+#define plodeDistance guiPlodeDistance
 
 float mEdge(vec3 p, TriPoints3D points) {
     vec3 edgeAB = normalize(cross(points.center, points.ab));
@@ -1583,8 +1587,8 @@ void main() {
     vec3 rayDirection = normalize(dir);
 
     if (guiFixedCamera) {
-        vec3 camPos = vec3(.0001,-.1,.5);
-        vec3 camTar = vec3(0,-.05,0);
+        vec3 camPos = vec3(0,-.1,.5) * guiCamDistance;
+        vec3 camTar = vec3(0,-.05,0) * guiCamLookDown;
         vec3 camUp = vec3(0,1,0);
         mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
         float focalLength = 2.4;
