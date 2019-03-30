@@ -1093,7 +1093,7 @@ const float surfaceOffset = .12;
 const float stepScale = .15;
 const float plodeDuration = 1.;
 const float plodeOverlap = .35;
-const float blendDuration = .4;
+const float blendDuration = .6;
 #define plodeDistance guiPlodeDistance
 
 float mEdge(vec3 p, TriPoints3D points) {
@@ -1111,19 +1111,28 @@ float mHeadShell(vec3 p) {
 
 float time;
 
-float animPlode(float id, float startOffset) {
-    float delay = id * .2;
-    delay = 0.;
+float invXEase(float x, float k)
+{
+    k = clamp(k, 0.0001, 10000.0) - 1.0;
+    x = clamp(x, 0.0, 1.0);
+    float kx = k * x;
+    return (x + kx) / (kx + 1.0);
+}
+
+float animPlode(float delay, float startOffset) {
+    // delay = 0.;
     float start = delay;
-    float end = plodeDuration;
+    float end = plodeDuration + delay;
     float plode = range(start, end, time - startOffset);
-    plode = sinstep(sinstep(plode));
-    plode *= (1. - delay);
+    // plode = sinstep(sinstep(plode));
+    plode = invXEase(plode, 2.5);
+    // plode *= (1. - delay);
     return plode;
 }
 
-bool animPlodeStarted(float startOffset) {
-    return time > startOffset;
+bool animPlodeStarted(float delay, float startOffset) {
+    // return time > startOffset;
+    return animPlode(delay, startOffset) > 0.;
 }
 
 float animBlend(float startOffset) {
@@ -1305,26 +1314,30 @@ float mapAnim(vec3 p) {
     float sectionEdge0, sectionEdge1;
     float plodeEdge0;
     float d, d2;
+    float blend;
 
     modelAlbedo = vec3(.9);
 
     points = geodesicTriPoints(p, 1.);
     sectionEdge0 = mEdge(p, points);
 
-    p -= points.hexCenter * animPlode(points.id, plodeOverlap - plodeDuration) * plodeDistance;
+    float delay = points.id * .5;
+
+    p -= points.hexCenter * animPlode(delay, plodeOverlap - plodeDuration) * plodeDistance;
+
+    d = mHeadShell(p);
+
+    plodeEdge0 = mEdge(p, points);
+    d = max(d, -plodeEdge0);
+    sectionEdge0 = max(sectionEdge0, d - .2);
+    d = min(d, sectionEdge0 + .02);
+
+    if ( ! guiStep0) {
+        return d;
+    }
 
     if (guiStep0) {
         p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
-    }
-
-    if ( ! guiStep0) {
-        plodeEdge0 = mEdge(p, points);
-        d = mHeadShell(p);
-        d = max(d, -plodeEdge0);
-        d = min(d, sectionEdge1+.02);
-        d /= focusScale;
-        return min(d, focusDebug);
-        return d;
     }
 
     float idA = points.id;
@@ -1333,16 +1346,25 @@ float mapAnim(vec3 p) {
 
     mat3 rot = calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
     p *= rot;
-    // p.x *= -1.; // somehow look at flips this
+    p.x *= -1.; // somehow look at flips this
 
     points = geodesicTriPoints(p, 1.);
     sectionEdge1 = mEdge(p, points) * stepScale;
 
-    if (animPlodeStarted(0.) && guiStep1) {
-        p -= points.hexCenter * animPlode(points.id, 0.) * plodeDistance;
-    }
+    float delay2 = delay + points.id * .5;
 
-    d = mHeadShell(p) * stepScale;
+    if (animPlodeStarted(delay2, 0.) && guiStep1) {
+        p -= points.hexCenter * animPlode(delay2, 0.) * plodeDistance;
+        d = mHeadShell(p) * stepScale;
+    } else {
+        d2 = mHead(p, false) * stepScale;
+        blend = animBlend(
+           -blendDuration + delay
+        );
+        d2 = blendHeadPrepare(d2, blend);
+        d = mix(d, d2, blend);
+        d = min(d, sectionEdge0 + .02);
+    }
 
     if ( ! guiStep1) {
         d /= focusScale;
@@ -1350,7 +1372,7 @@ float mapAnim(vec3 p) {
         return min(d, focusDebug);
     }
 
-    if (animPlodeStarted(0.)) {
+    if (animPlodeStarted(delay2, 0.)) {
         plodeEdge0 = mEdge(p, points) * stepScale;
         d = max(d, -plodeEdge0);
         sectionEdge1 = max(sectionEdge1, d - .2 * stepScale);
@@ -1362,7 +1384,9 @@ float mapAnim(vec3 p) {
             p /= stepScale;
             p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
             d2 = mHead(p, false) * stepScale * stepScale;
-            float blend = animBlend(plodeDuration - plodeOverlap - blendDuration);
+            blend = animBlend(
+                plodeDuration - plodeOverlap - blendDuration + delay2
+            );
             d2 = blendHeadPrepare(d2, blend);
             d = mix(d, d2, blend);
             d = min(d, sectionEdge1 + .02 * stepScale);
@@ -1373,7 +1397,10 @@ float mapAnim(vec3 p) {
     // return focusDebug;
     // return min(d / focusScale, focusDebug);
 
-    return d / focusScale;
+    d = d / focusScale;
+    return d;
+    // return focusDebug;
+    // return min(d, focusDebug);
 }
 
 // Hexagonal prism, circumcircle variant

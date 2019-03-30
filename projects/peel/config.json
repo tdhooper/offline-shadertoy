@@ -1,75 +1,131 @@
 {
-    "id": "peelfractal16",
+  "id": "peelfractal17",
   "camera": {
     "rotation": [
-      -0.27573806047439575,
-      0.2123076468706131,
-      -0.022826898843050003,
-      -0.9371662735939026
+      -0.011826988309621811,
+      0.130008727312088,
+      0.23245087265968323,
+      -0.9637573957443237
     ],
     "position": [
-      0.17572058640826071,
-      0.20123764012873835,
-      0.32578269537225424
+      0.14049548885259355,
+      0.0025199980188972404,
+      0.5658890083959704
     ]
   },
-    "controls": {
-        "plodeDistance": {
-            "type": "range",
-            "step": 0.01,
-            "min": 0,
-            "max": 0.8,
-            "value": 0.3
-        },
-        "camDistance": {
-            "type": "range",
-            "step": 0.01,
-            "min": 0,
-            "max": 2,
-            "value": 1
-        },
-        "camLookDown": {
-            "type": "range",
-            "step": 0.01,
-            "min": 0,
-            "max": 2,
-            "value": 1
-        },
-        "blend": {
-            "type": "toggle",
-            "value": false
-        },
-        "split": {
-            "type": "toggle",
-            "value": false
-        },
-        "neck": {
-            "type": "toggle",
-            "value": false
-        },
-        "debug": {
-            "type": "toggle",
-            "value": false
-        },
-        "edit": {
-            "type": "toggle",
-            "value": false
-        },
-        "fixedCamera": {
-            "type": "toggle",
-            "value": true
-        },
-        "step0": {
-            "type": "toggle",
-            "value": true
-        },
-        "step1": {
-            "type": "toggle",
-            "value": true
-        },
-        "step2": {
-            "type": "toggle",
-            "value": true
-        }
+  "view": {
+    "0": 0.8581286668777466,
+    "1": -0.45112770795822144,
+    "2": 0.245095357298851,
+    "3": 0,
+    "4": 0.4449772834777832,
+    "5": 0.8916534185409546,
+    "6": 0.08323797583580017,
+    "7": 0,
+    "8": -0.2560921311378479,
+    "9": 0.03764459118247032,
+    "10": 0.9659156799316406,
+    "11": 0,
+    "12": 0.023235168308019638,
+    "13": 0.03983178362250328,
+    "14": -0.5812456011772156,
+    "15": 1
+  },
+  "cameraMatrix": {
+    "0": 0.8581286668777466,
+    "1": -0.45112770795822144,
+    "2": 0.245095357298851,
+    "3": 0,
+    "4": 0.4449772834777832,
+    "5": 0.8916534185409546,
+    "6": 0.08323797583580017,
+    "7": 0,
+    "8": -0.2560921311378479,
+    "9": 0.03764459118247032,
+    "10": 0.9659156799316406,
+    "11": 0,
+    "12": 0.023235168308019638,
+    "13": 0.03983178362250328,
+    "14": -0.5812456011772156,
+    "15": 1
+  },
+  "cameraPosition": [
+    0.14049548885259355,
+    0.0025199980188972404,
+    0.5658890083959704
+  ],
+  "timer": {
+    "running": false,
+    "elapsed": 0
+  },
+  "mouse": [
+    0,
+    0,
+    false,
+    0
+  ],
+  "r": [
+    183,
+    114
+  ],
+  "controls": {
+    "closed": true,
+    "plodeDistance": {
+      "type": "range",
+      "step": 0.01,
+      "min": 0,
+      "max": 0.8,
+      "value": 0.3
+    },
+    "camDistance": {
+      "type": "range",
+      "step": 0.01,
+      "min": 0,
+      "max": 2,
+      "value": 1.16
+    },
+    "camLookDown": {
+      "type": "range",
+      "step": 0.01,
+      "min": 0,
+      "max": 2,
+      "value": 1.2
+    },
+    "blend": {
+      "type": "toggle",
+      "value": false
+    },
+    "split": {
+      "type": "toggle",
+      "value": false
+    },
+    "neck": {
+      "type": "toggle",
+      "value": false
+    },
+    "debug": {
+      "type": "toggle",
+      "value": false
+    },
+    "edit": {
+      "type": "toggle",
+      "value": false
+    },
+    "fixedCamera": {
+      "type": "toggle",
+      "value": false
+    },
+    "step0": {
+      "type": "toggle",
+      "value": true
+    },
+    "step1": {
+      "type": "toggle",
+      "value": true
+    },
+    "step2": {
+      "type": "toggle",
+      "value": true
     }
+  }
 }
