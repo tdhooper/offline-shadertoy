@@ -533,13 +533,13 @@ float mHead(vec3 p, bool bounded) {
         pR(p.yz, -.1);
     }
 
-    float bound = length(p - vec3(0,.03,0)) - .53;
+    float bound = length(p - vec3(0,.03,0)) - .55;
     bound = smin(bound, length(p - vec3(0,-.45,.28)) - .25, .3);
-    bound = smin(bound, length(p - vec3(0,-.25,.5)) - .1, .1);
+    bound = smin(bound, length(p - vec3(0,-.25,.52)) - .1, .1);
     bound = smax(bound, abs(p.x) - .4, .2);
-    bound -= .05;
+    bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
 
-    // return bound + .05;
+    return bound += .03;
 
     if (bounded && bound > .01) {
         return bound;
@@ -1004,6 +1004,13 @@ float mHead(vec3 p, bool bounded) {
         d = smin(d, ellip(p, vec3(.01,.03,.015)), .015);
     }
 
+    // p = pa;
+    // bound = abs(bound + .001) - .001;
+    // float ys = .05;
+    // p.y = mod(p.y, ys) - ys / 2.;
+    // bound = max(bound, abs(p.y) - ys / 4.);
+    // d = min(d, bound);
+
     return d;
 }
 
@@ -1119,7 +1126,7 @@ float animBlend(float startOffset) {
     float start = 0.;
     float end = start + blendDuration;
     float blend = range(start, end, time - startOffset);
-    // t = sinstep(sinstep(t));
+    blend = sinstep(sinstep(blend));
     return blend;
 }
 
@@ -1335,6 +1342,7 @@ float mapAnim(vec3 p) {
 
     if ( ! guiStep1) {
         d /= focusScale;
+        return d;
         return min(d, focusDebug);
     }
 
@@ -1384,9 +1392,9 @@ float map(vec3 p) {
     head = blendHeadPrepare(head, t);
     d = mix(d, head, t);
 
-    float w = .02;
-    d = abs(d + w) - w;
-    d = max(d, p.y - .1);
+    // float w = .02;
+    // d = abs(d + w) - w;
+    // d = max(d, p.y - .1);
 
     return d;
 }
