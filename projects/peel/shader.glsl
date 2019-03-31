@@ -291,6 +291,11 @@ vec3 faceToSphere(vec2 facePoint) {
 // float faceRadius = 1./3.;
 float faceRadius = .2205;
 
+
+float range(float vmin, float vmax, float value) {
+  return clamp((value - vmin) / (vmax - vmin), 0., 1.);
+}
+
 // Closest geodesic point (triangle center) on unit sphere's surface
 TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     
@@ -321,6 +326,7 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     vec3 ca = faceToSphere(points.ca / uvScale);
 
     float id = hash(vec3(int(hexCenter * 1000.)) / 1000.);
+    id = range(1., -1., hexCenter.y);
 
     return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca, id);
 }
@@ -1080,10 +1086,6 @@ float _map(vec3 p) {
     // return mHead(p) - iTime;
 }
 
-float range(float vmin, float vmax, float value) {
-  return clamp((value - vmin) / (vmax - vmin), 0., 1.);
-}
-
 float sinstep(float a) {
     return sin(a * PI - PI * .5) * .5 + .5;
 }
@@ -1164,6 +1166,13 @@ float wayScale2;
 vec3 wayTrans3;
 mat3 wayRot3;
 float wayScale3;
+float focusDelay;
+
+float calcDelay(TriPoints3D points) {
+    // return 0.;
+    // return range(1., -1., normalize(points.hexCenter).y) * .3;
+    return points.id * .3;
+}
 
 void calcWaypoints() {
 
@@ -1174,6 +1183,7 @@ void calcWaypoints() {
     focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
     vec3 hexCenter = focusPoints.hexCenter;
+    focusDelay = calcDelay(focusPoints);
     vec3 projected = projectSurface(hexCenter) - hexCenter * surfaceOffset;
     projected += hexCenter * plodeDistance;
 
@@ -1317,15 +1327,14 @@ float mapAnim(vec3 p) {
     float blend;
 
     float sectionEps = .001;
-    float delayMag = .5;
 
     modelAlbedo = vec3(.9);
 
     points = geodesicTriPoints(p, 1.);
-    float delay = points.id * delayMag;
+    float delay = calcDelay(points);
 
     sectionEdge0 = mEdge(p, points);
-    p -= points.hexCenter * animPlode(delay, plodeOverlap - plodeDuration) * plodeDistance;
+    p -= points.hexCenter * animPlode(delay + focusDelay, plodeOverlap - plodeDuration) * plodeDistance;
     d = mHeadShell(p);
     sectionEdge0 = max(sectionEdge0, d - .2);
 
@@ -1343,13 +1352,13 @@ float mapAnim(vec3 p) {
     p.x *= -1.; // somehow look at flips this
 
     points = geodesicTriPoints(p, 1.);
-    float delay2 = delay + points.id * delayMag;
+    float delay2 = delay + calcDelay(points);
 
     if ( ! animPlodeStarted(delay, 0.) || ! guiStep1) {
 
         d2 = mHead(p, false) * stepScale;
         blend = animBlend(
-           -blendDuration + delay
+           -blendDuration + delay + focusDelay
         );
         d2 = blendHeadPrepare(d2, blend);
         d = mix(d, d2, blend);
