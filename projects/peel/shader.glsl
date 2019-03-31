@@ -530,7 +530,7 @@ vec3 modelAlbedo;
 
 float mHead(vec3 p, bool bounded) {
 
-    modelAlbedo = vec3(.9);
+    modelAlbedo = vec3(1);
 
     // return fBox(p, vec3(.4));
 
@@ -1328,7 +1328,7 @@ float mapAnim(vec3 p) {
 
     float sectionEps = .001;
 
-    modelAlbedo = vec3(.9);
+    modelAlbedo = vec3(1);
 
     points = geodesicTriPoints(p, 1.);
     float delay = calcDelay(points);
@@ -1523,6 +1523,7 @@ vec3 render(Hit hit, vec3 col) {
         vec3 lig = vec3(0,1.5,.5);
         // lig = vec3(0,.5,1.5);
         lig = vec3(0,1,.2);
+        lig = normalize(vec3(-.5,1,.0));
         col = modelAlbedo * pow(clamp(dot(lig, hit.normal) * .5 + .5, 0., 1.), 1./2.2);
         // col = vec3(1,0,0);
 
@@ -1629,6 +1630,7 @@ void main() {
 
     vec3 bg = vec3(.7,.8,.9) * 1.1;
     bg *= .8;
+    bg = vec3(.05);
 
     Hit hit = raymarch(rayOrigin, rayDirection);
     vec3 color = render(hit, bg);
@@ -1681,7 +1683,10 @@ void main() {
         gl_FragDepthEXT = depth;
     }
 
-    color = mix(color, bg, smoothstep(MAX_TRACE_DISTANCE / 2., MAX_TRACE_DISTANCE, hit.rayLength));
+    color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 7., MAX_TRACE_DISTANCE, hit.rayLength), .33));
+
+    color = spectrum(mix(.0, .6, color.r)) * pow(color, vec3(2.));
+    color = pow(color, vec3(1. / 2.2)); // Gamma
 
     gl_FragColor = vec4(color, 1);
     
