@@ -1358,57 +1358,49 @@ float mapAnim(vec3 p) {
     // Model
 
     TriPoints3D points;
-    float sectionEdge0, sectionEdge1;
+    float sectionEdge;
     float plodeEdge;
     float d, d2;
     float blend;
     float bound;
     float start;
+    float delay = 0.;
 
 
     // modelAlbedo = vec3(1);
 
     points = geodesicTriPoints(p, 1.);
-    float delay = calcDelay(points);
 
-    sectionEdge0 = setupA(p, d, 0., points, delay + focusDelay + plodeOverlap - plodeDuration);
+    delay += calcDelay(points);
+    sectionEdge = setupA(p, d, 0., points, delay + focusDelay + plodeOverlap - plodeDuration);
 
-    // if ( ! guiStep0) {
-    //     d = min(d, sectionEdge0 + sectionEps);
-    //     return d / focusScale;
-    // }
+    bound = sectionEdge + sectionEps;
+
+    if ( ! guiStep0) {
+        return min(d, bound) / focusScale;
+    }
 
     setupP(p, points);
 
     points = geodesicTriPoints(p, 1.);
-    float delay2 = delay + calcDelay(points);
 
     if ( ! animPlodeStarted(delay) || ! guiStep1) {
-        bound = sectionEdge0 + sectionEps;
         start = -blendDuration + delay + focusDelay;
         return drawBlend(d, p, 1., start, bound) / focusScale;
     }
 
-    // sectionEdge1 = mEdge(p, points) * stepScale;
-    // p -= points.hexCenter * animPlode(delay2) * plodeDistance;
-    // d = mHeadShell(p) * stepScale;
-    // sectionEdge1 = max(sectionEdge1, d - .2 * stepScale);
+    delay += calcDelay(points);
+    sectionEdge = setupA(p, d, 1., points, delay);
 
-    // plodeEdge = mEdge(p, points) * stepScale;
-    // d = max(d, -plodeEdge);
+    bound = min(bound, sectionEdge + sectionEps * stepScale);
 
-    sectionEdge1 = setupA(p, d, 1., points, delay2);
-
-    // if ( ! guiStep2) {
-    //     d = min(d, sectionEdge0 + sectionEps);
-    //     d = min(d, sectionEdge1 + sectionEps * stepScale);
-    //     return d / focusScale;
-    // }
+    if ( ! guiStep2) {
+        return min(d, bound) / focusScale;
+    }
 
     setupP(p, points);
 
-    bound = min(sectionEdge0 + sectionEps, sectionEdge1 + sectionEps * stepScale);
-    start = plodeDuration - plodeOverlap - blendDuration + delay2;
+    start = plodeDuration - plodeOverlap - blendDuration + delay;
     return drawBlend(d, p, 2., start, bound) / focusScale;
 
     // return focusDebug;
