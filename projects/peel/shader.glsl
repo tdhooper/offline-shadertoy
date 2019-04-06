@@ -1124,11 +1124,11 @@ float invXEase(float x, float k)
     return (x + kx) / (kx + 1.0);
 }
 
-float animPlode(float delay, float startOffset) {
+float animPlode(float delay) {
     // delay = 0.;
     float start = delay;
     float end = plodeDuration + delay;
-    float plode = range(start, end, time - startOffset);
+    float plode = range(start, end, time);
     // plode = sinstep(sinstep(plode));
     // if (plode > 0.) {
     //     modelAlbedo = spectrum(plode*10.);
@@ -1138,9 +1138,9 @@ float animPlode(float delay, float startOffset) {
     return plode;
 }
 
-bool animPlodeStarted(float delay, float startOffset) {
+bool animPlodeStarted(float delay) {
     // return time > startOffset;
-    return animPlode(delay, startOffset) > 0.;
+    return animPlode(delay) > 0.;
 }
 
 float animBlend(float startOffset) {
@@ -1290,6 +1290,36 @@ float blendHeadPrepare(float head, float t) {
     return head;
 }
 
+    float sectionEps = .001;
+
+float setupA(inout vec3 p, inout float d, float level, TriPoints3D points, float start) {
+    float scale = pow(stepScale, level);
+    float sectionEdge = mEdge(p, points) * scale;
+    p -= points.hexCenter * animPlode(start) * plodeDistance;
+    d = mHeadShell(p) * scale;
+    sectionEdge = max(sectionEdge, d - .2 * scale);
+    float plodeEdge = mEdge(p, points) * scale;
+    d = max(d, -plodeEdge);
+    return sectionEdge;
+}
+
+
+void setupP(inout vec3 p, TriPoints3D points) {
+    p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
+    p /= stepScale;
+    p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
+    p.x *= -1.; // somehow look at flips this
+}
+
+float drawBlend(float d, vec3 p, float level, float start, float bound) {
+    float d2 = mHead(p, false) * pow(stepScale, level);
+    float blend = animBlend(start);
+    d2 = blendHeadPrepare(d2, blend);
+    d = mix(d, d2, blend);
+    d = min(d, bound);
+    return d;
+}
+
 float mapAnim(vec3 p) {
 
     // Camera
@@ -1332,80 +1362,58 @@ float mapAnim(vec3 p) {
     float plodeEdge;
     float d, d2;
     float blend;
+    float bound;
+    float start;
 
-    float sectionEps = .001;
 
     // modelAlbedo = vec3(1);
 
     points = geodesicTriPoints(p, 1.);
     float delay = calcDelay(points);
 
-    sectionEdge0 = mEdge(p, points);
-    p -= points.hexCenter * animPlode(delay + focusDelay, plodeOverlap - plodeDuration) * plodeDistance;
-    d = mHeadShell(p);
-    sectionEdge0 = max(sectionEdge0, d - .2);
+    sectionEdge0 = setupA(p, d, 0., points, delay + focusDelay + plodeOverlap - plodeDuration);
 
-    plodeEdge = mEdge(p, points);
-    d = max(d, -plodeEdge);
+    // if ( ! guiStep0) {
+    //     d = min(d, sectionEdge0 + sectionEps);
+    //     return d / focusScale;
+    // }
 
-    if ( ! guiStep0) {
-        d = min(d, sectionEdge0 + sectionEps);
-        return d / focusScale;
-    }
-
-    p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
-    p /= stepScale;
-    p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
-    p.x *= -1.; // somehow look at flips this
+    setupP(p, points);
 
     points = geodesicTriPoints(p, 1.);
     float delay2 = delay + calcDelay(points);
 
-    if ( ! animPlodeStarted(delay, 0.) || ! guiStep1) {
-
-        d2 = mHead(p, false) * stepScale;
-        blend = animBlend(
-           -blendDuration + delay + focusDelay
-        );
-        d2 = blendHeadPrepare(d2, blend);
-        d = mix(d, d2, blend);
-        d = min(d, sectionEdge0 + sectionEps);
-        return d / focusScale;
-
+    if ( ! animPlodeStarted(delay) || ! guiStep1) {
+        bound = sectionEdge0 + sectionEps;
+        start = -blendDuration + delay + focusDelay;
+        return drawBlend(d, p, 1., start, bound) / focusScale;
     }
 
-    sectionEdge1 = mEdge(p, points) * stepScale;
-    p -= points.hexCenter * animPlode(delay2, 0.) * plodeDistance;
-    d = mHeadShell(p) * stepScale;
-    sectionEdge1 = max(sectionEdge1, d - .2 * stepScale);
+    // sectionEdge1 = mEdge(p, points) * stepScale;
+    // p -= points.hexCenter * animPlode(delay2) * plodeDistance;
+    // d = mHeadShell(p) * stepScale;
+    // sectionEdge1 = max(sectionEdge1, d - .2 * stepScale);
 
-    plodeEdge = mEdge(p, points) * stepScale;
-    d = max(d, -plodeEdge);
+    // plodeEdge = mEdge(p, points) * stepScale;
+    // d = max(d, -plodeEdge);
 
-    if ( ! guiStep2) {
-        d = min(d, sectionEdge0 + sectionEps);
-        d = min(d, sectionEdge1 + sectionEps * stepScale);
-        return d / focusScale;
-    }
+    sectionEdge1 = setupA(p, d, 1., points, delay2);
 
-    p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
-    p /= stepScale;
-    p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
-    p.x *= -1.; // somehow look at flips this
+    // if ( ! guiStep2) {
+    //     d = min(d, sectionEdge0 + sectionEps);
+    //     d = min(d, sectionEdge1 + sectionEps * stepScale);
+    //     return d / focusScale;
+    // }
 
-    d2 = mHead(p, false) * stepScale * stepScale;
-    blend = animBlend(
-        plodeDuration - plodeOverlap - blendDuration + delay2
-    );
-    d2 = blendHeadPrepare(d2, blend);
-    d = mix(d, d2, blend);
-    d = min(d, sectionEdge0 + sectionEps);
-    d = min(d, sectionEdge1 + sectionEps * stepScale);
+    setupP(p, points);
+
+    bound = min(sectionEdge0 + sectionEps, sectionEdge1 + sectionEps * stepScale);
+    start = plodeDuration - plodeOverlap - blendDuration + delay2;
+    return drawBlend(d, p, 2., start, bound) / focusScale;
 
     // return focusDebug;
     // return min(d / focusScale, focusDebug);
 
-    return d / focusScale;
     // return focusDebug;
     // return min(d, focusDebug);
 }
