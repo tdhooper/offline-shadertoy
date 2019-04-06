@@ -327,6 +327,7 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
 
     float id = hash(vec3(int(hexCenter * 1000.)) / 1000.);
     id = range(1., -1., hexCenter.y);
+    // id = min(id, .2);
 
     return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca, id);
 }
@@ -525,12 +526,12 @@ float ellip(vec2 p, vec2 s) {
     return length(p) - r;
 }
 
-vec3 modelAlbedo;
+vec3 modelAlbedo = vec3(1);
 
 
 float mHead(vec3 p, bool bounded) {
 
-    modelAlbedo = vec3(1);
+    // modelAlbedo = vec3(1);
 
     // return fBox(p, vec3(.4));
 
@@ -1092,10 +1093,12 @@ float sinstep(float a) {
 
 const float shell = .07;
 const float surfaceOffset = .12;
+
 const float stepScale = .15;
 const float plodeDuration = 1.;
 const float plodeOverlap = .35;
 const float blendDuration = .6;
+const float blendMaxDelay = .3; // TODO causes glitch
 #define plodeDistance guiPlodeDistance
 
 float mEdge(vec3 p, TriPoints3D points) {
@@ -1127,6 +1130,9 @@ float animPlode(float delay, float startOffset) {
     float end = plodeDuration + delay;
     float plode = range(start, end, time - startOffset);
     // plode = sinstep(sinstep(plode));
+    // if (plode > 0.) {
+    //     modelAlbedo = spectrum(plode*10.);
+    // }
     plode = invXEase(plode, 2.5);
     // plode *= (1. - delay);
     return plode;
@@ -1141,6 +1147,7 @@ float animBlend(float startOffset) {
     float start = 0.;
     float end = start + blendDuration;
     float blend = range(start, end, time - startOffset);
+    // modelAlbedo = spectrum(blend*10.);
     blend = sinstep(sinstep(blend));
     return blend;
 }
@@ -1171,7 +1178,7 @@ float focusDelay;
 float calcDelay(TriPoints3D points) {
     // return 0.;
     // return range(1., -1., normalize(points.hexCenter).y) * .3;
-    return points.id * .3;
+    return points.id * blendMaxDelay;
 }
 
 void calcWaypoints() {
@@ -1328,7 +1335,7 @@ float mapAnim(vec3 p) {
 
     float sectionEps = .001;
 
-    modelAlbedo = vec3(1);
+    // modelAlbedo = vec3(1);
 
     points = geodesicTriPoints(p, 1.);
     float delay = calcDelay(points);
@@ -1475,6 +1482,22 @@ float mapPlayground(vec3 p) {
     return d;
 }
 
+bool hitDebugPlane = false;
+
+float mapDebug(vec3 p) {
+    float d = map(p);
+    return d;
+    // return d;
+    // if ( ! guiDebug) {
+    //     return d;
+    // }
+    float plane = abs(p.y);
+    //plane= abs(p.z);
+    hitDebugPlane = plane < abs(d);
+    // hitDebugPlane = true;
+    return hitDebugPlane ? plane : d;
+}
+
 
 // --------------------------------------------------------
 // Rendering
@@ -1505,6 +1528,8 @@ float calcAO( in vec3 pos, in vec3 nor )
     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );
 }
 
+#pragma glslify: distanceMeter = require(../clifford-torus/distance-meter.glsl)
+
 vec3 render(Hit hit, vec3 col) {
     if ( ! hit.isBackground) {
         // The simple ambient occlusion method results in hot spots
@@ -1527,6 +1552,10 @@ vec3 render(Hit hit, vec3 col) {
         col = modelAlbedo * pow(clamp(dot(lig, hit.normal) * .5 + .5, 0., 1.), 1./2.2);
         // col = vec3(1,0,0);
 
+    }
+    if (hitDebugPlane) {
+        float d = map(hit.pos);
+        col = distanceMeter(d * 2., hit.rayLength, hit.rayDirection, hit.rayOrigin);
     }
     return col;
 }
@@ -1568,7 +1597,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         if (rayLength > MAX_TRACE_DISTANCE) {
             break;
         }
-        currentDist = map(rayOrigin + rayDirection * rayLength);
+        currentDist = mapDebug(rayOrigin + rayDirection * rayLength);
         rayLength += currentDist;
     }
 
@@ -1606,6 +1635,7 @@ void main() {
 
     time = iTime;
     time /= 2.;
+    // time -= .1;
     // time *= .333;
     time = mod(time, 1.);
     time *= plodeDuration - plodeOverlap;
@@ -1685,8 +1715,8 @@ void main() {
 
     color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 7., MAX_TRACE_DISTANCE, hit.rayLength), .33));
 
-    color = spectrum(mix(.0, .6, color.r)) * pow(color, vec3(2.));
-    color = pow(color, vec3(1. / 2.2)); // Gamma
+    // color = spectrum(mix(.0, .6, color.r)) * pow(color, vec3(2.));
+    // color = pow(color, vec3(1. / 2.2)); // Gamma
 
     gl_FragColor = vec4(color, 1);
     
