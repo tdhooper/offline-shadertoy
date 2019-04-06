@@ -1363,17 +1363,15 @@ float mapAnim(vec3 p) {
     float d, d2;
     float blend;
     float bound;
-    float start;
+    float blendStart;
+    float plodeStart;
     float delay = 0.;
 
 
-    // modelAlbedo = vec3(1);
-
     points = geodesicTriPoints(p, 1.);
-
     delay += calcDelay(points);
-    sectionEdge = setupA(p, d, 0., points, delay + focusDelay + plodeOverlap - plodeDuration);
-
+    plodeStart = delay + focusDelay + plodeOverlap - plodeDuration;
+    sectionEdge = setupA(p, d, 0., points, plodeStart);
     bound = sectionEdge + sectionEps;
 
     if ( ! guiStep0) {
@@ -1382,16 +1380,15 @@ float mapAnim(vec3 p) {
 
     setupP(p, points);
 
-    points = geodesicTriPoints(p, 1.);
-
     if ( ! animPlodeStarted(delay) || ! guiStep1) {
-        start = -blendDuration + delay + focusDelay;
-        return drawBlend(d, p, 1., start, bound) / focusScale;
+        blendStart = -blendDuration + delay + focusDelay;
+        return drawBlend(d, p, 1., blendStart, bound) / focusScale;
     }
 
+    points = geodesicTriPoints(p, 1.);
     delay += calcDelay(points);
-    sectionEdge = setupA(p, d, 1., points, delay);
-
+    plodeStart = delay;
+    sectionEdge = setupA(p, d, 1., points, plodeStart);
     bound = min(bound, sectionEdge + sectionEps * stepScale);
 
     if ( ! guiStep2) {
@@ -1400,8 +1397,8 @@ float mapAnim(vec3 p) {
 
     setupP(p, points);
 
-    start = plodeDuration - plodeOverlap - blendDuration + delay;
-    return drawBlend(d, p, 2., start, bound) / focusScale;
+    blendStart = plodeDuration - plodeOverlap - blendDuration + delay;
+    return drawBlend(d, p, 2., blendStart, bound) / focusScale;
 
     // return focusDebug;
     // return min(d / focusScale, focusDebug);
