@@ -1292,19 +1292,19 @@ float blendHeadPrepare(float head, float t) {
 
     float sectionEps = .001;
 
-float setupA(inout vec3 p, inout float d, float level, TriPoints3D points, float start) {
+float drawPlode(inout vec3 p, inout float bound, float level, TriPoints3D points, float start) {
     float scale = pow(stepScale, level);
     float sectionEdge = mEdge(p, points) * scale;
     p -= points.hexCenter * animPlode(start) * plodeDistance;
-    d = mHeadShell(p) * scale;
+    float d = mHeadShell(p) * scale;
     sectionEdge = max(sectionEdge, d - .2 * scale);
+    bound = min(bound, sectionEdge + sectionEps * scale);
     float plodeEdge = mEdge(p, points) * scale;
     d = max(d, -plodeEdge);
-    return sectionEdge;
+    return d;
 }
 
-
-void setupP(inout vec3 p, TriPoints3D points) {
+void moveIntoHex(inout vec3 p, TriPoints3D points) {
     p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
     p /= stepScale;
     p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
@@ -1358,47 +1358,47 @@ float mapAnim(vec3 p) {
     // Model
 
     TriPoints3D points;
-    float sectionEdge;
     float plodeEdge;
     float d, d2;
     float blend;
-    float bound;
-    float blendStart;
-    float plodeStart;
+    float bound = 1e12;
+    float start;
     float delay = 0.;
+    float blendStart = plodeDuration - plodeOverlap - blendDuration;
+
 
 
     points = geodesicTriPoints(p, 1.);
     delay += calcDelay(points);
-    plodeStart = delay + focusDelay + plodeOverlap - plodeDuration;
-    sectionEdge = setupA(p, d, 0., points, plodeStart);
-    bound = sectionEdge + sectionEps;
+    start = delay + focusDelay - plodeDuration + plodeOverlap;
+    d = drawPlode(p, bound, 0., points, start);
 
     if ( ! guiStep0) {
         return min(d, bound) / focusScale;
     }
 
-    setupP(p, points);
+    moveIntoHex(p, points);
 
     if ( ! animPlodeStarted(delay) || ! guiStep1) {
-        blendStart = -blendDuration + delay + focusDelay;
-        return drawBlend(d, p, 1., blendStart, bound) / focusScale;
+        start += blendStart;
+        return drawBlend(d, p, 1., start, bound) / focusScale;
     }
 
+
+
     points = geodesicTriPoints(p, 1.);
-    delay += calcDelay(points);
-    plodeStart = delay;
-    sectionEdge = setupA(p, d, 1., points, plodeStart);
-    bound = min(bound, sectionEdge + sectionEps * stepScale);
+    delay = calcDelay(points);
+    start += delay - focusDelay + plodeDuration - plodeOverlap;
+    d = drawPlode(p, bound, 1., points, start);
 
     if ( ! guiStep2) {
         return min(d, bound) / focusScale;
     }
 
-    setupP(p, points);
+    moveIntoHex(p, points);
 
-    blendStart = plodeDuration - plodeOverlap - blendDuration + delay;
-    return drawBlend(d, p, 2., blendStart, bound) / focusScale;
+    start += blendStart;
+    return drawBlend(d, p, 2., start, bound) / focusScale;
 
     // return focusDebug;
     // return min(d / focusScale, focusDebug);
