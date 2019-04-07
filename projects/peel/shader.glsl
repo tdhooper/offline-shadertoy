@@ -1305,11 +1305,12 @@ float drawPlode(inout vec3 p, inout float bound, float level, TriPoints3D points
     return d;
 }
 
-void moveIntoHex(inout vec3 p, TriPoints3D points) {
+void moveIntoHex(inout vec3 p, inout float level, TriPoints3D points) {
     p -= projectSurface(points.hexCenter) - points.hexCenter * surfaceOffset;
     p /= stepScale;
     p *= calcLookAtMatrix(vec3(0), points.hexCenter, vec3(0,1,0));
     p.x *= -1.; // somehow look at flips this
+    level += 1.;
 }
 
 float drawBlend(float d, vec3 p, float level, float start, float bound) {
@@ -1365,6 +1366,7 @@ float mapAnim(vec3 p) {
     float bound = 1e12;
     float start;
     float delay = 0.;
+    float level = 0.;
 
 
 
@@ -1372,7 +1374,7 @@ float mapAnim(vec3 p) {
     delay += calcDelay(points);
     // start at focus blend finishing
     start = -(blendDelay + blendDuration - delay + focusDelay);
-    d = drawPlode(p, bound, 0., points, start);
+    d = drawPlode(p, bound, level, points, start);
 
     if ( ! guiStep0) {
         d = min(d, bound) / focusScale;
@@ -1380,19 +1382,21 @@ float mapAnim(vec3 p) {
         return d;
     }
 
-    moveIntoHex(p, points);
+    moveIntoHex(p, level, points);
 
     start += blendDelay;
     if ( ! animPlodeStarted(start + blendDuration) || ! guiStep1) {
-        d = drawBlend(d, p, 1., start, bound) / focusScale;
+        d = drawBlend(d, p, level, start, bound) / focusScale;
         // return min(d, focusDebug);
         return d;
     }
 
+
+
     points = geodesicTriPoints(p, 1.);
     delay = calcDelay(points);
     start += blendDuration + delay;
-    d = drawPlode(p, bound, 1., points, start);
+    d = drawPlode(p, bound, level, points, start);
 
     if ( ! guiStep2) {
         d = min(d, bound) / focusScale;
@@ -1400,10 +1404,10 @@ float mapAnim(vec3 p) {
         return d;
     }
 
-    moveIntoHex(p, points);
+    moveIntoHex(p, level, points);
 
     start += blendDelay;
-    d = drawBlend(d, p, 2., start, bound) / focusScale;
+    d = drawBlend(d, p, level, start, bound) / focusScale;
     // return min(d, focusDebug);
     return d;
 
