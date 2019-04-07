@@ -327,8 +327,10 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     vec3 bc = faceToSphere(points.bc / uvScale);
     vec3 ca = faceToSphere(points.ca / uvScale);
 
-    float id = hash(vec3(int(hexCenter * 1000.)) / 1000.);
-    id = range(1., -1., hexCenter.y);
+    float hashId = hash(vec3(int(hexCenter * 1000.)) / 1000.);
+    // id = range(.8, -.8, hexCenter.y);
+    float id = range(1., -1., dot(hexCenter, vec3(0,1,0)));
+    id = mix(id, hashId, .1);
     // id = min(id, .2);
 
     return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca, id);
@@ -1101,7 +1103,7 @@ const float stepScale = .15;
 const float plodeDuration = 1.;
 const float blendDuration = .6;
 const float blendDelay = .0;
-const float plodeMaxDelay = .5;
+const float plodeMaxDelay = 1.5;
 #define plodeDistance guiPlodeDistance
 
 float mEdge(vec3 p, TriPoints3D points) {
@@ -1136,6 +1138,8 @@ float animPlode(float delay) {
     // if (plode > 0.) {
     //     modelAlbedo = spectrum(plode*10.);
     // }
+    plode = sinstep(plode);
+    // plode = sinstep(plode);
     plode = invXEase(plode, 2.5);
     // plode *= (1. - delay);
     return plode;
@@ -1151,7 +1155,7 @@ float animBlend(float startOffset) {
     float end = start + blendDuration;
     float blend = range(start, end, time - startOffset);
     // modelAlbedo = spectrum(blend*10.);
-    blend = sinstep(sinstep(blend));
+    // blend = sinstep(sinstep(blend));
     return blend;
 }
 
@@ -1415,7 +1419,7 @@ float mapAnim(vec3 p) {
         focusScale = tweenCamera(p, animTime, way1, way2, way3, way4);
     }
     // return mapWaypoints(p) / focusScale;
-    // return mapAnimMain(p) / focusScale;
+    return mapAnimMain(p) / focusScale;
     return min(
         mapAnimMain(p),
         mapWaypoints(p)
