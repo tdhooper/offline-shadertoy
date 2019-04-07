@@ -537,11 +537,11 @@ float mHeadInside(vec3 p) {
     pR(p.yz, -.1);
     p.x = abs(p.x);
     float bound = ellip(p - vec3(0,.05,0), vec3(.52,.47,.52));
-    bound = smax2(bound, abs(p.x) - .39, .2);
-    bound = smin2(bound, length(p - vec3(.04,-.5,.28)) - .1, .5);
-    bound = smin2(bound, length(p - vec3(.1,-.3,.28)) - .05, .25);
-    bound = smin2(bound, length(p - vec3(.02,-.58,.36)) - .05, .13);
-    bound = smax2(bound, -length(p - vec3(.12,-.1,.6)) + .1, .15);
+    bound = smax(bound, abs(p.x) - .39, .2);
+    bound = smin3(bound, length(p - vec3(.04,-.5,.28)) - .1, .5);
+    bound = smin3(bound, length(p - vec3(.1,-.3,.28)) - .05, .25);
+    bound = smin3(bound, length(p - vec3(.02,-.58,.36)) - .05, .13);
+    bound = smax(bound, -length(p - vec3(.12,-.1,.6)) + .1, .15);
     // bound = smin(bound, length(p - vec3(0,-.25,.52)) - .1, .1);
     // bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
     return bound;
@@ -1048,7 +1048,11 @@ vec3 projectSurface(vec3 dir, vec3 origin) {
     float dist = 0.;
     const int STEPS = 5;
     for(int i = 0; i < STEPS; i++ ) {
-        dist = mHead(ray - origin, true);
+        if (guiDebug) {
+            dist = mHeadInside(ray - origin);
+        } else {
+            dist = mHead(ray - origin, true);
+        }
         if (dist < .001) {
             break;
         }
@@ -1455,7 +1459,7 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
 float map(vec3 p) {
 
     // if ( ! guiEdit) {
-        // return mapAnim(p);
+        return mapAnim(p);
     // }
 
     // float t = clamp(mod(iTime, 1.5), 0., 1.);
@@ -1478,6 +1482,15 @@ float map(vec3 p) {
     // d = min(d, di);
     // return d;
 
+    // return max(mHeadShell(p), p.z);
+
+    // float d = mHeadInside(p);
+    // TriPoints3D points;
+    // points = geodesicTriPoints(p, 3.);
+    // vec3 o = projectSurface(points.hexCenter, vec3(0));
+    // d = min(d, length(p - o) - .03);
+    // return d;
+
     TriPoints3D points;
     float d;
     float delay;
@@ -1491,7 +1504,7 @@ float map(vec3 p) {
     moveIntoHex(p, level, points);
     start += blendDelay;
     d = drawBlend(d, p, level, start, bound);
-    d = max(d, -pp.z);
+    // d = max(d, -pp.z);
     return d;
 }
 
@@ -1549,7 +1562,7 @@ float mapDebug(vec3 p) {
     // if ( ! guiDebug) {
     //     return d;
     // }
-    float plane = abs(p.x);
+    float plane = abs(p.y);
     //plane= abs(p.z);
     hitDebugPlane = plane < abs(d);
     // hitDebugPlane = true;
@@ -1697,7 +1710,7 @@ void main() {
     time /= 2.;
     // time -= .1;
     // time *= .333;
-    // time = mod(time, 1.);
+    time = mod(time, 1.);
     time *= loopDuration;
 
 
