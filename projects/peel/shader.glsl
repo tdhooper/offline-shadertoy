@@ -329,7 +329,7 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
 
     float hashId = hash(vec3(int(hexCenter * 1000.)) / 1000.);
     // id = range(.8, -.8, hexCenter.y);
-    float id = range(1., -1., dot(hexCenter, vec3(0,1,0)));
+    float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,0))));
     id = mix(id, hashId, .1);
     // id = min(id, .2);
 
@@ -1101,7 +1101,7 @@ const float surfaceOffset = .12;
 float loopDuration;
 const float stepScale = .15;
 const float plodeDuration = 1.;
-const float blendDuration = .6;
+const float blendDuration = .3;
 const float blendDelay = .0;
 const float plodeMaxDelay = 1.5;
 #define plodeDistance guiPlodeDistance
@@ -1334,6 +1334,7 @@ float mapWaypoints(vec3 p) {
     );
 }
 
+// #define ANOTHER_LEVEL
 
 float mapAnimMain(vec3 p) {
 
@@ -1351,11 +1352,11 @@ float mapAnimMain(vec3 p) {
     points = geodesicTriPoints(p, 1.);
     delay += calcDelay(points);
     // start at focus blend finishing
-    if ( ! guiAnotherLevel) {
+    #ifndef ANOTHER_LEVEL
         start = delay - loopDuration;
-    } else {
+    #else
         start = delay - loopDuration * 2.;
-    }
+    #endif
     d = drawPlode(p, bound, level, points, start);
 
     if ( ! guiStep0) {
@@ -1387,9 +1388,9 @@ float mapAnimMain(vec3 p) {
 
     start += blendDelay;
 
-    if ( ! guiAnotherLevel) {
+    #ifndef ANOTHER_LEVEL
         return drawBlend(d, p, level, start, bound);
-    }
+    #endif
 
     if ( ! animPlodeStarted(start + blendDuration) || ! guiStep3) {
         return drawBlend(d, p, level, start, bound);
@@ -1413,11 +1414,11 @@ float mapAnimMain(vec3 p) {
 float mapAnim(vec3 p) {
     float animTime = range(.0, loopDuration, time);
     float focusScale;
-    if ( ! guiAnotherLevel) {
+    #ifndef ANOTHER_LEVEL
         focusScale = tweenCamera(p, animTime, way0, way1, way2, way3);
-    } else {
+    #else
         focusScale = tweenCamera(p, animTime, way1, way2, way3, way4);
-    }
+    #endif
     // return mapWaypoints(p) / focusScale;
     return mapAnimMain(p) / focusScale;
     return min(
