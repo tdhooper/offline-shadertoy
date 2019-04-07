@@ -1253,6 +1253,7 @@ vec3 controlDir(vec3 a, vec3 b, vec3 c) {
 vec3 tweenCameraPos(float t) {
     vec3 c1 = wayTrans1 - controlDir(wayTrans0, wayTrans1, wayTrans2) * distance(wayTrans1, wayTrans2) * .6;
     vec3 c2 = wayTrans2 + controlDir(wayTrans1, wayTrans2, wayTrans3) * distance(wayTrans1, wayTrans2) * .2;
+    t = pow(t, 1.08); // correct for non-constant speed
     vec3 p = bezier(wayTrans1, c1, c2, wayTrans2, t);
     return p;
 }
@@ -1322,17 +1323,14 @@ float drawBlend(float d, vec3 p, float level, float start, float bound) {
     return d;
 }
 
-float mapAnim(vec3 p) {
-
-    // Camera
-
-    vec3 pp = p;
-
-    float animTime = range(.0, loopDuration, time);
-    float focusScale = tweenCamera(p, animTime);
-    // float focusScale = 1.;
-
-    float focusDebug = min(
+float mapWaypoints(vec3 p) {
+    // float d = 1e12;
+    // const float WITER = 20.;
+    // for (float i = 0.; i < WITER; i++){
+    //     d = min(d, length(p - tweenCameraPos(i / WITER)) - .0003);
+    // }
+    // return d;
+    return min(
         min(
             fWaypoint(p, wayTrans0, wayRot0, wayScale0),
             fWaypoint(p, wayTrans1, wayRot1, wayScale1)
@@ -1342,22 +1340,9 @@ float mapAnim(vec3 p) {
             fWaypoint(p, wayTrans3, wayRot3, wayScale3)
         )
     );
+}
 
-    // focusDebug = 1e12;
-    // float fs = 1.;
-
-    // vec3 ppp;
-    // const float PT = 20.;
-    // for(float i = 0.; i < PT; i++ ) {
-    //     ppp = p;
-    //     fs = tweenCameraI(ppp, i/PT);
-    //     focusDebug = min(focusDebug, fBox(ppp, vec3(.02, .05, .03) * .2) * fs);
-    // }
-
-    // return focusDebug;
-
-
-    // Model
+float mapAnimMain(vec3 p) {
 
     TriPoints3D points;
     float plodeEdge;
@@ -1373,23 +1358,22 @@ float mapAnim(vec3 p) {
     points = geodesicTriPoints(p, 1.);
     delay += calcDelay(points);
     // start at focus blend finishing
-    start = -(blendDelay + blendDuration - delay + focusDelay);
+    start = delay - loopDuration;
     d = drawPlode(p, bound, level, points, start);
 
     if ( ! guiStep0) {
-        d = min(d, bound) / focusScale;
-        // return min(d, focusDebug);
-        return d;
+        return min(d, bound);
     }
 
     moveIntoHex(p, level, points);
 
     start += blendDelay;
     if ( ! animPlodeStarted(start + blendDuration) || ! guiStep1) {
-        d = drawBlend(d, p, level, start, bound) / focusScale;
+        d = drawBlend(d, p, level, start, bound);
         // return min(d, focusDebug);
         return d;
     }
+
 
 
 
@@ -1399,24 +1383,26 @@ float mapAnim(vec3 p) {
     d = drawPlode(p, bound, level, points, start);
 
     if ( ! guiStep2) {
-        d = min(d, bound) / focusScale;
-        // return min(d, focusDebug);
-        return d;
+        return min(d, bound);
     }
 
     moveIntoHex(p, level, points);
 
     start += blendDelay;
-    d = drawBlend(d, p, level, start, bound) / focusScale;
-    // return min(d, focusDebug);
-    return d;
-
-
-    // return min(d / focusScale, focusDebug);
-
-    // return focusDebug;
-    // return min(d, focusDebug);
+    return drawBlend(d, p, level, start, bound);
 }
+
+float mapAnim(vec3 p) {
+    float animTime = range(.0, loopDuration, time);
+    float focusScale = tweenCamera(p, animTime);
+    // return mapWaypoints(p) / focusScale;
+    // return mapAnimMain(p) / focusScale;
+    return min(
+        mapAnimMain(p),
+        mapWaypoints(p)
+    )  / focusScale;
+}
+
 
 // Hexagonal prism, circumcircle variant
 float fHexagonCircumcircle(vec3 p, vec2 h) {
