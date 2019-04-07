@@ -1,5 +1,5 @@
 {
-  "id": "peelfractal18",
+  "id": "peelfractal19",
   "camera": {
     "rotation": [
       0.051536690443754196,
@@ -55,8 +55,8 @@
     0.35169507020009405
   ],
   "timer": {
-    "running": false,
-    "elapsed": 0
+    "running": true,
+    "elapsed": 143719.29999999702
   },
   "mouse": [
     0,
@@ -65,8 +65,8 @@
     0
   ],
   "r": [
-    366,
-    229
+    169,
+    114
   ],
   "controls": {
     "closed": true,
@@ -75,14 +75,14 @@
       "step": 0.01,
       "min": 0,
       "max": 0.8,
-      "value": 0.24
+      "value": 0.13
     },
     "camDistance": {
       "type": "range",
       "step": 0.01,
       "min": 0,
       "max": 2,
-      "value": 0.9400000000000001
+      "value": 1.05
     },
     "camLookDown": {
       "type": "range",
@@ -124,6 +124,10 @@
       "value": true
     },
     "step2": {
+      "type": "toggle",
+      "value": true
+    },
+    "step3": {
       "type": "toggle",
       "value": true
     }

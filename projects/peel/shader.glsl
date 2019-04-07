@@ -23,6 +23,7 @@ uniform bool guiEdit;
 uniform bool guiStep0;
 uniform bool guiStep1;
 uniform bool guiStep2;
+uniform bool guiStep3;
 uniform bool guiFixedCamera;
 
 uniform float guiPlodeDistance;
@@ -1174,6 +1175,11 @@ float wayScale2;
 vec3 wayTrans3;
 mat3 wayRot3;
 float wayScale3;
+
+vec3 wayTrans4;
+mat3 wayRot4;
+float wayScale4;
+
 float focusDelay;
 
 float calcDelay(TriPoints3D points) {
@@ -1217,6 +1223,11 @@ void calcWaypoints() {
     wayTrans3 = wayTrans2 + wayRot2 * (projected * wayScale3);
     wayRot3 = calcLookAtMatrix(vec3(0), wayRot2 * hexCenter, wayRot2 * vec3(0,1,0));;
     // wayRot3 = mat3(1,0,0,0,1,0,0,0,1);
+
+    wayScale4 = wayScale3 * stepScale;
+    wayTrans4 = wayTrans3 + wayRot3 * (projected * wayScale4);
+    wayRot4 = calcLookAtMatrix(vec3(0), wayRot3 * hexCenter, wayRot3 * vec3(0,1,0));;
+
 }
 
 vec3 Catmull(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t){
@@ -1251,18 +1262,18 @@ vec3 controlDir(vec3 a, vec3 b, vec3 c) {
 }
 
 vec3 tweenCameraPos(float t) {
-    vec3 c1 = wayTrans1 - controlDir(wayTrans0, wayTrans1, wayTrans2) * distance(wayTrans1, wayTrans2) * .6;
-    vec3 c2 = wayTrans2 + controlDir(wayTrans1, wayTrans2, wayTrans3) * distance(wayTrans1, wayTrans2) * .2;
+    vec3 c1 = wayTrans2 - controlDir(wayTrans1, wayTrans2, wayTrans3) * distance(wayTrans2, wayTrans3) * .6;
+    vec3 c2 = wayTrans3 + controlDir(wayTrans2, wayTrans3, wayTrans4) * distance(wayTrans2, wayTrans3) * .2;
     t = pow(t, 1.08); // correct for non-constant speed
-    vec3 p = bezier(wayTrans1, c1, c2, wayTrans2, t);
+    vec3 p = bezier(wayTrans2, c1, c2, wayTrans3, t);
     return p;
 }
 
 float tweenCamera(inout vec3 p, float animTime) {
     float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
-    float focusScale = mix(wayScale1, wayScale2, ar);
+    float focusScale = mix(wayScale2, wayScale3, ar);
     p *= focusScale;
-    p = mix(wayRot1 * p, wayRot2 * p, animTime);
+    p = mix(wayRot2 * p, wayRot3 * p, animTime);
     // p += mix(wayTrans1, wayTrans2, ar);
     p += tweenCameraPos(ar);
     return focusScale;
@@ -1332,13 +1343,16 @@ float mapWaypoints(vec3 p) {
     // return d;
     return min(
         min(
-            fWaypoint(p, wayTrans0, wayRot0, wayScale0),
-            fWaypoint(p, wayTrans1, wayRot1, wayScale1)
+            min(
+                fWaypoint(p, wayTrans0, wayRot0, wayScale0),
+                fWaypoint(p, wayTrans1, wayRot1, wayScale1)
+            ),
+            min(
+                fWaypoint(p, wayTrans2, wayRot2, wayScale2),
+                fWaypoint(p, wayTrans3, wayRot3, wayScale3)
+            )
         ),
-        min(
-            fWaypoint(p, wayTrans2, wayRot2, wayScale2),
-            fWaypoint(p, wayTrans3, wayRot3, wayScale3)
-        )
+        fWaypoint(p, wayTrans4, wayRot4, wayScale4)
     );
 }
 
@@ -1358,7 +1372,7 @@ float mapAnimMain(vec3 p) {
     points = geodesicTriPoints(p, 1.);
     delay += calcDelay(points);
     // start at focus blend finishing
-    start = delay - loopDuration;
+    start = delay - loopDuration * 2.;
     d = drawPlode(p, bound, level, points, start);
 
     if ( ! guiStep0) {
@@ -1383,6 +1397,25 @@ float mapAnimMain(vec3 p) {
     d = drawPlode(p, bound, level, points, start);
 
     if ( ! guiStep2) {
+        return min(d, bound);
+    }
+
+    moveIntoHex(p, level, points);
+
+    start += blendDelay;
+    if ( ! animPlodeStarted(start + blendDuration) || ! guiStep3) {
+        return drawBlend(d, p, level, start, bound);
+    }
+
+
+
+
+    points = geodesicTriPoints(p, 1.);
+    delay = calcDelay(points);
+    start += blendDuration + delay;
+    d = drawPlode(p, bound, level, points, start);
+
+    if ( ! guiStep3) {
         return min(d, bound);
     }
 
