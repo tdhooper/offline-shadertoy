@@ -1094,11 +1094,12 @@ float sinstep(float a) {
 const float shell = .07;
 const float surfaceOffset = .12;
 
+float loopDuration;
 const float stepScale = .15;
 const float plodeDuration = 1.;
-const float plodeOverlap = .35;
 const float blendDuration = .6;
-const float blendMaxDelay = .3; // TODO causes glitch
+const float blendDelay = .0;
+const float plodeMaxDelay = .5;
 #define plodeDistance guiPlodeDistance
 
 float mEdge(vec3 p, TriPoints3D points) {
@@ -1178,7 +1179,7 @@ float focusDelay;
 float calcDelay(TriPoints3D points) {
     // return 0.;
     // return range(1., -1., normalize(points.hexCenter).y) * .3;
-    return points.id * blendMaxDelay;
+    return points.id * plodeMaxDelay;
 }
 
 void calcWaypoints() {
@@ -1326,7 +1327,7 @@ float mapAnim(vec3 p) {
 
     vec3 pp = p;
 
-    float animTime = range(.0, (plodeDuration - plodeOverlap) - .0, time);
+    float animTime = range(.0, loopDuration, time);
     float focusScale = tweenCamera(p, animTime);
     // float focusScale = 1.;
 
@@ -1364,43 +1365,49 @@ float mapAnim(vec3 p) {
     float bound = 1e12;
     float start;
     float delay = 0.;
-    float blendStart = plodeDuration - plodeOverlap - blendDuration;
 
 
 
     points = geodesicTriPoints(p, 1.);
     delay += calcDelay(points);
-    start = delay + focusDelay - plodeDuration + plodeOverlap;
+    // start at focus blend finishing
+    start = -(blendDelay + blendDuration - delay + focusDelay);
     d = drawPlode(p, bound, 0., points, start);
 
     if ( ! guiStep0) {
-        return min(d, bound) / focusScale;
+        d = min(d, bound) / focusScale;
+        // return min(d, focusDebug);
+        return d;
     }
 
     moveIntoHex(p, points);
 
-    if ( ! animPlodeStarted(delay) || ! guiStep1) {
-        start += blendStart;
-        return drawBlend(d, p, 1., start, bound) / focusScale;
+    start += blendDelay;
+    if ( ! animPlodeStarted(start + blendDuration) || ! guiStep1) {
+        d = drawBlend(d, p, 1., start, bound) / focusScale;
+        // return min(d, focusDebug);
+        return d;
     }
-
-
 
     points = geodesicTriPoints(p, 1.);
     delay = calcDelay(points);
-    start += delay - focusDelay + plodeDuration - plodeOverlap;
+    start += blendDuration + delay;
     d = drawPlode(p, bound, 1., points, start);
 
     if ( ! guiStep2) {
-        return min(d, bound) / focusScale;
+        d = min(d, bound) / focusScale;
+        // return min(d, focusDebug);
+        return d;
     }
 
     moveIntoHex(p, points);
 
-    start += blendStart;
-    return drawBlend(d, p, 2., start, bound) / focusScale;
+    start += blendDelay;
+    d = drawBlend(d, p, 2., start, bound) / focusScale;
+    // return min(d, focusDebug);
+    return d;
 
-    // return focusDebug;
+
     // return min(d / focusScale, focusDebug);
 
     // return focusDebug;
@@ -1630,12 +1637,14 @@ void main() {
 
     calcWaypoints();
 
+    loopDuration = blendDelay + blendDuration + focusDelay;
+
     time = iTime;
     time /= 2.;
     // time -= .1;
     // time *= .333;
     time = mod(time, 1.);
-    time *= plodeDuration - plodeOverlap;
+    time *= loopDuration;
 
 
     vec3 rayOrigin = eye;
