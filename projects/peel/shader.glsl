@@ -330,7 +330,8 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     float hashId = hash(vec3(int(hexCenter * 1000.)) / 1000.);
     // id = range(.8, -.8, hexCenter.y);
     float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,0))));
-    id = mix(id, hashId, .1);
+    // float id = range(1., -1., dot(hexCenter, normalize(vec3(0,1,0))));
+    // id = mix(id, hashId, .1);
     // id = min(id, .2);
 
     return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca, id);
@@ -532,6 +533,19 @@ float ellip(vec2 p, vec2 s) {
 
 vec3 modelAlbedo = vec3(1);
 
+float mHeadInside(vec3 p) {
+    pR(p.yz, -.1);
+    p.x = abs(p.x);
+    float bound = ellip(p - vec3(0,.05,0), vec3(.52,.47,.52));
+    bound = smax2(bound, abs(p.x) - .39, .2);
+    bound = smin2(bound, length(p - vec3(.04,-.5,.28)) - .1, .5);
+    bound = smin2(bound, length(p - vec3(.1,-.3,.28)) - .05, .25);
+    bound = smin2(bound, length(p - vec3(.02,-.58,.36)) - .05, .13);
+    bound = smax2(bound, -length(p - vec3(.12,-.1,.6)) + .1, .15);
+    // bound = smin(bound, length(p - vec3(0,-.25,.52)) - .1, .1);
+    // bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
+    return bound;
+}
 
 float mHead(vec3 p, bool bounded) {
 
@@ -554,7 +568,7 @@ float mHead(vec3 p, bool bounded) {
     bound = smax(bound, abs(p.x) - .4, .2);
     bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
 
-    return bound += .03;
+    // return bound += .03;
 
     if (bounded && bound > .01) {
         return bound;
@@ -1115,7 +1129,9 @@ float mEdge(vec3 p, TriPoints3D points) {
 
 float mHeadShell(vec3 p) {
     float d = mHead(p, true);
-    d = abs(d + shell) - shell;
+    // d = abs(d + shell) - shell;
+    float di = mHeadInside(p);
+    d = max(d, -di - shell * 2.);
     return d;
 }
 
@@ -1288,7 +1304,7 @@ float drawPlode(inout vec3 p, inout float bound, float level, TriPoints3D points
     float sectionEdge = mEdge(p, points) * scale;
     p -= points.hexCenter * animPlode(start) * plodeDistance;
     float d = mHeadShell(p) * scale;
-    sectionEdge = max(sectionEdge, d - .2 * scale);
+    sectionEdge = max(sectionEdge, d  - .2 * scale);
     bound = min(bound, sectionEdge + sectionEps * scale);
     float plodeEdge = mEdge(p, points) * scale;
     d = max(d, -plodeEdge);
@@ -1439,19 +1455,43 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
 float map(vec3 p) {
 
     // if ( ! guiEdit) {
-        return mapAnim(p);
+        // return mapAnim(p);
     // }
 
-    float t = clamp(mod(iTime, 1.5), 0., 1.);
-    float d = fHexagonCircumcircle(p.yzx + vec3(.1,-.1,0), vec2(.5,.5));
-    float head = mHead(p, false);
-    head = blendHeadPrepare(head, t);
-    d = mix(d, head, t);
+    // float t = clamp(mod(iTime, 1.5), 0., 1.);
+    // float d = fHexagonCircumcircle(p.yzx + vec3(.1,-.1,0), vec2(.5,.5));
+    // float head = mHead(p, false);
+    // head = blendHeadPrepare(head, t);
+    // d = mix(d, head, t);
 
     // float w = .02;
     // d = abs(d + w) - w;
     // d = max(d, p.y - .1);
 
+    // float d = mHead(p, false);
+    // float di = mHeadInside(p);
+    // float diff = d - di;
+    // float split = p.x;
+    // // modelAlbedo = spectrum(diff*10.) * mix(.8, 1.2, step(diff * sign(split), 0.));
+    // d = max(d, split);
+    // di = max(di, -split);
+    // d = min(d, di);
+    // return d;
+
+    TriPoints3D points;
+    float d;
+    float delay;
+    float bound = 1e12;
+    float start;
+    float level = 0.;
+    vec3 pp = p;
+    points = geodesicTriPoints(p, 1.);
+    start += calcDelay(points);
+    d = drawPlode(p, bound, level, points, start);
+    moveIntoHex(p, level, points);
+    start += blendDelay;
+    d = drawBlend(d, p, level, start, bound);
+    d = max(d, -pp.z);
     return d;
 }
 
@@ -1509,7 +1549,7 @@ float mapDebug(vec3 p) {
     // if ( ! guiDebug) {
     //     return d;
     // }
-    float plane = abs(p.y);
+    float plane = abs(p.x);
     //plane= abs(p.z);
     hitDebugPlane = plane < abs(d);
     // hitDebugPlane = true;
@@ -1657,7 +1697,7 @@ void main() {
     time /= 2.;
     // time -= .1;
     // time *= .333;
-    time = mod(time, 1.);
+    // time = mod(time, 1.);
     time *= loopDuration;
 
 
