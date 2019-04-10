@@ -333,6 +333,7 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     // float id = range(1., -1., dot(hexCenter, normalize(vec3(0,1,0))));
     // id = mix(id, hashId, .1);
     // id = min(id, .2);
+    // id = 0.;
 
     return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca, id);
 }
@@ -491,6 +492,8 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 // Model
 // --------------------------------------------------------
 
+bool isMapPass = false;
+
 struct Model {
     float dist;
     vec3 material;
@@ -544,6 +547,57 @@ float mHeadInside(vec3 p) {
     bound = smax(bound, -length(p - vec3(.12,-.1,.6)) + .1, .15);
     // bound = smin(bound, length(p - vec3(0,-.25,.52)) - .1, .1);
     // bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
+    return bound;
+}
+
+float mHeadApprox(vec3 p) {
+
+    if (guiEdit) {
+        p.z -= .01;
+        p.y -= .08;
+    } else {
+        pR(p.yz, -.1);
+    }
+
+    p.x = abs(p.x);
+    vec3 pp = p;
+    p -= vec3(0,.135,.01);
+    pR(p.yz, .1);
+    float bound = ellip(p, vec3(.52,.38,.5));
+    p = pp;
+    p -= vec3(0,-.05,-.00);
+    pR(p.yz, .2);
+    bound = smin3(bound, ellip(p, vec3(.52,.38,.5)), .07);
+    p = pp;
+    pR(p.xz, .1);
+    bound = smax(bound, abs(p.x) - .51, .45);
+    bound = smax(bound, abs(p.x) - .41, .1);
+    p = pp;
+    p -= vec3(.0,-.5,.2);
+    pR(p.yz, .8);
+    bound = smin3(bound, ellip(p, vec3(.125,.08,.125)), .33); // jaw
+    bound = smin3(bound, ellip(p - vec3(.0,.09,.16), vec3(.022,.02,.02)), .23); // chin
+    p = pp;
+    bound = smin3(bound, length(p - vec3(.21,-.2,.26)) -.05, .16); // cheek
+    bound = smin3(bound, length(p - vec3(.12,-.32,.3)) - .11, .1); // cheek
+    bound = smax(bound, -length(p - vec3(.1,-.09,.53)) + .1, .1); // eye
+    p -= vec3(0,.02,.08);
+    pR(p.yz, -.05);
+    float brow = fDisc(p, .33) - .05;
+    brow = smax(brow, abs(p.x) - .25, .1);
+    bound = smin3(bound, brow, .1); // brow
+    p = pp;
+    bound = smin3(bound, ellip(p - vec3(0,-.4,.4), vec3(.12,.1,.1)), .05); // lips
+    p = pp;
+    p -= vec3(0,-.25,.46);
+    vec3 nn = normalize(vec3(1.1,.27,.5));
+    float nose = smax(dot(p, nn), dot(p, nn * vec3(-1,1,1)), .09) - .072;
+    nose = smax(nose, dot(p, normalize(vec3(0,-1,.2))) - .085, .05);
+    nose = smax(nose, dot(p, normalize(vec3(1,.0,-.2))) - .1, .05);
+    nose = max(nose, length(p) - .3);
+    bound = smin3(bound, nose, .05);
+    // // // bound = smin(bound, length(p - vec3(0,-.25,.52)) - .1, .1);
+    // // // bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
     return bound;
 }
 
@@ -1048,11 +1102,7 @@ vec3 projectSurface(vec3 dir, vec3 origin) {
     float dist = 0.;
     const int STEPS = 5;
     for(int i = 0; i < STEPS; i++ ) {
-        if (guiDebug) {
-            dist = mHeadInside(ray - origin);
-        } else {
-            dist = mHead(ray - origin, true);
-        }
+        dist = mHeadApprox(ray - origin);
         if (dist < .001) {
             break;
         }
@@ -1472,21 +1522,31 @@ float map(vec3 p) {
     // d = abs(d + w) - w;
     // d = max(d, p.y - .1);
 
+/*
+    float split = p.x;
     float d = mHead(p, false);
     float di = mHeadInside(p);
     TriPoints3D points = geodesicTriPoints(p, 2.);
-    float plodeEdge = mEdge(p, points) - .02;
-    d = max(d, plodeEdge);
-    di = max(di, -plodeEdge);
-    // float diff = d - di;
+    p *= calcLookAtMatrix(vec3(p), points.hexCenter, vec3(0,1,0));
+    float mask = length(p.xy) - .05;
+    if (split > 0.) {
+        float ddd = d; d = di; di = ddd;
+    }
+    float diff = d - di;
+    d = max(d, -mask);
+    di = max(di, mask);
     // float split = p.x;
     // modelAlbedo = spectrum(diff*10.) * mix(.8, 1.2, step(diff * sign(split), 0.));
     // d = max(d, split);
     // di = max(di, -split);
-    d = min(d, di);
+    if (di < d) {
+        if (isMapPass) modelAlbedo = spectrum(diff*10.);
+        return di;
+    }
+    if (isMapPass) modelAlbedo = vec3(1);
     return d;
-
-    // return max(mHeadShell(p), p.z);
+*/
+    return max(mHeadShell(p), -p.x - iTime + .5);
 
     // float d = mHeadInside(p);
     // TriPoints3D points;
@@ -1663,6 +1723,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
     float currentDist = INTERSECTION_PRECISION * 2.0;
     float rayLength = 0.;
     bool isBackground = true;
+    isMapPass = true;
 
     for(int i = 0; i < NUM_OF_TRACE_STEPS; i++){
         if (currentDist < INTERSECTION_PRECISION) {
@@ -1676,6 +1737,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         rayLength += currentDist;
     }
 
+    isMapPass = false;
     vec3 pos = vec3(0);
     vec3 normal = vec3(0);
 
@@ -1714,7 +1776,7 @@ void main() {
     time /= 2.;
     // time -= .1;
     // time *= .333;
-    // time = mod(time, 1.);
+    time = mod(time, 1.);
     time *= loopDuration;
 
 
@@ -1790,7 +1852,7 @@ void main() {
         gl_FragDepthEXT = depth;
     }
 
-    // color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 7., MAX_TRACE_DISTANCE, hit.rayLength), .33));
+    color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 7., MAX_TRACE_DISTANCE, hit.rayLength), .33));
 
     // color = spectrum(mix(.0, .6, color.r)) * pow(color, vec3(2.));
     // color = pow(color, vec3(1. / 2.2)); // Gamma
