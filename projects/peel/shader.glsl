@@ -1459,7 +1459,7 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
 float map(vec3 p) {
 
     // if ( ! guiEdit) {
-        return mapAnim(p);
+        // return mapAnim(p);
     // }
 
     // float t = clamp(mod(iTime, 1.5), 0., 1.);
@@ -1472,15 +1472,19 @@ float map(vec3 p) {
     // d = abs(d + w) - w;
     // d = max(d, p.y - .1);
 
-    // float d = mHead(p, false);
-    // float di = mHeadInside(p);
+    float d = mHead(p, false);
+    float di = mHeadInside(p);
+    TriPoints3D points = geodesicTriPoints(p, 2.);
+    float plodeEdge = mEdge(p, points) - .02;
+    d = max(d, plodeEdge);
+    di = max(di, -plodeEdge);
     // float diff = d - di;
     // float split = p.x;
-    // // modelAlbedo = spectrum(diff*10.) * mix(.8, 1.2, step(diff * sign(split), 0.));
+    // modelAlbedo = spectrum(diff*10.) * mix(.8, 1.2, step(diff * sign(split), 0.));
     // d = max(d, split);
     // di = max(di, -split);
-    // d = min(d, di);
-    // return d;
+    d = min(d, di);
+    return d;
 
     // return max(mHeadShell(p), p.z);
 
@@ -1491,21 +1495,21 @@ float map(vec3 p) {
     // d = min(d, length(p - o) - .03);
     // return d;
 
-    TriPoints3D points;
-    float d;
-    float delay;
-    float bound = 1e12;
-    float start;
-    float level = 0.;
-    vec3 pp = p;
-    points = geodesicTriPoints(p, 1.);
-    start += calcDelay(points);
-    d = drawPlode(p, bound, level, points, start);
-    moveIntoHex(p, level, points);
-    start += blendDelay;
-    d = drawBlend(d, p, level, start, bound);
-    // d = max(d, -pp.z);
-    return d;
+    // TriPoints3D points;
+    // float d;
+    // float delay;
+    // float bound = 1e12;
+    // float start;
+    // float level = 0.;
+    // vec3 pp = p;
+    // points = geodesicTriPoints(p, 1.);
+    // start += calcDelay(points);
+    // d = drawPlode(p, bound, level, points, start);
+    // moveIntoHex(p, level, points);
+    // start += blendDelay;
+    // d = drawBlend(d, p, level, start, bound);
+    // // d = max(d, -pp.z);
+    // return d;
 }
 
 float mapPlayground(vec3 p) {
@@ -1710,7 +1714,7 @@ void main() {
     time /= 2.;
     // time -= .1;
     // time *= .333;
-    time = mod(time, 1.);
+    // time = mod(time, 1.);
     time *= loopDuration;
 
 
@@ -1786,7 +1790,7 @@ void main() {
         gl_FragDepthEXT = depth;
     }
 
-    color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 7., MAX_TRACE_DISTANCE, hit.rayLength), .33));
+    // color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 7., MAX_TRACE_DISTANCE, hit.rayLength), .33));
 
     // color = spectrum(mix(.0, .6, color.r)) * pow(color, vec3(2.));
     // color = pow(color, vec3(1. / 2.2)); // Gamma
