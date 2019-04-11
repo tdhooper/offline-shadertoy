@@ -1509,7 +1509,7 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
 float map(vec3 p) {
 
     // if ( ! guiEdit) {
-        // return mapAnim(p);
+        return mapAnim(p);
     // }
 
     // float t = clamp(mod(iTime, 1.5), 0., 1.);
@@ -1546,7 +1546,7 @@ float map(vec3 p) {
     if (isMapPass) modelAlbedo = vec3(1);
     return d;
 */
-    return max(mHeadShell(p), -p.x - iTime + .5);
+    // return max(mHeadShell(p), p.y - iTime + .5);
 
     // float d = mHeadInside(p);
     // TriPoints3D points;
@@ -1555,21 +1555,21 @@ float map(vec3 p) {
     // d = min(d, length(p - o) - .03);
     // return d;
 
-    // TriPoints3D points;
-    // float d;
-    // float delay;
-    // float bound = 1e12;
-    // float start;
-    // float level = 0.;
-    // vec3 pp = p;
-    // points = geodesicTriPoints(p, 1.);
-    // start += calcDelay(points);
-    // d = drawPlode(p, bound, level, points, start);
-    // moveIntoHex(p, level, points);
-    // start += blendDelay;
-    // d = drawBlend(d, p, level, start, bound);
-    // // d = max(d, -pp.z);
-    // return d;
+    TriPoints3D points;
+    float d;
+    float delay;
+    float bound = 1e12;
+    float start;
+    float level = 0.;
+    vec3 pp = p;
+    points = geodesicTriPoints(p, 1.);
+    start += calcDelay(points);
+    d = drawPlode(p, bound, level, points, start);
+    moveIntoHex(p, level, points);
+    start += blendDelay;
+    d = drawBlend(d, p, level, start, bound);
+    // d = max(d, -pp.z);
+    return d;
 }
 
 float mapPlayground(vec3 p) {
