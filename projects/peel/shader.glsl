@@ -44,8 +44,9 @@ const float BALL_SPEED = -5.;
 const float TWISTS = .5;
 const float TWIST_SPEED = 1.;
 
-
 #define PI 3.14159265359
+
+#pragma glslify: import('./quat.glsl')
 
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
@@ -622,7 +623,7 @@ float mHead(vec3 p, bool bounded) {
     bound = smax(bound, abs(p.x) - .4, .2);
     bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
 
-    // return bound += .03;
+    return bound += .03;
 
     if (bounded && bound > .01) {
         return bound;
@@ -1168,7 +1169,7 @@ const float surfaceOffset = .12;
 
 float loopDuration;
 const float stepScale = .15;
-const float plodeDuration = 1.;
+const float plodeDuration = .8;
 const float blendDuration = .3;
 const float blendDelay = .0;
 const float plodeMaxDelay = 1.5;
@@ -1229,15 +1230,18 @@ float animBlend(float startOffset) {
     return blend;
 }
 
-float fWaypoint(vec3 p, vec3 trans, mat3 rot, float scale) {
+float fWaypoint(vec3 p, vec3 trans, vec4 rot, float scale) {
     p -= trans;
-    p *= rot;
-    return fBox(p, scale * vec3(.02, .05, .03) * 1.);
+    p = rotate_vector(p, q_conj(rot));
+    float d = fBox(p, scale * vec3(.02, .05, .03) * 1.);
+    p -= scale * vec3(.01,.025,.04);
+    d = min(d, fBox(p, scale * vec3(.01,.025,.01) * 1.));
+    return d;
 }
 
 struct Waypoint {
     vec3 trans;
-    mat3 rot;
+    vec4 rot;
     float scale;
 };
 
@@ -1261,7 +1265,8 @@ void calcWaypoints() {
     vec3 focusHexCenter;
     vec3 focusP;
 
-    focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
+    focusHexCenter = normalize(vec3(2, 1, 1));
+    // focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
     vec3 hexCenter = focusPoints.hexCenter;
     focusDelay = calcDelay(focusPoints);
@@ -1270,30 +1275,32 @@ void calcWaypoints() {
 
     way0.scale = 1. / stepScale;
     way0.trans = vec3(0);
-    way0.rot = mat3(1,0,0,0,1,0,0,0,1);
+    way0.rot = QUATERNION_IDENTITY;
+    // way0.rot = q_look_at(vec3(0,0,1), vec3(0,1,0));
 
     way1.scale = way0.scale * stepScale;
     way1.trans = projected * way1.scale;
-    way1.rot = calcLookAtMatrix(vec3(0), hexCenter, vec3(0,1,0));
-    // way1.rot = mat3(1,0,0,0,1,0,0,0,1);
+    way1.rot = q_look_at(hexCenter, vec3(0,-1,0));
+    // way1.rot = QUATERNION_IDENTITY;
 
     // idunno
-    hexCenter.x *= -1.;
-    projected.x *= -1.;
+    // hexCenter.x *= -1.;
+    // projected.x *= -1.;
 
     way2.scale = way1.scale * stepScale;
-    way2.trans = way1.trans + way1.rot * (projected * way2.scale);
-    way2.rot = calcLookAtMatrix(vec3(0), way1.rot * hexCenter, way1.rot * vec3(0,1,0));;
-    // way2.rot = mat3(1,0,0,0,1,0,0,0,1);
+    way2.trans = way1.trans + rotate_vector(projected * way2.scale, way1.rot);
+    way2.rot = q_look_at(rotate_vector(hexCenter, way1.rot), rotate_vector(vec3(0,-1,0), way1.rot));
+    // way2.rot = QUATERNION_IDENTITY;
 
     way3.scale = way2.scale * stepScale;
-    way3.trans = way2.trans + way2.rot * (projected * way3.scale);
-    way3.rot = calcLookAtMatrix(vec3(0), way2.rot * hexCenter, way2.rot * vec3(0,1,0));;
-    // way3.rot = mat3(1,0,0,0,1,0,0,0,1);
+    way3.trans = way2.trans + rotate_vector(projected * way3.scale, way2.rot);
+    way3.rot = q_look_at(rotate_vector(hexCenter, way2.rot), rotate_vector(vec3(0,-1,0), way2.rot));
+    // way3.rot = QUATERNION_IDENTITY;
 
     way4.scale = way3.scale * stepScale;
-    way4.trans = way3.trans + way3.rot * (projected * way4.scale);
-    way4.rot = calcLookAtMatrix(vec3(0), way3.rot * hexCenter, way3.rot * vec3(0,1,0));;
+    way4.trans = way3.trans + rotate_vector(projected * way4.scale, way3.rot);
+    way4.rot = q_look_at(rotate_vector(hexCenter, way3.rot), rotate_vector(vec3(0,-1,0), way3.rot));
+    // way4.rot = QUATERNION_IDENTITY;
 
 }
 
@@ -1340,7 +1347,8 @@ float tweenCamera(inout vec3 p, float animTime, Waypoint w0, Waypoint w1, Waypoi
     float ar = (pow(stepScale, animTime) - 1.) / (stepScale - 1.);
     float focusScale = mix(w1.scale, w2.scale, ar);
     p *= focusScale;
-    p = mix(w1.rot * p, w2.rot * p, animTime);
+    vec4 rot = q_slerp(w1.rot, w2.rot, animTime);
+    p = rotate_vector(p, rot);
     p += tweenCameraPos(ar, w0, w1, w2, w3);
     return focusScale;
 }
@@ -1389,6 +1397,10 @@ float mapWaypoints(vec3 p) {
     //     d = min(d, length(p - tweenCameraPos(i / WITER)) - .0003);
     // }
     // return d;
+    // return min(min(
+    //     fWaypoint(p, way0.trans, way0.rot, way0.scale),
+    //     fWaypoint(p, way1.trans, way1.rot, way1.scale)
+    // ),fWaypoint(p, way2.trans, way2.rot, way2.scale));
     return min(
         min(
             min(
