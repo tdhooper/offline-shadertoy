@@ -1,5 +1,5 @@
 {
-  "id": "peelfractal24",
+  "id": "peelfractal25",
   "camera": {
     "rotation": [
       0.020035402849316597,
@@ -123,21 +123,24 @@
       "type": "toggle",
       "value": false
     },
-    "step0": {
-      "type": "toggle",
-      "value": true
-    },
-    "step1": {
-      "type": "toggle",
-      "value": true
-    },
-    "step2": {
-      "type": "toggle",
-      "value": true
-    },
-    "step3": {
-      "type": "toggle",
-      "value": true
+    "step": {
+      "closed": true,
+      "0": {
+        "type": "toggle",
+        "value": true
+      },
+      "1": {
+        "type": "toggle",
+        "value": true
+      },
+      "2": {
+        "type": "toggle",
+        "value": true
+      },
+      "3": {
+        "type": "toggle",
+        "value": true
+      }
     }
   }
 }
