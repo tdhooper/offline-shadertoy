@@ -1581,6 +1581,8 @@ float map(vec3 p) {
     // d = min(d, length(p - o) - .03);
     // return d;
 
+    float scale = .25;
+    p /= scale;
     TriPoints3D points;
     float d;
     float delay;
@@ -1589,13 +1591,14 @@ float map(vec3 p) {
     float level = 0.;
     vec3 pp = p;
     points = geodesicTriPoints(p, 1.);
-    if (isMapPass) modelAlbedo = spectrum(points.id);
+    // if (isMapPass) modelAlbedo = spectrum(points.id);
     start += calcDelay(points);
     d = drawPlode(p, bound, level, points, start);
     moveIntoHex(p, level, points);
     start += blendDelay;
     d = drawBlend(d, p, level, start, bound);
     // d = max(d, -pp.z);
+    d *= scale;
     return d;
 }
 
