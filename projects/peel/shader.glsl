@@ -328,13 +328,24 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     vec3 bc = faceToSphere(points.bc / uvScale);
     vec3 ca = faceToSphere(points.ca / uvScale);
 
-    float hashId = hash(vec3(int(hexCenter * 1000.)) / 1000.);
+    // float hashId = hash(vec3(int(hexCenter * 1000.)) / 1000.);
+    float ee = 100.;
+    vec3 h = vec3(
+        dot(hexCenter, vec3(1,0,0)),
+        dot(hexCenter, vec3(0,1,0)),
+        dot(hexCenter, vec3(0,0,1))
+    ) * .5 + .5;
+    h = floor(h * ee + .5) / ee;
+    float hashId = hash(h + 2.);
+
     // id = range(.8, -.8, hexCenter.y);
     float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,.5))));
     // float id = range(1., -1., dot(hexCenter, normalize(vec3(0,1,0))));
-    // id = mix(id, hashId, .1);
+    id = mix(id, hashId, .4);
     // id = min(id, .2);
     // id = 0.;
+    // id = hashId;
+
 
     return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca, id);
 }
@@ -1169,10 +1180,10 @@ const float surfaceOffset = .12;
 
 float loopDuration;
 const float stepScale = .15;
-const float plodeDuration = .7;
+const float plodeDuration = .6;
 const float blendDuration = .3;
 const float blendDelay = .0;
-const float plodeMaxDelay = 1.;
+const float plodeMaxDelay = .5;
 #define plodeDistance guiPlodeDistance
 
 float mEdge(vec3 p, TriPoints3D points) {
