@@ -1,5 +1,5 @@
 {
-  "id": "peelfractal23",
+  "id": "peelfractal24",
   "camera": {
     "rotation": [
       0.020035402849316597,
@@ -114,6 +114,10 @@
     "edit": {
       "type": "toggle",
       "value": false
+    },
+    "loop": {
+      "type": "toggle",
+      "value": true
     },
     "fixedCamera": {
       "type": "toggle",

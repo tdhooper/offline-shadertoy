@@ -26,6 +26,7 @@ uniform bool guiStep1;
 uniform bool guiStep2;
 uniform bool guiStep3;
 uniform bool guiFixedCamera;
+uniform bool guiLoop;
 
 uniform float guiPlodeDistance;
 uniform float guiCamDistance;
@@ -1375,9 +1376,11 @@ float blendHeadPrepare(float head, float t) {
 float drawPlode(inout vec3 p, inout float bound, float level, TriPoints3D points, float start) {
     float scale = pow(stepScale, level);
     float sectionEdge = mEdge(p, points) * scale;
+    float inner = mHeadInside(p) * scale;
     p -= points.hexCenter * animPlode(start) * plodeDistance;
     float d = mHeadShell(p) * scale;
-    sectionEdge = max(sectionEdge, d  - .2 * scale);
+    sectionEdge = max(sectionEdge, d  - .15 * scale);
+    sectionEdge = max(sectionEdge, -inner  - .15 * scale);
     bound = min(bound, sectionEdge + sectionEps * scale);
     float plodeEdge = mEdge(p, points) * scale;
     d = max(d, -plodeEdge);
@@ -1586,6 +1589,7 @@ float map(vec3 p) {
     float level = 0.;
     vec3 pp = p;
     points = geodesicTriPoints(p, 1.);
+    if (isMapPass) modelAlbedo = spectrum(points.id);
     start += calcDelay(points);
     d = drawPlode(p, bound, level, points, start);
     moveIntoHex(p, level, points);
@@ -1669,6 +1673,7 @@ struct Hit {
     vec3 rayOrigin;
     float rayLength;
     vec3 rayDirection;
+    float steps;
 };
 
 float calcAO( in vec3 pos, in vec3 nor )
@@ -1747,6 +1752,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
     float rayLength = 0.;
     bool isBackground = true;
     isMapPass = true;
+    float steps = 0.;
 
     for(int i = 0; i < NUM_OF_TRACE_STEPS; i++){
         if (currentDist < INTERSECTION_PRECISION) {
@@ -1758,6 +1764,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         }
         currentDist = mapDebug(rayOrigin + rayDirection * rayLength);
         rayLength += currentDist;
+        steps += 1.;
     }
 
     isMapPass = false;
@@ -1779,7 +1786,8 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         normal,
         rayOrigin,
         rayLength,
-        rayDirection
+        rayDirection,
+        steps
     );
 }
 
@@ -1799,7 +1807,9 @@ void main() {
     time /= 2.;
     // time -= .1;
     // time *= .333;
-    time = mod(time, 1.);
+    if (guiLoop) {
+        time = mod(time, 1.);
+    }
     time *= loopDuration;
 
 
@@ -1879,6 +1889,8 @@ void main() {
 
     // color = spectrum(mix(.0, .6, color.r)) * pow(color, vec3(2.));
     // color = pow(color, vec3(1. / 2.2)); // Gamma
+
+    // color = spectrum(hit.steps / 400.);
 
     gl_FragColor = vec4(color, 1);
     
