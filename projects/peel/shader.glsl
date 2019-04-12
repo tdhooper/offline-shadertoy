@@ -330,7 +330,7 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
 
     float hashId = hash(vec3(int(hexCenter * 1000.)) / 1000.);
     // id = range(.8, -.8, hexCenter.y);
-    float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,0))));
+    float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,.5))));
     // float id = range(1., -1., dot(hexCenter, normalize(vec3(0,1,0))));
     // id = mix(id, hashId, .1);
     // id = min(id, .2);
@@ -1169,10 +1169,10 @@ const float surfaceOffset = .12;
 
 float loopDuration;
 const float stepScale = .15;
-const float plodeDuration = .8;
+const float plodeDuration = .7;
 const float blendDuration = .3;
 const float blendDelay = .0;
-const float plodeMaxDelay = 1.5;
+const float plodeMaxDelay = 1.;
 #define plodeDistance guiPlodeDistance
 
 float mEdge(vec3 p, TriPoints3D points) {
@@ -1715,7 +1715,7 @@ vec3 render(Hit hit, vec3 col) {
 
 const float MAX_TRACE_DISTANCE = 4.5;
 const float INTERSECTION_PRECISION = .0001;
-const int NUM_OF_TRACE_STEPS = 250;
+const int NUM_OF_TRACE_STEPS = 550;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
@@ -1864,7 +1864,7 @@ void main() {
         gl_FragDepthEXT = depth;
     }
 
-    color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 7., MAX_TRACE_DISTANCE, hit.rayLength), .33));
+    color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 5., MAX_TRACE_DISTANCE, hit.rayLength), .33));
 
     // color = spectrum(mix(.0, .6, color.r)) * pow(color, vec3(2.));
     // color = pow(color, vec3(1. / 2.2)); // Gamma
