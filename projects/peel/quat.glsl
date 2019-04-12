@@ -1,3 +1,4 @@
+// From https://github.com/mattatz/ShibuyaCrowd/blob/master/source/shaders/common/quaternion.glsl
 
 #define QUATERNION_IDENTITY vec4(0, 0, 0, 1)
 
