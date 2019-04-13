@@ -506,6 +506,7 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 // --------------------------------------------------------
 
 bool isMapPass = false;
+bool isAoPass = false;
 
 struct Model {
     float dist;
@@ -622,6 +623,8 @@ float mHead(vec3 p, bool bounded) {
 
     // return length(p) - .5;
     
+    bounded = bounded && ! isAoPass;
+
     if (guiEdit) {
         p.z -= .01;
         p.y -= .08;
@@ -635,7 +638,7 @@ float mHead(vec3 p, bool bounded) {
     bound = smax(bound, abs(p.x) - .4, .2);
     bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
 
-    return bound += .03;
+    // return bound += .03;
 
     if (bounded && bound > .01) {
         return bound;
@@ -1400,7 +1403,9 @@ float drawBlend(float d, vec3 p, float level, float start, float bound) {
     float blend = animBlend(start);
     d2 = blendHeadPrepare(d2, blend);
     d = mix(d, d2, blend);
-    d = min(d, bound);
+    if ( ! isAoPass) {
+        d = min(d, bound);
+    }
     return d;
 }
 
@@ -1532,10 +1537,17 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
     //return max(q.y - h.y, max(dot(vec2(cos(PI/3), sin(PI/3)), q.zx), q.z) - h.x);
 }
 
+vec3 LIGHT_POS = vec3(-.2,.12,.2) * 5.;
+
 float map(vec3 p) {
 
+
+
     // if ( ! guiEdit) {
-        return mapAnim(p);
+        float ad = mapAnim(p);
+        // ad = min(ad, length(p - LIGHT_POS) - .01);
+        // ad = length(p - LIGHT_POS) - .1;
+        return ad;
     // }
 
     // float t = clamp(mod(iTime, 1.5), 0., 1.);
@@ -1679,8 +1691,53 @@ struct Hit {
     float steps;
 };
 
+#define HASHSCALE1 .1031
+float hash(float p)
+{
+    vec3 p3  = fract(vec3(p) * HASHSCALE1);
+    p3 += dot(p3, p3.yzx + 19.19);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+vec3 randomSphereDir(vec2 rnd)
+{
+    float s = rnd.x*PI*2.;
+    float t = rnd.y*2.-1.;
+    return vec3(sin(s), cos(s), t) / sqrt(1.0 + t * t);
+}
+vec3 randomHemisphereDir(vec3 dir, float i)
+{
+    vec3 v = randomSphereDir( vec2(hash(i+1.), hash(i+2.)) );
+    return v * sign(dot(v, dir));
+}
+
+float ambientOcclusion( in vec3 p, in vec3 n, in float maxDist, in float falloff )
+{
+    isAoPass = true;
+    const int nbIte = 32;
+    const float nbIteInv = 1./float(nbIte);
+    const float rad = 1.-1.*nbIteInv; //Hemispherical factor (self occlusion correction)
+    
+    float ao = 0.0;
+    
+    for( int i=0; i<nbIte; i++ )
+    {
+        float l = hash(float(i))*maxDist;
+        vec3 rd = normalize(n+randomHemisphereDir(n, l )*rad)*l; // mix direction with the normal
+                                                                // for self occlusion problems!
+        
+        ao += (l - max(map( p + rd ),0.)) / maxDist * falloff;
+    }
+    isAoPass = false;
+    return clamp( 1.-ao*nbIteInv, 0., 1.);
+}
+
+
+
 float calcAO( in vec3 pos, in vec3 nor )
 {
+    return ambientOcclusion(pos, nor, .2, .9);
+    isAoPass = true;
     float occ = 0.0;
     float sca = 1.0;
     for( int i=0; i<5; i++ )
@@ -1691,13 +1748,105 @@ float calcAO( in vec3 pos, in vec3 nor )
         occ += -(dd-hr)*sca;
         sca *= 0.95;
     }
+    isAoPass = false;
     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );
 }
 
 #pragma glslify: distanceMeter = require(../clifford-torus/distance-meter.glsl)
 
+// float 
+
+float calcSoftshadow(vec3 ro, vec3 rd, float initialStep, float tmax) {
+    isAoPass = true;
+    float lit = 1.0;
+    float d;
+    float rl = initialStep;
+    for(int i = 0; i < 256; i++) {
+        d = map(ro + rd * rl);
+        lit = min(lit, 2. * d / min(rl, tmax / 2.));
+        rl += d / 10.;
+        if (lit < 0.0001 || rl > tmax) break;
+    }
+    isAoPass = false;
+    return saturate(lit);
+}
+
+float G1V(float dnv, float k){
+    return 1.0/(dnv*(1.0-k)+k);
+}
+
+float ggx(vec3 n, vec3 v, vec3 l, float rough, float f0){
+    float alpha = rough*rough;
+    vec3 h = normalize(v+l);
+    float dnl = clamp(dot(n,l), 0.0, 1.0);
+    float dnv = clamp(dot(n,v), 0.0, 1.0);
+    float dnh = clamp(dot(n,h), 0.0, 1.0);
+    float dlh = clamp(dot(l,h), 0.0, 1.0);
+    float f, d, vis;
+    float asqr = alpha*alpha;
+    const float pi = 3.14159;
+    float den = dnh*dnh*(asqr-1.0)+1.0;
+    d = asqr/(pi * den * den);
+    dlh = pow(1.0-dlh, 5.0);
+    f = f0 + (1.0-f0)*dlh;
+    float k = alpha/1.0;
+    vis = G1V(dnl, k)*G1V(dnv, k);
+    float spec = dnl * d * f * vis;
+    return spec;
+}
+
+vec3 shade(vec3 p, vec3 rd, vec3 n){
+    vec3 lp = LIGHT_POS;
+
+    vec3 ld = normalize(lp-p);
+    // return ld;
+    // return vec3(saturate(dot(n, ld)));
+    
+    float fresnel = pow( max(0.0, 1.0+dot(n, rd)), 5.0 );
+    
+    vec3 final = vec3(0);
+    vec3 ambient = vec3(.5);
+    vec3 albedo = vec3(1.);
+    vec3 sky = vec3(0.5,0.65,0.8)*2.0;
+    
+    float lamb = max(0.0, dot(n, ld));
+    float spec = ggx(n, rd, ld, 2., fresnel);
+
+    float ao = calcAO(p, n);
+    lamb *= ao;
+    float shadow = calcSoftshadow(p, ld, .01, 1.);
+    // return vec3(shadow);
+    lamb *= shadow;
+    spec *= shadow;
+
+    // artistic license
+    final = ambient + albedo * lamb + 5. * spec + fresnel * sky;
+    final = ambient + albedo * lamb + 2. * spec;
+    return vec3(final*0.5);
+}
+
+// linear white point
+const float W = 1.2;
+const float T2 = 7.5;
+
+float filmic_reinhard_curve (float x) {
+    float q = (T2*T2 + 1.0)*x*x;    
+    return q / (q + x + T2*T2);
+}
+
+vec3 filmic_reinhard(vec3 x) {
+    float w = filmic_reinhard_curve(W);
+    return vec3(
+        filmic_reinhard_curve(x.r),
+        filmic_reinhard_curve(x.g),
+        filmic_reinhard_curve(x.b)) / w;
+}
+
 vec3 render(Hit hit, vec3 col) {
     if ( ! hit.isBackground) {
+        // return hit.normal * .5 + .5;
+
+        return shade(hit.pos, hit.rayDirection, hit.normal);
         // The simple ambient occlusion method results in hot spots
         // at the base and sides of the balls. This is a result of
         // the limited samples we do across the normal. In reality
@@ -1738,7 +1887,7 @@ const int NUM_OF_TRACE_STEPS = 550;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3(.0001,0,0);
+    vec3 eps = vec3(.00001,0,0);
     vec3 nor = vec3(0);
     float invert = 1.;
     for (int i = 0; i < NORMAL_STEPS; i++){
@@ -1835,7 +1984,7 @@ void main() {
 
     vec3 bg = vec3(.7,.8,.9) * 1.1;
     bg *= .8;
-    bg = vec3(.05);
+    bg = vec3(1.);
 
     Hit hit = raymarch(rayOrigin, rayDirection);
     vec3 color = render(hit, bg);
@@ -1890,10 +2039,16 @@ void main() {
 
     color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 5., MAX_TRACE_DISTANCE, hit.rayLength), .33));
 
-    // color = spectrum(mix(.0, .6, color.r)) * pow(color, vec3(2.));
+    color *= 1.2;
+
+    // vec3 tint = spectrum(mix(.0, .6, color.r));
+    // tint *= pow(color, vec3(2.));
+    // color *= mix(vec3(1.), tint, .1);
     // color = pow(color, vec3(1. / 2.2)); // Gamma
 
     // color = spectrum(hit.steps / 400.);
+
+    color = filmic_reinhard(color);
 
     gl_FragColor = vec4(color, 1);
     
