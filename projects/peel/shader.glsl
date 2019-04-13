@@ -27,6 +27,7 @@ uniform bool guiStep2;
 uniform bool guiStep3;
 uniform bool guiFixedCamera;
 uniform bool guiLoop;
+uniform float guiRand;
 
 uniform float guiPlodeDistance;
 uniform float guiCamDistance;
@@ -337,12 +338,14 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
         dot(hexCenter, vec3(0,0,1))
     ) * .5 + .5;
     h = floor(h * ee + .5) / ee;
-    float hashId = hash(h + 2.);
+    float seed = guiRand;
+    seed = .6;
+    float hashId = hash(h + seed);
 
     // id = range(.8, -.8, hexCenter.y);
-    float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,.5))));
+    float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,.25))));
     // float id = range(1., -1., dot(hexCenter, normalize(vec3(0,1,0))));
-    id = mix(id, hashId, .4);
+    id = mix(id, hashId, .3);
     // id = min(id, .2);
     // id = 0.;
     // id = hashId;

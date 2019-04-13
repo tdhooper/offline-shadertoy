@@ -191,7 +191,7 @@ module.exports = (project) => {
   const captureRender = (milliseconds, done) => {
     timer.set(milliseconds);
     draw();
-    done();
+    setTimeout(done, 10);
   };
 
   // Default config used by the UI
