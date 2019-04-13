@@ -617,7 +617,7 @@ float mHeadApprox(vec3 p) {
 
 float mHead(vec3 p, bool bounded) {
 
-    // modelAlbedo = vec3(1);
+    if (isMapPass) modelAlbedo = vec3(1);
 
     // return fBox(p, vec3(.4));
 
@@ -647,7 +647,6 @@ float mHead(vec3 p, bool bounded) {
     vec3 pa = p;
     p.x = abs(p.x);
     vec3 pp = p;
-
 
     float d = 1e12;
 
@@ -953,7 +952,9 @@ float mHead(vec3 p, bool bounded) {
     // eyeball
     p = pp;
     p += vec3(-.165,.0715,-.346);
-    d = min(d, length(p) - .088);
+    float eyeball = length(p) - .088;
+    if (isMapPass && eyeball < d) modelAlbedo = vec3(-.775);
+    d = min(d, eyeball);
 
     // tear duct
     p = pp;
@@ -1399,10 +1400,12 @@ void moveIntoHex(inout vec3 p, inout float level, TriPoints3D points) {
 }
 
 float drawBlend(float d, vec3 p, float level, float start, float bound) {
+    vec3 albedo = modelAlbedo;
     float d2 = mHead(p, false) * pow(stepScale, level);
     float blend = animBlend(start);
     d2 = blendHeadPrepare(d2, blend);
     d = mix(d, d2, blend);
+    modelAlbedo = mix(albedo, modelAlbedo, blend);
     if ( ! isAoPass) {
         d = min(d, bound);
     }
@@ -1806,21 +1809,23 @@ vec3 shade(vec3 p, vec3 rd, vec3 n){
     
     vec3 final = vec3(0);
     vec3 ambient = vec3(.5);
-    vec3 albedo = vec3(1.);
-    vec3 sky = vec3(0.5,0.65,0.8)*2.0;
+    vec3 albedo = modelAlbedo;
+    vec3 sky = vec3(.2);
     
     float lamb = max(0.0, dot(n, ld));
     float spec = ggx(n, rd, ld, 2., fresnel);
 
     float ao = calcAO(p, n);
     lamb *= ao;
+    // float amb = saturate(n.y * .5 + .5) * ao;
     float shadow = calcSoftshadow(p, ld, .01, 1.);
+    shadow = mix(shadow, 1., .1);
     // return vec3(shadow);
     lamb *= shadow;
     spec *= shadow;
 
     // artistic license
-    final = ambient + albedo * lamb + 5. * spec + fresnel * sky;
+    // final = ambient + albedo * lamb + 2. * spec + fresnel * sky;
     final = ambient + albedo * lamb + 2. * spec;
     return vec3(final*0.5);
 }
@@ -1984,7 +1989,8 @@ void main() {
 
     vec3 bg = vec3(.7,.8,.9) * 1.1;
     bg *= .8;
-    bg = vec3(1.);
+    // bg = mix(vec3(.5), vec3(1,0,1), .25);
+    bg = vec3(.2);
 
     Hit hit = raymarch(rayOrigin, rayDirection);
     vec3 color = render(hit, bg);
@@ -2041,10 +2047,14 @@ void main() {
 
     color *= 1.2;
 
-    // vec3 tint = spectrum(mix(.0, .6, color.r));
+    float tintl = color.r;
+    tintl = pow(tintl, 2.);
+    vec3 tint = spectrum(mix(.5, -.2, tintl));
     // tint *= pow(color, vec3(2.));
-    // color *= mix(vec3(1.), tint, .1);
+    color *= mix(vec3(1.), tint, .3);
     // color = pow(color, vec3(1. / 2.2)); // Gamma
+
+    color *= 1.2;
 
     // color = spectrum(hit.steps / 400.);
 
