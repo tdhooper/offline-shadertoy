@@ -32,6 +32,7 @@ uniform bool guiStep3;
 uniform bool guiFixedCamera;
 uniform bool guiLoop;
 uniform float guiRand;
+uniform bool guiMultiscreen;
 
 uniform float guiPlodeDistance;
 uniform float guiCamDistance;
@@ -1990,8 +1991,10 @@ void main() {
     // time -= .1;
     // time *= .333;
 
-    float screen = floor(vVertex.x) + floor(1.-vVertex.y) * 2.;
-    time += screen / 4.;
+    if (guiMultiscreen) {
+        float screen = floor(vVertex.x) + floor(1.-vVertex.y) * 2.;
+        time += screen / 4.;
+    }
 
     if (guiLoop) {
         time = mod(time, 1.);
@@ -2001,10 +2004,13 @@ void main() {
     SHADE_DEBUG = (gl_FragCoord.x / iResolution.x) > .5;
     SHADE_DEBUG = SHADE_DEBUG == (gl_FragCoord.y / iResolution.y) > .5;
 
+    vec3 dir2 = dir;
+    vec3 cameraForward2 = cameraForward;
 
-    vec3 dir2 = vec3(vertex.x * fov * aspect, vertex.y * fov,-1.0) * mat3(vView);
-    vec3 cameraForward2 = vec3(0,0,-1) * mat3(vView);
-
+    if (guiMultiscreen) {
+        dir2 = vec3(vertex.x * fov * aspect, vertex.y * fov,-1.0) * mat3(vView);
+        cameraForward2 = vec3(0,0,-1) * mat3(vView);
+    }
 
     vec3 rayOrigin = eye;
     vec3 rayDirection = normalize(dir2);

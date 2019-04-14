@@ -1,5 +1,5 @@
 {
-  "id": "peelfractal30",
+  "id": "peelfractal31",
   "camera": {
     "rotation": [
       0.03302038460969925,
@@ -119,6 +119,10 @@
     "anotherLevel": {
       "type": "toggle",
       "value": false
+    },
+    "multiscreen": {
+      "type": "toggle",
+      "value": true
     },
     "edit": {
       "type": "toggle",
