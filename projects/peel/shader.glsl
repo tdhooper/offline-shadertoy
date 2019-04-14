@@ -68,6 +68,14 @@ float hash(const in vec3 p) {
     return fract(sin(dot(p,vec3(127.1,311.7,758.5453123)))*43758.5453123);
 }
 
+vec3 hash3( vec2 p )
+{
+    vec3 q = vec3( dot(p,vec2(127.1,311.7)), 
+                   dot(p,vec2(269.5,183.3)), 
+                   dot(p,vec2(419.2,371.9)) );
+    return fract(sin(q)*43758.5453);
+}
+
 
 // --------------------------------------------------------
 // IQ
@@ -559,6 +567,7 @@ float ellip(vec2 p, vec2 s) {
 
 vec3 MAIN_COL = vec3(.583,.643,.68);
 vec3 modelAlbedo = MAIN_COL;
+float isSkin = 0.;
 
 float mHeadInside(vec3 p) {
     pR(p.yz, -.1);
@@ -627,7 +636,10 @@ float mHeadApprox(vec3 p) {
 
 float mHead(vec3 p, bool bounded) {
 
-    if (isMapPass) modelAlbedo = MAIN_COL;
+    if (isMapPass) {
+        modelAlbedo = MAIN_COL;
+        isSkin = 1.;
+    }
 
     // return fBox(p, vec3(.4));
 
@@ -963,7 +975,10 @@ float mHead(vec3 p, bool bounded) {
     p = pp;
     p += vec3(-.165,.0715,-.346);
     float eyeball = length(p) - .088;
-    if (isMapPass && eyeball < d) modelAlbedo = vec3(1.2);
+    if (isMapPass && eyeball < d) {
+        modelAlbedo = vec3(1.2);
+        isSkin = 0.;
+    }
     d = min(d, eyeball);
 
     // tear duct
@@ -1397,7 +1412,10 @@ float drawPlode(inout vec3 p, inout float bound, float level, TriPoints3D points
     sectionEdge = max(sectionEdge, -inner  - .15 * scale);
     bound = min(bound, sectionEdge + sectionEps * scale);
     float plodeEdge = mEdge(p, points) * scale;
-    if (isMapPass && -plodeEdge > d) modelAlbedo = MAIN_COL;
+    if (isMapPass && -plodeEdge > d) {
+        modelAlbedo = MAIN_COL;
+        isSkin = 0.;
+    }
     d = max(d, -plodeEdge);
     return d;
 }
@@ -1411,12 +1429,14 @@ void moveIntoHex(inout vec3 p, inout float level, TriPoints3D points) {
 }
 
 float drawBlend(float d, vec3 p, float level, float start, float bound) {
-    vec3 albedo = modelAlbedo;
+    vec3 _modelAlbedo = modelAlbedo;
+    float _isSkin = isSkin;
     float d2 = mHead(p, false) * pow(stepScale, level);
     float blend = animBlend(start);
     d2 = blendHeadPrepare(d2, blend);
     d = mix(d, d2, blend);
-    modelAlbedo = mix(albedo, modelAlbedo, blend);
+    modelAlbedo = mix(_modelAlbedo, modelAlbedo, blend);
+    isSkin = mix(_isSkin, isSkin, blend);
     if ( ! isAoPass) {
         d = min(d, bound);
     }
@@ -1833,6 +1853,8 @@ vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 a
 
 bool SHADE_DEBUG = false;
 
+vec3 screenhash;
+
 vec3 shade(vec3 p, vec3 rd, vec3 n) {
     float fresnel = pow( max(0.0, 1.0+dot(n, rd)), 5.0 );
     vec3 albedo = modelAlbedo;
@@ -1840,6 +1862,8 @@ vec3 shade(vec3 p, vec3 rd, vec3 n) {
     vec3 ambient = vec3(.6) * albedo;
     float ao = calcAO(p, n);
     ambient *= ao;
+
+    n = mix(n, normalize(n + screenhash * .1), isSkin);
 
     vec3 l1 = shadeLight(p, rd, n, fresnel, LIGHT_POS, vec3(1), albedo);
     //// vec3 l1 = shadeLight(p, rd, n, fresnel, vec3(-.2,.1,.1) * 5., vec3(1,0,0), albedo);
@@ -2016,19 +2040,21 @@ void main() {
     vec3 rayOrigin = eye;
     vec3 rayDirection = normalize(dir2);
 
+    vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.y;
+
     if (guiFixedCamera) {
         vec3 camPos = vec3(0,-.1,.5) * guiCamDistance;
         vec3 camTar = vec3(0,-.05,0) * guiCamLookDown;
         vec3 camUp = vec3(0,1,0);
         mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
         float focalLength = 2.4;
-        vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.y;
         rayDirection = normalize(camMat * vec3(p, focalLength));
         rayOrigin = camPos;
     }
 
     vec3 rayPosition = rayOrigin;
 
+    screenhash = hash3(p + time);
 
     vec3 bg = vec3(.7,.8,.9) * 1.1;
     bg *= .8;
