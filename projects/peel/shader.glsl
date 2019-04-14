@@ -551,7 +551,8 @@ float ellip(vec2 p, vec2 s) {
     return length(p) - r;
 }
 
-vec3 modelAlbedo = vec3(1);
+vec3 MAIN_COL = vec3(.583,.643,.68);
+vec3 modelAlbedo = MAIN_COL;
 
 float mHeadInside(vec3 p) {
     pR(p.yz, -.1);
@@ -620,7 +621,7 @@ float mHeadApprox(vec3 p) {
 
 float mHead(vec3 p, bool bounded) {
 
-    if (isMapPass) modelAlbedo = vec3(1);
+    if (isMapPass) modelAlbedo = MAIN_COL;
 
     // return fBox(p, vec3(.4));
 
@@ -956,7 +957,7 @@ float mHead(vec3 p, bool bounded) {
     p = pp;
     p += vec3(-.165,.0715,-.346);
     float eyeball = length(p) - .088;
-    if (isMapPass && eyeball < d) modelAlbedo = vec3(-.775);
+    if (isMapPass && eyeball < d) modelAlbedo = vec3(1.2);
     d = min(d, eyeball);
 
     // tear duct
@@ -1548,10 +1549,10 @@ vec3 LIGHT_POS = vec3(-.2,.12,.2) * 5.;
 float map(vec3 p) {
 
     // if ( ! guiEdit) {
-        // float ad = mapAnim(p);
-        // // ad = min(ad, length(p - LIGHT_POS) - .01);
-        // // ad = length(p - LIGHT_POS) - .1;
-        // return ad;
+        float ad = mapAnim(p);
+        // ad = min(ad, length(p - LIGHT_POS) - .01);
+        // ad = length(p - LIGHT_POS) - .1;
+        return ad;
     // }
 
     // float t = clamp(mod(iTime, 1.5), 0., 1.);
@@ -1805,36 +1806,42 @@ float ggx(vec3 n, vec3 v, vec3 l, float rough, float f0){
     return spec;
 }
 
-vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc) {
+vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 albedo) {
     vec3 ld = normalize(lp-p);
-    
-    vec3 albedo = modelAlbedo;
 
     float shadow = calcSoftshadow(p, ld, .01, 1.);
     shadow = mix(shadow, 1., .1);
 
     float diff = max(0.0, dot(n, ld));
-    float spec = ggx(n, rd, ld, 2., fresnel);
+    float spec = ggx(n, rd, ld, 3., fresnel);
 
     diff *= shadow;
     spec *= shadow;
 
-    return albedo * diff + 2. * spec;
+    vec3 specC = lc * 4.;
+    specC = spectrum(dot(n, ld) - .2) * 2.;
+
+    return (albedo * diff + spec * specC);
 }
 
 bool SHADE_DEBUG = false;
 
 vec3 shade(vec3 p, vec3 rd, vec3 n) {
     float fresnel = pow( max(0.0, 1.0+dot(n, rd)), 5.0 );
+    vec3 albedo = modelAlbedo;
 
-    vec3 ambient = vec3(.5);
+    vec3 ambient = vec3(.6) * albedo;
     float ao = calcAO(p, n);
     ambient *= ao;
 
-    vec3 l1 = shadeLight(p, rd, n, fresnel, LIGHT_POS, vec3(1));
+    vec3 l1 = shadeLight(p, rd, n, fresnel, LIGHT_POS, vec3(1), albedo);
+    // vec3 l1 = shadeLight(p, rd, n, fresnel, vec3(-.2,.1,.1) * 5., vec3(1,0,0), albedo);
+    vec3 l2 = shadeLight(p, rd, n, fresnel, vec3(-.05,-.3,-.1) * 5., vec3(1), albedo);
+    // vec3 l2 = shadeLight(p, rd, n, fresnel, -LIGHT_POS, vec3(1), albedo);
+    vec3 l3 = shadeLight(p, rd, n, fresnel, vec3(.2,-.1,.0) * 5., vec3(1), albedo);
 
-    vec3 final = ambient + l1;
-    return final * .5;
+    vec3 final = ambient + l1 + l3 + l2;
+    return final;
 }
 
 // linear white point
@@ -1999,7 +2006,7 @@ void main() {
     vec3 bg = vec3(.7,.8,.9) * 1.1;
     bg *= .8;
     // bg = mix(vec3(.5), vec3(1,0,1), .25);
-    bg = vec3(.2);
+    bg = MAIN_COL;
 
     Hit hit = raymarch(rayOrigin, rayDirection);
     vec3 color = render(hit, bg);
@@ -2054,16 +2061,16 @@ void main() {
 
     color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 5., MAX_TRACE_DISTANCE, hit.rayLength), .33));
 
-    color *= 1.2;
+    // color *= 1.2;
 
-    float tintl = color.r;
-    tintl = pow(tintl, 2.);
-    vec3 tint = spectrum(mix(.5, -.2, tintl));
-    // tint *= pow(color, vec3(2.));
-    color *= mix(vec3(1.), tint, .3);
-    // color = pow(color, vec3(1. / 2.2)); // Gamma
+    // float tintl = color.r;
+    // tintl = pow(tintl, 2.);
+    // vec3 tint = spectrum(mix(.5, -.2, tintl));
+    // // tint *= pow(color, vec3(2.));
+    // color *= mix(vec3(1.), tint, .3);
+    // // color = pow(color, vec3(1. / 2.2)); // Gamma
 
-    color *= 1.2;
+    // color *= 1.2;
 
     // color = spectrum(hit.steps / 400.);
 
