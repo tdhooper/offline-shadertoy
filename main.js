@@ -196,7 +196,7 @@ module.exports = (project) => {
 
   // Default config used by the UI
   const captureConfig = {
-    fps: 40,
+    fps: 50,
     seconds: 1, // (duration)
     width: 640 * 2,
     height: 360 * 2,
