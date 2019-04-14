@@ -14,6 +14,10 @@ uniform mat4 projection;
 varying vec3 eye;
 varying vec3 dir;
 varying vec3 cameraForward;
+varying mat4 vView;
+varying float fov;
+varying float aspect;
+varying vec2 vVertex;
 
 uniform bool guiBlend;
 uniform bool guiSplit;
@@ -1975,20 +1979,32 @@ void main() {
 
     loopDuration = blendDelay + blendDuration + focusDelay;
 
+    vec2 vertex = vVertex;
+    vertex = mod(vertex, 1.) * 2. - 1.;
+
     time = iTime;
-    time /= 2.;
+    time /= 3.;
     // time -= .1;
     // time *= .333;
+
+    float screen = floor(vVertex.x) + floor(1.-vVertex.y) * 2.;
+    time += screen / 4.;
+
     if (guiLoop) {
         time = mod(time, 1.);
     }
     time *= loopDuration;
 
     SHADE_DEBUG = (gl_FragCoord.x / iResolution.x) > .5;
+    SHADE_DEBUG = SHADE_DEBUG == (gl_FragCoord.y / iResolution.y) > .5;
+
+
+    vec3 dir2 = vec3(vertex.x * fov * aspect, vertex.y * fov,-1.0) * mat3(vView);
+    vec3 cameraForward2 = vec3(0,0,-1) * mat3(vView);
 
 
     vec3 rayOrigin = eye;
-    vec3 rayDirection = normalize(dir);
+    vec3 rayDirection = normalize(dir2);
 
     if (guiFixedCamera) {
         vec3 camPos = vec3(0,-.1,.5) * guiCamDistance;
@@ -2016,7 +2032,7 @@ void main() {
         // color = vec3(0,0,1);
         // color = pow(color, vec3(1. / 2.2)); // Gamma
 
-        float eyeHitZ = -hit.rayLength * dot(rayDirection, cameraForward);
+        float eyeHitZ = -hit.rayLength * dot(rayDirection, cameraForward2);
 
         vec3 eyeSpace = vec3(0, 0, eyeHitZ);
         float zc = ( projection * vec4(eyeSpace, 1)).z;
