@@ -1397,6 +1397,7 @@ float drawPlode(inout vec3 p, inout float bound, float level, TriPoints3D points
     sectionEdge = max(sectionEdge, -inner  - .15 * scale);
     bound = min(bound, sectionEdge + sectionEps * scale);
     float plodeEdge = mEdge(p, points) * scale;
+    if (isMapPass && -plodeEdge > d) modelAlbedo = MAIN_COL;
     d = max(d, -plodeEdge);
     return d;
 }
