@@ -1805,36 +1805,36 @@ float ggx(vec3 n, vec3 v, vec3 l, float rough, float f0){
     return spec;
 }
 
-vec3 shade(vec3 p, vec3 rd, vec3 n){
-    vec3 lp = LIGHT_POS;
-
+vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc) {
     vec3 ld = normalize(lp-p);
-    // return ld;
-    // return vec3(saturate(dot(n, ld)));
     
-    float fresnel = pow( max(0.0, 1.0+dot(n, rd)), 5.0 );
-    
-    vec3 final = vec3(0);
-    vec3 ambient = vec3(.5);
     vec3 albedo = modelAlbedo;
-    vec3 sky = vec3(.2);
-    
-    float lamb = max(0.0, dot(n, ld));
-    float spec = ggx(n, rd, ld, 2., fresnel);
 
-    float ao = calcAO(p, n);
-    lamb *= ao;
-    // float amb = saturate(n.y * .5 + .5) * ao;
     float shadow = calcSoftshadow(p, ld, .01, 1.);
     shadow = mix(shadow, 1., .1);
-    // return vec3(shadow);
-    lamb *= shadow;
+
+    float diff = max(0.0, dot(n, ld));
+    float spec = ggx(n, rd, ld, 2., fresnel);
+
+    diff *= shadow;
     spec *= shadow;
 
-    // artistic license
-    // final = ambient + albedo * lamb + 2. * spec + fresnel * sky;
-    final = ambient + albedo * lamb + 2. * spec;
-    return vec3(final*0.5);
+    return albedo * diff + 2. * spec;
+}
+
+bool SHADE_DEBUG = false;
+
+vec3 shade(vec3 p, vec3 rd, vec3 n) {
+    float fresnel = pow( max(0.0, 1.0+dot(n, rd)), 5.0 );
+
+    vec3 ambient = vec3(.5);
+    float ao = calcAO(p, n);
+    ambient *= ao;
+
+    vec3 l1 = shadeLight(p, rd, n, fresnel, LIGHT_POS, vec3(1));
+
+    vec3 final = ambient + l1;
+    return final * .5;
 }
 
 // linear white point
@@ -1976,6 +1976,8 @@ void main() {
     }
     time *= loopDuration;
 
+    SHADE_DEBUG = (gl_FragCoord.x / iResolution.x) > .5;
+
 
     vec3 rayOrigin = eye;
     vec3 rayDirection = normalize(dir);
@@ -2064,6 +2066,8 @@ void main() {
     color *= 1.2;
 
     // color = spectrum(hit.steps / 400.);
+
+    // if (SHADE_DEBUG) color *= 2.;
 
     color = filmic_reinhard(color);
 
