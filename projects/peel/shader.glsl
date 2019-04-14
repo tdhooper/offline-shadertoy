@@ -1550,7 +1550,7 @@ float fHexagonCircumcircle(vec3 p, vec2 h) {
     //return max(q.y - h.y, max(dot(vec2(cos(PI/3), sin(PI/3)), q.zx), q.z) - h.x);
 }
 
-vec3 LIGHT_POS = vec3(-.2,.12,.2) * 5.;
+vec3 LIGHT_POS = vec3(-.1,.12,.2) * 5.;
 
 float map(vec3 p) {
 
@@ -1825,7 +1825,7 @@ vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 a
     spec *= shadow;
 
     vec3 specC = lc * 4.;
-    specC = spectrum(dot(n, ld) - .2) * 2.;
+    specC = spectrum(dot(n, ld) - .2) * 1.;
 
     return (albedo * diff + spec * specC);
 }
