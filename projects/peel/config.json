@@ -1,5 +1,5 @@
 {
-  "id": "peelfractal27",
+  "id": "peelfractal28",
   "camera": {
     "rotation": [
       0.03302038460969925,
@@ -96,7 +96,9 @@
       "step": 0.01,
       "min": 0,
       "max": 3,
-      "value": 1
+      "value": 1,
+      "hotkeyUp": "]",
+      "hotkeyDown": "["
     },
     "blend": {
       "type": "toggle",

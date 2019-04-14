@@ -24,6 +24,7 @@
     "glsl-solid-wireframe": "^1.0.1",
     "glslify": "^7.0.0",
     "glslify-import": "^3.1.0",
+    "hotkeys-js": "^3.6.2",
     "key-pressed": "0.0.1",
     "mouse-change": "^1.4.0",
     "pad-number": "0.0.4",
