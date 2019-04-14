@@ -1867,7 +1867,7 @@ vec3 shade(vec3 p, vec3 rd, vec3 n) {
 
     vec3 l1 = shadeLight(p, rd, n, fresnel, LIGHT_POS, vec3(1), albedo);
     //// vec3 l1 = shadeLight(p, rd, n, fresnel, vec3(-.2,.1,.1) * 5., vec3(1,0,0), albedo);
-    vec3 l2 = shadeLight(p, rd, n, fresnel, vec3(-.1,-.5,.0) * 5., vec3(1), albedo);
+    vec3 l2 = shadeLight(p, rd, n, fresnel, vec3(.08,-.2,-.025) * 5., vec3(1), albedo);
     //// vec3 l2 = shadeLight(p, rd, n, fresnel, -LIGHT_POS, vec3(1), albedo);
     // vec3 l3 = shadeLight(p, rd, n, fresnel, vec3(.2,-.1,.0) * 5., vec3(1), albedo);
 

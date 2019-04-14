@@ -122,7 +122,7 @@
     },
     "multiscreen": {
       "type": "toggle",
-      "value": true
+      "value": false
     },
     "edit": {
       "type": "toggle",
