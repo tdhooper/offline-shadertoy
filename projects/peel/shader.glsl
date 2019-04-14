@@ -641,7 +641,7 @@ float mHead(vec3 p, bool bounded) {
     bound = smax(bound, abs(p.x) - .4, .2);
     bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
 
-    // return bound += .03;
+    return bound += .03;
 
     if (bounded && bound > .01) {
         return bound;
@@ -1547,13 +1547,11 @@ vec3 LIGHT_POS = vec3(-.2,.12,.2) * 5.;
 
 float map(vec3 p) {
 
-
-
     // if ( ! guiEdit) {
-        float ad = mapAnim(p);
-        // ad = min(ad, length(p - LIGHT_POS) - .01);
-        // ad = length(p - LIGHT_POS) - .1;
-        return ad;
+        // float ad = mapAnim(p);
+        // // ad = min(ad, length(p - LIGHT_POS) - .01);
+        // // ad = length(p - LIGHT_POS) - .1;
+        // return ad;
     // }
 
     // float t = clamp(mod(iTime, 1.5), 0., 1.);
@@ -1599,7 +1597,13 @@ float map(vec3 p) {
     // d = min(d, length(p - o) - .03);
     // return d;
 
-    float scale = .25;
+    p -= vec3(-.1,-.02,-.24);
+
+    pR(p.xz, .7);
+    pR(p.yz, 0.2);
+    pR(p.xy, -.15);
+
+    float scale = .45;
     p /= scale;
     TriPoints3D points;
     float d;
