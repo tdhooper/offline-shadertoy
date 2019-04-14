@@ -2085,7 +2085,8 @@ void main() {
         gl_FragDepthEXT = depth;
     }
 
-    color = mix(color, bg, pow(smoothstep(MAX_TRACE_DISTANCE / 5., MAX_TRACE_DISTANCE, hit.rayLength), .33));
+    float fog = 1. - exp( -(hit.rayLength - length(rayOrigin)) * 1.8 );
+    color = mix(color, bg, fog);
 
     // color *= 1.2;
 
