@@ -565,7 +565,7 @@ float ellip(vec2 p, vec2 s) {
     return length(p) - r;
 }
 
-vec3 MAIN_COL = vec3(.583,.643,.68) * 1.1;
+vec3 MAIN_COL = vec3(.583,.643,.68) * 1.0;
 vec3 modelAlbedo = MAIN_COL;
 float isSkin = 0.;
 
