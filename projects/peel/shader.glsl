@@ -1847,6 +1847,7 @@ vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 a
 
     vec3 specC = lc * 4.;
     specC = spectrum(dot(n, ld) - .2) * 1.;
+    // specC = spectrum(mix(-1., .9, saturate(dot(n, ld)))) * 1.5;
 
     return (albedo * diff + spec * specC);
 }
