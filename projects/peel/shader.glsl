@@ -1408,8 +1408,8 @@ float tweenCamera(inout vec3 p, float animTime, Waypoint w0, Waypoint w1, Waypoi
     return focusScale;
 }
 
-float blendHeadPrepare(float head, float t) {
-    float blendExpand = range(1., .5, t) * stepScale * stepScale;
+float blendHeadPrepare(float head, float t, float scale) {
+    float blendExpand = range(1., .5, t) * scale;
     head = smin(head, head, blendExpand) + blendExpand * .2;
     return head;
 }
@@ -1445,9 +1445,11 @@ void moveIntoHex(inout vec3 p, inout float level, TriPoints3D points) {
 float drawBlend(float d, vec3 p, float level, float start, float bound) {
     vec3 _modelAlbedo = modelAlbedo;
     float _isSkin = isSkin;
-    float d2 = mHead(p, false) * pow(stepScale, level);
+    float scale = pow(stepScale, level);
+    float d2 = mHead(p, false) * scale;
     float blend = animBlend(start);
-    d2 = blendHeadPrepare(d2, blend);
+    // blend = .5;
+    d2 = blendHeadPrepare(d2, blend, scale);
     d = mix(d, d2, blend);
     modelAlbedo = mix(_modelAlbedo, modelAlbedo, blend);
     isSkin = mix(_isSkin, isSkin, blend);
