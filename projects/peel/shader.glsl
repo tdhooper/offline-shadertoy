@@ -629,6 +629,20 @@ float mHeadApprox(vec3 p) {
     nose = smax(nose, dot(p, normalize(vec3(1,.0,-.2))) - .1, .05);
     nose = max(nose, length(p) - .3);
     bound = smin3(bound, nose, .05);
+    // ear
+    p = pp;
+    p -= vec3(.35,-.12,-.1);
+    float ear = ellip(p.zy, vec2(.09,.11));
+    p -= vec3(0,-.15,.05);
+    ear = smin(ear, length(p.zy) - .04, .1);
+    pR(p.xz, .42);
+    pR(p.xy, -.1);
+    ear = max(ear, p.x - .025);
+    bound = min(bound, ear);
+    p = pp;
+    // bring head above ear forward to avoid glitch
+    p -= vec3(.4,.015,-.16);
+    bound = min(bound, length(p) - .035);
     // // // bound = smin(bound, length(p - vec3(0,-.25,.52)) - .1, .1);
     // // // bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
     return bound;
@@ -1592,11 +1606,11 @@ float map(vec3 p) {
     // d = abs(d + w) - w;
     // d = max(d, p.y - .1);
 
-/*
+
     float split = p.x;
     float d = mHead(p, false);
-    float di = mHeadInside(p);
-    TriPoints3D points = geodesicTriPoints(p, 2.);
+    float di = mHeadApprox(p);
+    TriPoints3D points = geodesicTriPoints(p, 1.);
     p *= calcLookAtMatrix(vec3(p), points.hexCenter, vec3(0,1,0));
     float mask = length(p.xy) - .05;
     if (split > 0.) {
@@ -1615,7 +1629,7 @@ float map(vec3 p) {
     }
     if (isMapPass) modelAlbedo = vec3(1);
     return d;
-*/
+
     // return max(mHeadShell(p), p.y - iTime + .5);
 
     // float d = mHeadInside(p);
@@ -1625,31 +1639,31 @@ float map(vec3 p) {
     // d = min(d, length(p - o) - .03);
     // return d;
 
-    p -= vec3(-.1,-.02,-.24);
+    // p -= vec3(-.1,-.02,-.24);
 
-    pR(p.xz, .7);
-    pR(p.yz, 0.2);
-    pR(p.xy, -.15);
+    // pR(p.xz, .7);
+    // pR(p.yz, 0.2);
+    // pR(p.xy, -.15);
 
-    float scale = .45;
-    p /= scale;
-    TriPoints3D points;
-    float d;
-    float delay;
-    float bound = 1e12;
-    float start;
-    float level = 0.;
-    vec3 pp = p;
-    points = geodesicTriPoints(p, 1.);
-    // if (isMapPass) modelAlbedo = spectrum(points.id);
-    start += calcDelay(points);
-    d = drawPlode(p, bound, level, points, start);
-    moveIntoHex(p, level, points);
-    start += blendDelay;
-    d = drawBlend(d, p, level, start, bound);
-    // d = max(d, -pp.z);
-    d *= scale;
-    return d;
+    // float scale = .45;
+    // p /= scale;
+    // TriPoints3D points;
+    // float d;
+    // float delay;
+    // float bound = 1e12;
+    // float start;
+    // float level = 0.;
+    // vec3 pp = p;
+    // points = geodesicTriPoints(p, 1.);
+    // // if (isMapPass) modelAlbedo = spectrum(points.id);
+    // start += calcDelay(points);
+    // d = drawPlode(p, bound, level, points, start);
+    // moveIntoHex(p, level, points);
+    // start += blendDelay;
+    // d = drawBlend(d, p, level, start, bound);
+    // // d = max(d, -pp.z);
+    // d *= scale;
+    // return d;
 }
 
 float mapPlayground(vec3 p) {
