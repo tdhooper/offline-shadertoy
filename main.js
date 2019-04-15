@@ -93,6 +93,36 @@ module.exports = (project) => {
     },
     count: 3,
     uniforms,
+    viewport: {
+      x: function(context, props) {
+        var s = context.viewportWidth;
+        if (props.screenQuad !== undefined) {
+          return props.screenQuad % 2 === 1 ? -s : 0;
+        }
+        return 0;
+      },
+      y: function(context, props) {
+        var s = context.viewportHeight;
+        if (props.screenQuad !== undefined) {
+          return props.screenQuad < 2 ? -s : 0;
+        }
+        return 0;
+      },
+      width: function(context, props) {
+        var s = context.viewportWidth;
+        if (props.screenQuad !== undefined) {
+          return s * 2;
+        }
+        return s;
+      },
+      height: function(context, props) {
+        var s = context.viewportHeight;
+        if (props.screenQuad !== undefined) {
+          return s * 2;
+        }
+        return s;
+      },
+    }
   });
 
   if (project.draw) {
@@ -107,6 +137,7 @@ module.exports = (project) => {
 
   const timer = new Timer();
   const scrubber = createScrubber(timer);
+  let screenQuad = undefined;
 
   const toState = () => {
     const state = {
@@ -116,6 +147,7 @@ module.exports = (project) => {
       cameraPosition: camera.position,
       timer: timer.serialize(),
       mouse,
+      screenQuad,
       r: [canvas.width, canvas.height],
     };
     if (controls) {
@@ -185,21 +217,26 @@ module.exports = (project) => {
   };
 
   const captureTeardown = () => {
+    screenQuad = undefined;
     tick = regl.frame(draw);
   };
 
-  const captureRender = (milliseconds, done) => {
-    timer.set(milliseconds);
-    draw();
-    setTimeout(done, 10);
+  const captureRender = (milliseconds, quad, done) => {
+    setTimeout(function() {
+      timer.set(milliseconds);
+      screenQuad = quad;
+      draw();
+      setTimeout(done, 10);
+    }, 10);
   };
 
   // Default config used by the UI
   const captureConfig = {
-    fps: 50,
+    fps: 35,
     seconds: 1, // (duration)
-    width: 640 * 2,
-    height: 360 * 2,
+    width: (640 * 3) / 2,
+    height: (360 * 3) / 2,
+    quads: true,
     prefix: 'plode-',
   };
 
