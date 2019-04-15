@@ -565,7 +565,7 @@ float ellip(vec2 p, vec2 s) {
     return length(p) - r;
 }
 
-vec3 MAIN_COL = vec3(.583,.643,.68);
+vec3 MAIN_COL = vec3(.583,.643,.68) * 1.1;
 vec3 modelAlbedo = MAIN_COL;
 float isSkin = 0.;
 
@@ -1861,7 +1861,7 @@ vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 a
 
     vec3 specC = lc * 4.;
     specC = spectrum(dot(n, ld) - .2) * 1.;
-    // specC = spectrum(mix(-1., .9, saturate(dot(n, ld)))) * 1.5;
+    // specC = spectrum(mix(-.5, .8, dot(n, ld))) * 1.;
 
     return (albedo * diff + spec * specC);
 }
