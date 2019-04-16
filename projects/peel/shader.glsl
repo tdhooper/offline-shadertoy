@@ -880,14 +880,23 @@ float mHead(vec3 p, bool bounded) {
     p += vec3(0,.455,-.455);
     p.z += smoothstep(.0, .2, p.x) * .05;
     float lb = mix(.035, .03, smoothstep(.05, .15, length(p)));
-    float bottomlip = ellip(p, vec3(.055,.028,.022) * 1.25);
+    vec3 ls = vec3(.055,.028,.022) * 1.25;
+    float w = .192;
+    vec2 pl2 = vec2(p.x, length(p.yz * vec2(.79,1)));
+    float bottomlip = length(pl2 + vec2(0,w-ls.z)) - w;
+    bottomlip = smax(bottomlip, length(pl2 - vec2(0,w-ls.z)) - w, .055);
     d = smin(d, bottomlip, lb);
+    
 
     // top lip
     p = pp;
     p += vec3(0,.38,-.45);
     pR(p.xz, -.3);
-    float toplip = ellip(p, vec3(.065,.03,.05));
+    ls = vec3(.065,.03,.05);
+    w = ls.x * (-log(ls.y/ls.x) + 1.);
+    vec3 pl = p * vec3(.78,1,1);
+    float toplip = length(pl + vec3(0,w-ls.y,0)) - w;
+    toplip = smax(toplip, length(pl - vec3(0,w-ls.y,0)) - w, .065);
     p = pp;
     p += vec3(0,.33,-.45);
     pR(p.yz, .7);
@@ -1609,28 +1618,28 @@ float map(vec3 p) {
     // d = max(d, p.y - .1);
 
 
-    float split = p.x;
-    float d = mHead(p, false);
-    float di = mHeadApprox(p);
-    TriPoints3D points = geodesicTriPoints(p, 1.);
-    p *= calcLookAtMatrix(vec3(p), points.hexCenter, vec3(0,1,0));
-    float mask = length(p.xy) - .05;
-    if (split > 0.) {
-        float ddd = d; d = di; di = ddd;
-    }
-    float diff = d - di;
-    d = max(d, -mask);
-    di = max(di, mask);
     // float split = p.x;
-    // modelAlbedo = spectrum(diff*10.) * mix(.8, 1.2, step(diff * sign(split), 0.));
-    // d = max(d, split);
-    // di = max(di, -split);
-    if (di < d) {
-        if (isMapPass) modelAlbedo = spectrum(diff*10.);
-        return di;
-    }
-    if (isMapPass) modelAlbedo = vec3(1);
-    return d;
+    // float d = mHead(p, false);
+    // float di = mHeadApprox(p);
+    // TriPoints3D points = geodesicTriPoints(p, 1.);
+    // p *= calcLookAtMatrix(vec3(p), points.hexCenter, vec3(0,1,0));
+    // float mask = length(p.xy) - .05;
+    // if (split > 0.) {
+    //     float ddd = d; d = di; di = ddd;
+    // }
+    // float diff = d - di;
+    // d = max(d, -mask);
+    // di = max(di, mask);
+    // // float split = p.x;
+    // // modelAlbedo = spectrum(diff*10.) * mix(.8, 1.2, step(diff * sign(split), 0.));
+    // // d = max(d, split);
+    // // di = max(di, -split);
+    // if (di < d) {
+    //     if (isMapPass) modelAlbedo = spectrum(diff*10.);
+    //     return di;
+    // }
+    // if (isMapPass) modelAlbedo = vec3(1);
+    // return d;
 
     // return max(mHeadShell(p), p.y - iTime + .5);
 
@@ -1641,31 +1650,30 @@ float map(vec3 p) {
     // d = min(d, length(p - o) - .03);
     // return d;
 
-    // p -= vec3(-.1,-.02,-.24);
-
-    // pR(p.xz, .7);
-    // pR(p.yz, 0.2);
-    // pR(p.xy, -.15);
-
-    // float scale = .45;
-    // p /= scale;
-    // TriPoints3D points;
-    // float d;
-    // float delay;
-    // float bound = 1e12;
-    // float start;
-    // float level = 0.;
-    // vec3 pp = p;
-    // points = geodesicTriPoints(p, 1.);
-    // // if (isMapPass) modelAlbedo = spectrum(points.id);
-    // start += calcDelay(points);
-    // d = drawPlode(p, bound, level, points, start);
-    // moveIntoHex(p, level, points);
-    // start += blendDelay;
-    // d = drawBlend(d, p, level, start, bound);
-    // // d = max(d, -pp.z);
-    // d *= scale;
-    // return d;
+    p -= vec3(-.1,-.02,-.24);
+    pR(p.xz, .7);
+    pR(p.yz, 0.2);
+    pR(p.xy, -.15);
+    float scale = .45;
+    p /= scale;
+    // return mHead(p, false) * scale;
+    TriPoints3D points;
+    float d;
+    float delay;
+    float bound = 1e12;
+    float start;
+    float level = 0.;
+    vec3 pp = p;
+    points = geodesicTriPoints(p, 1.);
+    // if (isMapPass) modelAlbedo = spectrum(points.id);
+    start += calcDelay(points);
+    d = drawPlode(p, bound, level, points, start);
+    moveIntoHex(p, level, points);
+    start += blendDelay;
+    d = drawBlend(d, p, level, start, bound);
+    // d = max(d, -pp.z);
+    d *= scale;
+    return d;
 }
 
 float mapPlayground(vec3 p) {
@@ -1722,7 +1730,7 @@ float mapDebug(vec3 p) {
     // if ( ! guiDebug) {
     //     return d;
     // }
-    float plane = abs(p.y);
+    float plane = abs(p.y + .1);
     //plane= abs(p.z);
     hitDebugPlane = plane < abs(d);
     // hitDebugPlane = true;
@@ -1914,29 +1922,9 @@ vec3 filmic_reinhard(vec3 x) {
 
 vec3 render(Hit hit, vec3 col) {
     if ( ! hit.isBackground) {
-        // return hit.normal * .5 + .5;
-
-        return shade(hit.pos, hit.rayDirection, hit.normal);
-        // The simple ambient occlusion method results in hot spots
-        // at the base and sides of the balls. This is a result of
-        // the limited samples we do across the normal. In reality
-        // there would be a more evenly distributed darkness along
-        // the base of the channell; so here it's faked with the uv
-        // coordinates and blended in.
-        float ao = calcAO(hit.pos, hit.normal);
-        float light = dot(normalize(vec3(1,1,0)), hit.normal) * .5 + .5;
-        float diff = light * ao;
-        vec3 diffuse = mix(vec3(.5,.5,.6) * .7, vec3(1), diff);
-        col = hit.model.material * diffuse;
         // col = hit.normal * .5 + .5;
-
-        vec3 lig = vec3(0,1.5,.5);
-        // lig = vec3(0,.5,1.5);
-        lig = vec3(0,1,.2);
-        lig = normalize(vec3(-.5,1,.0));
-        col = modelAlbedo * pow(clamp(dot(lig, hit.normal) * .5 + .5, 0., 1.), 1./2.2);
-        // col = vec3(1,0,0);
-
+        // col = vec3(dot(hit.normal, vec3(0,.2,-.2)));
+        col = shade(hit.pos, hit.rayDirection, hit.normal);
     }
     if (hitDebugPlane) {
         float d = map(hit.pos);
