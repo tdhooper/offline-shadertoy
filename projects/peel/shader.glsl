@@ -1860,10 +1860,13 @@ float ggx(vec3 n, vec3 v, vec3 l, float rough, float f0){
     return spec;
 }
 
+
+bool SHADE_DEBUG = false;
+
 vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 albedo) {
     vec3 ld = normalize(lp-p);
 
-    float shadow = calcSoftshadow(p, ld, .01, 1.);
+    float shadow = calcSoftshadow(p, ld, .01, .75);
     shadow = mix(shadow, 1., .1);
 
     float diff = max(0.0, dot(n, ld));
@@ -1879,7 +1882,6 @@ vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 a
     return (albedo * diff + spec * specC);
 }
 
-bool SHADE_DEBUG = false;
 
 vec3 screenhash;
 
@@ -1926,7 +1928,7 @@ vec3 filmic_reinhard(vec3 x) {
 vec3 render(Hit hit, vec3 col) {
     if ( ! hit.isBackground) {
         // col = hit.normal * .5 + .5;
-        // col = vec3(dot(hit.normal, vec3(0,.2,-.2)));
+        // col = vec3(dot(hit.normal, vec3(.2,.5,1.3))) * modelAlbedo;
         col = shade(hit.pos, hit.rayDirection, hit.normal);
     }
     if (hitDebugPlane) {
