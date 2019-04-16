@@ -1292,8 +1292,8 @@ float animBlend(float startOffset) {
     // modelAlbedo = spectrum(blend*10.);
     // blend = sinstep(sinstep(blend));
     // blend = invXEase(blend, 2.);
-    blend = sinstep(blend);
-    blend = sinstep(blend);
+    // blend = sinstep(blend);
+    // blend = sinstep(blend);
     return blend;
 }
 
