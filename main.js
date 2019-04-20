@@ -6,7 +6,7 @@ const regl = require('regl')({
     'ext_frag_depth',
     'oes_standard_derivatives',
   ],
-  // pixelRatio: .15,
+  // pixelRatio: .2,
   pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
@@ -69,13 +69,14 @@ module.exports = (project) => {
     iGlobalTime: (context, props) => props.timer.elapsed / 1000,
     iTime: (context, props) => props.timer.elapsed / 1000,
     iMouse: (context, props) => {
+
       const mouseProp = props.mouse.map(value => value * context.pixelRatio);
       mouseProp[1] = context.viewportHeight - mouseProp[1];
       // console.log(mouse[0] / context.viewportWidth);
       // console.log(mouse[1] / context.viewportHeight)
       console.log(
-        mouseProp.x / context.viewportWidth,
-        mouseProp.y / context.viewportHeight
+        mouseProp[0] / context.viewportWidth,
+        mouseProp[1] / context.viewportHeight
       );
       return mouseProp;
     },

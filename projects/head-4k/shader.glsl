@@ -209,6 +209,9 @@ void fMouth(inout float d, vec3 pp) {
 
 }
 
+bool isMap = true;
+bool isEye = false;
+
 float mHead(vec3 p) {
 
     p.y -= .13;
@@ -424,6 +427,7 @@ float mHead(vec3 p) {
     p = pp;
     p += vec3(-.165,.0715,-.346);
     float eyeball = length(p) - .088;
+    if (isMap) isEye = eyeball < d;
     d = min(d, eyeball);
 
     // tear duct
@@ -435,15 +439,17 @@ float mHead(vec3 p) {
 }
 
 float mBg(vec3 p) {
-    // pR(p.xz, -.5);
+    pR(p.xy, 1420./10.);
     // return length(p) - .1;
-    // p.xy -= vec2(20.) + vec2(iMouse.xy/iResolution.xy) * 50.;
-    p.xy -= vec2(1.);
-    p.z += 20.;
-    float r = 5.;
+    p.xy -= vec2(22.3, 87.5);
+    p.xy -= vec2(0.18356164383561643,0.5947368421052632) * 5.;
+    // p.xy -= vec2(1.);
+    p.z += 17.;
+    float r = 5.5;
     float rz = 5.;
     float a = floor(p.z / rz);
-    pR(p.xy, a * 1.4);
+    pR(p.xy, a * 3.4);
+    pR(p.xy, -.002);
     p.xy = mod(p.xy, r) - r / 2.;
     // if (p.z < 0.) {
         p.z = mod(p.z, rz) - rz / 2.;
@@ -493,7 +499,8 @@ vec2 map(vec3 p) {
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3(.0001,0,0);
+    isMap = false;
+    vec3 eps = vec3(.001,0,0);
     vec3 nor = vec3(0);
     float invert = 1.;
     for (int i = 0; i < NORMAL_STEPS; i++){
@@ -501,6 +508,7 @@ vec3 calcNormal(vec3 pos){
         eps = eps.zxy;
         invert *= -1.;
     }
+    isMap = true;
     return normalize(nor);
 }
 
@@ -525,10 +533,11 @@ vec3 march(vec2 fc) {
     vec3 n;
     bool rf = false;
     vec2 m;
+    float ss;
 
     for (float i = 0.; i < 1450.; i++) {
 
-        rayPosition += rayDirection * distance * .5;
+        rayPosition += rayDirection * distance * .25;
         m = map(rayPosition);
         distance = abs(m.x);
 
@@ -539,7 +548,7 @@ vec3 march(vec2 fc) {
                 bb = false;
             }
             if (m.y == 1.) {
-                float ss = rayPosition.y / 20. + .5;
+                ss = rayPosition.y / 20. + .5;
                 ss = saturate(ss);
                 c = spectrum(ss/ 2.);
                 break;
@@ -547,6 +556,11 @@ vec3 march(vec2 fc) {
             if (m.y == 2.) {
                 n = calcNormal(rayPosition);
                 c = n * .5 + .5;
+                ss = dot(n, .5*vec3(.5,1,1));
+                ss = saturate(ss);
+                c = spectrum(ss / 2. - .8);
+                c *= mix(1., saturate(ss), .8);
+                // if (isEye) c = vec3(1);
                 break;
             }
         }
@@ -565,5 +579,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         c += march(gl_FragCoord.xy + o);
     }
     c /= 4.;
+    // c = march(gl_FragCoord.xy);
     fragColor = vec4(c, 1);
 }
