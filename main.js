@@ -76,7 +76,7 @@ module.exports = (project) => {
       console.log(
         mouseProp.x / context.viewportWidth,
         mouseProp.y / context.viewportHeight
-      )
+      );
       return mouseProp;
     },
     uDepth: buffer.depthStencil,

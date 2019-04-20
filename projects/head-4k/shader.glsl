@@ -134,7 +134,7 @@ float ellip(vec2 p, vec2 s) {
 }
 
 float helix(vec3 p, float lead, float thick) {
-    p.z += iTime * .1;
+    // p.z += iTime * .1;
     float d = (mod(atan(p.y, p.x) - p.z * lead, PI * 2.) - PI) / lead;
     d = abs(d) - thick;
     return d;
@@ -431,88 +431,6 @@ float mHead(vec3 p) {
     p += vec3(-.075,.1,-.37);
     d = min(d, length(p) - .05);
 
-
-    return d;
-
-    // position
-
-    p = pp;
-    p += vec3(-.405,.12,.10);
-    pR(p.xy, -.12);
-    pR(p.xz, .35);
-    pR(p.yz, -.3);
-    vec3 pe = p;
-
-    // base
-    float ear = p.s + smoothstep(-.05, .1, p.y) * .015 - .005;
-    float earback = -ear - mix(.001, .025, smoothstep(.3, -.2, p.y));
-
-    // inner
-    pR(p.xz, -.5);
-    float iear = ellip(p.zy - vec2(.01,-.03), vec2(.045,.05));
-    iear = smin(iear, length(p.zy - vec2(.04,-.09)) - .02, .09);
-    float ridge = iear;
-    iear = smin(iear, length(p.zy - vec2(.1,-.03)) - .06, .07);
-    ear = smax2(ear, -iear, .04);
-    earback = smin(earback, iear - .04, .02);
-
-    // ridge
-    p = pe;
-    pR(p.xz, .2);
-    ridge = ellip(p.zy - vec2(.01,-.03), vec2(.045,.055));
-    ridge = smin3(ridge, -pRi(p.zy, .2).x - .01, .015);
-    ridge = smax3(ridge, -ellip(p.zy - vec2(-.01,.1), vec2(.12,.08)), .02);
-    float ridger = .01;
-    ridge = max(-ridge, ridge - ridger);
-    ridge = smax2(ridge, abs(p.x) - ridger/2., ridger/2.);
-    ear = smin(ear, ridge, .045);
-
-    p = pe;
-
-    // outline
-    float outline = ellip(pRi(p.yz, .2), vec2(.12,.09));
-    outline = smin(outline, ellip(p.yz + vec2(.155,-.02), vec2(.035, .03)), .14);
-
-    // edge
-    float eedge = p.x + smoothstep(.2, -.4, p.y) * .06 - .03;
-
-    float edgeo = ellip(pRi(p.yz, .1), vec2(.095,.065));
-    edgeo = smin(edgeo, length(p.zy - vec2(0,-.1)) - .03, .1);
-    float edgeoin = smax(abs(pRi(p.zy, .15).y + .035) - .01, -p.z-.01, .01);
-    edgeo = smax(edgeo, -edgeoin, .05);
-
-    float eedent = smoothstep(-.05, .05, -p.z) * smoothstep(.06, 0., fCorner2(vec2(-p.z, p.y)));
-    eedent += smoothstep(.1, -.1, -p.z) * .2;
-    eedent += smoothstep(.1, -.1, p.y) * smoothstep(-.03, .0, p.z) * .3;
-    eedent = min(eedent, 1.);
-
-    eedge += eedent * .06;
-
-    eedge = smax(eedge, -edgeo, .01);
-    ear = smin(ear, eedge, .01);
-    ear = max(ear, earback);
-
-    ear = smax2(ear, outline, .015);
-
-    d = smin(d, ear, .015);
-
-    // hole
-    p = pp;
-    p += vec3(-.36,.19,.06);
-    pR(p.xz, -.5);
-    pR(p.xy, -.2);
-    p.x += .02;
-
-    // targus
-    p = pp;
-    p += vec3(-.34,.2,.02);
-    d = smin2(d, ellip(p, vec3(.015,.025,.015)), .035);
-    p = pp;
-    p += vec3(-.37,.18,.03);
-    pR(p.xz, .5);
-    pR(p.yz, -.4);
-    d = smin(d, ellip(p, vec3(.01,.03,.015)), .015);
-
     return d;
 }
 
@@ -548,44 +466,20 @@ float mce(vec3 p) {
 bool bb = true;
 
 vec2 map(vec3 p) {
-
     float d = mBg(p);
     float e = p.z + 25.;
-
     p.z += 17.;
     p.y -= .4;
     float hs = 10.;
     float h = mce(p / hs) * hs;
-    // float h = length(p) - 1.9;
-    // return vec2(h, 0.);
-    vec2 m = vec2(e, 1.);
-    
+    vec2 m = vec2(e, 1.);    
     if (d < m.x && bb) {
         m = vec2(d, 0.);
     }
     if (h < m.x) {
         m = vec2(h, 2.);
     }
-
     return m;
-
-    // // pR(p.xz, -.2);
-    // float d = mBg(p);
-    // d = min(d, -p.z + 5.);
-    // return d;
-    // pR(p.yz, -.15);
-
-    // float head = length(p) - .5;
-    // // float head = mHead(p);
-
-    // p.y -= .08;
-    // float h = helix(p.xzy, 35., .06);
-    // head = abs(head + .01) - .01;
-    // head = max(head, h);
-
-    // d = min(d, head);
-
-    // return d;
 }
 
 // vec3 calcNormal(vec3 pos) {
@@ -645,27 +539,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 c = n * .5 + .5;
                 break;
             }
-            // } else if ( ! rf) {
-            //     n = calcNormal(rayPosition);
-            //     rayPosition += rayDirection * abs(distance) * 3.;
-            //     rayDirection = refract(rayDirection, n, 1. / 2.222);
-            //     m = map(rayPosition);
-            //     rf = true;
-            // } else {
-            //     rayPosition += rayDirection * distance * 3.;
-            // }
-            // rayPosition += rayDirection * .0001;
-            // c += vec3(.5);
-            // break;
         }
-
-        // if (rayPosition.z < -20.) {
-        //     c = vec3(rayPosition.xy/10.,0);
-        //     break;
-        // }
     }
-
-    
 
     fragColor = vec4(c, 1);
 }
