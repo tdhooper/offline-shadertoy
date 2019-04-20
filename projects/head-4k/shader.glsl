@@ -459,7 +459,7 @@ float mce(vec3 p) {
     p.y -= .45;
     float s = helix(p.xzy, 35., .06);
     h = abs(h + .01) - .01;
-    h = max(h, s);
+    h = smax(h, s, .005);
     return h;    
 }
 
@@ -505,9 +505,17 @@ vec3 calcNormal(vec3 pos){
 }
 
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
 
-    vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.y;
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+vec3 march(vec2 fc) {
+    bb = true;
+    vec2 p = (-iResolution.xy + 2. * fc.xy) / iResolution.y;
 
     vec3 camPos = vec3(0,0,2.5);
     vec3 rayDirection = normalize(vec3(p,-4));
@@ -518,7 +526,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     bool rf = false;
     vec2 m;
 
-    for (float i = 0.; i < 450.; i++) {
+    for (float i = 0.; i < 1450.; i++) {
 
         rayPosition += rayDirection * distance * .5;
         m = map(rayPosition);
@@ -531,7 +539,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 bb = false;
             }
             if (m.y == 1.) {
-                c = vec3(rayPosition.y / 20. + .5);
+                float ss = rayPosition.y / 20. + .5;
+                ss = saturate(ss);
+                c = spectrum(ss/ 2.);
                 break;
             }
             if (m.y == 2.) {
@@ -542,5 +552,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         }
     }
 
+    c = pow(c, vec3(1./2.2));
+    return c;
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec3 c = vec3(0);
+    vec2 o = vec2(.5,0);    
+    for (float i = 0.; i < 4.; i++) {
+        if (i == 2.) o *= -1.;
+        o = o.yx;
+        c += march(gl_FragCoord.xy + o);
+    }
+    c /= 4.;
     fragColor = vec4(c, 1);
 }
