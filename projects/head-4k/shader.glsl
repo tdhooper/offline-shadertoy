@@ -133,6 +133,82 @@ float ellip(vec2 p, vec2 s) {
     return length(p) - r;
 }
 
+float helix(vec3 p, float lead, float thick) {
+    p.z += iTime * .1;
+    float d = (mod(atan(p.y, p.x) - p.z * lead, PI * 2.) - PI) / lead;
+    d = abs(d) - thick;
+    return d;
+}
+
+void fMouth(inout float d, vec3 pp) {
+    vec3 p;
+    // mouth base
+    p = pp;
+    p += vec3(-.0,.29,-.29);
+    pR(p.yz, -.3);
+    d = smin(d, ellip(p, vec3(.13,.15,.1)), .18);
+
+    p = pp;
+    p += vec3(0,.37,-.4);
+    d = smin(d, ellip(p, vec3(.03,.03,.02) * .5), .1);
+
+    p = pp;
+    p += vec3(-.09,.37,-.31);
+    d = smin(d, ellip(p, vec3(.04)), .18);
+
+    // bottom lip
+    p = pp;
+    p += vec3(0,.455,-.455);
+    p.z += smoothstep(.0, .2, p.x) * .05;
+    float lb = mix(.035, .03, smoothstep(.05, .15, length(p)));
+    vec3 ls = vec3(.055,.028,.022) * 1.25;
+    float w = .192;
+    vec2 pl2 = vec2(p.x, length(p.yz * vec2(.79,1)));
+    float bottomlip = length(pl2 + vec2(0,w-ls.z)) - w;
+    bottomlip = smax(bottomlip, length(pl2 - vec2(0,w-ls.z)) - w, .055);
+    d = smin(d, bottomlip, lb);
+    
+    // top lip
+    p = pp;
+    p += vec3(0,.38,-.45);
+    pR(p.xz, -.3);
+    ls = vec3(.065,.03,.05);
+    w = ls.x * (-log(ls.y/ls.x) + 1.);
+    vec3 pl = p * vec3(.78,1,1);
+    float toplip = length(pl + vec3(0,w-ls.y,0)) - w;
+    toplip = smax(toplip, length(pl - vec3(0,w-ls.y,0)) - w, .065);
+    p = pp;
+    p += vec3(0,.33,-.45);
+    pR(p.yz, .7);
+    float cut;
+    cut = dot(p, normalize(vec3(.5,.25,0))) - .056;
+    float dip = smin(
+        dot(p, normalize(vec3(-.5,.5,0))) + .005,
+        dot(p, normalize(vec3(.5,.5,0))) + .005,
+        .025
+    );
+    cut = smax(cut, dip, .04);
+    cut = smax(cut, p.x - .1, .05);
+    toplip = smax(toplip, cut, .02);
+
+    d = smin(d, toplip, .07);
+
+
+    // seam
+    p = pp;
+    p += vec3(0,.425,-.44);
+    lb = length(p);
+    float lr = mix(.04, .02, smoothstep(.05, .12, lb));
+    pR(p.yz, .1);
+    p.y -= smoothstep(0., .03, p.x) * .002;
+    p.y += smoothstep(.03, .1, p.x) * .007;
+    p.z -= .133;
+    float seam = fDisc(p, .2);
+    seam = smax(seam, -d - .015, .01); // fix inside shape
+    d = mix(d, smax(d, -seam, lr), .65);
+
+}
+
 float mHead(vec3 p) {
 
     p.y -= .13;
@@ -258,6 +334,8 @@ float mHead(vec3 p) {
     p.x *= .7;
     d = smin(d, ellip(p, vec3(.028,.028,.028)*1.2), .15);
 
+    // return d;
+
     // cheek
 
     p = pp;
@@ -285,69 +363,7 @@ float mHead(vec3 p) {
     ch = ellip(p, vec3(.1));
     d = smin(d, ch, .1);
 
-    // mouth base
-    p = pp;
-    p += vec3(-.0,.29,-.29);
-    pR(p.yz, -.3);
-    d = smin(d, ellip(p, vec3(.13,.15,.1)), .18);
-
-    p = pp;
-    p += vec3(0,.37,-.4);
-    d = smin(d, ellip(p, vec3(.03,.03,.02) * .5), .1);
-
-    p = pp;
-    p += vec3(-.09,.37,-.31);
-    d = smin(d, ellip(p, vec3(.04)), .18);
-
-    // bottom lip
-    p = pp;
-    p += vec3(0,.455,-.455);
-    p.z += smoothstep(.0, .2, p.x) * .05;
-    float lb = mix(.035, .03, smoothstep(.05, .15, length(p)));
-    vec3 ls = vec3(.055,.028,.022) * 1.25;
-    float w = .192;
-    vec2 pl2 = vec2(p.x, length(p.yz * vec2(.79,1)));
-    float bottomlip = length(pl2 + vec2(0,w-ls.z)) - w;
-    bottomlip = smax(bottomlip, length(pl2 - vec2(0,w-ls.z)) - w, .055);
-    d = smin(d, bottomlip, lb);
-    
-
-    // top lip
-    p = pp;
-    p += vec3(0,.38,-.45);
-    pR(p.xz, -.3);
-    ls = vec3(.065,.03,.05);
-    w = ls.x * (-log(ls.y/ls.x) + 1.);
-    vec3 pl = p * vec3(.78,1,1);
-    float toplip = length(pl + vec3(0,w-ls.y,0)) - w;
-    toplip = smax(toplip, length(pl - vec3(0,w-ls.y,0)) - w, .065);
-    p = pp;
-    p += vec3(0,.33,-.45);
-    pR(p.yz, .7);
-    float cut;
-    cut = dot(p, normalize(vec3(.5,.25,0))) - .056;
-    float dip = smin(
-        dot(p, normalize(vec3(-.5,.5,0))) + .005,
-        dot(p, normalize(vec3(.5,.5,0))) + .005,
-        .025
-    );
-    cut = smax(cut, dip, .04);
-    cut = smax(cut, p.x - .1, .05);
-    toplip = smax(toplip, cut, .02);
-    d = smin(d, toplip, .07);
-
-    // seam
-    p = pp;
-    p += vec3(0,.425,-.44);
-    lb = length(p);
-    float lr = mix(.04, .02, smoothstep(.05, .12, lb));
-    pR(p.yz, .1);
-    p.y -= smoothstep(0., .03, p.x) * .002;
-    p.y += smoothstep(.03, .1, p.x) * .007;
-    p.z -= .133;
-    float seam = fDisc(p, .2);
-    seam = smax(seam, -d - .015, .01); // fix inside shape
-    d = mix(d, smax(d, -seam, lr), .65);
+    fMouth(d, pp);
 
     // nostrils base
     p = pp;
@@ -414,6 +430,9 @@ float mHead(vec3 p) {
     p = pp;
     p += vec3(-.075,.1,-.37);
     d = min(d, length(p) - .05);
+
+
+    return d;
 
     // position
 
@@ -497,47 +516,156 @@ float mHead(vec3 p) {
     return d;
 }
 
-float map(vec3 p) {
-    pR(p.xz, -.3);
-    return mHead(p);
+float mBg(vec3 p) {
+    // pR(p.xz, -.5);
+    // return length(p) - .1;
+    // p.xy -= vec2(20.) + vec2(iMouse.xy/iResolution.xy) * 50.;
+    p.xy -= vec2(1.);
+    p.z += 20.;
+    float r = 5.;
+    float rz = 5.;
+    float a = floor(p.z / rz);
+    pR(p.xy, a * 1.4);
+    p.xy = mod(p.xy, r) - r / 2.;
+    // if (p.z < 0.) {
+        p.z = mod(p.z, rz) - rz / 2.;
+    // }
+    float d = length(p)- r / 5.;
+    return d;
 }
 
-vec3 calcNormal(vec3 pos) {
-    vec3 eps = vec3( 0.001, 0.0, 0.0 );
-    vec3 nor = vec3(
-        map(pos+eps.xyy) - map(pos-eps.xyy),
-        map(pos+eps.yxy) - map(pos-eps.yxy),
-        map(pos+eps.yyx) - map(pos-eps.yyx) );
+float mce(vec3 p) {
+    float h = mHead(p);
+    // h = length(p) - .5;
+    // return h;
+    p.y -= .45;
+    float s = helix(p.xzy, 35., .06);
+    h = abs(h + .01) - .01;
+    h = max(h, s);
+    return h;    
+}
+
+bool bb = true;
+
+vec2 map(vec3 p) {
+
+    float d = mBg(p);
+    float e = p.z + 25.;
+
+    p.z += 17.;
+    p.y -= .4;
+    float hs = 10.;
+    float h = mce(p / hs) * hs;
+    // float h = length(p) - 1.9;
+    // return vec2(h, 0.);
+    vec2 m = vec2(e, 1.);
+    
+    if (d < m.x && bb) {
+        m = vec2(d, 0.);
+    }
+    if (h < m.x) {
+        m = vec2(h, 2.);
+    }
+
+    return m;
+
+    // // pR(p.xz, -.2);
+    // float d = mBg(p);
+    // d = min(d, -p.z + 5.);
+    // return d;
+    // pR(p.yz, -.15);
+
+    // float head = length(p) - .5;
+    // // float head = mHead(p);
+
+    // p.y -= .08;
+    // float h = helix(p.xzy, 35., .06);
+    // head = abs(head + .01) - .01;
+    // head = max(head, h);
+
+    // d = min(d, head);
+
+    // return d;
+}
+
+// vec3 calcNormal(vec3 pos) {
+//     vec3 eps = vec3( 0.001, 0.0, 0.0 );
+//     vec3 nor = vec3(
+//         map(pos+eps.xyy).x - map(pos-eps.xyy).x,
+//         map(pos+eps.yxy).x - map(pos-eps.yxy).x,
+//         map(pos+eps.yyx).x - map(pos-eps.yyx).x );
+//     return normalize(nor);
+// }
+
+const int NORMAL_STEPS = 6;
+vec3 calcNormal(vec3 pos){
+    vec3 eps = vec3(.0001,0,0);
+    vec3 nor = vec3(0);
+    float invert = 1.;
+    for (int i = 0; i < NORMAL_STEPS; i++){
+        nor += map(pos + eps * invert).x * eps * invert;
+        eps = eps.zxy;
+        invert *= -1.;
+    }
     return normalize(nor);
 }
+
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.y;
 
-    vec3 camPos = vec3(0,0,3);
+    vec3 camPos = vec3(0,0,2.5);
     vec3 rayDirection = normalize(vec3(p,-4));
     vec3 rayPosition = camPos;
-    float rayLength = 0.;
     float distance = 0.;
-    vec3 c;
+    vec3 c = vec3(0);
+    vec3 n;
+    bool rf = false;
+    vec2 m;
 
-    for (float i = 0.; i < 100.; i++) {
+    for (float i = 0.; i < 450.; i++) {
 
-        // Step a little slower so we can accumilate glow
-        rayLength += distance;
-        rayPosition = camPos + rayDirection * rayLength;
-        distance = map(rayPosition);
+        rayPosition += rayDirection * distance * .5;
+        m = map(rayPosition);
+        distance = abs(m.x);
 
         if (distance < .0001) {
-            c = calcNormal(rayPosition) * .5 + .5;
-            break;
+            if (m.y == 0.) {
+                n = calcNormal(rayPosition);
+                rayDirection = refract(rayDirection, n, 1. / 2.222);
+                bb = false;
+            }
+            if (m.y == 1.) {
+                c = vec3(rayPosition.y / 20. + .5);
+                break;
+            }
+            if (m.y == 2.) {
+                n = calcNormal(rayPosition);
+                c = n * .5 + .5;
+                break;
+            }
+            // } else if ( ! rf) {
+            //     n = calcNormal(rayPosition);
+            //     rayPosition += rayDirection * abs(distance) * 3.;
+            //     rayDirection = refract(rayDirection, n, 1. / 2.222);
+            //     m = map(rayPosition);
+            //     rf = true;
+            // } else {
+            //     rayPosition += rayDirection * distance * 3.;
+            // }
+            // rayPosition += rayDirection * .0001;
+            // c += vec3(.5);
+            // break;
         }
 
-        if (rayLength > 10.) {
-            break;
-        }
+        // if (rayPosition.z < -20.) {
+        //     c = vec3(rayPosition.xy/10.,0);
+        //     break;
+        // }
     }
+
+    
 
     fragColor = vec4(c, 1);
 }

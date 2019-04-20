@@ -6,7 +6,7 @@ const regl = require('regl')({
     'ext_frag_depth',
     'oes_standard_derivatives',
   ],
-  pixelRatio: .5,
+  pixelRatio: .15,
   // pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
@@ -21,6 +21,7 @@ const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
 const createControls = require('./lib/uniform-controls');
 
+var dbt = performance.now();
 
 global.regl = regl;
 
@@ -72,6 +73,10 @@ module.exports = (project) => {
       mouseProp[1] = context.viewportHeight - mouseProp[1];
       // console.log(mouse[0] / context.viewportWidth);
       // console.log(mouse[1] / context.viewportHeight)
+      console.log(
+        mouseProp.x / context.viewportWidth,
+        mouseProp.y / context.viewportHeight
+      )
       return mouseProp;
     },
     uDepth: buffer.depthStencil,
@@ -162,6 +167,12 @@ module.exports = (project) => {
     } else if (state.cameraMatrix) {
       camera.fromState(state.cameraMatrix);
     }
+    if (state.mouse) {
+      mouse[0] = state.mouse[0];
+      mouse[1] = state.mouse[1];
+      mouse[2] = state.mouse[2];
+      mouse[3] = state.mouse[3];
+    }
     if (state.timer) {
       timer.fromObject(state.timer);
     }
@@ -202,6 +213,10 @@ module.exports = (project) => {
       });
     }
     stats.end();
+    if (dbt !== undefined) {
+      console.log(performance.now() - dbt);
+      dbt = undefined;
+    }
   };
 
   let tick = regl.frame(draw);
