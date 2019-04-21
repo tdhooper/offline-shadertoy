@@ -7,7 +7,7 @@ const regl = require('regl')({
     'oes_standard_derivatives',
   ],
   // pixelRatio: .2,
-  pixelRatio: 1,
+  // pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
