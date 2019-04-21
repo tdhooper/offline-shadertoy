@@ -23,6 +23,6 @@ const main = require('./main.js');
 // rays-and-polygons
 // head-4k
 
-const project = LOADPROJECT('head-4k');
+const project = LOADPROJECT('rhombille-triangle');
 
 main(project);
