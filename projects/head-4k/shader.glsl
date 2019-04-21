@@ -441,8 +441,8 @@ float mHead(vec3 p) {
 float mBg(vec3 p) {
     pR(p.xy, 1420./10.);
     // return length(p) - .1;
-    p.xy -= vec2(22.3, 87.5);
-    p.xy -= vec2(0.18356164383561643,0.5947368421052632) * 5.;
+
+    p.xy -= vec2(23.22, 90.67);
     // p.xy -= vec2(1.);
     p.z += 17.;
     float r = 5.5;
@@ -451,7 +451,7 @@ float mBg(vec3 p) {
     pR(p.xy, a * 3.4);
     pR(p.xy, -.002);
     p.xy = mod(p.xy, r) - r / 2.;
-    // if (p.z < 0.) {
+    // if (p.z > -1.2) {
         p.z = mod(p.z, rz) - rz / 2.;
     // }
     float d = length(p)- r / 5.;
