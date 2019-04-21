@@ -469,17 +469,18 @@ float mce(vec3 p) {
     return h;    
 }
 
-bool bb = true;
+bool inside = false;
 
 vec2 map(vec3 p) {
     float d = mBg(p);
+    if (inside) d = -d;
     float e = p.z + 25.;
     p.z += 17.;
     p.y -= .4;
     float hs = 10.;
     float h = mce(p / hs) * hs;
     vec2 m = vec2(e, 1.);    
-    if (d < m.x && bb) {
+    if (d < m.x) {
         m = vec2(d, 0.);
     }
     if (h < m.x) {
@@ -522,9 +523,8 @@ vec3 spectrum(float n) {
 }
 
 vec3 march(vec2 fc) {
-    bb = true;
     vec2 p = (-iResolution.xy + 2. * fc.xy) / iResolution.y;
-
+    inside = false;
     vec3 camPos = vec3(0,0,2.5);
     vec3 rayDirection = normalize(vec3(p,-4));
     vec3 rayPosition = camPos;
@@ -539,13 +539,14 @@ vec3 march(vec2 fc) {
 
         rayPosition += rayDirection * distance * .25;
         m = map(rayPosition);
-        distance = abs(m.x);
+        distance = m.x;
 
         if (distance < .0001) {
             if (m.y == 0.) {
                 n = calcNormal(rayPosition);
                 rayDirection = refract(rayDirection, n, 1. / 2.222);
-                bb = false;
+                rayPosition -= n * .001;
+                inside = ! inside;
             }
             if (m.y == 1.) {
                 ss = rayPosition.y / 20. + .5;
@@ -572,7 +573,7 @@ vec3 march(vec2 fc) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 c = vec3(0);
-    vec2 o = vec2(.5,0);    
+    vec2 o = vec2(1./3.,0);    
     for (float i = 0.; i < 4.; i++) {
         if (i == 2.) o *= -1.;
         o = o.yx;

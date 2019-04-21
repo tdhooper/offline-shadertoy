@@ -7,7 +7,7 @@ const regl = require('regl')({
     'oes_standard_derivatives',
   ],
   // pixelRatio: .2,
-  pixelRatio: 1,
+  // pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -72,12 +72,10 @@ module.exports = (project) => {
 
       const mouseProp = props.mouse.map(value => value * context.pixelRatio);
       mouseProp[1] = context.viewportHeight - mouseProp[1];
-      // console.log(mouse[0] / context.viewportWidth);
-      // console.log(mouse[1] / context.viewportHeight)
-      console.log(
-        mouseProp[0] / context.viewportWidth,
-        mouseProp[1] / context.viewportHeight
-      );
+      // console.log(
+      //   mouseProp[0] / context.viewportWidth,
+      //   mouseProp[1] / context.viewportHeight
+      // );
       return mouseProp;
     },
     uDepth: buffer.depthStencil,
