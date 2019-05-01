@@ -1541,7 +1541,7 @@ TriPoints3D shiftPoints(TriPoints3D points) {
     );
 }
 
-float drawPlode(inout vec3 p, inout bool doBlend, float level, TriPoints3D points, float start) {
+float drawPlode(inout vec3 p, inout float dAdjacent, float level, TriPoints3D points, float start) {
     float scale = pow(stepScale, level);
     // float sectionEdge = mEdge(p, points) * scale;
     // float inner = mHeadInside(p) * scale;
@@ -1563,7 +1563,6 @@ float drawPlode(inout vec3 p, inout bool doBlend, float level, TriPoints3D point
     }
     part = max(part, -plodeEdge);
     float d = part;
-    doBlend = true;
 
     // return d;
 
@@ -1576,10 +1575,7 @@ float drawPlode(inout vec3 p, inout bool doBlend, float level, TriPoints3D point
     part = mHeadShell(p) * scale;
     plodeEdge = mEdge(p, points) * scale;
     part = max(part, -plodeEdge);
-    if (part < d) {
-        d = part;
-        doBlend = false;
-    }
+    dAdjacent = part;
 
     // return d;
 
@@ -1592,10 +1588,9 @@ float drawPlode(inout vec3 p, inout bool doBlend, float level, TriPoints3D point
     part = mHeadShell(p) * scale;
     plodeEdge = mEdge(p, points) * scale;
     part = max(part, -plodeEdge);
-    if (part < d) {
-        d = part;
-        doBlend = false;
-    }
+    dAdjacent = min(dAdjacent, part);
+    
+    // d = min(d, dAdjacent);
 
     // sectionEdge = max(sectionEdge, d  - .15 * scale);
     // sectionEdge = max(sectionEdge, -inner  - .15 * scale);
@@ -1616,7 +1611,7 @@ void moveIntoHex(inout vec3 p, inout float level, TriPoints3D points) {
     level += 1.;
 }
 
-float drawBlend(float d, vec3 p, float level, float start, float bound) {
+float drawBlend(float d, float dAdjacent, vec3 p, float level, float start, float bound) {
     vec3 _modelAlbedo = modelAlbedo;
     float _isSkin = isSkin;
     float scale = pow(stepScale, level);
@@ -1632,6 +1627,7 @@ float drawBlend(float d, vec3 p, float level, float start, float bound) {
         //     d = min(d, bound);
         // }
     }
+    d = min(d, dAdjacent + .01 * scale);
     return d;
 }
 
@@ -1670,6 +1666,7 @@ float mapAnimMain(vec3 p) {
     float d, d2;
     float blend;
     float bound = 1e12;
+    float dAdjacent;
     bool doBlend = true;
     float start;
     float level = 0.;
@@ -1679,7 +1676,7 @@ float mapAnimMain(vec3 p) {
     points = geodesicTriPoints(p, 1.);
     // start at focus blend finishing
     start = -loopDuration;
-    d = drawPlode(p, doBlend, level, points, start);
+    d = drawPlode(p, dAdjacent, level, points, start);
 
     start += calcDelay(points);
 
@@ -1691,7 +1688,7 @@ float mapAnimMain(vec3 p) {
 
     start += blendDelay;
     if ( ! animPlodeStarted(start + blendDuration) || ! guiStep1) {
-        d = drawBlend(d, p, level, start, bound);
+        d = drawBlend(d, dAdjacent, p, level, start, bound);
         // return min(d, focusDebug);
         return d;
     }
@@ -1701,7 +1698,7 @@ float mapAnimMain(vec3 p) {
 
     points = geodesicTriPoints(p, 1.);
     start += blendDuration;
-    d = drawPlode(p, doBlend, level, points, start);
+    d = drawPlode(p, dAdjacent, level, points, start);
 
     if ( ! guiStep2) {
         return min(d, bound);
@@ -1711,7 +1708,7 @@ float mapAnimMain(vec3 p) {
 
     start += blendDelay;
 
-    return drawBlend(d, p, level, start, bound);
+    return drawBlend(d, dAdjacent, p, level, start, bound);
 }
 
 float mapAnim(vec3 p) {
@@ -1804,20 +1801,23 @@ float map(vec3 p) {
     float d;
     float delay;
     float bound = 1e12;
-    bool doBlend = true;
+    float dAdjacent;
     float start;
     float level = 0.;
     vec3 pp = p;
+    float inner = -(mHeadInside(p) + shell * 2.);
     points = geodesicTriPoints(p, 1.);
-    // points = geodesicTriPoints(vec3(0,.8,1), 1.);
+    // points = geodesicTriPoints(vec3(-1,.5,.9), 1.);
     // if (isMapPass) modelAlbedo = spectrum(points.id);
-    d = drawPlode(p, doBlend, level, points, start);
+    d = drawPlode(p, dAdjacent, level, points, start);
     
-    if (doBlend) {
-        start += calcDelay(points);
-        moveIntoHex(p, level, points);
-        start += blendDelay;
-        d = drawBlend(d, p, level, start, bound);
+    start += calcDelay(points);
+    moveIntoHex(p, level, points);
+    start += blendDelay;
+    d = drawBlend(d, dAdjacent, p, level, start, bound);
+
+    if (inner > .001) {
+        d = inner;
     }
     
     // d = max(d, -pp.z);
@@ -1879,7 +1879,7 @@ float mapDebug(vec3 p) {
     // if ( ! guiDebug) {
     //     return d;
     // }
-    float plane = abs(p.y + .1);
+    float plane = abs(p.y - .15);
     //plane= abs(p.z);
     hitDebugPlane = plane < abs(d);
     // hitDebugPlane = true;
