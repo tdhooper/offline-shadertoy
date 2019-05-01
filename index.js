@@ -23,6 +23,6 @@ const main = require('./main.js');
 // rays-and-polygons
 // head-4k
 
-const project = LOADPROJECT('spiral-loop2');
+const project = LOADPROJECT('peel');
 
 main(project);

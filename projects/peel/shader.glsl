@@ -186,7 +186,7 @@ struct TriPoints {
     vec2 ca;
 };
 
-TriPoints closestTriPoints(vec2 p) {
+TriPoints _closestTriPoints(vec2 p) {
 
     float rot = PI / 2.;
     pR(p, rot);
@@ -211,6 +211,8 @@ TriPoints closestTriPoints(vec2 p) {
     c = hex2cart * c;
     
     vec2 center = (a + b + c) / 3.;
+
+
     
     vec2 ab0 = (a + b) / 2.;
     vec2 bc0 = (b + c) / 2.;
@@ -248,6 +250,80 @@ TriPoints closestTriPoints(vec2 p) {
 
     return TriPoints(a, b, c, center, hexCenter, ab, bc, ca);
 }
+
+void shiftOne(inout vec2 a, inout vec2 b, inout vec2 c) {
+    vec2 a0 = a;
+    vec2 b0 = b;
+    vec2 c0 = c;
+    a = b0;
+    b = c0;
+    c = a0;
+}
+
+
+TriPoints closestTriPoints(vec2 p) {
+
+    float rot = PI / 2.;
+    pR(p, rot);
+
+    vec2 pTri = cart2hex * p;
+    vec2 pi = floor(pTri);
+    vec2 pf = fract(pTri);
+    
+    vec2 a, b, c;
+
+    if (pf.y > pf.x) {
+        a = vec2(0, 1);
+        b = vec2(1, 1);
+        c = vec2(0, 0);
+    } else {
+        a = vec2(1, 1);
+        b = vec2(1, 0);
+        c = vec2(0, 0);
+    }
+
+    a += pi;
+    b += pi;
+    c += pi;
+
+    a = hex2cart * a;
+    b = hex2cart * b;
+    c = hex2cart * c;
+    
+    vec2 center = (a + b + c) / 3.;
+    
+    vec2 ab = (a + b) / 2.;
+    vec2 bc = (b + c) / 2.;
+    vec2 ca = (c + a) / 2.;
+
+    vec2 a0, b0, c0, ab0, bc0, ca0;
+
+    if (distance(p, c) < distance(p, b)) {
+        shiftOne(a, b, c);
+        shiftOne(ab, bc, ca);
+    }
+    if (distance(p, b) < distance(p, a)) {
+        shiftOne(a, b, c);
+        shiftOne(ab, bc, ca);
+    }
+    if (distance(p, b) < distance(p, a)) {
+        shiftOne(a, b, c);
+        shiftOne(ab, bc, ca);
+    }
+
+    pR(a, -rot);
+    pR(b, -rot);
+    pR(c, -rot);
+
+    pR(center, -rot);
+
+    pR(ab, -rot);
+    pR(bc, -rot);
+    pR(ca, -rot);
+
+    return TriPoints(a, b, c, center, a, ab, bc, ca);
+}
+
 
 
 // --------------------------------------------------------
@@ -314,6 +390,31 @@ float range(float vmin, float vmax, float value) {
   return clamp((value - vmin) / (vmax - vmin), 0., 1.);
 }
 
+float calcId(vec3 hexCenter) {
+    // return 0.;
+    // float hashId = hash(vec3(int(hexCenter * 1000.)) / 1000.);
+    float ee = 100.;
+    vec3 h = vec3(
+        dot(hexCenter, vec3(1,0,0)),
+        dot(hexCenter, vec3(0,1,0)),
+        dot(hexCenter, vec3(0,0,1))
+    ) * .5 + .5;
+    h = floor(h * ee + .5) / ee;
+    float seed = guiRand;
+    // seed = .6; // .6;
+    float hashId = hash(h + seed);
+
+    // id = range(.8, -.8, hexCenter.y);
+    float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,.5))));
+    // float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,.25))));
+    // float id = range(1., -1., dot(hexCenter, normalize(vec3(0,1,0))));
+    id = mix(id, hashId, .4);
+    // id = min(id, .2);
+    // id = 0.;
+    // id = hashId;
+    return id;
+}
+
 // Closest geodesic point (triangle center) on unit sphere's surface
 TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     
@@ -343,27 +444,7 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     vec3 bc = faceToSphere(points.bc / uvScale);
     vec3 ca = faceToSphere(points.ca / uvScale);
 
-    // float hashId = hash(vec3(int(hexCenter * 1000.)) / 1000.);
-    float ee = 100.;
-    vec3 h = vec3(
-        dot(hexCenter, vec3(1,0,0)),
-        dot(hexCenter, vec3(0,1,0)),
-        dot(hexCenter, vec3(0,0,1))
-    ) * .5 + .5;
-    h = floor(h * ee + .5) / ee;
-    float seed = guiRand;
-    // seed = .6; // .6;
-    float hashId = hash(h + seed);
-
-    // id = range(.8, -.8, hexCenter.y);
-    float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,.5))));
-    // float id = range(1., -1., dot(hexCenter, normalize(vec3(.5,1,.25))));
-    // float id = range(1., -1., dot(hexCenter, normalize(vec3(0,1,0))));
-    id = mix(id, hashId, .4);
-    // id = min(id, .2);
-    // id = 0.;
-    // id = hashId;
-
+    float id = calcId(hexCenter);
 
     return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca, id);
 }
@@ -1239,15 +1320,17 @@ const float blendDelay = .0;
 const float plodeMaxDelay = .5;
 #define plodeDistance guiPlodeDistance
 
-float mEdge(vec3 p, TriPoints3D points) {
-    vec3 edgeAB = normalize(cross(points.center, points.ab));
-    vec3 edgeBC = normalize(cross(points.center, points.bc));
-    float edge = min(dot(p, edgeAB), -dot(p, edgeBC));
-    return edge;
-}
-
 float mHeadShell(vec3 p) {
     float d = mHead(p, true);
+    // d = abs(d + shell) - shell;
+    float di = mHeadInside(p);
+    d = max(d, -di - shell * 2.);
+    return d;
+}
+
+
+float mHeadApproxShell(vec3 p) {
+    float d = mHeadApprox(p);
     // d = abs(d + shell) - shell;
     float di = mHeadInside(p);
     d = max(d, -di - shell * 2.);
@@ -1426,23 +1509,102 @@ float blendHeadPrepare(float head, float t, float scale) {
     return head;
 }
 
+float mEdge(vec3 p, TriPoints3D points) {
+    vec3 edgeAB = normalize(cross(points.center, points.ab));
+    vec3 edgeBC = normalize(cross(points.center, points.bc));
+    vec3 edgeCA = normalize(cross(points.center, points.ca));
+    // return dot(p, edgeAB);
+    float edge = min(dot(p, edgeAB), -dot(p, edgeCA));
+    return edge;
+}
+
+
+// float mGhost(vec3 p, TriPoints3D points) {
+//     p = normalize(p);
+//     float g = min(
+//         distance(p, points.b),
+//         distance(p, points.c)
+//     );
+//     // g = min(g, distance(p, points.a));
+//     return g;
+// }
+
     float sectionEps = .001;
 
-float drawPlode(inout vec3 p, inout float bound, float level, TriPoints3D points, float start) {
+TriPoints3D shiftPoints(TriPoints3D points) {
+    return TriPoints3D(
+        points.b, points.c, points.a,
+        points.center,
+        points.b,
+        points.bc, points.ca, points.ab,
+        calcId(points.b)
+    );
+}
+
+float drawPlode(inout vec3 p, inout bool doBlend, float level, TriPoints3D points, float start) {
     float scale = pow(stepScale, level);
-    float sectionEdge = mEdge(p, points) * scale;
-    float inner = mHeadInside(p) * scale;
+    // float sectionEdge = mEdge(p, points) * scale;
+    // float inner = mHeadInside(p) * scale;
+    float plodeEdge, part;
+
+    float start0 = start;
+    vec3 p0 = p;
+
+
+    // sectionEdge = mGhost(p, points);
+    start += calcDelay(points);
     p -= points.hexCenter * animPlode(start) * plodeDistance;
-    float d = mHeadShell(p) * scale;
-    sectionEdge = max(sectionEdge, d  - .15 * scale);
-    sectionEdge = max(sectionEdge, -inner  - .15 * scale);
-    bound = min(bound, sectionEdge + sectionEps * scale);
-    float plodeEdge = mEdge(p, points) * scale;
-    if (isMapPass && -plodeEdge > d) {
+    vec3 pf = p;
+    part = mHeadShell(p) * scale;
+    plodeEdge = mEdge(p, points) * scale;
+    if (isMapPass && -plodeEdge > part) {
         modelAlbedo = MAIN_COL;
         isSkin = 0.;
     }
-    d = max(d, -plodeEdge);
+    part = max(part, -plodeEdge);
+    float d = part;
+    doBlend = true;
+
+    // return d;
+
+    start = start0;
+    p = p0;
+    points = shiftPoints(points);
+
+    start += calcDelay(points);
+    p -= points.hexCenter * animPlode(start) * plodeDistance;
+    part = mHeadShell(p) * scale;
+    plodeEdge = mEdge(p, points) * scale;
+    part = max(part, -plodeEdge);
+    if (part < d) {
+        d = part;
+        doBlend = false;
+    }
+
+    // return d;
+
+    start = start0;
+    p = p0;
+    points = shiftPoints(points);
+
+    start += calcDelay(points);
+    p -= points.hexCenter * animPlode(start) * plodeDistance;
+    part = mHeadShell(p) * scale;
+    plodeEdge = mEdge(p, points) * scale;
+    part = max(part, -plodeEdge);
+    if (part < d) {
+        d = part;
+        doBlend = false;
+    }
+
+    // sectionEdge = max(sectionEdge, d  - .15 * scale);
+    // sectionEdge = max(sectionEdge, -inner  - .15 * scale);
+
+    // bound = min(bound, sectionEdge - .2 * scale);
+    // bound = min(bound, sectionEdge + sectionEps * scale);
+
+    p = pf;
+
     return d;
 }
 
@@ -1466,7 +1628,9 @@ float drawBlend(float d, vec3 p, float level, float start, float bound) {
     modelAlbedo = mix(_modelAlbedo, modelAlbedo, blend);
     isSkin = mix(_isSkin, isSkin, blend);
     if ( ! isAoPass) {
-        d = min(d, bound);
+        // if (bound > .001) {
+        //     d = min(d, bound);
+        // }
     }
     return d;
 }
@@ -1506,21 +1670,18 @@ float mapAnimMain(vec3 p) {
     float d, d2;
     float blend;
     float bound = 1e12;
+    bool doBlend = true;
     float start;
-    float delay = 0.;
     float level = 0.;
 
 
 
     points = geodesicTriPoints(p, 1.);
-    delay += calcDelay(points);
     // start at focus blend finishing
-    #ifndef ANOTHER_LEVEL
-        start = delay - loopDuration;
-    #else
-        start = delay - loopDuration * 2.;
-    #endif
-    d = drawPlode(p, bound, level, points, start);
+    start = -loopDuration;
+    d = drawPlode(p, doBlend, level, points, start);
+
+    start += calcDelay(points);
 
     if ( ! guiStep0) {
         return min(d, bound);
@@ -1539,9 +1700,8 @@ float mapAnimMain(vec3 p) {
 
 
     points = geodesicTriPoints(p, 1.);
-    delay = calcDelay(points);
-    start += blendDuration + delay;
-    d = drawPlode(p, bound, level, points, start);
+    start += blendDuration;
+    d = drawPlode(p, doBlend, level, points, start);
 
     if ( ! guiStep2) {
         return min(d, bound);
@@ -1551,26 +1711,6 @@ float mapAnimMain(vec3 p) {
 
     start += blendDelay;
 
-    #ifndef ANOTHER_LEVEL
-        return drawBlend(d, p, level, start, bound);
-    #endif
-
-    if ( ! animPlodeStarted(start + blendDuration) || ! guiStep3) {
-        return drawBlend(d, p, level, start, bound);
-    }
-
-    points = geodesicTriPoints(p, 1.);
-    delay = calcDelay(points);
-    start += blendDuration + delay;
-    d = drawPlode(p, bound, level, points, start);
-
-    if ( ! guiStep3) {
-        return min(d, bound);
-    }
-
-    moveIntoHex(p, level, points);
-
-    start += blendDelay;
     return drawBlend(d, p, level, start, bound);
 }
 
@@ -1604,10 +1744,10 @@ vec3 LIGHT_POS = vec3(-.1,.12,.2) * 5.;
 float map(vec3 p) {
 
     // if ( ! guiEdit) {
-        float ad = mapAnim(p);
-        // ad = min(ad, length(p - LIGHT_POS) - .01);
-        // ad = length(p - LIGHT_POS) - .1;
-        return ad;
+        // float ad = mapAnim(p);
+        // // ad = min(ad, length(p - LIGHT_POS) - .01);
+        // // ad = length(p - LIGHT_POS) - .1;
+        // return ad;
     // }
 
     // float t = clamp(mod(iTime, 1.5), 0., 1.);
@@ -1664,16 +1804,22 @@ float map(vec3 p) {
     float d;
     float delay;
     float bound = 1e12;
+    bool doBlend = true;
     float start;
     float level = 0.;
     vec3 pp = p;
     points = geodesicTriPoints(p, 1.);
+    // points = geodesicTriPoints(vec3(0,.8,1), 1.);
     // if (isMapPass) modelAlbedo = spectrum(points.id);
-    start += calcDelay(points);
-    d = drawPlode(p, bound, level, points, start);
-    moveIntoHex(p, level, points);
-    start += blendDelay;
-    d = drawBlend(d, p, level, start, bound);
+    d = drawPlode(p, doBlend, level, points, start);
+    
+    if (doBlend) {
+        start += calcDelay(points);
+        moveIntoHex(p, level, points);
+        start += blendDelay;
+        d = drawBlend(d, p, level, start, bound);
+    }
+    
     // d = max(d, -pp.z);
     d *= scale;
     return d;
@@ -1886,6 +2032,7 @@ vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 a
 vec3 screenhash;
 
 vec3 shade(vec3 p, vec3 rd, vec3 n) {
+    return n * .5 + .5;
     float fresnel = pow( max(0.0, 1.0+dot(n, rd)), 5.0 );
     vec3 albedo = modelAlbedo;
 
@@ -2136,7 +2283,9 @@ void main() {
 
     // color *= 1.2;
 
-    // color = spectrum(hit.steps / 400.);
+    if (p.x > 0.) {
+        color = spectrum(hit.steps / 300.);
+    }
 
     // if (SHADE_DEBUG) color *= 2.;
 
