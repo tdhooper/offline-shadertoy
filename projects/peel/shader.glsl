@@ -1677,7 +1677,6 @@ float mapAnimMain(vec3 p) {
     // start at focus blend finishing
     start = -loopDuration;
     d = drawPlode(p, dAdjacent, level, points, start);
-
     start += calcDelay(points);
 
     if ( ! guiStep0) {
@@ -1693,12 +1692,15 @@ float mapAnimMain(vec3 p) {
         return d;
     }
 
+    float dAdjacent2;
 
-
-
+    // float inner = -(mHeadInside(p) + shell * 2.) * pow(stepScale, level);
     points = geodesicTriPoints(p, 1.);
     start += blendDuration;
-    d = drawPlode(p, dAdjacent, level, points, start);
+    d = drawPlode(p, dAdjacent2, level, points, start);
+    start += calcDelay(points);
+
+    dAdjacent = min(dAdjacent2, dAdjacent);
 
     if ( ! guiStep2) {
         return min(d, bound);
@@ -1708,7 +1710,11 @@ float mapAnimMain(vec3 p) {
 
     start += blendDelay;
 
-    return drawBlend(d, dAdjacent, p, level, start, bound);
+    d = drawBlend(d, dAdjacent, p, level, start, bound);
+    // if (inner > .001) {
+    //     d = inner;
+    // }
+    return d;
 }
 
 float mapAnim(vec3 p) {
@@ -1741,10 +1747,10 @@ vec3 LIGHT_POS = vec3(-.1,.12,.2) * 5.;
 float map(vec3 p) {
 
     // if ( ! guiEdit) {
-        // float ad = mapAnim(p);
+        float ad = mapAnim(p);
         // // ad = min(ad, length(p - LIGHT_POS) - .01);
         // // ad = length(p - LIGHT_POS) - .1;
-        // return ad;
+        return ad;
     // }
 
     // float t = clamp(mod(iTime, 1.5), 0., 1.);
@@ -1879,7 +1885,7 @@ float mapDebug(vec3 p) {
     // if ( ! guiDebug) {
     //     return d;
     // }
-    float plane = abs(p.y - .15);
+    float plane = abs(p.z - .15);
     //plane= abs(p.z);
     hitDebugPlane = plane < abs(d);
     // hitDebugPlane = true;
@@ -2284,7 +2290,7 @@ void main() {
     // color *= 1.2;
 
     if (p.x > 0.) {
-        color = spectrum(hit.steps / 300.);
+        // color = spectrum(hit.steps / 300.);
     }
 
     // if (SHADE_DEBUG) color *= 2.;
