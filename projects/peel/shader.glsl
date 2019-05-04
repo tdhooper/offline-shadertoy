@@ -538,6 +538,7 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 // --------------------------------------------------------
 
 bool isMapPass = false;
+bool isNormalPass = false;
 bool isAoPass = false;
 
 struct Model {
@@ -1494,6 +1495,11 @@ float drawPlode(inout vec3 p, inout float dAdjacent, float level, TriPoints3D po
     part = max(part, -plodeEdge);
     float d = part;
 
+    if ( ! isMapPass && ! isNormalPass) {
+        dAdjacent = 1e12;
+        return d;
+    }
+
     start = start0;
     p = p0;
     points = shiftPoints(points);
@@ -1613,7 +1619,7 @@ float mapAnimMain(vec3 p) {
     float inner;
 
     inner = -(mHeadInside(p) + shell * 2.) * pow(stepScale, level);
-    if (inner > .005) {
+    if (inner > .005 && isMapPass) {
         return inner;
     }
     points = geodesicTriPoints(p, 1.);
@@ -1622,11 +1628,6 @@ float mapAnimMain(vec3 p) {
     start = -loopDuration;
     d = drawPlode(p, dAdjacent, level, points, start);
     start += calcDelay(points);
-
-    if ( ! guiStep0) {
-        return min(d, bound);
-    }
-
     moveIntoHex(p, level, points);
 
     start += blendDelay;
@@ -1639,7 +1640,7 @@ float mapAnimMain(vec3 p) {
     float dAdjacent2;
 
     inner = max(inner, -(mHeadInside(p) + shell * 2.) * pow(stepScale, level));
-    if (inner > .005) {
+    if (inner > .005 && isMapPass) {
         return inner;
     }
     points = geodesicTriPoints(p, 1.);
@@ -2050,6 +2051,7 @@ const int NUM_OF_TRACE_STEPS = 150;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
+    isNormalPass = true;
     vec3 eps = vec3(.00001,0,0);
     vec3 nor = vec3(0);
     float invert = 1.;
@@ -2058,6 +2060,7 @@ vec3 calcNormal(vec3 pos){
         eps = eps.zxy;
         invert *= -1.;
     }
+    isNormalPass = false;
     return normalize(nor);
 }
 
