@@ -186,71 +186,6 @@ struct TriPoints {
     vec2 ca;
 };
 
-TriPoints _closestTriPoints(vec2 p) {
-
-    float rot = PI / 2.;
-    pR(p, rot);
-
-    vec2 pTri = cart2hex * p;
-    vec2 pi = floor(pTri);
-    vec2 pf = fract(pTri);
-    
-    float split1 = step(pf.y, pf.x);
-    float split2 = step(pf.x, pf.y);
-    
-    vec2 a = vec2(split1, 1);
-    vec2 b = vec2(1, split2);
-    vec2 c = vec2(0, 0);
-
-    a += pi;
-    b += pi;
-    c += pi;
-
-    a = hex2cart * a;
-    b = hex2cart * b;
-    c = hex2cart * c;
-    
-    vec2 center = (a + b + c) / 3.;
-
-
-    
-    vec2 ab0 = (a + b) / 2.;
-    vec2 bc0 = (b + c) / 2.;
-    vec2 ca0 = (c + a) / 2.;
-
-    vec2 ab, bc, ca;
-
-    vec2 hexCenter = a;
-    ab = ab0;
-    bc = ca0;
-    ca = bc0;
-    if (distance(p, b) < distance(p, hexCenter)) {
-        hexCenter = b;
-        ab = bc0;
-        bc = ab0;
-        ca = ca0;
-    }
-    if (distance(p, c) < distance(p, hexCenter)) {
-        hexCenter = c;
-        ab = ca0;
-        bc = bc0;
-        ca = ab0;
-    }
-
-    pR(a, -rot);
-    pR(b, -rot);
-    pR(c, -rot);
-
-    pR(center, -rot);
-    pR(hexCenter, -rot);
-
-    pR(ab, -rot);
-    pR(bc, -rot);
-    pR(ca, -rot);
-
-    return TriPoints(a, b, c, center, hexCenter, ab, bc, ca);
-}
-
 void shiftOne(inout vec2 a, inout vec2 b, inout vec2 c) {
     vec2 a0 = a;
     vec2 b0 = b;
@@ -259,7 +194,6 @@ void shiftOne(inout vec2 a, inout vec2 b, inout vec2 c) {
     b = c0;
     c = a0;
 }
-
 
 TriPoints closestTriPoints(vec2 p) {
 
@@ -651,6 +585,9 @@ vec3 modelAlbedo = MAIN_COL;
 float isSkin = 0.;
 
 float mHeadInside(vec3 p) {
+
+    //return length(p) - .4;
+
     pR(p.yz, -.1);
     p.x = abs(p.x);
     float bound = ellip(p - vec3(0,.05,0), vec3(.52,.47,.52));
@@ -665,6 +602,8 @@ float mHeadInside(vec3 p) {
 }
 
 float mHeadApprox(vec3 p) {
+
+    //return length(p) - .4;
 
     if (guiEdit) {
         p.z -= .01;
@@ -730,6 +669,8 @@ float mHeadApprox(vec3 p) {
 }
 
 float mHead(vec3 p, bool bounded) {
+
+    //return length(p) - .4;
 
     if (isMapPass) {
         modelAlbedo = MAIN_COL;
@@ -1513,21 +1454,9 @@ float mEdge(vec3 p, TriPoints3D points) {
     vec3 edgeAB = normalize(cross(points.center, points.ab));
     vec3 edgeBC = normalize(cross(points.center, points.bc));
     vec3 edgeCA = normalize(cross(points.center, points.ca));
-    // return dot(p, edgeAB);
     float edge = min(dot(p, edgeAB), -dot(p, edgeCA));
     return edge;
 }
-
-
-// float mGhost(vec3 p, TriPoints3D points) {
-//     p = normalize(p);
-//     float g = min(
-//         distance(p, points.b),
-//         distance(p, points.c)
-//     );
-//     // g = min(g, distance(p, points.a));
-//     return g;
-// }
 
     float sectionEps = .001;
 
@@ -1549,6 +1478,7 @@ float drawPlode(inout vec3 p, inout float dAdjacent, float level, TriPoints3D po
 
     float start0 = start;
     vec3 p0 = p;
+    float offset;
 
 
     // sectionEdge = mGhost(p, points);
@@ -1564,8 +1494,6 @@ float drawPlode(inout vec3 p, inout float dAdjacent, float level, TriPoints3D po
     part = max(part, -plodeEdge);
     float d = part;
 
-    // return d;
-
     start = start0;
     p = p0;
     points = shiftPoints(points);
@@ -1575,6 +1503,12 @@ float drawPlode(inout vec3 p, inout float dAdjacent, float level, TriPoints3D po
     part = mHeadShell(p) * scale;
     plodeEdge = mEdge(p, points) * scale;
     part = max(part, -plodeEdge);
+
+    start += blendDelay;
+    start += blendDuration;
+    offset = animPlode(start) * plodeDistance * pow(stepScale, level + 1.);
+    part -= offset;
+
     dAdjacent = part;
 
     // return d;
@@ -1588,6 +1522,12 @@ float drawPlode(inout vec3 p, inout float dAdjacent, float level, TriPoints3D po
     part = mHeadShell(p) * scale;
     plodeEdge = mEdge(p, points) * scale;
     part = max(part, -plodeEdge);
+
+    start += blendDelay;
+    start += blendDuration;
+    offset = animPlode(start) * plodeDistance * pow(stepScale, level + 1.);
+    part -= offset;
+
     dAdjacent = min(dAdjacent, part);
     
     // d = min(d, dAdjacent);
@@ -1670,10 +1610,14 @@ float mapAnimMain(vec3 p) {
     bool doBlend = true;
     float start;
     float level = 0.;
+    float inner;
 
-
-
+    inner = -(mHeadInside(p) + shell * 2.) * pow(stepScale, level);
+    if (inner > .005) {
+        return inner;
+    }
     points = geodesicTriPoints(p, 1.);
+
     // start at focus blend finishing
     start = -loopDuration;
     d = drawPlode(p, dAdjacent, level, points, start);
@@ -1694,7 +1638,10 @@ float mapAnimMain(vec3 p) {
 
     float dAdjacent2;
 
-    // float inner = -(mHeadInside(p) + shell * 2.) * pow(stepScale, level);
+    inner = max(inner, -(mHeadInside(p) + shell * 2.) * pow(stepScale, level));
+    if (inner > .005) {
+        return inner;
+    }
     points = geodesicTriPoints(p, 1.);
     start += blendDuration;
     d = drawPlode(p, dAdjacent2, level, points, start);
@@ -1711,9 +1658,6 @@ float mapAnimMain(vec3 p) {
     start += blendDelay;
 
     d = drawBlend(d, dAdjacent, p, level, start, bound);
-    // if (inner > .001) {
-    //     d = inner;
-    // }
     return d;
 }
 
@@ -1879,13 +1823,16 @@ float mapPlayground(vec3 p) {
 bool hitDebugPlane = false;
 
 float mapDebug(vec3 p) {
+    float plane = abs(dot(p, normalize(vec3(-.5,1,0))) - .0);
+    // hitDebugPlane = true;
+    // return plane;
+
     float d = map(p);
     return d;
     // return d;
     // if ( ! guiDebug) {
     //     return d;
     // }
-    float plane = abs(p.z - .15);
     //plane= abs(p.z);
     hitDebugPlane = plane < abs(d);
     // hitDebugPlane = true;
@@ -2097,9 +2044,9 @@ vec3 render(Hit hit, vec3 col) {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 4.5;
+const float MAX_TRACE_DISTANCE = 3.5;
 const float INTERSECTION_PRECISION = .0001;
-const int NUM_OF_TRACE_STEPS = 550;
+const int NUM_OF_TRACE_STEPS = 150;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
@@ -2123,6 +2070,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
     float steps = 0.;
 
     for(int i = 0; i < NUM_OF_TRACE_STEPS; i++){
+        // if (currentDist < INTERSECTION_PRECISION * (1. + 50. * (rayLength / MAX_TRACE_DISTANCE)) ) {
         if (currentDist < INTERSECTION_PRECISION) {
             isBackground = false;
             break;
@@ -2178,6 +2126,8 @@ void main() {
     time /= 3.;
     // time -= .1;
     // time *= .333;
+
+    // time = .5;
 
     if (guiMultiscreen) {
         float screen = floor(vVertex.x) + floor(1.-vVertex.y) * 2.;
@@ -2289,9 +2239,9 @@ void main() {
 
     // color *= 1.2;
 
-    if (p.x > 0.) {
-        // color = spectrum(hit.steps / 300.);
-    }
+    // if (p.x > 0.) {
+        // color = spectrum(hit.steps / 100.);
+    // }
 
     // if (SHADE_DEBUG) color *= 2.;
 
