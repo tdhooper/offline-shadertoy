@@ -56,9 +56,10 @@ module.exports = (project) => {
     depthTexture: true,
   });
 
+  const m4identity = mat4.identity([]);
 
   const uniforms = {
-    model: mat4.identity([]),
+    model: m4identity,
     iResolution: (context, props) => {
       const resolution = [context.viewportWidth, context.viewportHeight];
       return props.resolution || resolution;
@@ -66,6 +67,8 @@ module.exports = (project) => {
     iOffset: (context, props) => (props.offset || [0, 0]),
     cameraMatrix: regl.prop('cameraMatrix'),
     cameraPosition: regl.prop('cameraPosition'),
+    debugPlaneMatrix: (context, props) => (props && props.debugPlane && props.debugPlane.matrix) || m4identity,
+    debugPlanePosition: (context, props) => (props && props.debugPlane && props.debugPlane.position) || [0, 0, 1],
     iGlobalTime: (context, props) => props.timer.elapsed / 1000,
     iTime: (context, props) => props.timer.elapsed / 1000,
     iMouse: (context, props) => {
@@ -137,6 +140,15 @@ module.exports = (project) => {
     position: [0, 0, 5],
   });
 
+  let debugPlane = {};
+
+  window.dropDebugPlane = () => {
+    debugPlane = {
+      matrix: Array.prototype.slice.call(camera.view()),
+      position: Array.prototype.slice.call(camera.position),
+    };
+  };
+
   const mouse = createMouse(canvas);
 
   const timer = new Timer();
@@ -153,6 +165,7 @@ module.exports = (project) => {
       mouse,
       screenQuad,
       r: [canvas.width, canvas.height],
+      debugPlane,
     };
     if (controls) {
       state.controls = controls.toState();
@@ -178,6 +191,7 @@ module.exports = (project) => {
     if (state.controls) {
       controls.fromState(state.controls);
     }
+    debugPlane = state.debugPlane;
   };
 
   const stateStore = new StateStore(toState, fromState, defaultState);
