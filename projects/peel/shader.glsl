@@ -19,6 +19,10 @@ varying float fov;
 varying float aspect;
 varying vec2 vVertex;
 
+uniform vec3 debugPlanePosition;
+uniform mat4 debugPlaneMatrix;
+
+
 uniform bool guiBlend;
 uniform bool guiSplit;
 uniform bool guiNeck;
@@ -587,7 +591,7 @@ float isSkin = 0.;
 
 float mHeadInside(vec3 p) {
 
-    //return length(p) - .4;
+    return length(p) - .4;
 
     pR(p.yz, -.1);
     p.x = abs(p.x);
@@ -604,7 +608,7 @@ float mHeadInside(vec3 p) {
 
 float mHeadApprox(vec3 p) {
 
-    //return length(p) - .4;
+    return length(p) - .4;
 
     if (guiEdit) {
         p.z -= .01;
@@ -671,7 +675,7 @@ float mHeadApprox(vec3 p) {
 
 float mHead(vec3 p, bool bounded) {
 
-    //return length(p) - .4;
+    return length(p) - .4;
 
     if (isMapPass) {
         modelAlbedo = MAIN_COL;
@@ -1577,6 +1581,210 @@ float drawBlend(float d, float dAdjacent, vec3 p, float level, float start, floa
     return d;
 }
 
+// #define ANOTHER_LEVEL
+
+
+bool SHADE_DEBUG = false;
+
+
+float _mapAnimMain(vec3 p) {
+
+    TriPoints3D points;
+    float plodeEdge;
+    float d, d2;
+    float blend;
+    float bound = 1e12;
+    float dAdjacent;
+    bool doBlend = true;
+    float start;
+    float level = 0.;
+    float inner;
+
+    inner = -(mHeadInside(p) + shell * 2.) * pow(stepScale, level);
+    if (inner > .005 && isMapPass) {
+        return inner;
+    }
+    points = geodesicTriPoints(p, 1.);
+
+    // start at focus blend finishing
+    start = -loopDuration;
+    d = drawPlode(p, dAdjacent, level, points, start);
+    start += calcDelay(points);
+    moveIntoHex(p, level, points);
+
+    start += blendDelay;
+    if ( ! animPlodeStarted(start + blendDuration)) {
+        d = drawBlend(d, dAdjacent, p, level, start, bound);
+        // return min(d, focusDebug);
+        return d;
+    }
+
+    float dAdjacent2;
+
+    inner = max(inner, -(mHeadInside(p) + shell * 2.) * pow(stepScale, level));
+    if (inner > .005 && isMapPass) {
+        return inner;
+    }
+    points = geodesicTriPoints(p, 1.);
+    start += blendDuration;
+    d = drawPlode(p, dAdjacent2, level, points, start);
+    start += calcDelay(points);
+
+    dAdjacent = min(dAdjacent2, dAdjacent);
+
+
+    moveIntoHex(p, level, points);
+
+    start += blendDelay;
+
+    d = drawBlend(d, dAdjacent, p, level, start, bound);
+    return d;
+}
+
+float plodeOffset(float delay) {
+    return animPlode(delay) * plodeDistance;
+}
+
+vec3 plode(vec3 p, TriPoints3D points, float delay) {
+    return p - points.hexCenter * plodeOffset(delay);
+}
+
+float drawHeadHex(vec3 p, float level, TriPoints3D points) {
+    float scale = pow(stepScale, level);
+    float d = mHeadShell(p) * scale;
+    float plodeEdge = mEdge(p, points) * scale;
+    if (isMapPass && -plodeEdge > d) {
+        modelAlbedo = MAIN_COL;
+        isSkin = 0.;
+    }
+    d = max(d, -plodeEdge);
+    return d;
+}
+
+float drawBlend2(float d, vec3 p, float level, float delay) {
+    vec3 _modelAlbedo = modelAlbedo;
+    float _isSkin = isSkin;
+    float scale = pow(stepScale, level);
+    float d2 = mHead(p, false) * scale;
+    float blend = animBlend(delay);
+    d2 = blendHeadPrepare(d2, blend, scale);
+    d = mix(d, d2, blend);
+    modelAlbedo = mix(_modelAlbedo, modelAlbedo, blend);
+    isSkin = mix(_isSkin, isSkin, blend);
+    return d;
+}
+
+float drawNeighbour(vec3 p, float level, TriPoints3D points, float delay) {
+    float d;
+
+    delay += calcDelay(points);
+    p = plode(p, points, delay);
+
+    if (time < delay + blendDuration) {
+        d = drawHeadHex(p, level, points);
+        moveIntoHex(p, level, points);
+        d = drawBlend2(d, p, level, delay);
+        return d;
+    }
+
+    moveIntoHex(p, level, points);
+    float scale = pow(stepScale, level);
+    d = mHead(p, false) * scale;
+    delay += blendDuration;
+    // d -= plodeOffset(delay) * scale;
+
+    return d;
+}
+
+float drawNeighbours(vec3 p, float level, TriPoints3D points, float delay) {
+    float d;
+
+    points = shiftPoints(points);
+    d = drawNeighbour(p, level, points, delay);
+
+    points = shiftPoints(points);
+    d = min(d, drawNeighbour(p, level, points, delay));
+
+    return d;
+}
+
+float draw3(vec3 p, float level, TriPoints3D points, float delay) {
+    float d;
+
+    float neighbours = drawNeighbours(p, level, points, delay);
+
+    delay += calcDelay(points);
+    p = plode(p, points, delay);
+
+    d = drawHeadHex(p, level, points);
+    moveIntoHex(p, level, points);
+    d = drawBlend2(d, p, level, delay);
+
+    d = min(d, neighbours);
+
+    return d;
+}
+
+float draw2(vec3 p, float level, TriPoints3D points, float delay) {
+    float d;
+
+    float neighbours = drawNeighbours(p, level, points, delay);
+
+    delay += calcDelay(points);
+    p = plode(p, points, delay);
+
+    // if (time < delay + blendDuration) {
+        d = drawHeadHex(p, level, points);
+        moveIntoHex(p, level, points);
+        d = drawBlend2(d, p, level, delay);
+    // } else {
+    //     moveIntoHex(p, level, points);
+    //     points = geodesicTriPoints(p, 1.);
+    //     delay += blendDuration;
+    //     d = draw3(p, level, points, delay);
+    // }
+
+    d = min(d, neighbours);
+
+    return d;
+}
+
+
+float draw(vec3 p, float level, TriPoints3D points, float delay) {
+    float d;
+
+    float neighbours = drawNeighbours(p, level, points, delay);
+
+    delay += calcDelay(points);
+    p = plode(p, points, delay);
+
+    if (time < delay + blendDuration) {
+        d = drawHeadHex(p, level, points);
+        moveIntoHex(p, level, points);
+        d = drawBlend2(d, p, level, delay);
+    } else {
+        moveIntoHex(p, level, points);
+        points = geodesicTriPoints(p, 1.);
+        delay += blendDuration;
+        d = draw2(p, level, points, delay);
+    }
+
+    d = min(d, neighbours);
+
+    return d;
+}
+
+float mapAnimMain(vec3 p) {
+    if (SHADE_DEBUG) {
+        return _mapAnimMain(p);
+    }
+    float delay = -loopDuration;
+    float level = 1.;
+    TriPoints3D points = geodesicTriPoints(p, 1.);
+    float d = draw(p, level, points, delay);
+    return d / stepScale;
+}
+
 float mapWaypoints(vec3 p) {
     // float d = 1e12;
     // const float WITER = 20.;
@@ -1603,64 +1811,6 @@ float mapWaypoints(vec3 p) {
     );
 }
 
-// #define ANOTHER_LEVEL
-
-float mapAnimMain(vec3 p) {
-
-    TriPoints3D points;
-    float plodeEdge;
-    float d, d2;
-    float blend;
-    float bound = 1e12;
-    float dAdjacent;
-    bool doBlend = true;
-    float start;
-    float level = 0.;
-    float inner;
-
-    inner = -(mHeadInside(p) + shell * 2.) * pow(stepScale, level);
-    if (inner > .005 && isMapPass) {
-        return inner;
-    }
-    points = geodesicTriPoints(p, 1.);
-
-    // start at focus blend finishing
-    start = -loopDuration;
-    d = drawPlode(p, dAdjacent, level, points, start);
-    start += calcDelay(points);
-    moveIntoHex(p, level, points);
-
-    start += blendDelay;
-    if ( ! animPlodeStarted(start + blendDuration) || ! guiStep1) {
-        d = drawBlend(d, dAdjacent, p, level, start, bound);
-        // return min(d, focusDebug);
-        return d;
-    }
-
-    float dAdjacent2;
-
-    inner = max(inner, -(mHeadInside(p) + shell * 2.) * pow(stepScale, level));
-    if (inner > .005 && isMapPass) {
-        return inner;
-    }
-    points = geodesicTriPoints(p, 1.);
-    start += blendDuration;
-    d = drawPlode(p, dAdjacent2, level, points, start);
-    start += calcDelay(points);
-
-    dAdjacent = min(dAdjacent2, dAdjacent);
-
-    if ( ! guiStep2) {
-        return min(d, bound);
-    }
-
-    moveIntoHex(p, level, points);
-
-    start += blendDelay;
-
-    d = drawBlend(d, dAdjacent, p, level, start, bound);
-    return d;
-}
 
 float mapAnim(vec3 p) {
     float animTime = range(.0, loopDuration, time);
@@ -1821,23 +1971,24 @@ float mapPlayground(vec3 p) {
     return d;
 }
 
-bool hitDebugPlane = false;
+float hitDebugPlane = 0.;
 
 float mapDebug(vec3 p) {
-    float plane = abs(dot(p, normalize(vec3(-.5,1,0))) - .0);
-    // hitDebugPlane = true;
-    // return plane;
-
     float d = map(p);
+
+    p = (debugPlaneMatrix * vec4(p, 1)).xyz;
+
+    float plane = abs(p.y);
+    float r = .001;
+    float marker = mix(length(p.xy) - r, length(p) - r, step(0., p.z));
+
+    hitDebugPlane = plane < abs(d) ? 1. : 0.;
+    d = min(d, plane);
+
+    hitDebugPlane = marker < abs(d) ? 2. : hitDebugPlane;
+    d = min(d, marker);
+
     return d;
-    // return d;
-    // if ( ! guiDebug) {
-    //     return d;
-    // }
-    //plane= abs(p.z);
-    hitDebugPlane = plane < abs(d);
-    // hitDebugPlane = true;
-    return hitDebugPlane ? plane : d;
 }
 
 
@@ -1961,7 +2112,6 @@ float ggx(vec3 n, vec3 v, vec3 l, float rough, float f0){
 }
 
 
-bool SHADE_DEBUG = false;
 
 vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 albedo) {
     vec3 ld = normalize(lp-p);
@@ -2032,9 +2182,12 @@ vec3 render(Hit hit, vec3 col) {
         // col = vec3(dot(hit.normal, vec3(.2,.5,1.3))) * modelAlbedo;
         col = shade(hit.pos, hit.rayDirection, hit.normal);
     }
-    if (hitDebugPlane) {
+    if (hitDebugPlane == 1.) {
         float d = map(hit.pos);
         col = distanceMeter(d * 2., hit.rayLength, hit.rayDirection, hit.rayOrigin);
+    }
+    if (hitDebugPlane == 2.) {
+        col = vec3(1);
     }
     return col;
 }
@@ -2127,6 +2280,9 @@ void main() {
 
     time = iTime;
     time /= 3.;
+    // time = 0.;
+    // time -= .3;
+    // time -= .5;
     // time -= .1;
     // time *= .333;
 
@@ -2140,10 +2296,13 @@ void main() {
     if (guiLoop) {
         time = mod(time, 1.);
     }
+
+    // time -= .8;
+
     time *= loopDuration;
 
     SHADE_DEBUG = (gl_FragCoord.x / iResolution.x) > .5;
-    SHADE_DEBUG = SHADE_DEBUG == (gl_FragCoord.y / iResolution.y) > .5;
+    // SHADE_DEBUG = SHADE_DEBUG == (gl_FragCoord.y / iResolution.y) > .5;
 
     vec3 dir2 = dir;
     vec3 cameraForward2 = cameraForward;
@@ -2228,8 +2387,10 @@ void main() {
         gl_FragDepthEXT = depth;
     }
 
-    float fog = 1. - exp( -(hit.rayLength - length(rayOrigin)) * 1.8 );
-    color = mix(color, bg, fog);
+    // gl_FragColor = vec4(spectrum(hit.steps / float(NUM_OF_TRACE_STEPS)), 1); return;
+
+    // float fog = 1. - exp( -(hit.rayLength - length(rayOrigin)) * 1.8 );
+    // color = mix(color, bg, fog);
 
     // color *= 1.2;
 

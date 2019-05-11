@@ -39,6 +39,10 @@ body:hover .stats {
     /*display: none;*/
 }
 
+.dg {
+    z-index: 1 !important;
+}
+
 .overlay {
     position: absolute;
     top: 0;
