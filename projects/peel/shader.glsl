@@ -1309,11 +1309,6 @@ float animPlode(float delay) {
     return plode;
 }
 
-bool animPlodeStarted(float delay) {
-    // return time > startOffset;
-    return animPlode(delay) > 0.;
-}
-
 float animBlend(float startOffset) {
     float start = 0.;
     float end = start + blendDuration;
@@ -1505,7 +1500,7 @@ float drawHeadHex(vec3 p, float level, TriPoints3D points) {
     return d;
 }
 
-float drawBlend2(float d, vec3 p, float level, float delay) {
+float drawBlend(float d, vec3 p, float level, float delay) {
     vec3 _modelAlbedo = modelAlbedo;
     float _isSkin = isSkin;
     float scale = pow(stepScale, level);
@@ -1525,6 +1520,13 @@ float drawNeighbour(vec3 p, float level, TriPoints3D points, float delay) {
     p = plode(p, points, delay);
 
     d = drawHeadHex(p, level, points);
+
+    if (isNormalPass) {
+        moveIntoHex(p, level, points);
+        d = drawBlend(d, p, level, delay);
+        return d;
+    }
+
     float scale = pow(stepScale, level + 1.);
     delay += blendDuration;
     d -= plodeOffset(delay) * scale;
@@ -1555,20 +1557,23 @@ float draw2(vec3 p, float level, TriPoints3D points, float delay) {
     }
 
     float d;
-    float neighbours = drawNeighbours(p, level, points, delay);
+    float neighbours = 1e12;
+
+    if (isMapPass || isNormalPass) {
+        neighbours = drawNeighbours(p, level, points, delay);
+    }
 
     delay += calcDelay(points);
     p = plode(p, points, delay);
 
     d = drawHeadHex(p, level, points);
     moveIntoHex(p, level, points);
-    d = drawBlend2(d, p, level, delay);
+    d = drawBlend(d, p, level, delay);
 
     d = min(d, neighbours);
 
     return d;
 }
-
 
 float draw(vec3 p, float level, TriPoints3D points, float delay) {
     float inner = drawInner(p, level);
@@ -1577,7 +1582,11 @@ float draw(vec3 p, float level, TriPoints3D points, float delay) {
     }
 
     float d;
-    float neighbours = drawNeighbours(p, level, points, delay);
+    float neighbours = 1e12;
+
+    if (isMapPass || isNormalPass) {
+        neighbours = drawNeighbours(p, level, points, delay);
+    }
 
     delay += calcDelay(points);
     p = plode(p, points, delay);
@@ -1585,7 +1594,7 @@ float draw(vec3 p, float level, TriPoints3D points, float delay) {
     if (time < delay + blendDuration) {
         d = drawHeadHex(p, level, points);
         moveIntoHex(p, level, points);
-        d = drawBlend2(d, p, level, delay);
+        d = drawBlend(d, p, level, delay);
     } else {
         moveIntoHex(p, level, points);
         points = geodesicTriPoints(p, 1.);
@@ -1734,7 +1743,7 @@ float map(vec3 p) {
     p = plode(p, points, delay);
     d = drawHeadHex(p, level, points);
     moveIntoHex(p, level, points);
-    d = drawBlend2(d, p, level, delay);
+    d = drawBlend(d, p, level, delay);
 
     if (inner > .001) {
         d = inner;
@@ -2103,7 +2112,7 @@ void main() {
     time = iTime;
     time /= 3.;
     // time = 0.;
-    // time -= .3;
+    // time -= .2;
     // time -= .5;
     // time -= .1;
     // time *= .333;
