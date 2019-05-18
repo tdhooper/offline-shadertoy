@@ -34,6 +34,9 @@ uniform float guiPlodeDistance;
 uniform float guiCamDistance;
 uniform float guiCamLookDown;
 
+uniform float guiFocusX;
+uniform float guiFocusY;
+
 /* SHADERTOY FROM HERE */
 
 
@@ -1497,8 +1500,8 @@ void calcWaypoints() {
     vec3 focusP;
 
     focusHexCenter = normalize(vec3(0, .3, 1));
-    // pR(focusHexCenter.xz, guiFocusX);
-    // pR(focusHexCenter.yz, guiFocusY);
+    // pR(focusHexCenter.xz, guiFocusX * PI);
+    // pR(focusHexCenter.yz, guiFocusY * PI);
 
     // focusHexCenter = normalize(vec3(0, 1, PHI + 1.));
     focusPoints = geodesicTriPoints(focusHexCenter, 1.);
