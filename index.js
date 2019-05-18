@@ -22,7 +22,9 @@ const main = require('./main.js');
 // peel
 // rays-and-polygons
 // head-4k
+// peel
+// plode-2
 
-const project = LOADPROJECT('peel');
+const project = LOADPROJECT('plode-2');
 
 main(project);
