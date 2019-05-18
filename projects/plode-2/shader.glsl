@@ -352,14 +352,13 @@ TriPoints3D geodesicTriPoints(vec3 p, float subdivisions) {
     vec3 b = faceToSphere(points.b / uvScale);
     vec3 c = faceToSphere(points.c / uvScale);
     vec3 center = faceToSphere(points.center / uvScale);
-    vec3 hexCenter = faceToSphere(points.hexCenter / uvScale);
     vec3 ab = faceToSphere(points.ab / uvScale);
     vec3 bc = faceToSphere(points.bc / uvScale);
     vec3 ca = faceToSphere(points.ca / uvScale);
 
-    float id = calcId(hexCenter);
+    float id = calcId(a);
 
-    return TriPoints3D(a, b, c, center, hexCenter, ab, bc, ca, id);
+    return TriPoints3D(a, b, c, center, a, ab, bc, ca, id);
 }
 
 
@@ -1185,39 +1184,6 @@ vec3 _projectSurface(vec3 dir, vec3 origin) {
     dist = mHead(ray - origin, true); ray += dist * -dir;
     dist = mHead(ray - origin, true); ray += dist * -dir;
     return ray - origin;
-}
-
-float _map(vec3 p) {
-
-    vec3 origin = vec3(cos(iTime * 2.) * .25,sin(iTime * 2.) * .25 + .1,0);
-    origin = vec3(0,.1,0);
-
-    TriPoints3D points = geodesicTriPoints(p + origin, 3.);
-
-    vec3 psA = projectSurface(points.a, origin);
-    vec3 psB = projectSurface(points.b, origin);
-    vec3 psC = projectSurface(points.c, origin);
-
-    float sz = .02;
-    float dotsA = length(p - psA) - sz;
-    float dotsB = length(p - psB) - sz;
-    float dotsC = length(p - psC) - sz;
-    float dots = min(dotsA, min(dotsB, dotsC));
-
-    float head = mHead(p, true);
-
-    return smin(head, dots, .015);
-
-    // head = abs(head + .01) - .01;
-
-    // float headd = smin(head, dots, .1 / s);
-
-
-    // return mix(head, mix(headd, dots, smoothstep(.33, 1., iTime)), smoothstep(0., .33, iTime));
-
-    // return smin(head, dots, .1 / s);
-
-    // return mHead(p) - iTime;
 }
 
 float sinstep(float a) {
