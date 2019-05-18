@@ -39,17 +39,6 @@ uniform float guiFocusY;
 
 /* SHADERTOY FROM HERE */
 
-
-const float EDGE_THICKNESS = .2;
-const float WIDTH = 1.;
-const float RADIUS = 3.;
-const float CHANNEL_DEPTH_RATIO = 1.;
-const float BALL_COUNT = 19.;
-const float BALL_SIZE_RATIO = 1.;
-const float BALL_SPEED = -5.;
-const float TWISTS = .5;
-const float TWIST_SPEED = 1.;
-
 #define PI 3.14159265359
 
 #pragma glslify: import('./quat.glsl')
@@ -127,23 +116,6 @@ vec3 icosahedronVertex(vec3 p) {
     result = splitPlane(v2, v1, p, plane);
     return normalize(result);
 }
-
-vec3 icosahedronVertexComplete(vec3 p) {
-    vec3 sp, v1, v2, v3, result, plane;
-    float split;
-    sp = sign(p);
-    v1 = vec3(PHI, 1, 0) * sp;
-    v2 = vec3(1, 0, PHI) * sp;
-    v3 = vec3(0, PHI, 1) * sp;
-    plane = cross(cross(v1, v2), v1 + v2);
-    split = max(sign(dot(p, plane)), 0.);
-    result = mix(v1, v2, split);
-    plane = cross(cross(result, v3), v3 + result);
-    split = max(sign(dot(p, plane)), 0.);
-    result = mix(result, v3, split);
-    return normalize(result);
-}
-
 
 // Nearest dodecahedron vertex (nearest icosahrdron face)
 vec3 dodecahedronVertex(vec3 p) {
@@ -518,34 +490,6 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 bool isMapPass = false;
 bool isNormalPass = false;
 bool isAoPass = false;
-
-struct Model {
-    float dist;
-    vec3 material;
-};
-
-Model mapA(vec3 p) {
-    float d;
-    float c = length(p.xy) - .5;
-
-    float lead = 20.;
-    float strands = 2.;
-
-    d = abs(
-        sin((atan(p.y,p.x)-p.z * lead) / strands)
-        * min(1., length(p.xy))
-    ) / (lead / strands) - .02;
-    d = max(d, c);
-
-    return Model(d, vec3(.8));
-}
-
-float helix(vec3 p, float lead, float thick) {
-    p.z += iTime * .1;
-    float d = (mod(atan(p.y, p.x) - p.z * lead, PI * 2.) - PI) / lead;
-    d = abs(d) - thick;
-    return d;
-}
 
 float ellip(vec3 p, vec3 s) {
     float r = vmin(s);
@@ -1175,17 +1119,6 @@ vec3 projectSurface(vec3 dir) {
     return projectSurface(dir, vec3(0));
 }
 
-vec3 _projectSurface(vec3 dir, vec3 origin) {
-    vec3 ray = dir;
-    float dist = 0.;
-    dist = mHead(ray - origin, true); ray += dist * -dir;
-    dist = mHead(ray - origin, true); ray += dist * -dir;
-    dist = mHead(ray - origin, true); ray += dist * -dir;
-    dist = mHead(ray - origin, true); ray += dist * -dir;
-    dist = mHead(ray - origin, true); ray += dist * -dir;
-    return ray - origin;
-}
-
 float sinstep(float a) {
     return sin(a * PI - PI * .5) * .5 + .5;
 }
@@ -1630,7 +1563,6 @@ float mapDebug(vec3 p) {
 // --------------------------------------------------------
 
 struct Hit {
-    Model model;
     vec3 pos;
     bool isBackground;
     vec3 normal;
@@ -1884,10 +1816,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         normal = calcNormal(pos);
     }
 
-    Model model = Model(currentDist, modelAlbedo);
-
     return Hit(
-        model,
         pos,
         isBackground,
         normal,
