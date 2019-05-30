@@ -1713,6 +1713,20 @@ vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 a
 
 vec3 screenhash;
 
+vec3 env(vec3 dir) {
+    float f = atan(dir.x / dir.z);
+    float e = range(1., -1., dot(dir, normalize(vec3(0,1,.3+sin(f * 3.) * .1))));
+    float ee = range(1., -1., dot(dir, normalize(vec3(-.3,1,0))));
+    float l = saturate(step(e,.5) + e);
+    l -= min(.5, e);
+    l = mix(l, saturate(.25 - ee * .25), .5);
+    l = saturate(l - pow(ee, 4.) * .5);
+    l = mix(l * .75, 2., pow(saturate(1. - ee * 3.), 5.));
+    return vec3(l);
+    vec3 c = spectrum(-e * .3 + .5);
+    return c;
+}
+
 vec3 shade(vec3 p, vec3 rd, vec3 n) {
 
     // n = refract(rd, n, 1. / 1.333);
@@ -1721,13 +1735,12 @@ vec3 shade(vec3 p, vec3 rd, vec3 n) {
     // // return pow(spectrum(e - .2), vec3(1./2.2));
     // return vec3(sin(e * 20.) * .5 + .5);
 
-    float ao = calcAO(p, n);
-    ao = range(.25, 1., ao);
-    return vec3(ao);
+    // float ao = calcAO(p, n);
+    // ao = range(.25, 1., ao);
+    // return vec3(ao);
     n = reflect(rd, n);
-    float e = range(1., -1., dot(n, vec3(1,0,0)));
-    vec3 c = spectrum(-e * .3 + .5);
-    c *= ao;
+    vec3 c = env(n);
+    // c *= ao;
     return c;
 
 /*
@@ -1796,14 +1809,14 @@ vec3 render(Hit hit, vec3 col) {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 7.;
+const float MAX_TRACE_DISTANCE = 6.;
 const float INTERSECTION_PRECISION = .0001;
 const int NUM_OF_TRACE_STEPS = 150;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
     isNormalPass = true;
-    vec3 eps = vec3(.00001,0,0);
+    vec3 eps = vec3(.0001,0,0);
     vec3 nor = vec3(0);
     float invert = 1.;
     for (int i = 0; i < NORMAL_STEPS; i++){
@@ -1873,7 +1886,7 @@ void main() {
     vec2 vertex = vVertex;
     vertex = mod(vertex, 1.) * 2. - 1.;
 
-    time = iTime;
+    time = iTime * 2.;
     time /= 3.;
     time = mod(-time, 1.);
     time *= loopDuration;
@@ -1908,14 +1921,15 @@ void main() {
     // bg = mix(vec3(.5), vec3(1,0,1), .25);
     bg = MAIN_COL;
     bg = vec3(97,221,225)/255.;
+    bg = vec3(.1);
 
     Hit hit = raymarch(rayOrigin, rayDirection);
     vec3 color = render(hit, bg);
 
     // gl_FragColor = vec4(spectrum(hit.steps / float(NUM_OF_TRACE_STEPS)), 1); return;
 
-    float fog = range(.5, MAX_TRACE_DISTANCE, hit.rayLength);
-    fog = 1. - exp(fog * -4.);
+    float fog = range(.0, MAX_TRACE_DISTANCE, hit.rayLength);
+    fog = 1. - exp(fog * -5.);
     color = mix(color, bg, fog);
 
     // color *= 1.2;
