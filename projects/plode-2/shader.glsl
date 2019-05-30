@@ -507,9 +507,14 @@ vec3 MAIN_COL = vec3(.583,.643,.68) * 1.0;
 vec3 modelAlbedo = MAIN_COL;
 float isSkin = 0.;
 
+// 0 head, 1 fake, 2 sphere
+#define MODEL_MOCK 1
+
 float mHeadInside(vec3 p) {
 
-    // return length(p) - .4;
+    #if MODEL_MOCK == 2
+        return length(p) - .4;
+    #endif
 
     pR(p.yz, -.1);
     p.x = abs(p.x);
@@ -527,7 +532,9 @@ float mHeadInside(vec3 p) {
 
 float mHead(vec3 p, bool bounded) {
 
-    // return length(p) - .4;
+    #if MODEL_MOCK == 2
+        return length(p) - .4;
+    #endif
 
     if (isMapPass) {
         modelAlbedo = MAIN_COL;
@@ -548,7 +555,9 @@ float mHead(vec3 p, bool bounded) {
     bound = smax(bound, abs(p.x) - .4, .2);
     bound = smin(bound, length(vec3(abs(p.x), p.yz) - vec3(.26,-.11,-.12)) - .23, .1);
 
-    return bound += .03;
+    #if MODEL_MOCK == 1
+        return bound += .03;
+    #endif
 
     if (bounded && bound > .01) {
         return bound;
@@ -1038,9 +1047,13 @@ float mHead(vec3 p, bool bounded) {
 
 float mHeadApprox(vec3 p) {
 
-    return mHead(p, true);
+    #if MODEL_MOCK == 2
+        return length(p) - .4;
+    #endif
 
-    return length(p) - .4;
+    #if MODEL_MOCK == 1
+        return mHead(p, true);
+    #endif
 
     pR(p.yz, -.1);
 
@@ -1701,6 +1714,23 @@ vec3 shadeLight(vec3 p, vec3 rd, vec3 n, float fresnel, vec3 lp, vec3 lc, vec3 a
 vec3 screenhash;
 
 vec3 shade(vec3 p, vec3 rd, vec3 n) {
+
+    // n = refract(rd, n, 1. / 1.333);
+    // float e = range(1., -1., dot(n, vec3(0,1,0)));
+    // // return vec3(range(.2, -.2, dot(n, vec3(0,1,0))) + .2);
+    // // return pow(spectrum(e - .2), vec3(1./2.2));
+    // return vec3(sin(e * 20.) * .5 + .5);
+
+    float ao = calcAO(p, n);
+    ao = range(.25, 1., ao);
+    return vec3(ao);
+    n = reflect(rd, n);
+    float e = range(1., -1., dot(n, vec3(1,0,0)));
+    vec3 c = spectrum(-e * .3 + .5);
+    c *= ao;
+    return c;
+
+/*
     return n * .5 + .5;
     float fresnel = pow( max(0.0, 1.0+dot(n, rd)), 5.0 );
     vec3 albedo = modelAlbedo;
@@ -1722,6 +1752,7 @@ vec3 shade(vec3 p, vec3 rd, vec3 n) {
     // }
 
     return ambient + l1 + l2;
+    */
 }
 
 // linear white point
@@ -1765,7 +1796,7 @@ vec3 render(Hit hit, vec3 col) {
 // Adapted from: https://www.shadertoy.com/view/Xl2XWt
 // --------------------------------------------------------
 
-const float MAX_TRACE_DISTANCE = 3.5;
+const float MAX_TRACE_DISTANCE = 7.;
 const float INTERSECTION_PRECISION = .0001;
 const int NUM_OF_TRACE_STEPS = 150;
 
@@ -1876,13 +1907,15 @@ void main() {
     bg *= .8;
     // bg = mix(vec3(.5), vec3(1,0,1), .25);
     bg = MAIN_COL;
+    bg = vec3(97,221,225)/255.;
 
     Hit hit = raymarch(rayOrigin, rayDirection);
     vec3 color = render(hit, bg);
 
     // gl_FragColor = vec4(spectrum(hit.steps / float(NUM_OF_TRACE_STEPS)), 1); return;
 
-    float fog = 1. - exp( -(hit.rayLength - length(rayOrigin)) * 1.8 );
+    float fog = range(.5, MAX_TRACE_DISTANCE, hit.rayLength);
+    fog = 1. - exp(fog * -4.);
     color = mix(color, bg, fog);
 
     // color *= 1.2;
@@ -1892,7 +1925,7 @@ void main() {
     // vec3 tint = spectrum(mix(.5, -.2, tintl));
     // // tint *= pow(color, vec3(2.));
     // color *= mix(vec3(1.), tint, .3);
-    // // color = pow(color, vec3(1. / 2.2)); // Gamma
+    color = pow(color, vec3(1. / 2.2)); // Gamma
 
     // color *= 1.2;
 
@@ -1902,7 +1935,7 @@ void main() {
 
     // if (SHADE_DEBUG) color *= 2.;
 
-    color = filmic_reinhard(color);
+    // color = filmic_reinhard(color);
 
     gl_FragColor = vec4(color, 1);
     
