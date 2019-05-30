@@ -1,5 +1,5 @@
 {
-  "id": "plode-2_2",
+  "id": "plode-2_3",
   "camera": {
     "rotation": [
       -0.01688377745449543,
@@ -65,8 +65,8 @@
     0
   ],
   "r": [
-    183,
-    106
+    344,
+    169
   ],
   "controls": {
     "closed": true,
@@ -75,7 +75,7 @@
       "step": 0.01,
       "min": 0,
       "max": 0.8,
-      "value": 0.41000000000000003
+      "value": 0.59
     },
     "camDistance": {
       "type": "range",
@@ -112,25 +112,6 @@
     "fixedCamera": {
       "type": "toggle",
       "value": true
-    },
-    "step": {
-      "0": {
-        "type": "toggle",
-        "value": true
-      },
-      "1": {
-        "type": "toggle",
-        "value": true
-      },
-      "2": {
-        "type": "toggle",
-        "value": true
-      },
-      "3": {
-        "type": "toggle",
-        "value": true
-      },
-      "closed": true
     }
   }
 }
