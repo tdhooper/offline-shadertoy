@@ -12,7 +12,7 @@ module.exports = () => {
       .map(fragName => `./projects/${name}/${fragName}.glsl`)
       .find(fs.existsSync);
     const frag = glslify(fragFile);
-    this.emit('file', path.join(__dirname, fragFile));
+    this.emit('file', path.join(__dirname, fragFile)); // watch file
 
     const configFile = `projects/${name}/config.json`;
     let config = null;
@@ -38,6 +38,7 @@ module.exports = () => {
     return str;
   }
 
+  // Replace LOADPROJECT with a json blob containing it's shaders and config
   function process(buf, enc, next) {
 
     const re = /LOADPROJECT\('([^\)]+)'\)/;
