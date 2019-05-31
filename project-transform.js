@@ -8,11 +8,22 @@ module.exports = () => {
 
   function inlineProject(name) {
 
-    const fragFile = ['shader', 'frag']
-      .map(fragName => `./projects/${name}/${fragName}.glsl`)
-      .find(fs.existsSync);
-    const frag = glslify(fragFile);
-    this.emit('file', path.join(__dirname, fragFile)); // watch file
+    const project = {};
+
+    const dir = `./projects/${name}`;
+    const files = fs.readdirSync(dir);
+    const glsl = files.filter(f => /.glsl$/.test(f)).reduce((acc, _file) => {
+      const file = path.join(dir, _file);
+      let filename = path.parse(file).name;
+      if (['shader', 'frag'].indexOf(filename) !== -1) {
+        filename = 'main';
+      }
+      acc[filename] = glslify(file);
+      this.emit('file', path.join(__dirname, file)); // watch file
+      return acc;
+    }, {});
+
+    project.shaders = glsl;
 
     const configFile = `projects/${name}/config.json`;
     let config = null;
@@ -22,10 +33,7 @@ module.exports = () => {
       this.emit('file', path.join(__dirname, configFile));
     }
 
-    const project = {
-      config,
-      frag,
-    };
+    project.config = config;
 
     const drawFile = `projects/${name}/draw.js`;
     if (fs.existsSync(drawFile)) {

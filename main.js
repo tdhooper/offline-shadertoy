@@ -26,7 +26,7 @@ var dbt = performance.now();
 global.regl = regl;
 
 module.exports = (project) => {
-  const { frag } = project;
+  const frag = project.shaders.main;
   const defaultState = project.config || null;
 
   const stats = new Stats();
