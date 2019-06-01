@@ -1,8 +1,9 @@
 precision highp float;
 
 uniform vec2 iResolution;
+uniform float iTime;
 
 void main() {
     vec2 uv = gl_FragCoord.xy / iResolution.xy;
-    gl_FragColor = vec4(uv, 1, 1);
+    gl_FragColor = vec4(uv, sin(iTime) * .5 + .5, 1);
 }

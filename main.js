@@ -1,3 +1,5 @@
+/* eslint no-param-reassign: ["error", { "props": false }] */
+
 const Stats = require('stats.js');
 const glslify = require('glslify');
 const regl = require('regl')({
@@ -40,7 +42,7 @@ module.exports = (project) => {
     // Reads comment after uniform, e.g.
     // uniform sampler2D iChannel0; // buffer-a.glsl, filter: linear, wrap: clamp
     const dependencies = [];
-    const reUniform = /uniform sampler2D.*\/\/(.*)/g;
+    const reUniform = /uniform\s+sampler2D\s+([^;]+).*\/\/(.*)/g;
     const reFile = /([^\s]+)\.glsl/;
     const reFilter = /filter:\s*(\w+)/;
     const reWrap = /wrap:\s*(\w+)/;
@@ -49,9 +51,10 @@ module.exports = (project) => {
       match = reUniform.exec(shader);
       if (match) {
         dependencies.push({
-          name: match[1].match(reFile)[1],
-          filter: match[1].match(reFilter)[1],
-          wrap: match[1].match(reWrap)[1],
+          uniform: match[1],
+          name: match[2].match(reFile)[1],
+          filter: match[2].match(reFilter)[1],
+          wrap: match[2].match(reWrap)[1],
         });
       }
     } while (match);
@@ -86,8 +89,24 @@ module.exports = (project) => {
 
   const renderOrder = [];
   resolveDependency(nodes.main, renderOrder, []);
-  console.log(renderOrder);
 
+  renderOrder.forEach((node) => {
+    if (node.name === 'main') return;
+    node.buffer = regl.framebuffer({
+      width: 1024,
+      height: 1024,
+    });
+  });
+
+  renderOrder.forEach((node) => {
+    node.draw = regl({
+      frag: node.shader,
+      uniforms: node.dependencies.reduce((acc, dep) => {
+        acc[dep.uniform] = nodes[dep.name].buffer;
+        return acc;
+      }, {}),
+    });
+  });
 
   const setup = regl({
     uniforms: {
@@ -103,7 +122,7 @@ module.exports = (project) => {
   });
 
 
-  const buffer = regl.framebuffer({
+  const bufferOld = regl.framebuffer({
     width: 1024,
     height: 1024,
     depthTexture: true,
@@ -134,8 +153,8 @@ module.exports = (project) => {
       // );
       return mouseProp;
     },
-    uDepth: buffer.depthStencil,
-    uSource: buffer,
+    uDepth: bufferOld.depthStencil,
+    uSource: bufferOld,
   };
 
   const controls = defaultState && defaultState.controls
@@ -143,7 +162,6 @@ module.exports = (project) => {
 
   const drawRaymarch = regl({
     vert: glslify('./quad.vert'),
-    frag,
     attributes: {
       position: [
         [-2, 0],
@@ -261,21 +279,42 @@ module.exports = (project) => {
       regl.clear({
         color: [0, 0, 0, 1],
         depth: 1,
-        framebuffer: buffer,
+        framebuffer: bufferOld,
+      });
+      renderOrder.forEach((node) => {
+        if ( ! node.buffer) return;
+        regl.clear({
+          color: [0, 0, 0, 1],
+          depth: 1,
+          framebuffer: node.buffer,
+        });
       });
       setup(stateStore.state, (context) => {
         if (
-          buffer.width !== context.viewportWidth
-          || buffer.height !== context.viewportHeight
+          bufferOld.width !== context.viewportWidth
+          || bufferOld.height !== context.viewportHeight
         ) {
-          buffer.resize(context.viewportWidth, context.viewportHeight);
+          bufferOld.resize(context.viewportWidth, context.viewportHeight);
         }
+        renderOrder.forEach((node) => {
+          if ( ! node.buffer) return;
+          if (
+            node.buffer.width !== context.viewportWidth
+            || node.buffer.height !== context.viewportHeight
+          ) {
+            node.buffer.resize(context.viewportWidth, context.viewportHeight);
+          }
+        });
         if (projectDraw) {
-          buffer.use(function() {
+          bufferOld.use(function() {
             projectDraw(stateStore.state);
           });
         }
-        drawRaymarch(stateStore.state);
+        drawRaymarch(stateStore.state, () => {
+          renderOrder.forEach((node) => {
+            node.draw(stateStore.state);
+          });
+        });
       });
     }
     stats.end();

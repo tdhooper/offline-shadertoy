@@ -8,6 +8,6 @@ uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
 
 void main() {
     vec2 uv = gl_FragCoord.xy / iResolution.xy;
-    // gl_FragColor = texture2D(iChannel0, uv);
-    gl_FragColor = vec4(uv, 0, 1);
+    gl_FragColor = texture2D(iChannel0, uv);
+    // gl_FragColor = vec4(uv, 0, 1);
 }
