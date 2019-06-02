@@ -1,5 +1,5 @@
 /* eslint no-param-reassign: ["error", { "props": false }] */
-/* eslint space-unary-ops: [2, { "overrides": {"!": false} }] */
+/* eslint space-unary-ops: [2, { "overrides": {"!": true} }] */
 
 const Stats = require('stats.js');
 const glslify = require('glslify');
@@ -23,6 +23,7 @@ const StateStore = require('./lib/state-store');
 const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
 const createControls = require('./lib/uniform-controls');
+const buildRenderNodes = require('./lib/multipass');
 
 var dbt = performance.now();
 
@@ -39,71 +40,19 @@ module.exports = (project) => {
 
   const canvas = regl._gl.canvas;
 
-  function findBuffers(shader) {
-    // Reads comment after uniform, e.g.
-    // uniform sampler2D iChannel0; // buffer-a.glsl, filter: linear, wrap: clamp
-    const dependencies = [];
-    const reUniform = /uniform\s+sampler2D\s+([^;]+).*\/\/(.*)/g;
-    const reFile = /([^\s]+)\.glsl/;
-    const reFilter = /filter:\s*(\w+)/;
-    const reWrap = /wrap:\s*(\w+)/;
-    let match;
-    do {
-      match = reUniform.exec(shader);
-      if (match) {
-        dependencies.push({
-          uniform: match[1],
-          name: match[2].match(reFile)[1],
-          filter: match[2].match(reFilter)[1],
-          wrap: match[2].match(reWrap)[1],
-        });
-      }
-    } while (match);
-    return dependencies;
-  }
+  const renderNodes = buildRenderNodes(project.shaders);
 
-  const nodes = {};
-
-  Object.entries(project.shaders).forEach(([name, shader]) => {
-    nodes[name] = {
-      name,
-      shader,
-      dependencies: findBuffers(shader),
-    };
-  });
-
-  // https://www.electricmonk.nl/docs/dependency_resolving_algorithm/dependency_resolving_algorithm.html
-  function resolveDependency(node, resolved, unresolved) {
-    unresolved.push(node);
-    node.dependencies.forEach((dep) => {
-      const depNode = nodes[dep.name];
-      if (resolved.indexOf(depNode) === -1) {
-        if (unresolved.indexOf(depNode) !== -1) {
-          throw new Error(`Circular reference detected: ${node.name} -> ${depNode.name}`);
-        }
-        resolveDependency(depNode, resolved, unresolved);
-      }
-    });
-    resolved.push(node);
-    unresolved.push(node);
-  }
-
-  const renderOrder = [];
-  resolveDependency(nodes.main, renderOrder, []);
-
-  renderOrder.forEach((node) => {
-    if (node.name === 'main') return;
-    node.buffer = regl.framebuffer({
-      width: 1024,
-      height: 1024,
-    });
-  });
-
-  renderOrder.forEach((node) => {
+  renderNodes.forEach((node) => {
+    if (node.name !== 'main') {
+      node.buffer = regl.framebuffer({
+        width: 1024,
+        height: 1024,
+      });
+    }
     node.draw = regl({
       frag: node.shader,
       uniforms: node.dependencies.reduce((acc, dep) => {
-        acc[dep.uniform] = nodes[dep.name].buffer;
+        acc[dep.uniform] = dep.node.buffer;
         return acc;
       }, {}),
     });
@@ -270,7 +219,7 @@ module.exports = (project) => {
         color: [0, 0, 0, 1],
         depth: 1,
       });
-      renderOrder.forEach((node) => {
+      renderNodes.forEach((node) => {
         if ( ! node.buffer) return;
         regl.clear({
           color: [0, 0, 0, 1],
@@ -279,7 +228,7 @@ module.exports = (project) => {
         });
       });
       setup(stateStore.state, (context) => {
-        renderOrder.forEach((node) => {
+        renderNodes.forEach((node) => {
           if ( ! node.buffer) return;
           if (
             node.buffer.width !== context.viewportWidth
@@ -292,7 +241,7 @@ module.exports = (project) => {
           projectDraw(stateStore.state, context);
         } else {
           drawRaymarch(stateStore.state, () => {
-            renderOrder.forEach((node) => {
+            renderNodes.forEach((node) => {
               node.draw(stateStore.state);
             });
           });
