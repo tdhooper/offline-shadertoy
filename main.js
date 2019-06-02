@@ -30,8 +30,18 @@ var dbt = performance.now();
 global.regl = regl;
 
 module.exports = (project) => {
-  const frag = project.shaders.main;
   const defaultState = project.config || null;
+  const shaders = Object.assign({}, project.shaders);
+
+  if (shaders.common) {
+    Object.entries(shaders).forEach(([name, shader]) => {
+      if (name !== 'common') {
+        shaders[name] = `${shaders.common}\n\n${shader}`;
+      }
+    });
+  }
+
+  const frag = shaders.main;
 
   const stats = new Stats();
   stats.showPanel(0);
@@ -40,7 +50,7 @@ module.exports = (project) => {
 
   const canvas = regl._gl.canvas;
 
-  const renderNodes = buildRenderNodes(project.shaders);
+  const renderNodes = buildRenderNodes(shaders);
 
   renderNodes.forEach((node) => {
     if (node.name !== 'main') {
