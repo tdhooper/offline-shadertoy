@@ -55,6 +55,7 @@ module.exports = (project) => {
         acc[dep.uniform] = dep.node.buffer;
         return acc;
       }, {}),
+      framebuffer: node.buffer,
     });
   });
 
