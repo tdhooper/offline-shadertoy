@@ -14,9 +14,15 @@ mat4.rotateZ(model, model, .01);
 mat4.translate(model, model, [.222,-.5,.15]);
 mat4.scale(model, model, [50, 50, 50]);
 
-const init = function(uniforms) {
+function init(drawRaymarch, uniforms) {
   const uu = Object.assign({}, uniforms);
   uu.model = model;
+
+  const buffer = regl.framebuffer({
+    width: 1024,
+    height: 1024,
+    depthTexture: true,
+  });
 
   const drawPolygons = global.regl({
     // primitive: 'lines',
@@ -51,9 +57,35 @@ const init = function(uniforms) {
     },
     elements: mesh.cells,
     uniforms: uu,
+    framebuffer: buffer,
   });
 
-  return drawPolygons;
+  const setup = global.regl({
+    uniforms: {
+      uDepth: buffer.depthStencil,
+      uSource: buffer,
+    },
+  });
+
+  return function draw(state, context) {
+    global.regl.clear({
+      color: [0, 0, 0, 1],
+      depth: 1,
+      framebuffer: buffer,
+    });
+
+    if (
+      buffer.width !== context.viewportWidth
+      || buffer.height !== context.viewportHeight
+    ) {
+      buffer.resize(context.viewportWidth, context.viewportHeight);
+    }
+
+    drawPolygons(state);
+    setup(() => {
+      drawRaymarch(state);
+    });
+  };
 }
 
 module.exports = init;
