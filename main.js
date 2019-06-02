@@ -1,4 +1,5 @@
 /* eslint no-param-reassign: ["error", { "props": false }] */
+/* eslint space-unary-ops: [2, { "overrides": {"!": false} }] */
 
 const Stats = require('stats.js');
 const glslify = require('glslify');
@@ -121,13 +122,6 @@ module.exports = (project) => {
     },
   });
 
-
-  const bufferOld = regl.framebuffer({
-    width: 1024,
-    height: 1024,
-    depthTexture: true,
-  });
-
   const m4identity = mat4.identity([]);
 
   const uniforms = {
@@ -153,8 +147,6 @@ module.exports = (project) => {
       // );
       return mouseProp;
     },
-    uDepth: bufferOld.depthStencil,
-    uSource: bufferOld,
   };
 
   const controls = defaultState && defaultState.controls
@@ -162,6 +154,7 @@ module.exports = (project) => {
 
   const drawRaymarch = regl({
     vert: glslify('./quad.vert'),
+    frag,
     attributes: {
       position: [
         [-2, 0],
@@ -203,8 +196,9 @@ module.exports = (project) => {
     }
   });
 
+  let projectDraw;
   if (project.draw) {
-    var projectDraw = project.draw(uniforms);
+    projectDraw = project.draw(drawRaymarch, uniforms);
   }
 
   const camera = createCamera(canvas, {
@@ -276,11 +270,6 @@ module.exports = (project) => {
         color: [0, 0, 0, 1],
         depth: 1,
       });
-      regl.clear({
-        color: [0, 0, 0, 1],
-        depth: 1,
-        framebuffer: bufferOld,
-      });
       renderOrder.forEach((node) => {
         if ( ! node.buffer) return;
         regl.clear({
@@ -290,12 +279,6 @@ module.exports = (project) => {
         });
       });
       setup(stateStore.state, (context) => {
-        if (
-          bufferOld.width !== context.viewportWidth
-          || bufferOld.height !== context.viewportHeight
-        ) {
-          bufferOld.resize(context.viewportWidth, context.viewportHeight);
-        }
         renderOrder.forEach((node) => {
           if ( ! node.buffer) return;
           if (
@@ -306,15 +289,14 @@ module.exports = (project) => {
           }
         });
         if (projectDraw) {
-          bufferOld.use(function() {
-            projectDraw(stateStore.state);
+          projectDraw(stateStore.state, context);
+        } else {
+          drawRaymarch(stateStore.state, () => {
+            renderOrder.forEach((node) => {
+              node.draw(stateStore.state);
+            });
           });
         }
-        drawRaymarch(stateStore.state, () => {
-          renderOrder.forEach((node) => {
-            node.draw(stateStore.state);
-          });
-        });
       });
     }
     stats.end();
