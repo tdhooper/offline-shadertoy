@@ -8,8 +8,10 @@ const regl = require('regl')({
     'webgl_depth_texture',
     'ext_frag_depth',
     'oes_standard_derivatives',
+    'oes_texture_float',
+    'oes_texture_float_linear',
   ],
-  pixelRatio: .5,
+  // pixelRatio: .5,
   // pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
@@ -49,6 +51,7 @@ module.exports = (project) => {
   stats.dom.classList.add('stats');
 
   const canvas = regl._gl.canvas;
+  const gl = regl._gl;
 
   const renderNodes = buildRenderNodes(shaders);
 
@@ -57,9 +60,10 @@ module.exports = (project) => {
       node.buffer = regl.framebuffer({
         width: 1024,
         height: 1024,
+        colorType: 'float',
       });
     }
-    node.draw = regl({
+    const nodeCommand = regl({
       frag: node.shader,
       uniforms: node.dependencies.reduce((acc, dep) => {
         acc[dep.uniform] = dep.node.buffer;
@@ -67,6 +71,16 @@ module.exports = (project) => {
       }, {}),
       framebuffer: node.buffer,
     });
+    node.draw = (state) => {
+      node.dependencies.forEach((dep) => {
+        const texture = dep.node.buffer.color[0]._texture;
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(texture.target, texture.texture);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      });
+      nodeCommand(state);
+    };
   });
 
   const setup = regl({
