@@ -3,6 +3,10 @@ precision highp float;
 uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
 uniform float iTime;
 
+varying vec3 eye;
+varying vec3 dir;
+
+
 // filter: nearest, linear, mipmap
 // wrap: clamp, repeat
 
@@ -107,17 +111,20 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (-iResolution.xy + 2. * fragCoord.xy) / iResolution.y;
     
-    vec3 camPos = vec3(0,.05,3.2) * .5;
-    vec3 rayDirection = normalize(vec3(p + vec2(0,-0),-4));
-    
-    float r2 = .0;//iTime;
-    pR(camPos.yz, r2);
-    pR(rayDirection.yz, r2);
+    // vec3 camPos = vec3(0,.05,3.2) * .5;
+    // vec3 rayDirection = normalize(vec3(p + vec2(0,-0),-4));
 
-    float r = .5;//iTime + .7;
-    pR(camPos.xz, r);
-    pR(rayDirection.xz, r);
-        
+    // float r2 = .0;//iTime;
+    // pR(camPos.yz, r2);
+    // pR(rayDirection.yz, r2);
+
+    // float r = .5;//iTime + .7;
+    // pR(camPos.xz, r);
+    // pR(rayDirection.xz, r);
+
+    vec3 camPos = eye;
+    vec3 rayDirection = dir;
+
     vec3 rayPosition = camPos;
     float rayLength = 0.;
     float dist = 0.;
