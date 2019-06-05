@@ -58,8 +58,8 @@ module.exports = (project) => {
   renderNodes.forEach((node) => {
     if (node.name !== 'main') {
       node.buffer = regl.framebuffer({
-        width: 1024,
-        height: 1024,
+        width: 1000,
+        height: 1000,
         colorType: 'float',
       });
     }

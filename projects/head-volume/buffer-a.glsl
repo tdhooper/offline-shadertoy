@@ -504,13 +504,16 @@ float mHead(vec3 p) {
 float map(vec3 p) {
     p -= OFFSET;
     p /= SCALE;
-    return mHead(p);
-    return length(p) - .3;
+    // return mHead(p);
+    // return fBox(p, vec3(.5));
+    return length(p) - .9;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 size = vec2(1000.);
+    size = iResolution;
+    vec2 coord = fragCoord.xy;
     
     // vec4 lastFrame = texture2d(iChannel0, uv);
     // if (lastFrame.x != 0. && iFrame > 2) {
@@ -518,10 +521,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     //     return;
     // }
     
-    vec3 p0 = texToSpace(uv)[0].xyz;
-    vec3 p1 = texToSpace(uv)[1].xyz;
-    vec3 p2 = texToSpace(uv)[2].xyz;
-    vec3 p3 = texToSpace(uv)[3].xyz;
+    vec3 p0 = texToSpace(coord, size)[0].xyz;
+    vec3 p1 = texToSpace(coord, size)[1].xyz;
+    vec3 p2 = texToSpace(coord, size)[2].xyz;
+    vec3 p3 = texToSpace(coord, size)[3].xyz;
     
     fragColor = vec4(
         map(p0),

@@ -48,7 +48,9 @@ void pR(inout vec2 p, float a) {
 float mHead(vec3 p) {
     vec3 pa = p;
     float bound = fBox(p, vec3(.45,.65,.6));
-    p.x = -abs(p.x);
+    #ifdef MIRROR
+        p.x = -abs(p.x);
+    #endif
     p += OFFSET / SCALE;
     bound = fBox(p, 1./SCALE);
     //return bound;
@@ -58,7 +60,9 @@ float mHead(vec3 p) {
     //p.x = -abs(p.x);
     //p += OFFSET / SCALE;
     p *= SCALE;
-    float d = mapTex(iChannel0, p);
+    vec2 size = vec2(1000.);
+    size = iResolution;
+    float d = mapTex(iChannel0, p, size);
     //return min(d, max(bound, pa.x));
     return d;
     return min(d, bound + .02);
@@ -107,10 +111,33 @@ vec3 calcNormal(vec3 pos){
     return normalize(nor);
 }
 
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (-iResolution.xy + 2. * fragCoord.xy) / iResolution.y;
     
+    // vec3 space = texToSpace(fragCoord.xy, 0, iResolution);
+    // // fragColor = vec4(space, 1); return;
+    // // if (p.x < .9) {fragColor = vec4(spectrum(1.), 1); return;}
+    // // fragColor = vec4(spectrum(space.z * .5 + .5), 1); return;
+
+    // vec3 tex = spaceToTex(space, iResolution);
+    // tex.b /= 4.;
+    // // fragColor = vec4(vec3(step(tex.x, iTime)), 1); return;
+    // // fragColor = vec4(vec3(tex.z), 1); return;
+    // // fragColor = vec4(vec3(tex), 1); return;
+    // fragColor = vec4(spectrum(tex.z), 1); return;
+
+
     // vec3 camPos = vec3(0,.05,3.2) * .5;
     // vec3 rayDirection = normalize(vec3(p + vec2(0,-0),-4));
 
