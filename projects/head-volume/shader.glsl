@@ -134,8 +134,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     // tex.b /= 4.;
     // // fragColor = vec4(vec3(step(tex.x, iTime)), 1); return;
     // // fragColor = vec4(vec3(tex.z), 1); return;
-    // // fragColor = vec4(vec3(tex), 1); return;
-    // fragColor = vec4(spectrum(tex.z), 1); return;
+    // fragColor = vec4(vec3(tex), 1); return;
+    // // fragColor = vec4(spectrum(tex.z), 1); return;
 
 
     // vec3 camPos = vec3(0,.05,3.2) * .5;

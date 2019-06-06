@@ -71,7 +71,7 @@ vec3 spaceToTex(vec3 p, vec2 size) {
 
     // Work out the z index
     float zRange = sub.x * sub.y * 4. - 1.;
-    float i = floor(p.z * zRange);
+    float i = round(p.z * zRange);
 
     // return vec3(i/zRange);
 
@@ -108,19 +108,13 @@ float mapTex(sampler2D tex, vec3 p, vec2 size) {
     #endif
     vec2 sub = texSubdivisions;
     float zRange = sub.x * sub.y * 4. - 1.;
-    float zRound = p.z;
-    zRange /= 2.;
-    p.z += .5 / zRange;
-    float zFloor = floor(p.z * zRange) / zRange;
-    float zCeil = ceil(p.z * zRange) / zRange;
-    vec3 uvcR = spaceToTex(vec3(p.xy, zRound), size);
+    float z = p.z * .5 + .5; // range 0:1
+    float zFloor = (floor(z * zRange) / zRange) * 2. - 1.;
+    float zCeil = (ceil(z * zRange) / zRange) * 2. - 1.;
     vec3 uvcA = spaceToTex(vec3(p.xy, zFloor), size);
     vec3 uvcB = spaceToTex(vec3(p.xy, zCeil), size);
-    float r = pickIndex(texture2D(tex, uvcR.xy), int(uvcR.z));
-    // return r;
     float a = pickIndex(texture2D(tex, uvcA.xy), int(uvcA.z));
     float b = pickIndex(texture2D(tex, uvcB.xy), int(uvcB.z));
-    // return b;
     return mix(a, b, range(zFloor, zCeil, p.z));
 }
 
