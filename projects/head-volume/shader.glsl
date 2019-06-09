@@ -1,7 +1,8 @@
 precision highp float;
 
 uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
-uniform float iTime;
+uniform vec2 iChannel0Size;
+// uniform float iTime;
 
 varying vec3 eye;
 varying vec3 dir;
@@ -60,9 +61,7 @@ float mHead(vec3 p) {
     //p.x = -abs(p.x);
     //p += OFFSET / SCALE;
     p *= SCALE;
-    vec2 size = vec2(1000.);
-    size = iResolution;
-    float d = mapTex(iChannel0, p, size);
+    float d = mapTex(iChannel0, p, iChannel0Size);
     //return min(d, max(bound, pa.x));
     return d;
     return min(d, bound + .02);
