@@ -56,7 +56,7 @@ float mHead(vec3 p) {
     bound = fBox(p, 1./SCALE);
     //return bound;
     if (bound > .01) {
-        return bound;
+        // return bound;
     }
     //p.x = -abs(p.x);
     //p += OFFSET / SCALE;
@@ -155,7 +155,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float rayLength = 0.;
     float dist = 0.;
     bool bg = false;
-    vec3 col = vec3(0);
+    vec3 col = vec3(.15,.05,.15);
 
     for (int i = 0; i < 300; i++) {
         rayLength += dist;

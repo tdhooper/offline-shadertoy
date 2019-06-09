@@ -12,7 +12,7 @@ const regl = require('regl')({
     'oes_texture_float_linear',
   ],
   // pixelRatio: .5,
-  // pixelRatio: 1,
+  // pixelRatio: 3,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -58,8 +58,8 @@ module.exports = (project) => {
   renderNodes.forEach((node) => {
     if (node.name !== 'main') {
       node.buffer = regl.framebuffer({
-        width: 500,
-        height: 500,
+        width: 300,
+        height: 300,
         colorType: 'float',
       });
     }
@@ -315,11 +315,11 @@ module.exports = (project) => {
 
   // Default config used by the UI
   const captureConfig = {
-    fps: 35,
+    fps: 1,
     seconds: 1, // (duration)
-    width: (640 * 3) / 2,
-    height: (360 * 3) / 2,
-    quads: true,
+    width: 1000,
+    height: 1000,
+    quads: false,
     prefix: 'plode-',
   };
 

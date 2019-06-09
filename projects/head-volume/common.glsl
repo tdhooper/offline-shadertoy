@@ -1,10 +1,11 @@
 precision highp float;
 
 uniform vec2 iResolution;
+uniform float iTime;
 
 // #define MIRROR
 
-vec2 texSubdivisions = vec2(5,5);
+vec2 texSubdivisions = vec2(10,3);
 // voxel resolution is
 // vec3(
 //     iResolution / texSubdivisions,
@@ -12,11 +13,12 @@ vec2 texSubdivisions = vec2(5,5);
 // );
 //
 
-// #define SCALE (vec3(4.1,1.73,1.75) * 1.)
+#define SCALE (vec3(4.1/2.,1.73,1.75) * .6)
 // #define OFFSET vec3(.95, .094, -.088)
+#define OFFSET vec3(0, .094, -.088)
 
-#define SCALE vec3(1)
-#define OFFSET vec3(0)
+// #define SCALE vec3(1)
+// #define OFFSET vec3(0)
 
 
 // Divide texture into 3d space coordinates
@@ -58,11 +60,23 @@ mat4 texToSpace(vec2 coord, vec2 size) {
 }
 
 
+void pR2(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
 // Transform xyz coordinate in range -1,-1,-1 to 1,1,1
 // to texture uv and channel
 vec3 spaceToTex(vec3 p, vec2 size) {
     p = clamp(p, -1., 1.);
+
+    // p.x = mix(0., sin(p.x * 2.) * 10., .1);
+    
+    // p *= 1.3;
+    // p.z -= .3;
+
     p = p * .5 + .5; // range 0:1
+
+    // p.x = sin(p.x * 5.) / 2.;
 
     vec2 sub = texSubdivisions;
     vec2 subSize = floor(size / sub);
@@ -71,6 +85,7 @@ vec3 spaceToTex(vec3 p, vec2 size) {
 
     // Work out the z index
     float zRange = sub.x * sub.y * 4. - 1.;
+
     float i = round(p.z * zRange);
 
     // return vec3(i/zRange);
@@ -85,9 +100,19 @@ vec3 spaceToTex(vec3 p, vec2 size) {
         mod(floor(i / sub.x), sub.y)
     ) * subSize;
 
-    float c = floor(i / (sub.x * sub.y));
+    // coord *= mix(1., tan(coord.y*10./coord.x*5.), .05 / 100.);
+    coord *= mix(1., tan(coord.y/10.), .002);
 
-    return vec3(coord / size, c);
+
+    float c = floor(i / (sub.x * sub.y));
+    vec3 uvc = vec3(coord / size, c);
+
+
+    float f = 1000.;
+    uvc.xy = mix(uvc.xy, round(uvc.xy * vec2(f)) / vec2(f), .5);
+    // pR2(uvc.xy, .015);
+
+    return uvc;
 }
 
 float range(float vmin, float vmax, float value) {
@@ -115,6 +140,7 @@ float mapTex(sampler2D tex, vec3 p, vec2 size) {
     vec3 uvcB = spaceToTex(vec3(p.xy, zCeil), size);
     float a = pickIndex(texture2D(tex, uvcA.xy), int(uvcA.z));
     float b = pickIndex(texture2D(tex, uvcB.xy), int(uvcB.z));
+    // return a;
     return mix(a, b, range(zFloor, zCeil, p.z));
 }
 
