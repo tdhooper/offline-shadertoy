@@ -56,7 +56,7 @@ float mHead(vec3 p) {
     bound = fBox(p, 1./SCALE);
     //return bound;
     if (bound > .01) {
-        return bound;
+        // return bound;
     }
     //p.x = -abs(p.x);
     //p += OFFSET / SCALE;
