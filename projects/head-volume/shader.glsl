@@ -56,7 +56,7 @@ float mHead(vec3 p) {
     bound = fBox(p, 1./SCALE);
     //return bound;
     if (bound > .01) {
-        // return bound;
+        return bound;
     }
     //p.x = -abs(p.x);
     //p += OFFSET / SCALE;
@@ -124,7 +124,8 @@ vec3 spectrum(float n) {
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (-iResolution.xy + 2. * fragCoord.xy) / iResolution.y;
-    
+    // fragColor = vec4(vec3(texture2D(iChannel0, fragCoord.xy/iResolution.xy).a), 1.);
+    // return;
     // vec3 space = texToSpace(fragCoord.xy, 0, iResolution);
     // // fragColor = vec4(space, 1); return;
     // // if (p.x < .9) {fragColor = vec4(spectrum(1.), 1); return;}

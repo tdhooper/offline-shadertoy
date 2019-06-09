@@ -5,7 +5,7 @@ uniform float iTime;
 
 // #define MIRROR
 
-vec2 texSubdivisions = vec2(10,3);
+vec2 texSubdivisions = vec2(6,3);
 // voxel resolution is
 // vec3(
 //     iResolution / texSubdivisions,
@@ -13,7 +13,7 @@ vec2 texSubdivisions = vec2(10,3);
 // );
 //
 
-#define SCALE (vec3(4.1/2.,1.73,1.75).zyx * .6)
+#define SCALE (vec3(4.1/2.,1.73,1.75) * 1.)
 // #define OFFSET vec3(.95, .094, -.088)
 #define OFFSET vec3(0, .094, -.088)
 
@@ -47,7 +47,7 @@ vec3 texToSpace(vec2 coord, int c, vec2 size) {
     vec2 subUv = mod(coord / subSize, 1.);
     vec3 p = vec3(subUv, z);
     p = p * 2. - 1.; // range -1:1
-    return p.zyx;
+    return p;
 }
 
 mat4 texToSpace(vec2 coord, vec2 size) {
@@ -102,8 +102,10 @@ vec3 spaceToTex(vec3 p, vec2 size) {
     ) * subSize;
 
     // coord *= mix(1., tan(coord.y*10./coord.x*5.), .05 / 100.);
-    coord *= mix(1., tan(coord.x*10./coord.y*5.), .02 / 100.);
+    // coord *= mix(1., tan(coord.x*10./coord.y*5.), .02 / 100.);
     // coord *= mix(1., tan(coord.y/10.), .002);
+
+    coord *= mix(1., sin(coord.y/coord.x*700.), .001);
 
 
     float c = floor(i / (sub.x * sub.y));
@@ -129,7 +131,7 @@ float pickIndex(vec4 v, int i) {
 }
 
 float mapTex(sampler2D tex, vec3 p, vec2 size) {
-    p = p.zyx;
+    p = p;
     // stop x bleeding into the next cell as it's the mirror cut
     #ifdef MIRROR
         p.x = clamp(p.x, -.95, .95);
