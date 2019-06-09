@@ -58,17 +58,28 @@ module.exports = (project) => {
   renderNodes.forEach((node) => {
     if (node.name !== 'main') {
       node.buffer = regl.framebuffer({
-        width: 1000,
-        height: 1000,
+        width: 500,
+        height: 500,
         colorType: 'float',
       });
     }
+    const nodeUniforms = {
+      iResolution: (context, props) => {
+        const resolution = [context.viewportWidth, context.viewportHeight];
+        return props.resolution || resolution;
+      },
+    };
+    node.dependencies.reduce((acc, dep) => {
+      acc[dep.uniform] = dep.node.buffer;
+      acc[dep.uniform + 'Size'] = () => [
+        dep.node.buffer.width,
+        dep.node.buffer.height,
+      ];
+      return acc;
+    }, nodeUniforms);
     const nodeCommand = regl({
       frag: node.shader,
-      uniforms: node.dependencies.reduce((acc, dep) => {
-        acc[dep.uniform] = dep.node.buffer;
-        return acc;
-      }, {}),
+      uniforms: nodeUniforms,
       framebuffer: node.buffer,
     });
     node.draw = (state) => {
@@ -100,10 +111,6 @@ module.exports = (project) => {
 
   const uniforms = {
     model: m4identity,
-    iResolution: (context, props) => {
-      const resolution = [context.viewportWidth, context.viewportHeight];
-      return props.resolution || resolution;
-    },
     iOffset: (context, props) => (props.offset || [0, 0]),
     cameraMatrix: regl.prop('cameraMatrix'),
     cameraPosition: regl.prop('cameraPosition'),

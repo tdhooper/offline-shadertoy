@@ -504,15 +504,14 @@ float mHead(vec3 p) {
 float map(vec3 p) {
     p -= OFFSET;
     p /= SCALE;
-    // return mHead(p);
-    // return fBox(p, vec3(.5));
+    return mHead(p);
+    return fBox(p, vec3(.5));
     return length(p) - .9;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 size = vec2(1000.);
-    size = iResolution;
+    vec2 size = iResolution;
     vec2 coord = fragCoord.xy;
     
     // vec4 lastFrame = texture2d(iChannel0, uv);
