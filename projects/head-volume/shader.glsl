@@ -107,6 +107,7 @@ vec3 calcNormal(vec3 pos){
         eps = eps.zxy;
         invert *= -1.;
     }
+    // pR(nor.xz, 1.);
     return normalize(nor);
 }
 
