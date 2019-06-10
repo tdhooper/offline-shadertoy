@@ -2,9 +2,9 @@ precision highp float;
 
 uniform vec2 iResolution;
 
-// #define MIRROR
+#define MIRROR
 
-vec2 texSubdivisions = vec2(5,5);
+vec2 texSubdivisions = vec2(15,3);
 // voxel resolution is
 // vec3(
 //     iResolution / texSubdivisions,
@@ -12,11 +12,11 @@ vec2 texSubdivisions = vec2(5,5);
 // );
 //
 
-// #define SCALE (vec3(4.1,1.73,1.75) * 1.)
-// #define OFFSET vec3(.95, .094, -.088)
+#define SCALE (vec3(4.1,1.73,1.75) * 1.)
+#define OFFSET vec3(.95, .094, -.088)
 
-#define SCALE vec3(1)
-#define OFFSET vec3(0)
+// #define SCALE vec3(1)
+// #define OFFSET vec3(0)
 
 
 // Divide texture into 3d space coordinates
