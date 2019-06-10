@@ -54,12 +54,18 @@ module.exports = (project) => {
   const gl = regl._gl;
 
   const renderNodes = buildRenderNodes(shaders);
+  let firstPass = true;
 
-  renderNodes.forEach((node) => {
-    if (node.name !== 'main') {
-      node.buffer = regl.framebuffer({
-        width: 500,
-        height: 500,
+  renderNodes.forEach((node, i) => {
+    node.buffer = regl.framebuffer({
+      width: 300,
+      height: 300,
+      colorType: 'float',
+    });
+    if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
+      node.lastBuffer = regl.framebuffer({
+        width: 300,
+        height: 300,
         colorType: 'float',
       });
     }
@@ -70,17 +76,17 @@ module.exports = (project) => {
       },
     };
     node.dependencies.reduce((acc, dep) => {
-      acc[dep.uniform] = dep.node.buffer;
-      acc[dep.uniform + 'Size'] = () => [
-        dep.node.buffer.width,
-        dep.node.buffer.height,
+      acc[dep.uniform] = regl.prop(dep.uniform);
+      acc[dep.uniform + 'Size'] = (context, props) => [
+        props[dep.uniform].width,
+        props[dep.uniform].height,
       ];
       return acc;
     }, nodeUniforms);
     const nodeCommand = regl({
       frag: node.shader,
       uniforms: nodeUniforms,
-      framebuffer: node.buffer,
+      framebuffer: regl.prop('framebuffer'),
     });
     node.draw = (state) => {
       node.dependencies.forEach((dep) => {
@@ -89,7 +95,20 @@ module.exports = (project) => {
         gl.bindTexture(texture.target, texture.texture);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        const s = {};
+        s[dep.uniform] = dep.node.buffer;
+        state = Object.assign(s, state);
       });
+      if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
+        const lastBuffer = node.buffer;
+        node.buffer = node.lastBuffer;
+        node.lastBuffer = lastBuffer;
+      }
+      if (i !== renderNodes.length - 1) {
+        state = Object.assign({
+          framebuffer: node.buffer,
+        }, state);
+      }
       nodeCommand(state);
     };
   });
@@ -118,6 +137,7 @@ module.exports = (project) => {
     debugPlanePosition: (context, props) => (props && props.debugPlane && props.debugPlane.position) || [0, 0, 1],
     iGlobalTime: (context, props) => props.timer.elapsed / 1000,
     iTime: (context, props) => props.timer.elapsed / 1000,
+    firstPass: () => firstPass,
     iMouse: (context, props) => {
 
       const mouseProp = props.mouse.map(value => value * context.pixelRatio);
@@ -251,14 +271,6 @@ module.exports = (project) => {
         color: [0, 0, 0, 1],
         depth: 1,
       });
-      renderNodes.forEach((node) => {
-        if ( ! node.buffer) return;
-        regl.clear({
-          color: [0, 0, 0, 1],
-          depth: 1,
-          framebuffer: node.buffer,
-        });
-      });
       setup(stateStore.state, (context) => {
         renderNodes.forEach((node) => {
           if ( ! node.buffer) return;
@@ -267,6 +279,9 @@ module.exports = (project) => {
             || node.buffer.height !== context.viewportHeight
           ) {
             node.buffer.resize(context.viewportWidth, context.viewportHeight);
+            if (node.lastBuffer) {
+              node.lastBuffer.resize(context.viewportWidth, context.viewportHeight);
+            }
           }
         });
         if (projectDraw) {
@@ -279,6 +294,7 @@ module.exports = (project) => {
           });
         }
       });
+      firstPass = false;
     }
     stats.end();
     if (dbt !== undefined) {
