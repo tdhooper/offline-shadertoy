@@ -123,7 +123,16 @@ vec3 spectrum(float n) {
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 p = (-iResolution.xy + 2. * fragCoord.xy) / iResolution.y;
-    
+    // vec4 last = texture2D(iChannel0, fragCoord.xy/iResolution.xy);
+    // fragColor = last;
+    // return;
+    // if (last.x != 0.) {
+    //     fragColor = last;
+    //     return;
+    // }
+    // fragColor = vec4(vec3(1,0,0), 1.);
+    // return;
+
     // vec3 space = texToSpace(fragCoord.xy, 0, iResolution);
     // // fragColor = vec4(space, 1); return;
     // // if (p.x < .9) {fragColor = vec4(spectrum(1.), 1); return;}
