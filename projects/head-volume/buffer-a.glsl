@@ -1,5 +1,9 @@
 precision highp float;
 
+uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
+uniform vec2 iChannel0Size;
+uniform bool firstPass;
+
 #define PI 3.14159265359
 
 void pR(inout vec2 p, float a) {
@@ -505,26 +509,26 @@ float map(vec3 p) {
     p -= OFFSET;
     p /= SCALE;
     return mHead(p);
-    return fBox(p, vec3(.5));
-    return length(p) - .9;
+    // return fBox(p, vec3(.5));
+    // return length(p) - .4;
 }
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 size = iResolution;
     vec2 coord = fragCoord.xy;
+    vec2 size = iResolution;
+    vec2 uv = coord / size;
     
-    // vec4 lastFrame = texture2d(iChannel0, uv);
-    // if (lastFrame.x != 0. && iFrame > 2) {
-    //     fragColor = lastFrame;
-    //     return;
-    // }
+    if ( ! firstPass) {
+        fragColor = texture2D(iChannel0, uv);
+        return;
+    }
     
     vec3 p0 = texToSpace(coord, size)[0].xyz;
     vec3 p1 = texToSpace(coord, size)[1].xyz;
     vec3 p2 = texToSpace(coord, size)[2].xyz;
     vec3 p3 = texToSpace(coord, size)[3].xyz;
-    
+
     fragColor = vec4(
         map(p0),
         map(p1),
