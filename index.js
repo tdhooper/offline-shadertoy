@@ -25,7 +25,8 @@ const main = require('./main.js');
 // peel
 // plode-2
 // multipass
+// mushrooms
 
-const project = LOADPROJECT('multipass');
+const project = LOADPROJECT('mushrooms');
 
 main(project);
