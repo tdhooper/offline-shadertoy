@@ -69,12 +69,7 @@ module.exports = (project) => {
         colorType: 'float',
       });
     }
-    const nodeUniforms = {
-      iResolution: (context, props) => {
-        const resolution = [context.viewportWidth, context.viewportHeight];
-        return props.resolution || resolution;
-      },
-    };
+    const nodeUniforms = {};
     node.dependencies.reduce((acc, dep) => {
       acc[dep.uniform] = regl.prop(dep.uniform);
       acc[dep.uniform + 'Size'] = (context, props) => [
@@ -130,6 +125,10 @@ module.exports = (project) => {
 
   const uniforms = {
     model: m4identity,
+    iResolution: (context, props) => {
+      const resolution = [context.viewportWidth, context.viewportHeight];
+      return props.resolution || resolution;
+    },
     iOffset: (context, props) => (props.offset || [0, 0]),
     cameraMatrix: regl.prop('cameraMatrix'),
     cameraPosition: regl.prop('cameraPosition'),
