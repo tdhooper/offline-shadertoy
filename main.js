@@ -1,6 +1,7 @@
 /* eslint no-param-reassign: ["error", { "props": false }] */
 /* eslint space-unary-ops: [2, { "overrides": {"!": true} }] */
 
+const EventEmitter = require('events');
 const Stats = require('stats.js');
 const glslify = require('glslify');
 const regl = require('regl')({
@@ -44,8 +45,13 @@ module.exports = (project) => {
     });
   }
 
+  const events = new EventEmitter();
+  function triggerDraw() {
+    events.emit('draw');
+  }
+
   const frag = shaders.main;
-  const textureUniforms = findTextures(frag);
+  const textureUniforms = findTextures(frag, triggerDraw);
 
   const stats = new Stats();
   stats.showPanel(0);
@@ -270,11 +276,11 @@ module.exports = (project) => {
 
   const stateStore = new StateStore(toState, fromState, defaultState);
 
-  const draw = () => {
+  const draw = (force) => {
     stats.begin();
     camera.tick();
     scrubber.update();
-    if (stateStore.update()) {
+    if (stateStore.update() || force) {
       regl.clear({
         color: [0, 0, 0, 1],
         depth: 1,
@@ -311,7 +317,8 @@ module.exports = (project) => {
     }
   };
 
-  let tick = regl.frame(draw);
+  let tick = regl.frame(() => draw());
+  events.on('draw', () => draw(true));
 
   const captureSetup = (config, done) => {
     tick.cancel();
