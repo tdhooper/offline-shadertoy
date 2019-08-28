@@ -3,6 +3,7 @@ precision highp float;
 uniform vec2 iResolution;
 uniform vec4 iMouse;
 uniform float iTime;
+uniform sampler2D iChannel0; // images/bubbles.png filter: linear wrap: repeat
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -68,8 +69,10 @@ float shroom(vec3 p, float t) {
 }
 
 vec4 floorTex(vec2 uv) {
-    return vec4(uv, 0, 1);
-    // return texture(iChannel1, uv);
+    uv *= 2.;
+    uv = uv * .5 + .5;
+    //return vec4(uv, 0, 1);
+    return texture2D(iChannel0, uv);
 }
 
 struct Result {
@@ -136,7 +139,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 im = (iMouse.xy / iResolution.xy) * 2. - 1.;
     vec3 camPos = vec3(
         cos(im.x * PI) * .4,
-        im.y + 1.,
+        (im.y + 1.) * 2.,
         sin(im.x * PI) * .4
     );
     mat3 cam = camMat(camPos, vec3(0,.2,0), 0.);

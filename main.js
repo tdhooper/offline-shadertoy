@@ -26,6 +26,7 @@ const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
 const createControls = require('./lib/uniform-controls');
 const buildRenderNodes = require('./lib/multipass');
+const findTextures = require('./lib/textures');
 
 var dbt = performance.now();
 
@@ -44,6 +45,7 @@ module.exports = (project) => {
   }
 
   const frag = shaders.main;
+  const textureUniforms = findTextures(frag);
 
   const stats = new Stats();
   stats.showPanel(0);
@@ -153,6 +155,8 @@ module.exports = (project) => {
       return mouseProp;
     },
   };
+
+  Object.assign(uniforms, textureUniforms);
 
   const controls = defaultState && defaultState.controls
     ? createControls(defaultState.controls, uniforms) : null;
