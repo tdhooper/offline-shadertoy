@@ -40,6 +40,7 @@ float range(float vmin, float vmax, float value) {
 }
 
 const float EXP = 2.;
+const float EXPLOG = 1. / log(EXP);
 const float REP = 3.5;
 
 float sinout(float t) {
@@ -75,6 +76,33 @@ vec4 floorTex(vec2 uv) {
     return texture2D(iChannel0, uv);
 }
 
+vec4 expFloorTex(vec2 uv) {
+    vec2 uva = uv;
+    vec4 tex, texA, texB;
+
+    float i = EXPLOG * log(1. / length(uv));
+
+    float ia = floor(i);
+    float powia = pow(EXP, ia);
+    pR(uv, ia * -2. * PI / REP);
+    texA = floorTex(uv * powia);
+    texA.a = 1. / powia;
+
+    uv = uva;
+
+    float ib = ceil(i);
+    float powib = pow(EXP, ib);
+    pR(uv, ib * -2. * PI / REP);
+    texB = floorTex(uv * powib);
+    texB.a = 1. / powib;
+
+    float blend = .2;
+    blend = .5 - blend;
+    tex = mix(texA, texB, smoothstep(ia + blend, ib - blend, i));
+    tex.a /= 4.;
+    return tex;
+}
+
 struct Result {
     float dist;
     int material;
@@ -97,22 +125,11 @@ Result map(vec3 p) {
        d = min(d, shroom(p, i + fTime));
     }
 
-    vec4 tex, texB;
-    float tr, trB;
-    
-    for (float i = 0.; i < 12.; i++) {
-        p /= 4.;
-        pR(p.xz, i * -2. * PI / REP);
-        texB = floorTex(p.xz * pow(EXP, i));
-        texB.a = 1. / pow(EXP, i);
-        float blend = .5;
-        tr = 1. / pow(EXP, i - blend);
-        trB = 1. / pow(EXP, i + blend);
-        tex = mix(tex, texB, smoothstep(tr, trB, length(p.xz)));
-        p = pp;
-    }
+    vec4 tex = expFloorTex(p.xz);
 
     albedo = tex.rgb;
+
+
     p.y -= tex.r * .5 * tex.a;
     float ground = p.y * .5;
     if (ground < d) {
@@ -172,6 +189,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     if ( ! bg) {
         col = calcNormal(pos) * .5 + .5;
         if (res.material == 1) {
+            //col = res.albedo.rgb;
             col *= res.albedo.r;
         }
     }
