@@ -192,10 +192,10 @@ float calcOcclusion(vec3 pos, vec3 nor)
 
 float calcSoftshadow( in vec3 ro, in vec3 rd)
 {
-    float tmax = 1.;
+    float tmax = 3.;
     int technique = 0;
     float res = 1.0;
-    float t = .02;
+    float t = .01;
     float ph = 1e10; // big, such that y = 0 on the first iteration
     float speed = 1.;
     
@@ -280,7 +280,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec3 nor = calcNormal(pos) * .5 + .5;
         float occ = calcOcclusion(pos, nor);
 
-        vec3  sun_lig = normalize(vec3(-.3, 1, .3));
+        vec3  sun_lig = normalize(vec3(-.0, 1, -.0));
         float sun_dif = clamp(dot(nor, sun_lig), 0., 1.);
         float sun_sha = calcSoftshadow(pos, sun_lig);
 
