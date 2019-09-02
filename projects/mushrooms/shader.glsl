@@ -5,6 +5,9 @@ uniform vec4 iMouse;
 uniform float iTime;
 uniform sampler2D iChannel0; // images/bubbles.png filter: linear wrap: repeat
 
+varying vec3 eye;
+varying vec3 dir;
+
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
@@ -51,7 +54,7 @@ float shroom(vec3 p, float t) {
     float d = 1e12;
     float tf = floor(t);
     float s = pow(EXP, tf);
-    s = mix(0., s, (range(0., 4., t)));
+    s = mix(0., s, (range(0., 5., t)));
     if (tf < 2.) {
         //s = (pow(EXP, t) - 1.) / (EXP - 1.);
         //s = smoothstep(0., 1., s);
@@ -71,7 +74,8 @@ float shroom(vec3 p, float t) {
 }
 
 vec4 floorTex(vec2 uv) {
-    uv *= 2.;
+    uv *= .75;
+    uv.x -= 1.5;
     uv = uv * .5 + .5;
     //return vec4(uv, 0, 1);
     return texture2D(iChannel0, uv);
@@ -126,13 +130,15 @@ Result map(vec3 p) {
     float s;
     for (float i = 0.; i < 4.; i++) {
        d = min(d, shroom(p, i + fTime));
+       pR(p.xz, PI / REP * -.5);
+       p = pp;
     }
 
     //d = max(d, ceiling);
 
     vec4 tex = expFloorTex(p.xz);
 
-    p.y -= tex.r * .5 * tex.a;
+    p.y -= tex.r * 1.5 * tex.a;
     float ground = p.y * .5;
     if (ground < d) {
         d = ground;
@@ -235,6 +241,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     ) * .35;
     mat3 cam = camMat(camPos, vec3(0,.05,0), 0.);
     vec3 rd = cam * normalize(vec3(uv, 1.8));
+
+    camPos = eye;
+    rd = normalize(dir);
 
     vec3 pos;
     Result res;
