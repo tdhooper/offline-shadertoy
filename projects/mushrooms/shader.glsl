@@ -52,16 +52,15 @@ const float REP = 3.5;
 
 float shroom(vec3 p, float t) {
     float d = 1e12;
-    float s = range(0., 5., t);
+    float height = range(0., 3., t) * .2;
+    float width = smoothstep(0., 1.5, t) * .075;
+    p -= vec3(.1,0,0);
     pR(p.yx, .5);
-    float h = s * .5;
-    p.x -= s * .2;
-    p.y -= h;
-    float sz = s * .24;
-    d = min(d, max(length(p.xz) - sz / 2., max(p.y, -p.y - h*2.)));
+    p.y -= height;
+    d = min(d, max(length(p.xz) - width / 2., max(p.y, -p.y - height*2.)));
     float flatten = mix(1., 2., range(1.5, 2.5, t));
     flatten = 1.;
-    d = min(d, max(length(p + vec3(0,(flatten-1.)*sz*.9,0)) - sz*flatten, -p.y));
+    d = min(d, max(length(p + vec3(0,(flatten-1.)*width*.9,0)) - width*flatten, -p.y));
     return d;
 }
 
@@ -106,7 +105,10 @@ struct Result {
     vec3 albedo;
 };
 
+vec3 camPos;
+
 Result map(vec3 p) {
+    float camHole = length(p - camPos) - .35;
 
     float sp = length(p) - .5;
 
@@ -144,7 +146,7 @@ Result map(vec3 p) {
     }
     d *= zoom;
 
-    //d= min(d, sp);
+    d= max(d, -camHole);
     return Result(d, material, albedo);
 }
 
@@ -233,7 +235,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (-iResolution.xy + 2. * fragCoord) / iResolution.y;
     vec2 im = (iMouse.xy / iResolution.xy) * 2. - 1.;
-    vec3 camPos = vec3(
+    camPos = vec3(
         cos(im.x * PI) * .4,
         (im.y + .5) * .5,
         sin(im.x * PI) * .4
@@ -266,7 +268,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         }
     }
     
-    vec3 col = vec3(0);
+    vec3 bgcol = vec3(.01,.01,0);
+    vec3 col = bgcol;
     int mat;
 
     if ( ! bg) {
@@ -293,6 +296,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         lin += sky_dif*vec3(0.50,0.70,1.00)*occ;
         lin += bou_dif*vec3(0.20,0.70,0.10)*occ;
         col = col * lin;
+
+        col = mix(col, bgcol, 1.0-exp( -0.01*pow(len, 3.) ) );
     }
 
     col = pow(col, vec3(0.4545));
