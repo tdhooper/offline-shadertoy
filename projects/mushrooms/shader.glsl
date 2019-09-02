@@ -54,10 +54,10 @@ float shroom(vec3 p, float t) {
     float d = 1e12;
     float s = range(0., 5., t);
     pR(p.yx, .5);
-    float h = s * .05;
-    p.x -= s * .02;
+    float h = s * .5;
+    p.x -= s * .2;
     p.y -= h;
-    float sz = s * .024;
+    float sz = s * .24;
     d = min(d, max(length(p.xz) - sz / 2., max(p.y, -p.y - h*2.)));
     float flatten = mix(1., 2., range(1.5, 2.5, t));
     flatten = 1.;
@@ -107,6 +107,9 @@ struct Result {
 };
 
 Result map(vec3 p) {
+
+    float sp = length(p) - .5;
+
     float d = 1e12;
     int material = 0;    
     vec3 albedo = vec3(.15);
@@ -140,6 +143,8 @@ Result map(vec3 p) {
         albedo = tex.rgb;
     }
     d *= zoom;
+
+    //d= min(d, sp);
     return Result(d, material, albedo);
 }
 
@@ -232,8 +237,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         cos(im.x * PI) * .4,
         (im.y + .5) * .5,
         sin(im.x * PI) * .4
-    ) * .35;
-    mat3 cam = camMat(camPos, vec3(0,.05,0), 0.);
+    ) * .35 * 10.;
+    mat3 cam = camMat(camPos, vec3(0,.05,0)*10., 0.);
     vec3 rd = cam * normalize(vec3(uv, 1.8));
 
     camPos = eye;
