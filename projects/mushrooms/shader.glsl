@@ -52,15 +52,7 @@ const float REP = 3.5;
 
 float shroom(vec3 p, float t) {
     float d = 1e12;
-    float tf = floor(t);
-    float s = pow(EXP, tf);
-    s = mix(0., s, (range(0., 5., t)));
-    if (tf < 2.) {
-        //s = (pow(EXP, t) - 1.) / (EXP - 1.);
-        //s = smoothstep(0., 1., s);
-        //s = sinout(s);
-    }
-    pR(p.xz, tf * 2. * PI / REP - .8);
+    float s = range(0., 5., t);
     pR(p.yx, .5);
     float h = s * .05;
     p.x -= s * .02;
@@ -125,13 +117,15 @@ Result map(vec3 p) {
     p /= zoom;
     pR(p.xz, fTime * 2. * PI / REP);
     vec3 pp = p;
-    float sz = 0.;
-    float h;
-    float s;
+    float sc;
+    float part;
     for (float i = 0.; i < 4.; i++) {
-       d = min(d, shroom(p, i + fTime));
-       pR(p.xz, PI / REP * -.5);
-       p = pp;
+        sc = pow(EXP, i);
+        p /= sc;
+        pR(p.xz, i * 2. * PI / REP - .8);
+        part = shroom(p, i + fTime) * sc;
+        d = min(d, part);
+        p = pp;
     }
 
     //d = max(d, ceiling);
