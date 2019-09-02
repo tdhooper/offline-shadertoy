@@ -64,6 +64,34 @@ float shroom(vec3 p, float t) {
     return d;
 }
 
+float shroom2(vec3 p, float t) {
+    float d = 1e12;
+    float height = range(1.7, 4., t) * .075;
+    float width = smoothstep(1.7, 3., t) * .02;
+    p -= vec3(.07,0,-.05);
+    pR(p.yx, -.2);
+    p.y -= height;
+    d = min(d, max(length(p.xz) - width / 2., max(p.y, -p.y - height*2.)));
+    float flatten = mix(1., 2., range(1.5, 2.5, t));
+    flatten = 1.;
+    d = min(d, max(length(p + vec3(0,(flatten-1.)*width*.9,0)) - width*flatten, -p.y));
+    return d;
+}
+
+float shroom3(vec3 p, float t) {
+    float d = 1e12;
+    float height = smoothstep(-.3, 5., t) * .15;
+    float width = smoothstep(-.3, 3.5, t) * .05;
+    p -= vec3(.08,0,-.1);
+    pR(p.yx, .1);
+    p.y -= height;
+    d = min(d, max(length(p.xz) - width / 2., max(p.y, -p.y - height*2.)));
+    float flatten = mix(1., 2., range(1.5, 2.5, t));
+    flatten = 1.;
+    d = min(d, max(length(p + vec3(0,(flatten-1.)*width*.9,0)) - width*flatten, -p.y));
+    return d;
+}
+
 vec4 floorTex(vec2 uv) {
     uv *= .75;
     uv.x -= 1.5;
@@ -129,6 +157,10 @@ Result map(vec3 p) {
         p /= sc;
         pR(p.xz, i * 2. * PI / REP - .8);
         part = shroom(p, i + fTime) * sc;
+        d = min(d, part);
+        part = shroom2(p, i + fTime) * sc;
+        d = min(d, part);
+        part = shroom3(p, i + fTime) * sc;
         d = min(d, part);
         p = pp;
     }
