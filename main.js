@@ -12,8 +12,8 @@ const regl = require('regl')({
     'oes_texture_float',
     'oes_texture_float_linear',
   ],
-  pixelRatio: .25,
-  // pixelRatio: 1,
+  // pixelRatio: .25,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -51,7 +51,6 @@ module.exports = (project) => {
   }
 
   const frag = shaders.main;
-  const textureUniforms = findTextures(frag, triggerDraw);
 
   const stats = new Stats();
   stats.showPanel(0);
@@ -86,6 +85,7 @@ module.exports = (project) => {
       ];
       return acc;
     }, nodeUniforms);
+    Object.assign(nodeUniforms, findTextures(node.shader, triggerDraw));
     const nodeCommand = regl({
       frag: node.shader,
       uniforms: nodeUniforms,
@@ -161,8 +161,6 @@ module.exports = (project) => {
       return mouseProp;
     },
   };
-
-  Object.assign(uniforms, textureUniforms);
 
   const controls = defaultState && defaultState.controls
     ? createControls(defaultState.controls, uniforms) : null;
