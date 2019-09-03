@@ -61,8 +61,8 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
-    uPixelSize = vec2(1) / iResolution.xy;
-    uPixelSize = vec2(.003);
+    // uv.x = 1.- uv.x;
+    uPixelSize = vec2(.001) / (iResolution.xy / iResolution.x);
     vec3 col = depthOfField(uv, .09 * uFar, .1);
     col = pow(col, vec3(0.4545));
     fragColor = vec4(col, 1);
