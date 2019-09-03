@@ -308,16 +308,20 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     if ( ! bg) {
         col = res.albedo;
         mat = res.material;
+        float spec = 2.;
 
         if (mat == 1) {
             col = vec3(.05) * res.albedo;
+            spec = .0;
         }
 
         vec3 nor = calcNormal(pos) * .5 + .5;
         float occ = calcOcclusion(pos, nor);
 
         vec3  sun_lig = normalize(vec3(-.0, 1, -.0));
+        vec3  sun_hal = normalize( sun_lig-rd );
         float sun_dif = clamp(dot(nor, sun_lig), 0., 1.);
+        float sun_spe = spec * pow(clamp(dot(nor,sun_hal),0.0,1.0),8.0)*sun_dif*(0.04+0.96*pow(clamp(1.0+dot(sun_hal,rd),0.0,1.0),5.0));
         float sun_sha = calcSoftshadow(pos, sun_lig);
 
         float sky_dif = sqrt(clamp( 0.5+0.5*nor.y, 0.0, 1.0 ));
@@ -329,8 +333,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         lin += sky_dif*vec3(0.50,0.70,1.00)*occ;
         lin += bou_dif*vec3(0.20,0.70,0.10)*occ;
         col = col * lin;
+        col += sun_spe*vec3(9.90,8.10,6.30)*sun_sha;
         col = mix(col, bgcol, 1.0-exp( -0.01*pow(len, 3.) ) );
     }
+
+
 
     // Output to screen
     fragColor = vec4(col, len / MAX_DIST);
