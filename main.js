@@ -99,6 +99,11 @@ module.exports = (project) => {
         node.buffer = node.lastBuffer;
         node.lastBuffer = lastBuffer;
       }
+      regl.clear({
+        color: [0, 0, 0, 1],
+        depth: 1,
+        framebuffer: node.buffer,
+      });
       if (i !== renderNodes.length - 1) {
         state = Object.assign({
           framebuffer: node.buffer,

@@ -26,6 +26,6 @@ const main = require('./main.js');
 // plode-2
 // multipass
 
-const project = LOADPROJECT('head-volume');
+const project = LOADPROJECT('multipass');
 
 main(project);
