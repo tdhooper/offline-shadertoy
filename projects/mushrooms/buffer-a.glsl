@@ -92,6 +92,13 @@ float shroom3(vec3 p, float t) {
     return d;
 }
 
+struct Result {
+    float dist;
+    int material;
+    vec3 albedo;
+};
+
+
 vec4 floorTex(vec2 uv) {
     uv *= .75;
     uv.x -= 1.5;
@@ -100,7 +107,8 @@ vec4 floorTex(vec2 uv) {
     return texture2D(iChannel0, uv);
 }
 
-vec4 expFloorTex(vec2 uv) {
+Result expFloor(vec3 p) {
+    vec2 uv = p.xz;
     vec2 uva = uv;
     vec4 tex, texA, texB;
 
@@ -124,14 +132,12 @@ vec4 expFloorTex(vec2 uv) {
     blend = .5 - blend;
     tex = mix(texA, texB, smoothstep(ia + blend, ib - blend, i));
     tex.a /= 4.;
-    return tex;
-}
 
-struct Result {
-    float dist;
-    int material;
-    vec3 albedo;
-};
+    p.y -= tex.r * 1.5 * tex.a;
+    float ground = p.y * .5;
+
+    return Result(ground, 1, tex.rgb);
+}
 
 vec3 camPos;
 
@@ -166,20 +172,16 @@ Result map(vec3 p) {
     }
 
     //d = max(d, ceiling);
+    Result result = Result(d, material, albedo);
 
-    vec4 tex = expFloorTex(p.xz);
-
-    p.y -= tex.r * 1.5 * tex.a;
-    float ground = p.y * .5;
-    if (ground < d) {
-        d = ground;
-        material = 1;
-        albedo = tex.rgb;
+    Result floor = expFloor(p);
+    if (floor.dist < result.dist) {
+        result = floor;
     }
-    d *= zoom;
 
-    d= max(d, -camHole);
-    return Result(d, material, albedo);
+    result.dist *= zoom;
+    result.dist = max(result.dist, -camHole);
+    return result;
 }
 
 vec3 calcNormal(vec3 p) {
