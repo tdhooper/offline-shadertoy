@@ -100,54 +100,44 @@ struct Result {
 };
 
 
-Result floorRes(vec3 p) {
-    vec2 uv = p.xz;
+vec4 floorTex(vec2 uv) {
     uv *= .75;
     uv.x -= 1.5;
     uv = uv * .5 + .5;
     //return vec4(uv, 0, 1);
-    vec4 tex = texture2D(iChannel0, uv);
-    p.y -= tex.r * 1.5 * (1./4.);
-    float d = p.y * .5;
-
-    return Result(d, 1, tex.rgb);
-}
-
-Result mix(Result a, Result b, float t) {
-    int mat = t < .5 ? a.material : b.material;
-    return Result(
-        mix(a.dist, b.dist, t),
-        mat,
-        mix(a.albedo, b.albedo, t)
-    );
+    return texture2D(iChannel0, uv);
 }
 
 Result expFloor(vec3 p) {
     vec2 uv = p.xz;
-    vec3 pp = p;
-    Result res, resA, resB;
+    vec2 uva = uv;
+    vec4 tex, texA, texB;
 
     float i = EXPLOG * log(1. / length(uv));
 
     float ia = floor(i);
     float powia = pow(EXP, ia);
-    pR(p.xz, ia * -2. * PI / REP);
-    resA = floorRes(p * powia);
-    resA.dist /= powia;
+    pR(uv, ia * -2. * PI / REP);
+    texA = floorTex(uv * powia);
+    texA.a = 1. / powia;
 
-    p = pp;
+    uv = uva;
 
     float ib = ceil(i);
     float powib = pow(EXP, ib);
-    pR(p.xz, ib * -2. * PI / REP);
-    resB = floorRes(p * powib);
-    resB.dist /= powib;
+    pR(uv, ib * -2. * PI / REP);
+    texB = floorTex(uv * powib);
+    texB.a = 1. / powib;
 
     float blend = .2;
     blend = .5 - blend;
-    res = mix(resA, resB, smoothstep(ia + blend, ib - blend, i));
+    tex = mix(texA, texB, smoothstep(ia + blend, ib - blend, i));
+    tex.a /= 4.;
 
-    return res;
+    p.y -= tex.r * 1.5 * tex.a;
+    float ground = p.y * .5;
+
+    return Result(ground, 1, tex.rgb);
 }
 
 vec3 camPos;
