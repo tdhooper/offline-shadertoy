@@ -4,6 +4,7 @@ uniform vec2 iResolution;
 uniform vec4 iMouse;
 uniform float iTime;
 uniform sampler2D iChannel0; // images/bubbles.png filter: linear wrap: repeat
+uniform sampler2D iChannel1; // buffer-b.glsl filter: linear wrap: clamp
 
 varying vec3 eye;
 varying vec3 dir;
