@@ -67,8 +67,8 @@ float shroom(vec3 p, float t) {
 
 float shroom2(vec3 p, float t) {
     float d = 1e12;
-    float height = range(1.7, 4., t) * .075;
-    float width = smoothstep(1.7, 3., t) * .02;
+    float height = range(1., 4.5, t) * .075;
+    float width = smoothstep(1., 3.5, t) * .02;
     p -= vec3(.07,0,-.05);
     pR(p.yx, -.2);
     p.y -= height;

@@ -1,5 +1,5 @@
 {
-  "id": "mush004",
+  "id": "mush005",
   "camera": {
     "rotation": [
       -0.1132141724228859,
@@ -56,7 +56,7 @@
   ],
   "timer": {
     "running": false,
-    "elapsed": 67886.36999990791
+    "elapsed": 0
   },
   "mouse": [
     418,
