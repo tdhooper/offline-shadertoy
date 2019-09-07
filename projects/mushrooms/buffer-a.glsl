@@ -22,9 +22,20 @@ precision mediump float;
 
 /* SHADERTOY FROM HERE */
 
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+
 #define fTime mod(iTime / 3., 1.)
 
 #define PI 3.14159
+
+#define saturate(x) clamp(x, 0., 1.)
 
 mat3 camMat(vec3 pos, vec3 tar, float roll) {
     vec3 w = normalize(tar - pos);
@@ -109,6 +120,7 @@ vec4 floorTex(vec2 uv) {
 }
 
 bool isMarch;
+float zoom;
 
 Result expFloor(vec3 p) {
     vec2 uv = p.xz;
@@ -134,9 +146,8 @@ Result expFloor(vec3 p) {
     float blend = .2;
     blend = .5 - blend;
     tex = mix(texA, texB, smoothstep(ia + blend, ib - blend, i));
-    tex.a /= 4.;
 
-    float h = 1. * tex.a;
+    float h = .25 * tex.a;
     float d = p.y - h;
 
     if (isMarch && d > .01) {
@@ -145,11 +156,17 @@ Result expFloor(vec3 p) {
 
     d = p.y - h * tex.r;
 
+    float lipshizRamp = length(uv) * zoom / 5.;
+    lipshizRamp = pow(lipshizRamp, 1./EXP);
+
     if (isMarch) {
-        d *= .2;
+        d *= mix(.7, .3, lipshizRamp);
+        //d *= .2;
     }
 
-    return Result(d, 1, tex.rgb);
+    vec3 albedo = tex.rgb;
+    //albedo = vec3(mod(lipshizRamp, 1.));
+    return Result(d, 1, albedo);
 }
 
 vec3 camPos;
@@ -165,7 +182,7 @@ Result map(vec3 p) {
     
     float ceiling = p.y - 1.;
 
-    float zoom = pow(EXP, fTime);
+    zoom = pow(EXP, fTime);
     p /= zoom;
     pR(p.xz, fTime * 2. * PI / REP);
     vec3 pp = p;
@@ -298,6 +315,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float dist = 0.;
     float len = 0.;
     bool bg = false;
+    int steps;
     const float MAX_DIST = 10.;
 
     isMarch = true;
@@ -307,6 +325,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         pos = camPos + len * rd;
         res = map(pos);
         dist = res.dist;
+        steps = i;
         
         if (dist < .00001) {
             break;
@@ -331,6 +350,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         if (mat == 1) {
             col = vec3(.05) * res.albedo;
+           // col = res.albedo;
             spec = .0;
         }
 
@@ -354,9 +374,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         col = col * lin;
         col += sun_spe*vec3(9.90,8.10,6.30)*sun_sha;
         col = mix(col, bgcol, 1.0-exp( -0.01*pow(len, 3.) ) );
+
+     //   col = res.albedo;
     }
 
-
+   // col = spectrum(float(steps) / 200.);
 
     // Output to screen
     fragColor = vec4(col, len / MAX_DIST);
