@@ -57,5 +57,5 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec3 v = voronoi(uv * 5.);
     float h = v.x * step(hash21(v.yz), .5);
-    fragColor = vec4(h, 0, 0, 1);
+    fragColor = vec4(h, h, h, 1);
 }

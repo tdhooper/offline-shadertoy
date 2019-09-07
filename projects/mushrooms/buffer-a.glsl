@@ -102,11 +102,13 @@ struct Result {
 
 vec4 floorTex(vec2 uv) {
     uv *= .75;
-    uv.x -= 1.5;
+    //uv.x -= 1.5;
     uv = uv * .5 + .5;
     //return vec4(uv, 0, 1);
-    return texture2D(iChannel0, uv);
+    return texture2D(iChannel1, uv);
 }
+
+bool isMarch;
 
 Result expFloor(vec3 p) {
     vec2 uv = p.xz;
@@ -134,10 +136,20 @@ Result expFloor(vec3 p) {
     tex = mix(texA, texB, smoothstep(ia + blend, ib - blend, i));
     tex.a /= 4.;
 
-    p.y -= tex.r * 1.5 * tex.a;
-    float ground = p.y * .5;
+    float h = 1. * tex.a;
+    float d = p.y - h;
 
-    return Result(ground, 1, tex.rgb);
+    if (isMarch && d > .01) {
+        return Result(d, 1, vec3(1));
+    }
+
+    d = p.y - h * tex.r;
+
+    if (isMarch) {
+        d *= .2;
+    }
+
+    return Result(d, 1, tex.rgb);
 }
 
 vec3 camPos;
@@ -287,7 +299,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float len = 0.;
     bool bg = false;
     const float MAX_DIST = 10.;
-    
+
+    isMarch = true;
+
     for (int i = 0; i < 200; i++) {
         len += dist;
         pos = camPos + len * rd;
@@ -303,6 +317,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             break;
         }
     }
+
+    isMarch = false;
     
     vec3 bgcol = vec3(.01,.01,0);
     vec3 col = bgcol;
