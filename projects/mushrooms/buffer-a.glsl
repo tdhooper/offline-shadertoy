@@ -161,7 +161,6 @@ Result expFloor(vec3 p) {
 
     if (isMarch) {
         d *= mix(.7, .3, lipshizRamp);
-        //d *= .2;
     }
 
     vec3 albedo = tex.rgb;
@@ -298,6 +297,9 @@ float calcSoftshadow( in vec3 ro, in vec3 rd)
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     vec2 uv = (-iResolution.xy + 2. * fragCoord) / iResolution.y;
+
+    //fragColor = texture2D(iChannel1, uv * .5 + .5); return;
+
     vec2 im = (iMouse.xy / iResolution.xy) * 2. - 1.;
     camPos = vec3(
         cos(im.x * PI) * .4,
@@ -350,7 +352,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         if (mat == 1) {
             col = vec3(.05) * res.albedo;
-           // col = res.albedo;
+            col = mix(vec3(.003), vec3(.08, .04, .02), res.albedo.g);
+            col *= mix(.5, 1., res.albedo.b * res.albedo.g);
             spec = .0;
         }
 
