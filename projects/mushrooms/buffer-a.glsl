@@ -106,8 +106,8 @@ float shroom3(vec3 p, float t) {
 
 struct Result {
     float dist;
-    int material;
-    vec3 albedo;
+    float material;
+    vec2 uv;
 };
 
 
@@ -133,7 +133,6 @@ Result expFloor(vec3 p) {
     float powia = pow(EXP, ia);
     pR(uv, ia * -2. * PI / REP);
     texA = floorTex(uv * powia);
-    texA.a = 1. / powia;
 
     uv = uva;
 
@@ -141,20 +140,21 @@ Result expFloor(vec3 p) {
     float powib = pow(EXP, ib);
     pR(uv, ib * -2. * PI / REP);
     texB = floorTex(uv * powib);
-    texB.a = 1. / powib;
 
     float blend = .2;
     blend = .5 - blend;
-    tex = mix(texA, texB, smoothstep(ia + blend, ib - blend, i));
+    blend = smoothstep(ia + blend, ib - blend, i);
+    tex = mix(texA, texB, blend);
+    float powi = mix(powia, powib, blend);
 
-    float h = .25 * tex.a;
+    float h = .25 / powi;
     float d = p.y - h;
 
     if (isMarch && d > .01) {
-        return Result(d, 1, vec3(1));
+        return Result(d, 1., vec2(0));
     }
 
-    d = p.y - h * tex.r;
+    d = p.y - h * tex.x;
 
     float lipshizRamp = length(uv) * zoom / 5.;
     lipshizRamp = pow(lipshizRamp, 1./EXP);
@@ -163,9 +163,11 @@ Result expFloor(vec3 p) {
         d *= mix(.7, .3, lipshizRamp);
     }
 
-    vec3 albedo = tex.rgb;
+    float texMaterial = tex.y;
+    vec2 texUv = tex.zw;
+
     //albedo = vec3(mod(lipshizRamp, 1.));
-    return Result(d, 1, albedo);
+    return Result(d, texMaterial, texUv);
 }
 
 vec3 camPos;
@@ -176,8 +178,7 @@ Result map(vec3 p) {
     float sp = length(p) - .5;
 
     float d = 1e12;
-    int material = 0;    
-    vec3 albedo = vec3(.15);
+    float material = 0.;
     
     float ceiling = p.y - 1.;
 
@@ -201,7 +202,8 @@ Result map(vec3 p) {
     }
 
     //d = max(d, ceiling);
-    Result result = Result(d, material, albedo);
+    vec2 uv = p.xy;
+    Result result = Result(d, material, uv);
 
     Result floor = expFloor(p);
     if (floor.dist < result.dist) {
@@ -209,7 +211,7 @@ Result map(vec3 p) {
     }
 
     result.dist *= zoom;
-    result.dist = max(result.dist, -camHole);
+    // result.dist = max(result.dist, -camHole);
     return result;
 }
 
@@ -296,7 +298,7 @@ float calcSoftshadow( in vec3 ro, in vec3 rd)
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
-    vec2 uv = (-iResolution.xy + 2. * fragCoord) / iResolution.y;
+    vec2 puv = (-iResolution.xy + 2. * fragCoord) / iResolution.y;
 
     //fragColor = texture2D(iChannel1, uv * .5 + .5); return;
 
@@ -307,7 +309,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         sin(im.x * PI) * .4
     ) * .35 * 10.;
     mat3 cam = camMat(camPos, vec3(0,.05,0)*10., 0.);
-    vec3 rd = cam * normalize(vec3(uv, 1.8));
+    vec3 rd = cam * normalize(vec3(puv, 1.8));
 
     camPos = eye;
     rd = normalize(dir);
@@ -343,18 +345,21 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     vec3 bgcol = vec3(.01,.01,0);
     vec3 col = bgcol;
-    int mat;
+    float mat = res.material;
+    vec2 uv = res.uv;
 
     if ( ! bg) {
-        col = res.albedo;
-        mat = res.material;
-        float spec = 2.;
+        float spec = 1.;
 
-        if (mat == 1) {
-            col = vec3(.05) * res.albedo;
-            col = mix(vec3(.003), vec3(.08, .04, .02), res.albedo.g);
-            col *= mix(.5, 1., res.albedo.b * res.albedo.g);
-            spec = .0;
+        if (mat < .5) {
+            col = vec3(.15);
+            spec = 2.;
+        } else if (mat < 1.5) {
+            col = vec3(.003);
+            spec = 0.;
+        } else if (mat < 2.5) {
+            col = vec3(.05);
+            spec = 1.;
         }
 
         vec3 nor = calcNormal(pos) * .5 + .5;

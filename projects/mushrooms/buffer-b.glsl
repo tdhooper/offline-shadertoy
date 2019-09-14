@@ -56,13 +56,13 @@ vec3 voronoi(in vec2 p){
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 p = fragCoord.xy / iResolution.xy;
     //uv *= 2.;
-    uv.x -= 1.;
-    vec3 v0 = voronoi((uv + vec2(0.)) * 5.) * .6;
-    vec3 v1 = voronoi((uv + vec2(1.)) * 10.) * .3;
-    vec3 v2 = voronoi((uv + vec2(2.)) * 25.) * .075;
-    vec3 v3 = voronoi((uv + vec2(3.)) * 60.) * .025;
+    p.x -= 1.;
+    vec3 v0 = voronoi((p + vec2(0.)) * 5.) * .6;
+    //vec3 v1 = voronoi((p + vec2(1.)) * 10.) * .3;
+    //vec3 v2 = voronoi((p + vec2(2.)) * 25.) * .075;
+    //vec3 v3 = voronoi((p + vec2(3.)) * 60.) * .025;
 
     vec3 v = (
         v0 * 1.
@@ -70,18 +70,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
        // v1 * .1 * step(hash21(v2.yz), .5)
     );
 
-    float on = step(hash21(v0.yz), .5);
-    v *= on;
+    // soil
+    float material = 1.;
+    float height = 0.;
+    vec2 uv = p;
 
-    vec2 dir = normalize(hash22(v.yz + 1.) * 2. - 1.);
-    uv += (sin(uv.x * 60.) * sin(uv.y * 30.)) * .01;
-    float grain = mod((sin(dot(uv, dir) * 5.) * .5 + .5) * 100., 1.);
-    grain = smoothstep(0., .5, grain) - smoothstep(.5, 1., grain);
-
-    v.x *= mix(.95, 1., grain);
-    //v *= (.3 + v2 * .7).x;
-
-    float h = v.x * 3.;
-    //h = v.x * hash21(v.yz);
-    fragColor = vec4(h, on, grain, 1);
+    if (hash21(v0.yz) < .5) {
+        // rock
+        height = v.x * 3.;
+        material = 2.;
+        //uv = v.yz;
+    }
+    
+    fragColor = vec4(height, material, uv);
 }
