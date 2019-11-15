@@ -25,7 +25,8 @@ const main = require('./main.js');
 // peel
 // plode-2
 // multipass
+// laptop
 
-const project = LOADPROJECT('multipass');
+const project = LOADPROJECT('laptop');
 
 main(project);
