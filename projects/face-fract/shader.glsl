@@ -5,6 +5,14 @@ uniform float iTime;
 varying vec3 eye;
 varying vec3 dir;
 
+uniform float guiTransformX;
+uniform float guiTransformY;
+uniform float guiTransformZ;
+uniform float guiRotateX;
+uniform float guiRotateY;
+uniform float guiRotateZ;
+uniform float guiScale;
+uniform int guiIterations;
 
 #pragma glslify: import('./quat.glsl')
 
@@ -99,7 +107,7 @@ Scene mix(Scene s1, Scene s2, float t) {
     );
 }
 
-Scene scenes[4];
+Scene scenes[5];
 
 void calcScenes() {
 
@@ -130,7 +138,6 @@ void calcScenes() {
             .6
         )
     );
-    
 
     scenes[2] = Scene(
         17, .02,
@@ -146,7 +153,6 @@ void calcScenes() {
         )
     );
 
-
     scenes[3] = Scene(
         17, .02,
         Transform(
@@ -158,6 +164,20 @@ void calcScenes() {
             vec3(-.3,-.15,-.05),
             q_euler(-.3, .4, .3),
             .8
+        )
+    );
+
+    scenes[4] = Scene(
+        guiIterations, .02,
+        Transform(
+            vec3(0,0,0),
+            QUATERNION_IDENTITY,
+            1.
+        ),
+        Transform(
+            vec3(guiTransformX, guiTransformY, guiTransformZ),
+            q_euler(guiRotateX * PI, guiRotateY * PI, guiRotateZ * PI),
+            guiScale
         )
     );
 }
@@ -178,21 +198,21 @@ float map(vec3 p) {
     
     float t = sin(mod(tt + 3., 4.) * PI / 2.) * .5 + .5;
 
-    Scene scene = mix(scenes[1], scenes[2], t);
+    Scene scene = mix(scenes[0], scenes[4], t);
     
-    //scene = scenes[3];
+    //Scene scene = scenes[4];
     
-    for (int i = 0; i < 17; i++) {
+    for (int i = 0; i < 20; i++) {
         d = smin(d, mHead(p) * scale, scale * scene.blend);
-        
+
+        if (i > scene.iterations - 2) {
+            break;
+        }
+
         p.x = abs(p.x);
         
         applyTransform(p, scene.fractal);
         scale *= scene.fractal.scale;
-
-        if (i > scene.iterations) {
-            break;
-        }
         
         //p -= off * scale;
         //pR(p.xz, rot.x);
@@ -307,7 +327,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         // https://www.shadertoy.com/view/Xds3zN
         float hole = range(4., 1., g_disp);
         float occ = calcAO( pos, nor ) * mix(.5, 1., hole);
-        vec3  lig = normalize( vec3(-2.9, -2.5, .5) );
+        vec3  lig = normalize( vec3(-2., 2., .5) );
         vec3  lba = normalize( vec3(.5, 1., -.5) );
         vec3  hal = normalize( lig-rd );
         float amb = sqrt(clamp( 0.5+0.5*nor.y, 0.0, 1.0 ));
