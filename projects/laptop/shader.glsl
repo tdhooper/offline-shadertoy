@@ -14,6 +14,8 @@ varying float aspect;
 varying vec2 vVertex;
 
 
+#define SIMPLE_HUMAN;
+
 
 #define PI 3.14159265359
 #define s(a, b, x) smoothstep(a, b, x)
@@ -68,21 +70,21 @@ vec3 rotateArm(vec3 p, vec3 sk ) {
 
 vec3 select(int i) {
     if (i == 0) return skel[0];
-    if (i == 1) return skel[0];
-    if (i == 2) return skel[0];
-    if (i == 3) return skel[0];
-    if (i == 4) return skel[0];
-    if (i == 5) return skel[0];
-    if (i == 6) return skel[0];
-    if (i == 7) return skel[0];
-    if (i == 8) return skel[0];
-    if (i == 9) return skel[0];
-    if (i == 10) return skel[0];
-    if (i == 11) return skel[0];
-    if (i == 12) return skel[0];
-    if (i == 13) return skel[0];
-    if (i == 14) return skel[0];
-    if (i == 15) return skel[0];
+    if (i == 1) return skel[1];
+    if (i == 2) return skel[2];
+    if (i == 3) return skel[3];
+    if (i == 4) return skel[4];
+    if (i == 5) return skel[5];
+    if (i == 6) return skel[6];
+    if (i == 7) return skel[7];
+    if (i == 8) return skel[8];
+    if (i == 9) return skel[9];
+    if (i == 10) return skel[10];
+    if (i == 11) return skel[11];
+    if (i == 12) return skel[12];
+    if (i == 13) return skel[13];
+    if (i == 14) return skel[14];
+    if (i == 15) return skel[15];
 }
 
 // rotate a limb
@@ -429,22 +431,29 @@ vec3 calcNormal(vec3 p) {
 
 void main() {
 
-    // skel[0] = vec3(0);
-    // skel[1] = vec3(0);
-    // skel[2] = vec3(0);
-    // skel[3] = vec3(0);
-    // skel[4] = vec3(0);
-    // skel[5] = vec3(0);
-    // skel[6] = vec3(0);
-    // skel[7] = vec3(0);
-    // skel[8] = vec3(0);
-    // skel[9] = vec3(0);
-    // skel[10] = vec3(0);
-    // skel[11] = vec3(0);
-    // skel[12] = vec3(0);
-    // skel[13] = vec3(0);
-    // skel[14] = vec3(0);
-    // skel[15] = vec3(0);
+    skel[0] = vec3(0,0,0);
+    skel[1] = vec3(.5,0,0); // torso
+    skel[2] = vec3(-.1,0,0); //neck
+    skel[3] = vec3(-.1,0,0); //head
+    skel[4] = vec3(1,-1,.5); // l-arm
+    skel[5] = vec3(0,-1.5,0); // l-arm2
+    skel[6] = vec3(0); // l-hand
+    skel[7] = vec3(1,-1,.5); // r-arm
+    skel[8] = vec3(0,-1.5,0); // r-arm-2
+    skel[9] = vec3(0);
+    skel[10] = vec3(1.2,0,0); // l-leg
+    skel[11] = vec3(0);
+    skel[12] = vec3(0);
+    skel[13] = vec3(1.2,0,0); // r-leg
+    skel[14] = vec3(0);
+    skel[15] = vec3(0);
+
+        // skel[2] = vec3(0.1, 0, 0);
+        // skel[3] = vec3(0.2, 0, 0);
+        // skel[4] = vec3(0.2, 0, 0);
+        // skel[7] = vec3(0.2, 0, 0);
+        // skel[10] = vec3(0.3, 0.7, 0);
+        // skel[13] = vec3(0.3, 0.7, 0);
 
 
     bool bg = false;
