@@ -203,10 +203,6 @@ void calcScenes() {
 
 }
 
-// float range(float vmin, float vmax, float value) {
-//  return (value - vmin) / (vmax - vmin);
-// }
-
 float map(vec3 p) {
     
     p.y -= .22;
@@ -227,66 +223,40 @@ float map(vec3 p) {
     
     float t = sin(mod(tt + 3., 4.) * PI / 2.) * .5 + .5;
 
-    // Scene sceneFor = mix(scenes[0], scenes[4], t);
-    // Scene sceneRev = mix(scenesRev[0], scenesRev[4], t);
+    Scene sceneFor = mix(scenes[0], scenes[4], t);
+    Scene sceneRev = mix(scenesRev[0], scenesRev[4], t);
     
-    // Scene scene = sceneFor;
+    Scene scene = sceneFor;
 
-    Scene start = scenesRev[0];
-    Scene end = scenesRev[4];
-    Scene scene;
-
-    applyTransform(p, end.origin);
-    d = mHead(p) * end.origin.scale;
-
-    int iterations = mix(start, end, t).iterations;
-    // iterations = end.iterations;
+    p = pp;
+    applyTransform(p, scene.origin);
+    scale = scene.origin.scale;
     for (int i = 0; i < 20; i++) {
-        scene = mix(
-            start, end,
-            range(
-                start.origin.scale,
-                end.origin.scale,
-                pow(scenes[4].fractal.scale, float(i))
-            )
-        );
-        p = pp;
-        applyTransform(p, scene.origin);
-        d = smin(d, mHead(p) * scene.origin.scale, scene.origin.scale * scene.blend);
-        if (i > iterations - 2) {
+        d = smin(d, mHead(p) * scale, scale * scene.blend);
+        if (i > scene.iterations - 2) {
             break;
         }
+        // p.x = abs(p.x);
+        applyTransform(p, scene.fractal);
+        scale *= scene.fractal.scale;
     }
 
-    // p = pp;
-    // applyTransform(p, scene.origin);
-    // scale = scene.origin.scale;
-    // for (int i = 0; i < 20; i++) {
-    //     d = smin(d, mHead(p) * scale, scale * scene.blend);
-    //     if (i > scene.iterations - 2) {
-    //         break;
-    //     }
-    //     // p.x = abs(p.x);
-    //     applyTransform(p, scene.fractal);
-    //     scale *= scene.fractal.scale;
-    // }
+    // return d;
 
-    // // return d;
+    scene = sceneRev;
 
-    // scene = sceneRev;
-
-    // p = pp;
-    // applyTransform(p, scene.origin);
-    // scale = scene.origin.scale;
-    // for (int i = 0; i < 20; i++) {
-    //     d = smin(d, mHead(p) * scale, scale * scene.blend);
-    //     if (i > scene.iterations - 2) {
-    //         break;
-    //     }
-    //     // p.x = abs(p.x);
-    //     applyTransformR(p, scene.fractal);
-    //     scale *= scene.fractal.scale;
-    // }
+    p = pp;
+    applyTransform(p, scene.origin);
+    scale = scene.origin.scale;
+    for (int i = 0; i < 20; i++) {
+        d = smin(d, mHead(p) * scale, scale * scene.blend);
+        if (i > scene.iterations - 2) {
+            break;
+        }
+        // p.x = abs(p.x);
+        applyTransformR(p, scene.fractal);
+        scale *= scene.fractal.scale;
+    }
     
     return d;
 }
