@@ -186,10 +186,7 @@ void calcScenes() {
 float map(vec3 p) {
     
     p.y -= .22;
-    
-    
-   p.z += .4;
-   //p.y -= .05;
+    p.z += .4;
     
     float d = 1e12;
     float scale = 1.;
@@ -215,16 +212,8 @@ float map(vec3 p) {
         
         applyTransform(p, scene.fractal);
         scale *= scene.fractal.scale;
-        
-        //p -= off * scale;
-        //pR(p.xz, rot.x);
-        //pR(p.zy, rot.y);
-        //pR(p.xy, rot.z);
-        
-        //scale *= scl;
     }
-    
-    
+
     return d;
 }
 
