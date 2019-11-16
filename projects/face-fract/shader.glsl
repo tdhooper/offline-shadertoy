@@ -86,6 +86,13 @@ Transform mix(Transform t1, Transform t2, float t) {
     );
 }
 
+Transform reverseTransform(Transform t) {
+    t.translate *= -1.;
+    t.rotate = q_conj(t.rotate);
+    t.scale = 1. / t.scale;
+    return t;
+}
+
 void applyTransform(inout vec3 p, Transform t) {
     p += t.translate;
     p = rotate_vector(p, t.rotate);
@@ -120,11 +127,7 @@ Scene reverseScene(Scene scene) {
         origin.rotate = qmul(origin.rotate, scene.fractal.rotate);
         translate = rotate_vector(translate, q_conj(scene.fractal.rotate));
     }
-    Transform fractal = Transform(
-        -scene.fractal.translate,
-        q_conj(scene.fractal.rotate),
-        1. / scene.fractal.scale
-    );
+    Transform fractal = reverseTransform(scene.fractal);
     return Scene(
         scene.iterations,
         scene.blend,
@@ -203,6 +206,8 @@ void calcScenes() {
 
 }
 
+float ss(float t) { return smoothstep(0., 1., t); }
+
 float map(vec3 p) {
     
     p.y -= .22;
@@ -215,13 +220,32 @@ float map(vec3 p) {
     float scale = 1.;
     bool flip;
         
-    float tt = iTime * 2.;
-    tt = guiTime;
+    float tt = mod(iTime / 3., 1.);
+    // tt = guiTime;
     float t = sin(tt * PI * 2. - PI / 2.) * .5 + .5;
 
     Scene start = scenes[0];
     Scene end = scenes[4];
     Scene scene = mix(start, end, t);
+
+    float zt = tt;
+    zt = range(
+        start.origin.scale,
+        scenesRev[4].origin.scale,
+        pow(scenesRev[4].origin.scale, tt)
+    );
+
+    // zt = smoothstep(.0, 1., zt);
+    // zt = ss(zt);
+    // zt = ss(zt);
+    // zt = ss(zt);
+    Transform origin = mix(start.origin, scenesRev[4].origin, zt);
+    origin = reverseTransform(origin);
+    // applyTransformR(p, origin);
+
+    p /= origin.scale;
+    p = rotate_vector(p, q_conj(q_slerp(start.origin.rotate, scenesRev[4].origin.rotate, tt)));
+    p += origin.translate;
 
     bool reverse = tt > .5;
 
@@ -246,7 +270,7 @@ float map(vec3 p) {
         scale *= scene.fractal.scale;
     }
     
-    return d;
+    return d * origin.scale;
 }
 
 
@@ -268,7 +292,7 @@ vec3 calcNormal(vec3 pos){
 // https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
-    // return 1.;
+    return 1.;
     float res = 1.0;
     float t = mint * 0.;
     
@@ -286,7 +310,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 // https://www.shadertoy.com/view/Xds3zN
 float calcAO( in vec3 pos, in vec3 nor )
 {
-    // return 1.;
+    return 1.;
     float occ = 0.0;
     float sca = 1.0;
     for( int i=0; i<5; i++ )
