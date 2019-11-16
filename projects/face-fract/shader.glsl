@@ -219,39 +219,31 @@ float map(vec3 p) {
     tt = guiTime;
     float t = sin(tt * PI * 2. - PI / 2.) * .5 + .5;
 
-    Scene sceneFor = mix(scenes[0], scenes[4], t);
-    Scene sceneRev = mix(scenesRev[0], scenesRev[4], t);
-    
-    Scene scene;
+    Scene start = scenes[0];
+    Scene end = scenes[4];
+    Scene scene = mix(start, end, t);
 
-    if (tt < .5) {
-        scene = sceneFor;
-        applyTransform(p, scene.origin);
-        scale = scene.origin.scale;
-        for (int i = 0; i < 20; i++) {
-            d = smin(d, mHead(p) * scale, scale * scene.blend);
-            if (i > scene.iterations - 2) {
-                break;
-            }
-            // p.x = abs(p.x);
-            applyTransform(p, scene.fractal);
-            scale *= scene.fractal.scale;
+    bool reverse = tt > .5;
+
+    if (reverse) {
+        start = scenesRev[4];
+        end = scenesRev[0];
+        scene = mix(start, end, 1. - t);
+    }
+
+    applyTransform(p, start.origin);
+    scale = start.origin.scale;
+    for (int i = 0; i < 20; i++) {
+        d = smin(d, mHead(p) * scale, scale * scene.blend);
+        if (i > scene.iterations - 2) {
+            break;
         }
-    } else {
-        scene = sceneRev;
-        p = pp;
-        applyTransform(p, scenesRev[4].origin);
-        scale = scenesRev[4].origin.scale;
-        for (int i = 0; i < 20; i++) {
-            d = smin(d, mHead(p) * scale, scale * scene.blend);
-            // break;
-            if (i > scene.iterations - 2) {
-                break;
-            }
-            // p.x = abs(p.x);
+        if (reverse) {
             applyTransformR(p, scene.fractal);
-            scale *= scene.fractal.scale;
+        } else {
+            applyTransform(p, scene.fractal);
         }
+        scale *= scene.fractal.scale;
     }
     
     return d;
