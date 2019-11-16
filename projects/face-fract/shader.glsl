@@ -194,7 +194,7 @@ void calcScenes() {
     scenesRev[3] = reverseScene(scenes[3]);
 
     scenes[4] = Scene(
-        guiIterations, .02,
+        30, .02,
         origin,
         Transform(
             vec3(guiTransformX, guiTransformY, guiTransformZ),
@@ -243,9 +243,9 @@ float map(vec3 p) {
     origin = reverseTransform(origin);
     // applyTransformR(p, origin);
 
-    p /= origin.scale;
-    p = rotate_vector(p, q_conj(q_slerp(start.origin.rotate, scenesRev[4].origin.rotate, tt)));
-    p += origin.translate;
+    // p /= origin.scale;
+    // p = rotate_vector(p, q_conj(q_slerp(start.origin.rotate, scenesRev[4].origin.rotate, tt)));
+    // p += origin.translate;
 
     bool reverse = tt > .5;
 
@@ -257,11 +257,12 @@ float map(vec3 p) {
 
     applyTransform(p, start.origin);
     scale = start.origin.scale;
-    for (int i = 0; i < 20; i++) {
+    for (int i = 0; i < 30; i++) {
         d = smin(d, mHead(p) * scale, scale * scene.blend);
         if (i > scene.iterations - 2) {
             break;
         }
+        // p.x = abs(p.x);
         if (reverse) {
             applyTransformR(p, scene.fractal);
         } else {
@@ -270,6 +271,7 @@ float map(vec3 p) {
         scale *= scene.fractal.scale;
     }
     
+    return d;
     return d * origin.scale;
 }
 
@@ -292,7 +294,7 @@ vec3 calcNormal(vec3 pos){
 // https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
-    return 1.;
+    // return 1.;
     float res = 1.0;
     float t = mint * 0.;
     
@@ -310,7 +312,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 // https://www.shadertoy.com/view/Xds3zN
 float calcAO( in vec3 pos, in vec3 nor )
 {
-    return 1.;
+    // return 1.;
     float occ = 0.0;
     float sca = 1.0;
     for( int i=0; i<5; i++ )
@@ -346,11 +348,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     bool bg = false;
 
     for (int i = 0; i < 300; i++) {
-        rayLength += dist;
+        rayLength += dist * .5;
         rayPosition = camPos + rayDirection * rayLength;
         dist = map(rayPosition);
 
-        if (abs(dist) < .001) {
+        if (abs(dist) < .0001) {
             break;
         }
         
@@ -360,7 +362,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         }
     }
 
-    vec3 col = vec3(.19,.19,.22).zxy * .0;
+    vec3 col = vec3(.19,.19,.22).zxy;
     
     if ( ! bg) {
         vec3 pos = rayPosition;
@@ -394,7 +396,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         lin += 1.55*bac*vec3(0.25,0.25,0.25)*occ;
         lin += 0.25*fre*vec3(1.00,1.00,1.00)*occ;
 
-        col = vec3(1, 0.8, 0.8) * .3;
+        col = vec3(1, 0.9, 0.9) * .3;
         col = mix(col, vec3(.4,.05,.03) * .5, range(.0, .15, g_disp));
         col = mix(col, vec3(1,.0,.05) * .2, range(.2, .5, g_disp));
         col = mix(col, vec3(.05,0,0), range(.4, .5, g_disp));
