@@ -200,7 +200,7 @@ float map(vec3 p) {
 
     Scene scene = mix(scenes[0], scenes[4], t);
     
-    //Scene scene = scenes[4];
+    // scene = scenes[4];
     
     for (int i = 0; i < 20; i++) {
         d = smin(d, mHead(p) * scale, scale * scene.blend);
