@@ -13,6 +13,7 @@ uniform float guiRotateY;
 uniform float guiRotateZ;
 uniform float guiScale;
 uniform int guiIterations;
+uniform float guiTime;
 
 #pragma glslify: import('./quat.glsl')
 
@@ -91,13 +92,47 @@ void applyTransform(inout vec3 p, Transform t) {
     p /= t.scale;
 }
 
+void applyTransformR(inout vec3 p, Transform t) {
+    p /= t.scale;
+    p = rotate_vector(p, t.rotate);
+    p += t.translate;
+}
+
 struct Scene {
     int iterations;
     float blend;
     Transform origin;
     Transform fractal;
 };
-    
+
+Scene scenes[5];
+Scene scenesRev[5];
+
+Scene reverseScene(Scene scene) {
+    Transform origin = scene.origin;
+    vec3 translate = scene.fractal.translate;
+    for (int i = 0; i < 20; i++) {
+        if (i > scene.iterations - 2) {
+            break;
+        }
+        origin.translate += translate * origin.scale;
+        origin.scale *= scene.fractal.scale;
+        origin.rotate = qmul(origin.rotate, scene.fractal.rotate);
+        translate = rotate_vector(translate, q_conj(scene.fractal.rotate));
+    }
+    Transform fractal = Transform(
+        -scene.fractal.translate,
+        q_conj(scene.fractal.rotate),
+        1. / scene.fractal.scale
+    );
+    return Scene(
+        scene.iterations,
+        scene.blend,
+        origin,
+        fractal
+    );
+}
+
 Scene mix(Scene s1, Scene s2, float t) {
     return Scene(
         int(mix(float(s1.iterations), float(s2.iterations), t)),
@@ -107,79 +142,65 @@ Scene mix(Scene s1, Scene s2, float t) {
     );
 }
 
-Scene scenes[5];
-
 void calcScenes() {
+
+    Transform origin = Transform(
+        vec3(0,0,0),
+        QUATERNION_IDENTITY,
+        1.
+    );
 
     scenes[0] = Scene(
         3, 0.,
-        Transform(
-            vec3(0,0,0),
-            QUATERNION_IDENTITY,
-            1.
-        ),
-        Transform(
-            vec3(0,0,0),
-            QUATERNION_IDENTITY,
-            1.
-        )
+        origin,
+        origin
     );
+    scenesRev[0] = reverseScene(scenes[0]);
     
     scenes[1] = Scene(
         3, .1,
-        Transform(
-            vec3(0,0,0),
-            QUATERNION_IDENTITY,
-            1.
-        ),
+        origin,
         Transform(
             vec3(-.4,0,0),
             q_euler(-.3, -.3, .3),
             .6
         )
     );
+    scenesRev[1] = reverseScene(scenes[1]);
 
     scenes[2] = Scene(
         17, .02,
-        Transform(
-            vec3(0,0,0),
-            QUATERNION_IDENTITY,
-            1.
-        ),
+        origin,
         Transform(
             vec3(-.55,-.3,-.1)*.6,
             q_euler(-.3, .45, .15),
             .8
         )
     );
+    scenesRev[2] = reverseScene(scenes[2]);
 
     scenes[3] = Scene(
         17, .02,
-        Transform(
-            vec3(0,0,0),
-            QUATERNION_IDENTITY,
-            1.
-        ),
+        origin,
         Transform(
             vec3(-.3,-.15,-.05),
             q_euler(-.3, .4, .3),
             .8
         )
     );
+    scenesRev[3] = reverseScene(scenes[3]);
 
     scenes[4] = Scene(
         guiIterations, .02,
-        Transform(
-            vec3(0,0,0),
-            QUATERNION_IDENTITY,
-            1.
-        ),
+        origin,
         Transform(
             vec3(guiTransformX, guiTransformY, guiTransformZ),
             q_euler(guiRotateX * PI, guiRotateY * PI, guiRotateZ * PI),
             guiScale
         )
     );
+    scenesRev[4] = reverseScene(scenes[4]);
+
 }
 
 float map(vec3 p) {
@@ -189,39 +210,53 @@ float map(vec3 p) {
     
    p.z += .4;
    //p.y -= .05;
+
+    p.x = -p.x;
+    vec3 pp = p;
     
     float d = 1e12;
     float scale = 1.;
     bool flip;
         
     float tt = iTime * 2.;
+    tt = guiTime * 2.;
     
     float t = sin(mod(tt + 3., 4.) * PI / 2.) * .5 + .5;
 
-    Scene scene = mix(scenes[0], scenes[4], t);
+    Scene sceneFor = mix(scenes[0], scenes[4], t);
+    Scene sceneRev = mix(scenesRev[0], scenesRev[4], t);
     
-    // scene = scenes[4];
-    
+    Scene scene = sceneFor;
+
+    p = pp;
+    applyTransform(p, scene.origin);
+    scale = scene.origin.scale;
     for (int i = 0; i < 20; i++) {
         d = smin(d, mHead(p) * scale, scale * scene.blend);
-
         if (i > scene.iterations - 2) {
             break;
         }
-
-        p.x = abs(p.x);
-        
+        // p.x = abs(p.x);
         applyTransform(p, scene.fractal);
         scale *= scene.fractal.scale;
-        
-        //p -= off * scale;
-        //pR(p.xz, rot.x);
-        //pR(p.zy, rot.y);
-        //pR(p.xy, rot.z);
-        
-        //scale *= scl;
     }
-    
+
+    // return d;
+
+    scene = sceneRev;
+
+    p = pp;
+    applyTransform(p, scene.origin);
+    scale = scene.origin.scale;
+    for (int i = 0; i < 20; i++) {
+        d = smin(d, mHead(p) * scale, scale * scene.blend);
+        if (i > scene.iterations - 2) {
+            break;
+        }
+        // p.x = abs(p.x);
+        applyTransformR(p, scene.fractal);
+        scale *= scene.fractal.scale;
+    }
     
     return d;
 }
@@ -357,5 +392,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     }
 
     col = pow( col, vec3(0.4545) );
+
     fragColor = vec4(col,1.0);
 }
