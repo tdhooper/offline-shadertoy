@@ -154,7 +154,7 @@ void calcScenes() {
     );
 
     scenes[0] = Scene(
-        3, 0.,
+        2, 0.,
         origin,
         origin
     );
@@ -222,17 +222,18 @@ float map(vec3 p) {
         
     float tt = mod(iTime / 3., 1.);
     // tt = guiTime;
-    float t = sin(tt * PI * 2. - PI / 2.) * .5 + .5;
+    float t = sin(tt * PI);
 
     Scene start = scenes[0];
     Scene end = scenes[4];
     Scene scene = mix(start, end, t);
 
-    float zt = tt;
+    float zt = sin(min(tt * PI * 2., PI / 2.));
+    zt = .5 + min(.5, smoothstep(.5, 1.5, tt)) - smoothstep(.5, -.5, tt);
     zt = range(
         start.origin.scale,
         scenesRev[4].origin.scale,
-        pow(scenesRev[4].origin.scale, tt)
+        pow(scenesRev[4].origin.scale, zt)
     );
 
     // zt = smoothstep(.0, 1., zt);
@@ -240,11 +241,13 @@ float map(vec3 p) {
     // zt = ss(zt);
     // zt = ss(zt);
     Transform origin = mix(start.origin, scenesRev[4].origin, zt);
+    Transform origin2 = mix(start.origin, scenesRev[4].origin, tt);
     origin = reverseTransform(origin);
+    origin2 = reverseTransform(origin2);
     // applyTransformR(p, origin);
 
     p /= origin.scale;
-    p = rotate_vector(p, q_conj(q_slerp(start.origin.rotate, scenesRev[4].origin.rotate, tt)));
+    p = rotate_vector(p, origin.rotate);
     p += origin.translate;
 
     bool reverse = tt > .5;
