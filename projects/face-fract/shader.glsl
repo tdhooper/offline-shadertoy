@@ -330,7 +330,7 @@ vec3 calcNormal(vec3 pos){
 // https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
-    // return 1.;
+    return 1.;
     float res = 1.0;
     float t = mint * 0.;
     
@@ -348,7 +348,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 // https://www.shadertoy.com/view/Xds3zN
 float calcAO( in vec3 pos, in vec3 nor )
 {
-    // return 1.;
+    return 1.;
     float occ = 0.0;
     float sca = 1.0;
     for( int i=0; i<5; i++ )
@@ -377,15 +377,25 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
 vec3 col;
 vec3 tot = vec3(0.0);
+
+float mTime = mod(iTime / 1., 1.);
+time = mTime;
+
+vec2 o = vec2(0);
+
+#ifdef AA
 for( int m=0; m<AA; m++ )
 for( int n=0; n<AA; n++ )
 {
+// pixel coordinates
+o = vec2(float(m),float(n)) / float(AA) - 0.5;
+// time coordinate (motion blurred, shutter=0.5)
+float d = 0.5*sin(fragCoord.x*147.0)*sin(fragCoord.y*131.0);
+time = mTime - 0.1*(1.0/24.0)*(float(m*AA+n)+d)/float(AA*AA-1);
+#endif
 
-    // pixel coordinates
-    vec2 o = vec2(float(m),float(n)) / float(AA) - 0.5;
     vec2 p = (-iResolution.xy + 2.0*(fragCoord+o))/iResolution.y;
 
-    time = mod(iTime / 1., 1.);
 
     calcScenes();
 
@@ -393,8 +403,8 @@ for( int n=0; n<AA; n++ )
     vec3 rayDirection = dir;
 
     // if (p.x > -0.3) {
-    mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.24,-.35), -1.68);
-    rayDirection = normalize( camMat * vec3(p.xy,3.05) );
+    mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
+    rayDirection = normalize( camMat * vec3(p.xy,2.8) );
     // }
 
     vec3 rayPosition = camPos;
@@ -402,9 +412,6 @@ for( int n=0; n<AA; n++ )
     float dist = 0.;
     bool bg = false;
 
-// time coordinate (motion blurred, shutter=0.5)
-float d = 0.5*sin(fragCoord.x*147.0)*sin(fragCoord.y*131.0);
-time = time - 0.1*(1.0/24.0)*(float(m*AA+n)+d)/float(AA*AA-1);
 
 
     for (int i = 0; i < 300; i++) {
@@ -466,10 +473,10 @@ time = time - 0.1*(1.0/24.0)*(float(m*AA+n)+d)/float(AA*AA-1);
     }
 
     tot += col;
-
+#ifdef AA
 }
 tot /= float(AA*AA);
-
+#endif
     col = tot;
     col = pow( col, vec3(0.4545) );
 
