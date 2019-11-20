@@ -69,7 +69,12 @@ module.exports = (project) => {
         colorType: 'float',
       });
     }
-    const nodeUniforms = {};
+    const nodeUniforms = {
+      iResolution: (context, props) => {
+        const resolution = [context.framebufferWidth, context.framebufferHeight];
+        return props.resolution || resolution;
+      },
+    };
     node.dependencies.reduce((acc, dep) => {
       acc[dep.uniform] = regl.prop(dep.uniform);
       acc[dep.uniform + 'Size'] = (context, props) => [
@@ -130,10 +135,6 @@ module.exports = (project) => {
 
   const uniforms = {
     model: m4identity,
-    iResolution: (context, props) => {
-      const resolution = [context.viewportWidth, context.viewportHeight];
-      return props.resolution || resolution;
-    },
     iOffset: (context, props) => (props.offset || [0, 0]),
     cameraMatrix: regl.prop('cameraMatrix'),
     cameraPosition: regl.prop('cameraPosition'),
@@ -278,13 +279,16 @@ module.exports = (project) => {
       setup(stateStore.state, (context) => {
         renderNodes.forEach((node) => {
           if ( ! node.buffer) return;
-          if (
-            node.buffer.width !== context.viewportWidth
-            || node.buffer.height !== context.viewportHeight
-          ) {
-            node.buffer.resize(context.viewportWidth, context.viewportHeight);
+          let width = context.viewportWidth;
+          let height = context.viewportHeight;
+          if (node.name == 'buffer-a') {
+            width = 3000;
+            height =3000;
+          }
+          if (node.buffer.width !== width || node.buffer.height !== height) {
+            node.buffer.resize(width, height);
             if (node.lastBuffer) {
-              node.lastBuffer.resize(context.viewportWidth, context.viewportHeight);
+              node.lastBuffer.resize(width, height);
             }
           }
         });

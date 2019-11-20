@@ -4,7 +4,7 @@ uniform vec2 iResolution;
 
 #define MIRROR
 
-vec2 texSubdivisions = vec2(15,3);
+vec2 texSubdivisions = vec2(22,4);
 // voxel resolution is
 // vec3(
 //     iResolution / texSubdivisions,
