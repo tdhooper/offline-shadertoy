@@ -370,7 +370,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
     return mat3( uu, vv, ww );
 }
 
-#define AA 2
+#define AA 3
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
