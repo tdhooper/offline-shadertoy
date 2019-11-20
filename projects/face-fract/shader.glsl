@@ -145,6 +145,8 @@ Scene mix(Scene s1, Scene s2, float t) {
     );
 }
 
+float time;
+
 void calcScenes() {
 
     Transform origin = Transform(
@@ -197,8 +199,9 @@ void calcScenes() {
         guiIterations, .02,
         origin,
         Transform(
+            // vec3(0, cos(time * PI * 2.) * -.2, sin(time * PI * 2.) * -.2) + 
             vec3(guiTransformX, guiTransformY, guiTransformZ),
-            q_euler(guiRotateX * PI, guiRotateY * PI, guiRotateZ * PI),
+            q_euler(guiRotateX * PI, guiRotateY * PI, guiRotateZ * PI + time * PI * 2.),
             guiScale
         )
     );
@@ -215,7 +218,7 @@ float map(vec3 p) {
 
     p.x = -p.x;
     vec3 pp = p;
-    
+    // return min(length(p) - .5, -p.y+1.);    
     float d = 1e12;
     float scale = 1.;
     bool flip;
@@ -227,53 +230,85 @@ float map(vec3 p) {
     Scene start = scenes[0];
     Scene end = scenes[4];
     Scene scene = mix(start, end, t);
+    scene = end;
 
-    float zt = sin(min(tt * PI * 2., PI / 2.));
-    zt = .5 + min(.5, smoothstep(.5, 1.5, tt)) - smoothstep(.5, -.5, tt);
-    zt = range(
-        start.origin.scale,
-        scenesRev[4].origin.scale,
-        pow(scenesRev[4].origin.scale, zt)
-    );
+    // float zt = sin(min(tt * PI * 2., PI / 2.));
+    // zt = .5 + min(.5, smoothstep(.5, 1.5, tt)) - smoothstep(.5, -.5, tt);
+    // zt = range(
+    //     start.origin.scale,
+    //     scenesRev[4].origin.scale,
+    //     pow(scenesRev[4].origin.scale, zt)
+    // );
 
-    // zt = smoothstep(.0, 1., zt);
-    // zt = ss(zt);
-    // zt = ss(zt);
-    // zt = ss(zt);
-    Transform origin = mix(start.origin, scenesRev[4].origin, zt);
-    Transform origin2 = mix(start.origin, scenesRev[4].origin, tt);
-    origin = reverseTransform(origin);
-    origin2 = reverseTransform(origin2);
-    // applyTransformR(p, origin);
+    // // zt = smoothstep(.0, 1., zt);
+    // // zt = ss(zt);
+    // // zt = ss(zt);
+    // // zt = ss(zt);
+    // Transform origin = mix(start.origin, scenesRev[4].origin, zt);
+    // Transform origin2 = mix(start.origin, scenesRev[4].origin, tt);
+    // origin = reverseTransform(origin);
+    // origin2 = reverseTransform(origin2);
+    // // applyTransformR(p, origin);
 
-    p /= origin.scale;
-    p = rotate_vector(p, origin.rotate);
-    p += origin.translate;
+    // p /= origin.scale;
+    // p = rotate_vector(p, origin.rotate);
+    // p += origin.translate;
 
-    bool reverse = tt > .5;
+    // bool reverse = tt > .5;
 
-    if (reverse) {
-        start = scenesRev[4];
-        end = scenesRev[0];
-        scene = mix(start, end, 1. - t);
-    }
+    // if (reverse) {
+    //     start = scenesRev[4];
+    //     end = scenesRev[0];
+    //     scene = mix(start, end, 1. - t);
+    // }
+
+    
+    
+    pR(p.xz, time * PI * 2. + 0.);
+    pR(p.xy, time * PI * -2. - 0.);
+    pR(p.zy, time * PI * -2. - 2.);
+    
+    
+// p.y = abs(-p.y);
+p.x = abs(p.x);
+// if (p.z > 0.) {
+//     p.y *= -1.;
+// }
+p.z = abs(p.z);
+// p.z += .05;
+// pR(p.yz, 1.3);
+// p.y -= .1;
+
+// p.x -= .5;
+     // p -= vec3(0,.12,0);
 
     applyTransform(p, start.origin);
     scale = start.origin.scale;
     for (int i = 0; i < 20; i++) {
-        d = smin(d, mHead(p) * scale, scale * scene.blend);
+
+        // p.x = abs(p.x);
+         d = smin(d, mHead(p) * scale, scale * scene.blend);        
         if (i > scene.iterations - 2) {
             break;
         }
-        if (reverse) {
-            applyTransformR(p, scene.fractal);
-        } else {
+        // // if (reverse) {
+        //     applyTransformR(p, scene.fractal);
+        // a} else {
             applyTransform(p, scene.fractal);
-        }
+        // }
         scale *= scene.fractal.scale;
+        // if (mod(float(i), 2.) == 1.) p.y *= -1.;
+
+       
+        // if (i < 1) p.x = abs(p.x);
+        // p.z = abs(p.z);
+
+    
+
     }
     
-    return d * origin.scale;
+    return d;
+    // return d * origin.scale;
 }
 
 
@@ -295,7 +330,7 @@ vec3 calcNormal(vec3 pos){
 // https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
-    return 1.;
+    // return 1.;
     float res = 1.0;
     float t = mint * 0.;
     
@@ -313,7 +348,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 // https://www.shadertoy.com/view/Xds3zN
 float calcAO( in vec3 pos, in vec3 nor )
 {
-    return 1.;
+    // return 1.;
     float occ = 0.0;
     float sca = 1.0;
     for( int i=0; i<5; i++ )
@@ -335,21 +370,45 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
     return mat3( uu, vv, ww );
 }
 
+#define AA 2
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
+
+vec3 col;
+vec3 tot = vec3(0.0);
+for( int m=0; m<AA; m++ )
+for( int n=0; n<AA; n++ )
+{
+
+    // pixel coordinates
+    vec2 o = vec2(float(m),float(n)) / float(AA) - 0.5;
+    vec2 p = (-iResolution.xy + 2.0*(fragCoord+o))/iResolution.y;
+
+    time = mod(iTime / 1., 1.);
+
     calcScenes();
 
     vec3 camPos = eye;
     vec3 rayDirection = dir;
+
+    // if (p.x > -0.3) {
+    mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.24,-.35), -1.68);
+    rayDirection = normalize( camMat * vec3(p.xy,3.05) );
+    // }
 
     vec3 rayPosition = camPos;
     float rayLength = 0.;
     float dist = 0.;
     bool bg = false;
 
+// time coordinate (motion blurred, shutter=0.5)
+float d = 0.5*sin(fragCoord.x*147.0)*sin(fragCoord.y*131.0);
+time = time - 0.1*(1.0/24.0)*(float(m*AA+n)+d)/float(AA*AA-1);
+
+
     for (int i = 0; i < 300; i++) {
-        rayLength += dist;
+        rayLength += dist * .7;
         rayPosition = camPos + rayDirection * rayLength;
         dist = map(rayPosition);
 
@@ -363,7 +422,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         }
     }
 
-    vec3 col = vec3(.19,.19,.22).zxy * .0;
+    col =  vec3(.19,.19,.22) * .5;
     
     if ( ! bg) {
         vec3 pos = rayPosition;
@@ -377,8 +436,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         // https://www.shadertoy.com/view/Xds3zN
         float hole = range(4., 1., g_disp);
         float occ = calcAO( pos, nor ) * mix(.5, 1., hole);
-        vec3  lig = normalize( vec3(-2., 2., .5) );
-        vec3  lba = normalize( vec3(.5, 1., -.5) );
+        vec3  lig = normalize( vec3(-1., 1.1, 1.5) );
+        vec3  lba = normalize( vec3(2., -1., -.5) );
         vec3  hal = normalize( lig-rd );
         float amb = sqrt(clamp( 0.5+0.5*nor.y, 0.0, 1.0 ));
         float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
@@ -394,7 +453,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         vec3 lin = vec3(0.0);
         lin += 2.80*dif*vec3(1.30,1.00,0.70);
         lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
-        lin += 1.55*bac*vec3(0.25,0.25,0.25)*occ;
+        lin += 1.55*bac*vec3(0.0,.5,.25)*occ;
         lin += 0.25*fre*vec3(1.00,1.00,1.00)*occ;
 
         col = vec3(1, 0.8, 0.8) * .3;
@@ -403,10 +462,18 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
         col = mix(col, vec3(.05,0,0), range(.4, .5, g_disp));
 
         col = col*lin;
-        col += 5.00*spe*vec3(1.10,0.90,0.70);
+        col += 5.00*spe;
     }
 
+    tot += col;
+
+}
+tot /= float(AA*AA);
+
+    col = tot;
     col = pow( col, vec3(0.4545) );
+
+
 
     fragColor = vec4(col,1.0);
 }
