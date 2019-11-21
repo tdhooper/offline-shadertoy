@@ -281,9 +281,8 @@ module.exports = (project) => {
           if ( ! node.buffer) return;
           let width = context.viewportWidth;
           let height = context.viewportHeight;
-          if (node.name == 'buffer-a') {
-            width = 3000;
-            height =3000;
+          if (node.size) {
+            [width, height] = node.size;
           }
           if (node.buffer.width !== width || node.buffer.height !== height) {
             node.buffer.resize(width, height);
