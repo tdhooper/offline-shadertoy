@@ -3,8 +3,13 @@ precision highp float;
 uniform vec2 iResolution;
 uniform float iTime;
 uniform vec4 iMouse;
+
 uniform sampler2D iChannel0; // /images/h157-small.png
 uniform vec2 iChannel0Size;
+
+uniform sampler2D iChannel1; // /images/h157-globe.png
+uniform vec2 iChannel1Size;
+
 
 // Adapted from https://www.shadertoy.com/view/WdB3Dw
 
@@ -41,15 +46,47 @@ const float FUDGE_FACTORR = .25;
 const float INTERSECTION_PRECISION = .0001;
 const float MAX_DIST = 4.;
 
-void main() {
-    vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.x;
-    vec2 uv = p;
+float drawLogo(vec2 uv) {
 
+    uv.x -= .2;
+    uv.y += .2;
+    uv *= 1.4;
+
+    vec2 uvv = uv;
+
+    uv = uvv;
     uv /= vec2(1, -iChannel0Size.y / iChannel0Size.x) * 2.;
     uv += .5;
-
     vec4 tex = texture2D(iChannel0, uv);
-    
+
+    return tex.a;
+
+    uv = uvv;
+    uv.y -= .23;
+    uv.x += .105;
+    uv *= .91;
+    uv /= vec2(1, -iChannel1Size.y / iChannel1Size.x) * 2.;
+    uv += .5;
+    vec4 tex2 = texture2D(iChannel1, uv);
+
+    float globe = (1.-tex2.r) / 2.;
+    // return globe * 2.;
+
+    return max(tex.a, globe);
+}
+
+void main() {
+    vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.x;
+
+    p.x += .14;
+    p.y -= .03;
+
+    float logo = drawLogo(p);
+
+    p.x += .28;
+    p.y += .03;
+    p *= 1.83;
+
     vec3 pos;
     float rayLength = 0.;
     float dist = 0.;
@@ -57,10 +94,6 @@ void main() {
     vec3 origin = vec3(0,.0,2.9);
     
     vec2 rot = vec2(.525,-.41);
-    vec2 im = (iMouse.xy / iResolution.xy) * 2. - 1.;
-    if (im.x > -1. && im.y > -1.) {
-       rot += im;
-    }
     pR(origin.zy, rot.y*1.5);
     pR(origin.zx, rot.x*1.5);
     
@@ -109,7 +142,9 @@ void main() {
     color = pow(color, vec3(2.)) * 3.;
     color = pow(color, vec3(1. / 2.2));
 
-    color = mix(color, vec3(1), tex.a);
+    color = mix(color, vec3(1), logo);
+
+    // color = mix(vec3(0), vec3(1), logo);
 
     gl_FragColor = vec4(color,1);
 }
