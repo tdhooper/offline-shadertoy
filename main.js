@@ -346,7 +346,7 @@ module.exports = (project) => {
   };
 
   // Default config used by the UI
-  const captureConfig = {
+  let captureConfig = {
     fps: 35,
     seconds: 1, // (duration)
     width: (640 * 3) / 2,
@@ -354,6 +354,15 @@ module.exports = (project) => {
     quads: true,
     prefix: 'plode-',
   };
+
+  if (defaultState && defaultState.capture) {
+    captureConfig = Object.assign({}, defaultState.capture);
+    captureConfig.prefix = `${defaultState.id}-`;
+    if (captureConfig.scale) {
+      captureConfig.width *= captureConfig.scale;
+      captureConfig.height *= captureConfig.scale;
+    }
+  }
 
   const webCapture = new WebCaptureClient(
     canvas,

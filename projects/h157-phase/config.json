@@ -1,0 +1,14 @@
+{
+  "id": "h157-phase",
+  "capture": {
+    "fps": 30,
+    "seconds": 3.5,
+    "width": 640,
+    "height": 360,
+    "scale": 2
+  },
+  "timer": {
+    "running": false,
+    "elapsed": 0
+  }
+}
