@@ -10,6 +10,9 @@ uniform vec2 iChannel0Size;
 uniform sampler2D iChannel1; // /images/h157-globe.png
 uniform vec2 iChannel1Size;
 
+uniform sampler2D iChannel2; // /images/globe.png
+uniform vec2 iChannel2Size;
+
 
 // Adapted from https://www.shadertoy.com/view/WdB3Dw
 
@@ -46,6 +49,42 @@ const float FUDGE_FACTORR = .25;
 const float INTERSECTION_PRECISION = .0001;
 const float MAX_DIST = 4.;
 
+vec2 warpLogo(vec2 uv) {
+    float l = length(uv);
+    l /= 20.;
+    l -= fTime;
+    // l -= .7;
+    l += 1.;
+    l = 1. - l;
+
+    float ww = smoothstep(.05, .15, l*.75) - smoothstep(.16, .5, l*.75);
+    float w = smoothstep(0., .2, l) - smoothstep(.2, 1., l);
+    float wt = smoothstep(.2, .3, fTime) - smoothstep(.3, 1., fTime);
+
+    uv += sin(l * 150.) * ww * vec2(-1,1) * .02 * (1. - length(uv) / 3.);
+    // uv += sin(uv * 100. + fTime * 100. * vec2(-1,1)) * w * vec2(-1,1) * .01;
+
+
+    // uv += sin(l * 50.) * .01 * w * vec2(-1,1);
+
+    // return uv;
+
+    // vec2 po = vec2(length(uv), atan(uv.x, uv.y));
+    uv += sin(uv * 10. + fTime * 100. * vec2(-1,1)) * .01 * wt * (1. - length(uv) / 3.);
+
+    // uv.y += clamp((1. - length(uv)/2.), 0., 1.);
+    // uv.y += 1.;
+
+    return uv;
+}
+
+vec4 texture2Dc(sampler2D s, vec2 uv) {
+    if (uv.x < 0. || uv.y < 0. || uv.x > 1. || uv.y > 1.) {
+        return vec4(0);
+    }
+    return texture2D(s, uv);
+}
+
 float drawLogo(vec2 uv) {
 
     uv.x -= .2;
@@ -55,11 +94,23 @@ float drawLogo(vec2 uv) {
     vec2 uvv = uv;
 
     uv = uvv;
+    
+    uv.x += .675;
+    uv.y -= .24;
+    uv *= 1.89;
+    uv /= vec2(1, -iChannel2Size.y / iChannel2Size.x) * 2.;
+    uv += .5;
+    vec4 tex3 = texture2Dc(iChannel2, uv);
+    // return tex3.a;
+
+    uv = uvv;
     uv /= vec2(1, -iChannel0Size.y / iChannel0Size.x) * 2.;
     uv += .5;
     vec4 tex = texture2D(iChannel0, uv);
 
-    return tex.a;
+    // return tex.a;
+
+    return max(tex.a, tex3.a);
 
     uv = uvv;
     uv.y -= .23;
@@ -69,10 +120,16 @@ float drawLogo(vec2 uv) {
     uv += .5;
     vec4 tex2 = texture2D(iChannel1, uv);
 
-    float globe = (1.-tex2.r) / 2.;
+
+    return min(tex2.r, 1.-tex3.a);
+
+
+    // float globe = (1.-tex2.r) / 2.;
+
+
     // return globe * 2.;
 
-    return max(tex.a, globe);
+    // return max(tex.a, globe);
 }
 
 void main() {
@@ -80,8 +137,6 @@ void main() {
 
     p.x += .14;
     p.y -= .03;
-
-    float logo = drawLogo(p);
 
     p.x += .28;
     p.y += .03;
@@ -141,6 +196,14 @@ void main() {
     color = pow(color, vec3(1. / 1.8)) * 2.;
     color = pow(color, vec3(2.)) * 3.;
     color = pow(color, vec3(1. / 2.2));
+
+    p = warpLogo(p);
+
+    p /= 1.83;
+    p.x -= .28;
+    p.y -= .03;
+
+    float logo = drawLogo(p);
 
     color = mix(color, vec3(1), logo);
 
