@@ -3,7 +3,8 @@ precision highp float;
 uniform vec2 iResolution;
 uniform float iTime;
 uniform vec4 iMouse;
-uniform sampler2D iChannel0; // /images/noise.png
+uniform sampler2D iChannel0; // /images/h157-small.png
+uniform vec2 iChannel0Size;
 
 // Adapted from https://www.shadertoy.com/view/WdB3Dw
 
@@ -41,12 +42,13 @@ const float INTERSECTION_PRECISION = .0001;
 const float MAX_DIST = 4.;
 
 void main() {
-    vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.y;
+    vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.x;
     vec2 uv = p;
 
+    uv /= vec2(1, -iChannel0Size.y / iChannel0Size.x) * 2.;
+    uv += .5;
+
     vec4 tex = texture2D(iChannel0, uv);
-    gl_FragColor = tex;
-    return;
     
     vec3 pos;
     float rayLength = 0.;
@@ -107,6 +109,7 @@ void main() {
     color = pow(color, vec3(2.)) * 3.;
     color = pow(color, vec3(1. / 2.2));
 
+    color = mix(color, vec3(1), tex.a);
 
     gl_FragColor = vec4(color,1);
 }
