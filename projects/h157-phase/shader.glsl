@@ -135,6 +135,7 @@ float drawLogo(vec2 uv) {
 void main() {
     vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.x;
 
+    // gl_FragColor = texture2Dc(iChannel2, p); return;
     p.x += .14;
     p.y -= .03;
 
