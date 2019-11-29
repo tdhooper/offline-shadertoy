@@ -26,6 +26,7 @@ const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
 const createControls = require('./lib/uniform-controls');
 const buildRenderNodes = require('./lib/multipass');
+const textureUniforms = require('./lib/textures');
 
 var dbt = performance.now();
 
@@ -83,6 +84,7 @@ module.exports = (project) => {
       ];
       return acc;
     }, nodeUniforms);
+    Object.assign(nodeUniforms, textureUniforms(regl, node.shader));
     const nodeCommand = regl({
       frag: node.shader,
       uniforms: nodeUniforms,

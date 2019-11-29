@@ -3,6 +3,7 @@ precision highp float;
 uniform vec2 iResolution;
 uniform float iTime;
 uniform vec4 iMouse;
+uniform sampler2D iChannel0; // /images/noise.png
 
 // Adapted from https://www.shadertoy.com/view/WdB3Dw
 
@@ -41,6 +42,11 @@ const float MAX_DIST = 4.;
 
 void main() {
     vec2 p = (-iResolution.xy + 2. * gl_FragCoord.xy) / iResolution.y;
+    vec2 uv = p;
+
+    vec4 tex = texture2D(iChannel0, uv);
+    gl_FragColor = tex;
+    return;
     
     vec3 pos;
     float rayLength = 0.;
