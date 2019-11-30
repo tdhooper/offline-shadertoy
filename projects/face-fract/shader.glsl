@@ -201,7 +201,7 @@ void calcScenes() {
         Transform(
             // vec3(0, cos(time * PI * 2.) * -.2, sin(time * PI * 2.) * -.2) + 
             vec3(guiTransformX, guiTransformY, guiTransformZ),
-            q_euler(guiRotateX * PI, guiRotateY * PI, guiRotateZ * PI + time * PI * 2.),
+            q_euler(guiRotateX * PI, guiRotateY * PI, guiRotateZ * PI + time * PI * 2. * 0.),
             guiScale
         )
     );
@@ -264,20 +264,22 @@ float map(vec3 p) {
 
     
     
-    pR(p.xz, time * PI * 2. + 0.);
-    pR(p.xy, time * PI * -2. - 0.);
-    pR(p.zy, time * PI * -2. - 2.);
-    
+    // pR(p.xz, time * PI * 2. + 0.);
+    // pR(p.xy, time * PI * -2. - 0.);
+    // pR(p.zy, time * PI * -2. - 2.);
+pR(p.xz, -1.3);    
     
 // p.y = abs(-p.y);
 p.x = abs(p.x);
 // if (p.z > 0.) {
 //     p.y *= -1.;
 // }
-p.z = abs(p.z);
+// p.z = abs(p.z);
 // p.z += .05;
 // pR(p.yz, 1.3);
 // p.y -= .1;
+
+// pR(p.xz, -1.3);
 
 // p.x -= .5;
      // p -= vec3(0,.12,0);
@@ -287,7 +289,7 @@ p.z = abs(p.z);
     for (int i = 0; i < 20; i++) {
 
         // p.x = abs(p.x);
-         d = smin(d, mHead(p) * scale, scale * scene.blend);        
+         d = smin(d, (mHead(p) - sin(iTime * 4. - 1. * float(i)) * .01 - .01) * scale, scale * scene.blend);
         if (i > scene.iterations - 2) {
             break;
         }
@@ -370,7 +372,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
     return mat3( uu, vv, ww );
 }
 
-#define AA 3
+// #define AA 3
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
@@ -378,7 +380,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 vec3 col;
 vec3 tot = vec3(0.0);
 
-float mTime = mod(iTime / 1., 1.);
+float mTime = mod(iTime / 10., 1.);
 time = mTime;
 
 vec2 o = vec2(0);
@@ -403,8 +405,8 @@ time = mTime - 0.1*(1.0/24.0)*(float(m*AA+n)+d)/float(AA*AA-1);
     vec3 rayDirection = dir;
 
     // if (p.x > -0.3) {
-    mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
-    rayDirection = normalize( camMat * vec3(p.xy,2.8) );
+    // mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
+    // rayDirection = normalize( camMat * vec3(p.xy,2.8) );
     // }
 
     vec3 rayPosition = camPos;
