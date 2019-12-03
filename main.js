@@ -13,7 +13,7 @@ const regl = require('regl')({
     'oes_texture_float_linear',
   ],
   // pixelRatio: .15,
-  // pixelRatio: 1,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -328,7 +328,7 @@ module.exports = (project) => {
     canvas.height = config.height;
     canvas.style.width = config.width + 'px';
     canvas.style.height = config.height + 'px';
-    done();
+    setTimeout(done, 1000);
   };
 
   const captureTeardown = () => {
@@ -337,12 +337,13 @@ module.exports = (project) => {
   };
 
   const captureRender = (milliseconds, quad, done) => {
-    setTimeout(function() {
+    // setTimeout(function() {
       timer.set(milliseconds);
       screenQuad = quad;
       draw();
-      setTimeout(done, 10);
-    }, 10);
+      done();
+    //   setTimeout(done, 10);
+    // }, 10);
   };
 
   // Default config used by the UI

@@ -18,7 +18,8 @@ uniform vec2 iChannel2Size;
 
 #define PI 3.14159265359
 #define fTime mod(iTime / 3.5, 1.)
-
+// #define fTime mod(iTime / 3.5 - 1., 3.)
+//#define LOOP
 
 // https://www.shadertoy.com/view/ll2GD3
 vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
@@ -157,6 +158,7 @@ void main() {
     vec3 rd = normalize(camMat * vec3(p, 4.));
 
     vec3 color = vec3(10,0,12)*.0007;
+    color *= 0.;
     vec3 c;    
 
     for (float i = 0.; i < ITER; i++) {
