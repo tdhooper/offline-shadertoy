@@ -28,6 +28,6 @@ const main = require('./main.js');
 // laptop
 // head-volume
 
-const project = LOADPROJECT('face-fract');
+const project = LOADPROJECT('aura');
 
 main(project);

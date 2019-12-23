@@ -11,14 +11,14 @@ const regl = require('regl')({
     'oes_texture_float',
     'oes_texture_float_linear',
   ],
-  // pixelRatio: .15,
+  pixelRatio: .15,
   // pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
 });
 const { mat4 } = require('gl-matrix');
-const WebCaptureClient = require('web-frames-capture');
+const enableCapture = require('web-frames-capture');
 const createMouse = require('./lib/mouse');
 const createCamera = require('./lib/camera');
 const StateStore = require('./lib/state-store');
@@ -30,6 +30,8 @@ const buildRenderNodes = require('./lib/multipass');
 var dbt = performance.now();
 
 global.regl = regl;
+
+window.open('https://www.google.com');
 
 module.exports = (project) => {
   const defaultState = project.config || null;
@@ -312,13 +314,13 @@ module.exports = (project) => {
 
   let tick = regl.frame(draw);
 
-  const captureSetup = (config, done) => {
+  const captureSetup = (width, height, done) => {
     tick.cancel();
     timer.pause();
-    canvas.width = config.width;
-    canvas.height = config.height;
-    canvas.style.width = config.width + 'px';
-    canvas.style.height = config.height + 'px';
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
     done();
   };
 
@@ -328,29 +330,30 @@ module.exports = (project) => {
   };
 
   const captureRender = (milliseconds, quad, done) => {
-    setTimeout(function() {
+    // setTimeout(function() {
       timer.set(milliseconds);
       screenQuad = quad;
       draw();
-      setTimeout(done, 10);
-    }, 10);
+      done();
+    //   setTimeout(done, 10);
+    // }, 10);
   };
 
   // Default config used by the UI
   const captureConfig = {
     fps: 35,
     seconds: 1, // (duration)
-    width: (640 * 3) / 2,
-    height: (360 * 3) / 2,
-    quads: true,
+    width: (640 * 3) / 10,
+    height: (360 * 3) / 10,
+    // quads: true,
     prefix: 'plode-',
   };
 
-  const webCapture = new WebCaptureClient(
+  enableCapture(
     canvas,
     captureSetup,
     captureTeardown,
     captureRender,
-    captureConfig
+    captureConfig,
   );
 };
