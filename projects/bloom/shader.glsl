@@ -30,6 +30,21 @@ void pR(inout vec2 p, float a) {
 }
 
 
+float smax2(float a, float b, float r) {
+    vec2 u = max(vec2(r + a,r + b), vec2(0));
+    return min(-r, max (a, b)) + length(u);
+}
+
+float smin(float a, float b, float k){
+    float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
+    return (1. - f) * a + f  * b - f * (1. - f) * k;
+}
+
+float smax(float a, float b, float k) {
+    return -smin(-a, -b, k);
+}
+
+
 float time;
 
 float bloom(vec3 p) {
@@ -57,11 +72,120 @@ float bloom(vec3 p) {
     return d;
 }
 
+vec2 round(vec2 a) {
+    return floor(a + .5);
+}
+
+vec2 fib(vec2 n) {
+    vec2 uv = vec2(5., 8.);
+    float aa = atan(uv.x / uv.y);
+    float r = (PI*2.) / sqrt(uv.x*uv.x + uv.y*uv.y);
+    //n.y = min(n.y, 1.);
+    //n.y = max(n.y, .7);
+    pR(n, aa);
+    vec2 cell = round(n / r);
+    n = cell * r;    
+    pR(n, -aa);
+
+    return n;
+}
+
+float leafBound(vec3 p, vec2 uv) {
+    float d = abs(length(p) - uv.y) - .16;
+    //return d;
+    //d = max(d, p.y);
+    pR(p.xz, -uv.x);
+   // vec3 n = normalize(vec3(1,0,.5));
+    
+    float width = mix(.5, .1, min(uv.y, 1.));
+    width = .75 / uv.y;
+    vec3 n = normalize(vec3(1,0,width));
+
+    d = max(d, -dot(p, n));
+    d = max(d, dot(p, n * vec3(1,1,-1)));
+    return d;
+}
+
+float leaf(vec3 p, vec2 uv) {
+    //return leafBound(p, uv);
+    float thick = clamp(uv.y, .7, 1.);
+    thick = 1.;
+    float th = thick * .16;
+    pR(p.xz, -uv.x);
+    //d = max(d, abs(p.x) - .05);
+    float width = mix(.5, .1, min(uv.y, 1.));
+    width = .75 / uv.y;
+    width *= thick;
+    vec3 n = normalize(vec3(1,0,width));
+    float d = -dot(p, n);
+    d = max(d, dot(p, n * vec3(1,1,-1)));
+    float len = mix(PI / 1.2, PI / 2., pow(uv.y/2.9, 2.));
+    len = max(len, 0.);
+    d = smax(d, dot(p, vec3(0,sin(len),cos(len))), thick);
+    d = smax(d, abs(length(p) - uv.y) - thick * th, th);
+    //vec3 n = vec3(sin(uv.x + PI/2.), 0, cos(uv.x + PI/2.));
+    //d = max(d, abs(dot(p, n)) - .05);
+    p.z -= uv.y;
+    //d = min(d, length(p) - .1);
+    return d;
+}
+
+
+
+
+float bloom2(vec3 p) {
+
+    float bound = length(p - vec3(0,-1.2,0)) - 3.3;
+    bound = max(bound, p.y - 1.1);
+    if (bound > .01) {
+        return bound;
+    }
+
+    vec2 offset = vec2(0, iTime * .4);
+
+    vec2 uv = vec2(
+        atan(p.x, p.z),
+        length(p)
+    );
+
+    uv -= offset;
+
+    vec2 cc = vec2(5., 8.);
+    //cc.y += floor(sin(iTime * .5) * 3.);
+    float aa = atan(cc.x / cc.y);
+    //float aa = 0.5585993153435624;
+    float r = (PI*2.) / sqrt(cc.x*cc.x + cc.y*cc.y);
+    //float r = 0.6660163105297472;
+    mat2 rot = mat2(cos(aa), -sin(aa), sin(aa), cos(aa));
+    uv = rot * uv;
+    vec2 cell = round(uv / r);
+
+    //bound = leafBound(p, ((cell + vec2(0, 0)) * rot * r) + offset);
+    //if (bound > .01) {
+    //    return bound;
+    //}
+
+    float d = 1e12;
+
+    d = min(d, leaf(p, ((cell + vec2(-1, 0)) * rot * r) + offset));
+    d = min(d, leaf(p, ((cell + vec2(0, -1)) * rot * r) + offset));
+    d = min(d, leaf(p, ((cell + vec2(0, 0)) * rot * r) + offset));
+    d = min(d, leaf(p, ((cell + vec2(1, -1)) * rot * r) + offset));
+    d = min(d, leaf(p, ((cell + vec2(1, 0)) * rot * r) + offset));
+
+   // d = min(d, leaf(p, (cell + vec2(-1, -1)) * rot * r));
+   // d = min(d, leaf(p, (cell + vec2(-1, 1)) * rot * r));
+   // d = min(d, leaf(p, (cell + vec2(0, 1)) * rot * r));
+   // d = min(d, leaf(p, (cell + vec2(1, 1)) * rot * r));
+
+    return d;
+}
+
 float map(vec3 p) {
     float d = length(p) - .5;
     p.y -= .5;
     //d = min(d, bloom(p));
-    d = bloom(p);
+    d = bloom2(p);
     return d;
 }
 
@@ -88,7 +212,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
     return mat3( uu, vv, ww );
 }
 
-#define AA 3
+//#define AA 3
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
@@ -133,7 +257,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 break;
             }
             
-            if (rayLength > 10.) {
+            if (rayLength > 16.) {
                 bg = true;
                 break;
             }
