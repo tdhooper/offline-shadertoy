@@ -15,6 +15,8 @@ uniform float guiScale;
 uniform int guiIterations;
 uniform float guiTime;
 
+uniform float roctest; // rocket
+
 #pragma glslify: import('./quat.glsl')
 
 
@@ -482,6 +484,7 @@ tot /= float(AA*AA);
     col = tot;
     col = pow( col, vec3(0.4545) );
 
+    col *= roctest / 100.;
 
 
     fragColor = vec4(col,1.0);

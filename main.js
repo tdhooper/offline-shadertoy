@@ -23,11 +23,13 @@ const WebCaptureClient = require('web-frames-capture');
 const createMouse = require('./lib/mouse');
 const createCamera = require('./lib/camera');
 const StateStore = require('./lib/state-store');
-const createScrubber = require('./lib/scrubber');
+const Scrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
 const createControls = require('./lib/uniform-controls');
 const buildRenderNodes = require('./lib/multipass');
 const textureUniforms = require('./lib/textures');
+const rocketUniforms = require('./lib/rocket-uniforms');
+const Rocket = require('./lib/rocket');
 
 var dbt = performance.now();
 
@@ -166,6 +168,9 @@ module.exports = (project) => {
   const controls = defaultState && defaultState.controls
     ? createControls(defaultState.controls, uniforms) : null;
 
+  const rocketValues = rocketUniforms(Object.values(shaders), uniforms);
+  const rocket = new Rocket(170, 8, rocketValues);
+
   const drawRaymarch = regl({
     vert: glslify('./quad.vert'),
     frag,
@@ -231,7 +236,18 @@ module.exports = (project) => {
   const mouse = createMouse(canvas);
 
   const timer = new Timer();
-  const scrubber = createScrubber(timer);
+
+  rocket.on('seek', (time) => {
+    timer.set(time * 1000);
+  });
+  rocket.on('play', () => timer.play());
+  rocket.on('pause', () => timer.pause());
+
+  const scrubber = new Scrubber(timer);
+  scrubber.on('scrub', (time) => {
+    rocket.seek(time / 1000);
+  });
+
   let screenQuad = undefined;
 
   const toState = () => {
@@ -249,6 +265,7 @@ module.exports = (project) => {
     if (controls) {
       state.controls = controls.toState();
     }
+    state.rocket = rocketValues;
     return state;
   };
 
@@ -280,6 +297,9 @@ module.exports = (project) => {
     camera.tick();
     scrubber.update();
     if (stateStore.update() || force) {
+      if (timer.running) {
+        rocket.seek(timer.elapsed() / 1000);
+      }
       regl.clear({
         color: [0, 0, 0, 1],
         depth: 1,
