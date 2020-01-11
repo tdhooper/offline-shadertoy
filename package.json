@@ -11,8 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "brfs": "^1.4.3",
-    "budo": "^11.5.0",
+    "brfs": "^2.0.2",
+    "budo": "^11.6.3",
     "clone-deep": "^4.0.1",
     "dat.gui": "^0.7.0",
     "deepmerge": "^2.1.0",
