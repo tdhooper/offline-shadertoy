@@ -44,6 +44,14 @@ float smax(float a, float b, float k) {
     return -smin(-a, -b, k);
 }
 
+float range(float vmin, float vmax, float value) {
+  return (value - vmin) / (vmax - vmin);
+}
+
+float rangec(float a, float b, float t) {
+    return clamp(range(a, b, t), 0., 1.);
+}
+
 
 float time;
 
@@ -106,8 +114,17 @@ float leafBound(vec3 p, vec2 uv) {
     return d;
 }
 
+float debugLeaf(vec3 p, vec2 uv) {
+    float d = abs(length(p) - uv.y) - .05;
+    d = max(d, p.y);
+    pR(p.xz, -uv.x);
+    d = max(d, abs(p.x) - .05);
+    return d;
+}
+
 float leaf(vec3 p, vec2 uv) {
-    //return leafBound(p, uv);
+   // return debugLeaf(p, uv);
+
     float thick = clamp(uv.y, .7, 1.);
     thick = 1.;
     float th = thick * .16;
@@ -131,6 +148,14 @@ float leaf(vec3 p, vec2 uv) {
 }
 
 
+vec2 calcCell(vec2 cell, vec2 offset, mat2 rot, float scale, vec2 move) {
+    cell += offset;
+    cell = cell * rot;
+    cell.y = min(cell.y, -.5);
+    cell = rot * cell;
+    cell = round(cell);
+    return cell * rot * scale + move;
+}
 
 
 float bloom2(vec3 p) {
@@ -141,42 +166,46 @@ float bloom2(vec3 p) {
         return bound;
     }
 
-    vec2 offset = vec2(0, iTime * .4);
+    float t = mod(iTime/2., 1.);
+    t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
+    vec2 move = vec2(0, t) * 4.5;
 
     vec2 uv = vec2(
         atan(p.x, p.z),
         length(p)
     );
 
-    uv -= offset;
+    uv -= move;
 
     vec2 cc = vec2(5., 8.);
     //cc.y += floor(sin(iTime * .5) * 3.);
     float aa = atan(cc.x / cc.y);
     //float aa = 0.5585993153435624;
-    float r = (PI*2.) / sqrt(cc.x*cc.x + cc.y*cc.y);
-    //float r = 0.6660163105297472;
+    float scale = (PI*2.) / sqrt(cc.x*cc.x + cc.y*cc.y);
+    //float scale = 0.6660163105297472;
     mat2 rot = mat2(cos(aa), -sin(aa), sin(aa), cos(aa));
     uv = rot * uv;
-    vec2 cell = round(uv / r);
+    vec2 cell = round(uv / scale);
 
-    //bound = leafBound(p, ((cell + vec2(0, 0)) * rot * r) + offset);
+    // cell.x = min(cell.x, 1.);
+
+    //bound = leafBound(p, ((cell + vec2(0, 0)) * rot * scale) + move);
     //if (bound > .01) {
     //    return bound;
     //}
 
     float d = 1e12;
 
-    d = min(d, leaf(p, ((cell + vec2(-1, 0)) * rot * r) + offset));
-    d = min(d, leaf(p, ((cell + vec2(0, -1)) * rot * r) + offset));
-    d = min(d, leaf(p, ((cell + vec2(0, 0)) * rot * r) + offset));
-    d = min(d, leaf(p, ((cell + vec2(1, -1)) * rot * r) + offset));
-    d = min(d, leaf(p, ((cell + vec2(1, 0)) * rot * r) + offset));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, 0), rot, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, -1), rot, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, 0), rot, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, -1), rot, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, 0), rot, scale, move)));
 
-   // d = min(d, leaf(p, (cell + vec2(-1, -1)) * rot * r));
-   // d = min(d, leaf(p, (cell + vec2(-1, 1)) * rot * r));
-   // d = min(d, leaf(p, (cell + vec2(0, 1)) * rot * r));
-   // d = min(d, leaf(p, (cell + vec2(1, 1)) * rot * r));
+   // d = min(d, leaf(p, (cell + vec2(-1, -1)) * rot * scale));
+   // d = min(d, leaf(p, (cell + vec2(-1, 1)) * rot * scale));
+   // d = min(d, leaf(p, (cell + vec2(0, 1)) * rot * scale));
+   // d = min(d, leaf(p, (cell + vec2(1, 1)) * rot * scale));
 
     return d;
 }
@@ -212,7 +241,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
     return mat3( uu, vv, ww );
 }
 
-//#define AA 3
+// #define AA 3
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
