@@ -53,6 +53,34 @@ float rangec(float a, float b, float t) {
 }
 
 
+
+vec2 cdiv (vec2 a, vec2 b) {
+  float e, f;
+  float g = 1.0;
+  float h = 1.0;
+
+  if( abs(b.x) >= abs(b.y) ) {
+    e = b.y / b.x;
+    f = b.x + b.y * e;
+    h = e;
+  } else {
+    e = b.x / b.y;
+    f = b.x * e + b.y;
+    g = e;
+  }
+
+  return (a * g + h * vec2(a.y, -a.x)) / f;
+} 
+
+
+float circle(vec2 p, float o) {
+    p = cdiv(p, p - vec2(o, 0)) * o;
+    float d = length(p);
+    d = sqrt(d);
+    return d;
+}
+
+
 float time;
 
 float bloom(vec3 p) {
@@ -123,7 +151,7 @@ float debugLeaf(vec3 p, vec2 uv) {
 }
 
 float leaf(vec3 p, vec2 uv) {
-   // return debugLeaf(p, uv);
+   return debugLeaf(p, uv);
 
     float thick = clamp(uv.y, .7, 1.);
     thick = 1.;
