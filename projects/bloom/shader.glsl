@@ -12,6 +12,20 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 
+// --------------------------------------------------------
+// Spectrum colour palette
+// IQ https://www.shadertoy.com/view/ll2GD3
+// --------------------------------------------------------
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+
 const float PI  = 3.14159265359;
 const float PHI = 1.61803398875;
 
@@ -53,6 +67,12 @@ float rangec(float a, float b, float t) {
 }
 
 
+vec2 cmul (vec2 a, vec2 b) {
+  return vec2(
+    a.x * b.x - a.y * b.y,
+    a.y * b.x + a.x * b.y
+  );
+}
 
 vec2 cdiv (vec2 a, vec2 b) {
   float e, f;
@@ -72,12 +92,24 @@ vec2 cdiv (vec2 a, vec2 b) {
   return (a * g + h * vec2(a.y, -a.x)) / f;
 } 
 
-
-float circle(vec2 p, float o) {
-    p = cdiv(p, p - vec2(o, 0)) * o;
-    float d = length(p);
-    d = sqrt(d);
+float circleFlat(vec2 p, float o) {
+    p.x -= o;
+    vec2 a = vec2(-o, 0);
+    vec2 b = vec2(o, 0);
+    // Complex function from rreusser https://www.shadertoy.com/view/tlcGzf
+    vec2 p2 = cdiv(cmul(p - a, b), cmul(p - b, a));
+    float d = length(p2);
+    d = ((1. - d) * o) / (-1. - d);
+    d += o;
     return d;
+}
+
+float circleFlatRadius(float x, float o) {
+    x = o - x;
+    float left = abs(x);
+    float right = (o * o) / left;
+    float d = max(0., right - left) * sign(x);
+    return d / 2.;
 }
 
 
@@ -126,6 +158,8 @@ vec2 fib(vec2 n) {
     return n;
 }
 
+float bloomHeight = 2.;
+
 float leafBound(vec3 p, vec2 uv) {
     float d = abs(length(p) - uv.y) - .16;
     //return d;
@@ -143,10 +177,26 @@ float leafBound(vec3 p, vec2 uv) {
 }
 
 float debugLeaf(vec3 p, vec2 uv) {
-    float d = abs(length(p) - uv.y) - .05;
-    d = max(d, p.y);
+
+    float bound = length(p + vec3(0, bloomHeight, 0)) - bloomHeight/1.;
+
+    //return bound;
+
+    float r = circleFlatRadius(uv.y, bloomHeight);
+    if (r == 0.) {
+        return 1e12;
+    }
+    p.y += uv.y - r;
+    float d2 = abs(length(p) - abs(r)) - .05;
+
+    float d = abs(length(p) - uv.y) - .01;
+    // d = min(d, d2);
+    d = d2;
+    d = max(d, bound);
     pR(p.xz, -uv.x);
     d = max(d, abs(p.x) - .05);
+
+
     return d;
 }
 
@@ -186,22 +236,25 @@ vec2 calcCell(vec2 cell, vec2 offset, mat2 rot, float scale, vec2 move) {
 }
 
 
-float bloom2(vec3 p) {
+vec2 bloom2(vec3 p) {
 
     float bound = length(p - vec3(0,-1.2,0)) - 3.3;
     bound = max(bound, p.y - 1.1);
+    // bound = length(p + vec3(0, bloomHeight, 0)) - bloomHeight/1.;
     if (bound > .01) {
-        return bound;
+        // return vec2(bound, 0.);
     }
 
-    float t = mod(iTime/2., 1.);
+    float t = mod(iTime/8., 1.);
     t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
-    vec2 move = vec2(0, t) * 4.5;
+    vec2 move = vec2(0, t) * 2.5;
 
     vec2 uv = vec2(
         atan(p.x, p.z),
-        length(p)
+        circleFlat(vec2(-p.y, length(p.xz)), bloomHeight)
     );
+
+    vec2 uuu = uv;
 
     uv -= move;
 
@@ -230,20 +283,17 @@ float bloom2(vec3 p) {
     d = min(d, leaf(p, calcCell(cell, vec2(1, -1), rot, scale, move)));
     d = min(d, leaf(p, calcCell(cell, vec2(1, 0), rot, scale, move)));
 
-   // d = min(d, leaf(p, (cell + vec2(-1, -1)) * rot * scale));
-   // d = min(d, leaf(p, (cell + vec2(-1, 1)) * rot * scale));
-   // d = min(d, leaf(p, (cell + vec2(0, 1)) * rot * scale));
-   // d = min(d, leaf(p, (cell + vec2(1, 1)) * rot * scale));
+    // d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), rot, scale, move)));
+    // d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), rot, scale, move)));
+    // d = min(d, leaf(p, calcCell(cell, vec2(0, 1), rot, scale, move)));
+    // d = min(d, leaf(p, calcCell(cell, vec2(1, 1), rot, scale, move)));
 
-    return d;
+    return vec2(d, length(cell) / 5.);
 }
 
-float map(vec3 p) {
-    float d = length(p) - .5;
+vec2 map(vec3 p) {
     p.y -= .5;
-    //d = min(d, bloom(p));
-    d = bloom2(p);
-    return d;
+    return bloom2(p);
 }
 
 const int NORMAL_STEPS = 6;
@@ -254,7 +304,7 @@ vec3 calcNormal(vec3 pos){
     vec3 npos;
     for (int i = 0; i < NORMAL_STEPS; i++){
         npos = pos + eps * invert;
-        nor += map(npos) * eps * invert;
+        nor += map(npos).x * eps * invert;
         eps = eps.zxy;
         invert *= -1.;
     }
@@ -304,11 +354,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float rayLength = 0.;
         float dist = 0.;
         bool bg = false;
+        vec2 res;
 
         for (int i = 0; i < 300; i++) {
             rayLength += dist;
             rayPosition = camPos + rayDirection * rayLength;
-            dist = map(rayPosition);
+            res = map(rayPosition);
+            dist = res.x;
 
             if (abs(dist) < .001) {
                 break;
@@ -325,6 +377,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if ( ! bg) {
             vec3 nor = calcNormal(rayPosition);
             col = nor * .5 + .5;
+            col = spectrum(res.y);
         }
 
         tot += col;
