@@ -245,8 +245,9 @@ vec2 bloom2(vec3 p) {
         // return vec2(bound, 0.);
     }
 
-    float t = mod(iTime/8., 1.);
+    float t = mod(iTime/5., 1.);
     t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
+    // t = 2.;
     vec2 move = vec2(0, t) * 2.5;
 
     vec2 uv = vec2(
@@ -283,12 +284,19 @@ vec2 bloom2(vec3 p) {
     d = min(d, leaf(p, calcCell(cell, vec2(1, -1), rot, scale, move)));
     d = min(d, leaf(p, calcCell(cell, vec2(1, 0), rot, scale, move)));
 
-    // d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), rot, scale, move)));
-    // d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), rot, scale, move)));
-    // d = min(d, leaf(p, calcCell(cell, vec2(0, 1), rot, scale, move)));
-    // d = min(d, leaf(p, calcCell(cell, vec2(1, 1), rot, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), rot, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), rot, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, 1), rot, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, 1), rot, scale, move)));
 
-    return vec2(d, length(cell) / 5.);
+    // float b = length(p.xz) - (cos(iTime * 1.)* .5 + .5) *1.;
+    // float c = .0;
+    // if (b < d) {
+    //     d = b;
+        float c = length(cell) / 5.;
+    // }
+
+    return vec2(d, c);
 }
 
 vec2 map(vec3 p) {
@@ -378,6 +386,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             vec3 nor = calcNormal(rayPosition);
             col = nor * .5 + .5;
             col = spectrum(res.y);
+            col *= clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5;
         }
 
         tot += col;
