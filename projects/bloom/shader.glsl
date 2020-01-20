@@ -158,7 +158,7 @@ vec2 fib(vec2 n) {
     return n;
 }
 
-float bloomHeight = 2.;
+float bloomHeight = 1.;
 
 float leafBound(vec3 p, vec2 uv) {
     float d = abs(length(p) - uv.y) - .16;
@@ -178,7 +178,7 @@ float leafBound(vec3 p, vec2 uv) {
 
 float debugLeaf(vec3 p, vec2 uv) {
 
-    float bound = length(p + vec3(0, bloomHeight, 0)) - bloomHeight/1.;
+    float bound = length(p + vec3(0, bloomHeight, 0)) - bloomHeight * 3.;
 
     //return bound;
 
@@ -200,8 +200,50 @@ float debugLeaf(vec3 p, vec2 uv) {
     return d;
 }
 
+float newLeaf(vec3 p, vec2 uv) {
+    float r = circleFlatRadius(uv.y, bloomHeight);
+    if (r == 0.) {
+        return 1e12;
+    }
+
+    // orient
+    pR(p.xz, -uv.x);
+
+    // wedge
+    vec3 n = normalize(vec3(1,0,.75));
+    float wedge = -dot(p, n);
+    wedge = max(wedge, dot(p, n * vec3(1,1,-1)));
+
+    float e = uv.y / bloomHeight;
+    e = 1. - abs(1. - e);
+
+    // sphere
+    float thick = mix(.01, .1, pow(e * bloomHeight, .5));
+    p.y += uv.y - r;
+    float sphere = abs(length(p) - abs(r)) - thick;
+
+    // top
+    float len = 1. - e;
+    len = sqrt(1. - len * len);
+    float a = (10. * len) / (2. * PI * r);
+    a = min(a, PI);
+    n = vec3(0, sin(a), cos(a));
+    float top = dot(p, n);
+
+    float round = mix(-1.5, 1.5, len);
+    round = max(0., round);
+    // round = 0.;
+    float d = smax(wedge, top, round);
+    d = smax(d, sphere, thick);
+
+    // 
+    // pR(p.xz, -uv.x);
+    // d = max(d, abs(p.x) - .05);
+    return d;
+}
+
 float leaf(vec3 p, vec2 uv) {
-   return debugLeaf(p, uv);
+   return newLeaf(p, uv);
 
     float thick = clamp(uv.y, .7, 1.);
     thick = 1.;
@@ -245,10 +287,12 @@ vec2 bloom2(vec3 p) {
         // return vec2(bound, 0.);
     }
 
-    float t = mod(iTime/5., 1.);
+    float t = iTime / 5.1;
+    t = mod(t, 1.);
     t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
     // t = 2.;
-    vec2 move = vec2(0, t) * 2.5;
+    // t += 1.;
+    vec2 move = vec2(0, t) * bloomHeight;
 
     vec2 uv = vec2(
         atan(p.x, p.z),
@@ -264,6 +308,7 @@ vec2 bloom2(vec3 p) {
     float aa = atan(cc.x / cc.y);
     //float aa = 0.5585993153435624;
     float scale = (PI*2.) / sqrt(cc.x*cc.x + cc.y*cc.y);
+    scale /= 2.5;
     //float scale = 0.6660163105297472;
     mat2 rot = mat2(cos(aa), -sin(aa), sin(aa), cos(aa));
     uv = rot * uv;
@@ -374,7 +419,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 break;
             }
             
-            if (rayLength > 16.) {
+            if (rayLength > 30.) {
                 bg = true;
                 break;
             }
@@ -385,8 +430,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if ( ! bg) {
             vec3 nor = calcNormal(rayPosition);
             col = nor * .5 + .5;
-            col = spectrum(res.y);
-            col *= clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5;
+            // col = spectrum(res.y);
+            // col *= clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5;
         }
 
         tot += col;
