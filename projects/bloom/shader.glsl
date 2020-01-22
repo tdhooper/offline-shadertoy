@@ -26,6 +26,13 @@ vec3 spectrum(float n) {
 }
 
 
+
+mat2 inverse(mat2 m) {
+  return mat2(m[1][1],-m[0][1],
+             -m[1][0], m[0][0]) / (m[0][0]*m[1][1] - m[0][1]*m[1][0]);
+}
+
+
 const float PI  = 3.14159265359;
 const float PHI = 1.61803398875;
 
@@ -64,6 +71,20 @@ float range(float vmin, float vmax, float value) {
 
 float rangec(float a, float b, float t) {
     return clamp(range(a, b, t), 0., 1.);
+}
+
+// Cylinder standing upright on the xz plane
+float fCylinder(vec3 p, float r, float height) {
+    float d = length(p.xz) - r;
+    d = max(d, abs(p.y) - height);
+    return d;
+}
+
+// Capsule: A Cylinder with round caps on both sides
+float fCapsule(vec3 p, float r, float c) {
+    c -= r;
+    // return fCylinder(p, r, c);
+    return mix(length(p.xz) - r, length(vec3(p.x, abs(p.y) - c, p.z)) - r, step(c, abs(p.y)));
 }
 
 
@@ -268,17 +289,20 @@ float leaf(vec3 p, vec2 uv) {
 }
 
 
-vec2 calcCell(vec2 cell, vec2 offset, mat2 rot, float scale, vec2 move) {
+vec2 calcCell(vec2 cell, vec2 offset, mat2 transform, mat2 transformI, float scale, vec2 move) {
     cell += offset;
-    cell = cell * rot;
-    cell.y = min(cell.y, -.5);
-    cell = rot * cell;
-    cell = round(cell);
-    return cell * rot * scale + move;
+    cell = transformI * cell; // remove warp
+    cell.y = min(cell.y, 0.); // clamp
+    cell = transform * cell; // warp
+    cell = round(cell); // snap
+    cell *= scale; // move into real units
+    cell = transformI * cell; // remove warp
+    cell += move; // offset
+    return cell;
 }
 
 
-vec2 bloom2(vec3 p) {
+vec3 bloom2(vec3 p) {
 
     float bound = length(p - vec3(0,-1.2,0)) - 3.3;
     bound = max(bound, p.y - 1.1);
@@ -291,8 +315,9 @@ vec2 bloom2(vec3 p) {
     t = mod(t, 1.);
     t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
     // t = 2.;
-    // t += 1.;
+    t -= .05;
     vec2 move = vec2(0, t) * bloomHeight;
+    // move *= 0.;
 
     vec2 uv = vec2(
         atan(p.x, p.z),
@@ -308,43 +333,52 @@ vec2 bloom2(vec3 p) {
     float aa = atan(cc.x / cc.y);
     //float aa = 0.5585993153435624;
     float scale = (PI*2.) / sqrt(cc.x*cc.x + cc.y*cc.y);
-    scale /= 2.5;
+    // scale /= 2.;
     //float scale = 0.6660163105297472;
-    mat2 rot = mat2(cos(aa), -sin(aa), sin(aa), cos(aa));
-    uv = rot * uv;
+    mat2 mRot = mat2(cos(aa), -sin(aa), sin(aa), cos(aa));
+    mat2 mScale = mat2(1,0,0,5);
+    mat2 transform = mRot * mScale;
+    mat2 transformI = inverse(transform);
+
+    uv = transform * uv;
     vec2 cell = round(uv / scale);
 
     // cell.x = min(cell.x, 1.);
 
-    //bound = leafBound(p, ((cell + vec2(0, 0)) * rot * scale) + move);
+    //bound = leafBound(p, ((cell + vec2(0, 0)) * transform * scale) + move);
     //if (bound > .01) {
     //    return bound;
     //}
 
+    vec2 ocell = cell;
+    // cell *= 0.;
+
     float d = 1e12;
 
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, 0), rot, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, -1), rot, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, 0), rot, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, -1), rot, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, 0), rot, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, 0), transform, transformI, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, -1), transform, transformI, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, 0), transform, transformI, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, -1), transform, transformI, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, 0), transform, transformI, scale, move)));
 
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), rot, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), rot, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, 1), rot, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, 1), rot, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), transform, transformI, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), transform, transformI, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, 1), transform, transformI, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, 1), transform, transformI, scale, move)));
 
-    // float b = length(p.xz) - (cos(iTime * 1.)* .5 + .5) *1.;
-    // float c = .0;
+cell = ocell;
+    
+    // float b = length(p.xz) - .2;
+    // b = fCapsule(p + vec3(0,bloomHeight,0), 1., bloomHeight);
     // if (b < d) {
-    //     d = b;
-        float c = length(cell) / 5.;
+    //     float c = cell.x / 5. + cell.y / 2.;
+    //     return vec3(b, c, 1.);
     // }
 
-    return vec2(d, c);
+    return vec3(d, 0, 0);
 }
 
-vec2 map(vec3 p) {
+vec3 map(vec3 p) {
     p.y -= .5;
     return bloom2(p);
 }
@@ -407,7 +441,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float rayLength = 0.;
         float dist = 0.;
         bool bg = false;
-        vec2 res;
+        vec3 res;
 
         for (int i = 0; i < 300; i++) {
             rayLength += dist;
@@ -430,8 +464,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if ( ! bg) {
             vec3 nor = calcNormal(rayPosition);
             col = nor * .5 + .5;
-            // col = spectrum(res.y);
-            // col *= clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5;
+            if (res.z == 1.) {
+                col = spectrum(res.y);
+                col *= clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5;
+            }
         }
 
         tot += col;
