@@ -180,6 +180,7 @@ vec2 fib(vec2 n) {
 }
 
 float bloomHeight = 1.;
+float bloomHeightMax = 1.;
 
 float leafBound(vec3 p, vec2 uv) {
     float d = abs(length(p) - uv.y) - .16;
@@ -235,11 +236,11 @@ float newLeaf(vec3 p, vec2 uv) {
     float wedge = -dot(p, n);
     wedge = max(wedge, dot(p, n * vec3(1,1,-1)));
 
-    float e = uv.y / bloomHeight;
+    float e = uv.y / bloomHeightMax;
     e = 1. - abs(1. - e);
 
     // sphere
-    float thick = mix(.01, .1, pow(e * bloomHeight, .5));
+    float thick = mix(.01, .1, pow(e * bloomHeightMax, .5));
     p.y += uv.y - r;
     float sphere = abs(length(p) - abs(r)) - thick;
 
@@ -289,10 +290,18 @@ float leaf(vec3 p, vec2 uv) {
 }
 
 
-vec2 calcCell(vec2 cell, vec2 offset, mat2 transform, mat2 transformI, float scale, vec2 move) {
+vec2 calcCell(
+    vec2 cell,
+    vec2 offset,
+    mat2 transform,
+    mat2 transformI,
+    float scale,
+    vec2 move,
+    float stretch
+) {
     cell += offset;
     cell = transformI * cell; // remove warp
-    cell.y = min(cell.y, 0.); // clamp
+    cell.y = min(cell.y, -.5/stretch); // clamp
     cell = transform * cell; // warp
     cell = round(cell); // snap
     cell *= scale; // move into real units
@@ -314,9 +323,13 @@ vec3 bloom2(vec3 p) {
     float t = iTime / 5.1;
     t = mod(t, 1.);
     t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
+    bloomHeight = mix(.1, bloomHeightMax, t);
+    //bloomHeight = bloomHeightMax;
     // t = 2.;
-    t -= .05;
-    vec2 move = vec2(0, t) * bloomHeight;
+    //t -= .05;
+    vec2 move = vec2(0, t)* bloomHeightMax;
+    float stretch = 5.;
+
     // move *= 0.;
 
     vec2 uv = vec2(
@@ -336,7 +349,7 @@ vec3 bloom2(vec3 p) {
     // scale /= 2.;
     //float scale = 0.6660163105297472;
     mat2 mRot = mat2(cos(aa), -sin(aa), sin(aa), cos(aa));
-    mat2 mScale = mat2(1,0,0,5);
+    mat2 mScale = mat2(1,0,0,stretch);
     mat2 transform = mRot * mScale;
     mat2 transformI = inverse(transform);
 
@@ -355,16 +368,16 @@ vec3 bloom2(vec3 p) {
 
     float d = 1e12;
 
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, 0), transform, transformI, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, -1), transform, transformI, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, 0), transform, transformI, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, -1), transform, transformI, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, 0), transform, transformI, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, 0), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, -1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, 0), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, -1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, 0), transform, transformI, scale, move, stretch)));
 
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), transform, transformI, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), transform, transformI, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, 1), transform, transformI, scale, move)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, 1), transform, transformI, scale, move)));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, 1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, 1), transform, transformI, scale, move, stretch)));
 
 cell = ocell;
     
