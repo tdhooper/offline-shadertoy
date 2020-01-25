@@ -94,10 +94,7 @@ vec2 round(vec2 a) {
     return floor(a + .5);
 }
 
-float bloomHeight = 1.;
-float bloomHeightMax = 1.;
-
-float leaf(vec3 p, vec2 uv) {
+float leaf(vec3 p, vec2 uv, float bloomHeight, float bloomHeightMax) {
     float r = circleFlatRadius(uv.y, bloomHeight);
     if (r == 0.) {
         return 1e12;
@@ -168,7 +165,9 @@ vec3 bloom2(vec3 p) {
     t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
     t *= 1.5;
     float ts = smoothstep(.6, 1.1, t);
-    bloomHeight = mix(.1, bloomHeightMax, t);
+    
+    float bloomHeightMax = 1.;
+    float bloomHeight = mix(.1, bloomHeightMax, t);
     p.y -= bloomHeight;
 
     float skull = length(p) - .4 * ts;
@@ -204,16 +203,16 @@ vec3 bloom2(vec3 p) {
 
     float d = 1e12;
 
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, 0), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, -1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, 0), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, -1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, 0), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, 0), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, -1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, 0), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, -1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, 0), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
 
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, 1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, 1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
+    d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
+    d = min(d, leaf(p, calcCell(cell, vec2(0, 1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
+    d = min(d, leaf(p, calcCell(cell, vec2(1, 1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
 
     d = min(d, skull);
 
