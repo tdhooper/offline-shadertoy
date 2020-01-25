@@ -302,6 +302,7 @@ vec2 calcCell(
     cell += offset;
     cell = transformI * cell; // remove warp
     cell.y = min(cell.y, -.5/stretch); // clamp
+    cell.y = max(cell.y, -.9); // clamp
     cell = transform * cell; // warp
     cell = round(cell); // snap
     cell *= scale; // move into real units
@@ -323,7 +324,13 @@ vec3 bloom2(vec3 p) {
     float t = iTime / 5.1;
     t = mod(t, 1.);
     t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
+    t *= 1.5;
+    float ts = smoothstep(.6, 1.1, t);
     bloomHeight = mix(.1, bloomHeightMax, t);
+    p.y -= bloomHeight;
+
+    float skull = length(p) - .4 * ts;
+
     //bloomHeight = bloomHeightMax;
     // t = 2.;
     //t -= .05;
@@ -378,6 +385,8 @@ vec3 bloom2(vec3 p) {
     d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), transform, transformI, scale, move, stretch)));
     d = min(d, leaf(p, calcCell(cell, vec2(0, 1), transform, transformI, scale, move, stretch)));
     d = min(d, leaf(p, calcCell(cell, vec2(1, 1), transform, transformI, scale, move, stretch)));
+
+    d = min(d, skull);
 
 cell = ocell;
     
