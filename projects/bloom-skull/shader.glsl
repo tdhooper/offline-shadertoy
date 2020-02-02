@@ -12,10 +12,7 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 
-mat2 inverse(mat2 m) {
-  return mat2(m[1][1],-m[0][1],
-             -m[1][0], m[0][0]) / (m[0][0]*m[1][1] - m[0][1]*m[1][0]);
-}
+#pragma glslify: inverse = require(glsl-inverse)
 
 const float PI  = 3.14159265359;
 const float PHI = 1.61803398875;
@@ -180,17 +177,18 @@ vec3 bloom(
     tt *= 1.5;
     
     float bloomHeightMax = 1.;
-    float bloomHeight = mix(.1, bloomHeightMax, tt);
+    float bloomHeight = mix(.1, bloomHeightMax, tt);;
+    p.y -= bloomHeight;
 
-    nextScale *= smoothstep(.4, .73, almostIdentityInv(clamp(t + .5, 0., 1.)));
+    float skullScale = smoothstep(.4, .73, almostIdentityInv(clamp(t, 0., 1.)));
     // innerOffset = bloomHeight;
     // vec3 skullP = p;
     // skullP /= innerScale;
     // float sk = length(skullP) - .4;
     // sk *= innerScale;
-
-    p.y -= bloomHeight;
-    nextP = p;
+    nextP = p / skullScale;
+    float sk = (length(nextP) - .4) * skullScale;
+    nextScale *= skullScale;
 
     if (t <= 0.) {
         return vec3(1e12, 0, 0);
@@ -246,6 +244,25 @@ vec3 bloom(
     return vec3(d, 0, 0);
 }
 
+float delay = .7;
+
+mat4 mTranslate = mat4(
+    1, 0, 0, 0,
+    0, 1, 0, -.35,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+);
+mat4 mScale = mat4(
+    .1, 0, 0, 0,
+    0, .1, 0, 0,
+    0, 0, .1, 0,
+    0, 0, 0, 1
+);
+
+void applyMat4(inout vec3 p, mat4 m) {
+    p = (vec4(p, 1) * m).xyz;
+}
+
 vec3 skullWithBloom(
     vec3 p,
     float t,
@@ -258,13 +275,13 @@ vec3 skullWithBloom(
     float d = length(p) - .4;
     
     // bloom
-    p.y -= .35;
-    t -= .5;
+    // p.y -= .35;
+    applyMat4(p, mTranslate);
+    t -= delay;
     // if (t > 0.) {
-        float scale = .1;
-        p /= scale;
-        float bl = bloom(p, t, nextP, nextScale).x * scale;
-        nextScale *= scale;
+        applyMat4(p, inverse(mScale));
+        float bl = bloom(p, t, nextP, nextScale).x * mScale[0][0];
+        nextScale *= mScale[0][0];
         d = min(d, bl);
     // }
 
@@ -284,37 +301,59 @@ vec3 opU(vec3 a, vec3 b) {
 
 vec3 map(vec3 p) {
 
-    p.y -= .5;
+    // return vec3(length(p) - .5, 0, 0);
+
     vec3 pp = p;
 
-    float t = iTime / 2.;
+    float t = iTime / 3.;
+    t = mod(t, 1.);
+    
     //float skullPos = 0.;
     //vec3 res = bloom(p, t, skullPos);
     //p.y -= skullPos;
 
     vec3 res = vec3(1e12, 0, 0);
 
-    float scale = 1.;
-    
-    scale /= .1;
-    p.y += .35 * scale;
+    // float scale = inverse(mScale)[0][0];
+    // scale = mix(scale, scale / .1, t);
+    // p /= scale;
+    // applyMat4(p, inverse(mTranslate));
+    // vec3 p2 = p;
+    // applyMat4(p2, inverse(mTranslate));
+    // p = mix(p, p2, t);
 
+    float ar = (pow(.1, t) - 1.) / (.1 - 1.);
+
+    float scale = 1./mix(.1, .1*.1, ar);
     p /= scale;
+
+    float a = .35;
+    float b = .35 + (.35 +  mix(.1, 1., almostIdentityInv(1.) * 1.5)) * .1;
+    p.y += mix(a, b, ar);
+
+    // float newScale = scale / .1;
+    // vec3 newP = p * .1;
+    
+    
+    // // applyMat4(newP, inverse(mTranslate));
+    // p = mix(p, newP, t);
+    // scale = mix(scale, newScale, t);
 
     vec3 nextP;
     float nextScale = scale;
     float nextT;
 
-    t += 1.;
+
+    t += 2.;
+    t *= delay;
+    // t += 2.;
 
     for (float i = 0.; i < 3.; i++) {
+        if (scale <= 0.) continue;
         vec3 res2 = skullWithBloom(p, t, nextP, nextScale, nextT) * scale;
         p = nextP;
         scale = nextScale;
         t = nextT;
-        
-        // t = nextT;
-        // if (i < 1.) continue;
         res = opU(res, res2);
     }
 
@@ -396,7 +435,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 break;
             }
             
-            if (rayLength > 30.) {
+            if (rayLength > 60.) {
                 bg = true;
                 break;
             }
