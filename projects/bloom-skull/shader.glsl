@@ -41,6 +41,15 @@ float rangec(float a, float b, float t) {
     return clamp(range(a, b, t), 0., 1.);
 }
 
+float almostIdentity(float x) {
+    return x*x*(2.0-x);
+}
+
+float almostIdentityInv(float x) {
+    x = 1. - x;
+    return 1. - almostIdentity(x);
+}
+
 vec2 cmul (vec2 a, vec2 b) {
   return vec2(
     a.x * b.x - a.y * b.y,
@@ -158,20 +167,38 @@ vec2 calcCell(
 }
 
 
-vec3 bloom2(vec3 p) {
+vec3 bloom(
+    vec3 p,
+    float t,
+    inout vec3 nextP,
+    inout float nextScale
+) {
 
-    float t = iTime / 5.1;
-    t = mod(t, 1.);
-    t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
-    t *= 1.5;
-    float ts = smoothstep(.6, 1.1, t);
+
+    float tt = clamp(t, 0., 1.);
+    tt = almostIdentityInv(tt);
+    tt *= 1.5;
     
     float bloomHeightMax = 1.;
-    float bloomHeight = mix(.1, bloomHeightMax, t);
+    float bloomHeight = mix(.1, bloomHeightMax, tt);
+
+    nextScale *= smoothstep(.4, .73, almostIdentityInv(clamp(t + .5, 0., 1.)));
+    // innerOffset = bloomHeight;
+    // vec3 skullP = p;
+    // skullP /= innerScale;
+    // float sk = length(skullP) - .4;
+    // sk *= innerScale;
+
     p.y -= bloomHeight;
+    nextP = p;
 
-    float skull = length(p) - .4 * ts;
+    if (t <= 0.) {
+        return vec3(1e12, 0, 0);
+    }
 
+    // float sk = length(p) - .4;
+
+    t = tt;
     vec2 move = vec2(0, t) * bloomHeightMax;
     float stretch = 5.;
 
@@ -214,14 +241,89 @@ vec3 bloom2(vec3 p) {
     d = min(d, leaf(p, calcCell(cell, vec2(0, 1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
     d = min(d, leaf(p, calcCell(cell, vec2(1, 1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
 
-    d = min(d, skull);
+    // d = min(d, sk);
 
     return vec3(d, 0, 0);
 }
 
+vec3 skullWithBloom(
+    vec3 p,
+    float t,
+    inout vec3 nextP,
+    inout float nextScale,
+    inout float nextT
+) {
+
+    // skull
+    float d = length(p) - .4;
+    
+    // bloom
+    p.y -= .35;
+    t -= .5;
+    // if (t > 0.) {
+        float scale = .1;
+        p /= scale;
+        float bl = bloom(p, t, nextP, nextScale).x * scale;
+        nextScale *= scale;
+        d = min(d, bl);
+    // }
+
+    nextT = t;
+
+    return vec3(d, 0, 0);
+}
+
+// vec3 skull(vec3 p, float t) {
+//     float d = length(p) - .4 * smoothstep(.4, .73, t);
+//     return vec3(d, 0, 0);
+// }
+
+vec3 opU(vec3 a, vec3 b) {
+    return a.x < b.x ? a : b;
+}
+
 vec3 map(vec3 p) {
+
     p.y -= .5;
-    return bloom2(p);
+    vec3 pp = p;
+
+    float t = iTime / 2.;
+    //float skullPos = 0.;
+    //vec3 res = bloom(p, t, skullPos);
+    //p.y -= skullPos;
+
+    vec3 res = vec3(1e12, 0, 0);
+
+    float scale = 1.;
+    
+    scale /= .1;
+    p.y += .35 * scale;
+
+    p /= scale;
+
+    vec3 nextP;
+    float nextScale = scale;
+    float nextT;
+
+    t += 1.;
+
+    for (float i = 0.; i < 3.; i++) {
+        vec3 res2 = skullWithBloom(p, t, nextP, nextScale, nextT) * scale;
+        p = nextP;
+        scale = nextScale;
+        t = nextT;
+        
+        // t = nextT;
+        // if (i < 1.) continue;
+        res = opU(res, res2);
+    }
+
+
+    // draw skull with bloom, outputs y tween
+    // apply scale, origin, rotation
+    // tween y position
+
+    return res;
 }
 
 const int NORMAL_STEPS = 6;
