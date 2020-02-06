@@ -13,8 +13,16 @@ void main() {
 }
 
 #pragma glslify: inverse = require(glsl-inverse)
+#pragma glslify: import('./quat.glsl')
 
-const float PI  = 3.14159265359;
+
+float delay = .7;
+vec3 stepPosition = vec3(.5, -.35, .5);
+float stepScale = .3;
+
+#pragma glslify: import('./camera.glsl')
+
+
 const float PHI = 1.61803398875;
 
 void pR(inout vec2 p, float a) {
@@ -244,20 +252,6 @@ vec3 bloom(
     return vec3(d, 0, 0);
 }
 
-float delay = .7;
-
-mat4 mTranslate = mat4(
-    1, 0, 0, 0,
-    0, 1, 0, -.35,
-    0, 0, 1, 0,
-    0, 0, 0, 1
-);
-mat4 mScale = mat4(
-    .1, 0, 0, 0,
-    0, .1, 0, 0,
-    0, 0, .1, 0,
-    0, 0, 0, 1
-);
 
 void applyMat4(inout vec3 p, mat4 m) {
     p = (vec4(p, 1) * m).xyz;
@@ -276,12 +270,12 @@ vec3 skullWithBloom(
     
     // bloom
     // p.y -= .35;
-    applyMat4(p, mTranslate);
+    p += stepPosition;
     t -= delay;
     // if (t > 0.) {
-        applyMat4(p, inverse(mScale));
-        float bl = bloom(p, t, nextP, nextScale).x * mScale[0][0];
-        nextScale *= mScale[0][0];
+        p /= stepScale;
+        float bl = bloom(p, t, nextP, nextScale).x * stepScale;
+        nextScale *= stepScale;
         d = min(d, bl);
     // }
 
@@ -301,43 +295,30 @@ vec3 opU(vec3 a, vec3 b) {
 
 vec3 map(vec3 p) {
 
+    float w = mapWaypoints(p);
+
     // return vec3(length(p) - .5, 0, 0);
 
     vec3 pp = p;
 
     float t = iTime / 3.;
     t = mod(t, 1.);
-    
-    //float skullPos = 0.;
-    //vec3 res = bloom(p, t, skullPos);
-    //p.y -= skullPos;
+
+    // tweenCamera(p, t);
 
     vec3 res = vec3(1e12, 0, 0);
 
-    // float scale = inverse(mScale)[0][0];
-    // scale = mix(scale, scale / .1, t);
-    // p /= scale;
-    // applyMat4(p, inverse(mTranslate));
-    // vec3 p2 = p;
-    // applyMat4(p2, inverse(mTranslate));
-    // p = mix(p, p2, t);
 
+/*
     float ar = (pow(.1, t) - 1.) / (.1 - 1.);
-
     float scale = 1./mix(.1, .1*.1, ar);
     p /= scale;
-
     float a = .35;
     float b = .35 + (.35 +  mix(.1, 1., almostIdentityInv(1.) * 1.5)) * .1;
     p.y += mix(a, b, ar);
+*/
 
-    // float newScale = scale / .1;
-    // vec3 newP = p * .1;
-    
-    
-    // // applyMat4(newP, inverse(mTranslate));
-    // p = mix(p, newP, t);
-    // scale = mix(scale, newScale, t);
+    float scale = 1.;
 
     vec3 nextP;
     float nextScale = scale;
@@ -361,6 +342,10 @@ vec3 map(vec3 p) {
     // draw skull with bloom, outputs y tween
     // apply scale, origin, rotation
     // tween y position
+
+    res.x = min(res.x, w);
+
+    res.x = w;
 
     return res;
 }
@@ -391,6 +376,8 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 // #define AA 3
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+
+    calcWaypoints();
 
     vec3 col;
     vec3 tot = vec3(0.0);
