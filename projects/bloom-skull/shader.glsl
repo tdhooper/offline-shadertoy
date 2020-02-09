@@ -17,8 +17,10 @@ void main() {
 
 
 float delay = .7;
-vec3 stepPosition = vec3(.5, -.35, .5);
-float stepScale = .3;
+vec3 stepPosition = vec3(.5, .35, .5);
+// float stepScale = 1.;//.5;
+float stepScale = .5;
+vec3 stepNormal = normalize(vec3(5,1,1));
 
 #pragma glslify: import('./camera.glsl')
 
