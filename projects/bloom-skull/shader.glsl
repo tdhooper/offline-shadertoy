@@ -1,26 +1,10 @@
-precision highp float;
 
-uniform vec2 iResolution;
-uniform float iTime;
-
-varying vec3 eye;
-varying vec3 dir;
-
-void mainImage(out vec4 a, in vec2 b);
-
-void main() {
-    mainImage(gl_FragColor, gl_FragCoord.xy);
-}
 
 #pragma glslify: inverse = require(glsl-inverse)
 #pragma glslify: import('./quat.glsl')
 
 
 float delay = .7;
-vec3 stepPosition = vec3(.5, .35, .5);
-// float stepScale = 1.;//.5;
-float stepScale = .5;
-vec3 stepNormal = normalize(vec3(5,1,1));
 
 #pragma glslify: import('./camera.glsl')
 
@@ -379,6 +363,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
+    stepScale = mix(1., .3, sin(iTime) * .5 + .5);
     calcWaypoints();
 
     vec3 col;

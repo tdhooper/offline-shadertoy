@@ -1,3 +1,6 @@
+uniform sampler2D iChannel0; // camera-data.glsl filter: nearest wrap: clamp
+uniform vec2 iChannel0Size;
+
 struct Waypoint {
     vec3 trans;
     vec4 rot;
@@ -47,6 +50,14 @@ vec3 debug0;
 vec3 debug1;
 
 void calcCylinder() {
+
+    wayOrigin = texture2D(iChannel0, vec2(0,0)).rgb;
+    wayAxis = texture2D(iChannel0, vec2(1,0)).rgb;
+
+    return;
+
+
+    return;
     vec3 up = vec3(0,-1,0);
 
     vec3 v0, v1, v2, v3;
@@ -64,32 +75,70 @@ void calcCylinder() {
     v3 = v2 + rotate_vector(stepPosition, r2);
     r3 = q_look_at(rotate_vector(stepNormal, r2), rotate_vector(up, r2));
 
+
     vec3 n0 = calcCylinderNormal(v0, v1, v2);
     vec3 n1 = calcCylinderNormal(v1, v2, v3);
 
+    vec3 v2a = v2;
+    vec3 v3a = v3;
+
+    float s0, s1, s2, s3;
+
+    s0 = 1. / stepScale;
+    v0 = vec3(0);
+    r0 = QUATERNION_IDENTITY;
+
+    s1 = s0 * stepScale;
+    v1 = stepPosition * s1;
+    r1 = q_look_at(stepNormal, up);
+
+    s2 = s1 * stepScale;
+    v2 = v1 + rotate_vector(stepPosition * s2, r1);
+    r2 = q_look_at(rotate_vector(stepNormal, r1), rotate_vector(up, r1));
+
+    s3 = s2 * stepScale;
+    v3 = v2 + rotate_vector(stepPosition * s3, r2);
+    r3 = q_look_at(rotate_vector(stepNormal, r2), rotate_vector(up, r2));
+
+    // vec3 n0 = calcCylinderNormal(v0, v1, v2);
+    // vec3 n1 = calcCylinderNormal(v1, v2, v3);
+
+
+    // rotation matrix for cylinder direction
     vec3 nor = normalize(cross(n0, n1));
     vec3 bin = normalize(cross(nor, up));
     vec3 tan = normalize(cross(nor, bin));
     mat3 m = mat3(nor, bin, tan);
     mat3 mi = inverse(m);
 
+    debug0 = v2a;
+    debug1 = v3a;
+
+
+    vec3 n2 = normalize(v2a - v2);
+    vec3 n3 = normalize(v3a - v3);
+
+    // n0 = vec3(1,0,0);
+    // n1 = rotate_vector(n0, q_conj(r1));
+
+
     // Project onto axis plane 
-    n0 = n0 * m;
-    n1 = n1 * m;
-    v1 = v1 * m;
+    n2 = n2 * m;
+    n3 = n3 * m;
     v2 = v2 * m;
-    n0.x = 0.;
-    n1.x = 0.;
-    v1.x = 0.;
+    v3 = v3 * m;
+    n2.x = 0.;
+    n3.x = 0.;
     v2.x = 0.;
+    v3.x = 0.;
 
     vec2 center = lineIntersection(
-        v1.yz, n0.yz,
-        v2.yz, n1.yz
+        v2.yz, n2.yz,
+        v3.yz, n3.yz
     );
 
-    debug0 = v1 * mi;
-    debug1 = v2 * mi;
+    // debug0 = v1 * mi;
+    // debug1 = v2 * mi;
 
     wayAxis = nor;
     wayOrigin = vec3(0, center) * mi;
@@ -178,35 +227,22 @@ float fBox(vec3 p, vec3 b) {
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
-float fWaypoint(vec3 p, Waypoint w) {
-    float s = 2.;
-    p -= w.trans;
-    p = rotate_vector(p, q_conj(w.rot));
-    float d = fBox(p, w.scale * vec3(.02, .05, .03) * s);
-    p -= w.scale * vec3(.01,.025,.04) * s;
-    d = min(d, fBox(p, w.scale * vec3(.01,.025,.01) * s));
-    return d;
-}
-
-#define saturate(x) clamp(x, 0., 1.)
-
 float fLine(vec3 p, vec3 n) {
     float t = dot(p, n) / dot(n, n);
     return length((n * t) - p) ;
 }
 
-
-// Distance to line segment between <a> and <b>, used for fCapsule() version 2below
-float fLineSegment(vec3 p, vec3 a, vec3 b) {
-    vec3 ab = b - a;
-    float t = saturate(dot(p - a, ab) / dot(ab, ab));
-    return length((ab*t + a) - p);
-}
-
-// Capsule version 2: between two end points <a> and <b> with radius r 
-float fCapsule(vec3 p, vec3 a, vec3 b, float r) {
-    return fLine(p, normalize(a - b)) - r;
-    return fLineSegment(p, a, b) - r;
+float fWaypoint(vec3 p, Waypoint w) {
+    float s = 2.;
+    p -= w.trans;
+    p = rotate_vector(p, q_conj(w.rot));
+    float d = fBox(p, w.scale * vec3(.02, .05, .03) * s);
+    // d = min(d, max(length(p.yz) - .001, -p.x));
+    // d = min(d, fLine(p, stepNormal) - .001);
+    // d = min(d, abs(p.z) - .001);
+    p -= w.scale * vec3(.01,.025,.04) * s;
+    d = min(d, fBox(p, w.scale * vec3(.01,.025,.01) * s));
+    return d;
 }
 
 float mapWaypoints(vec3 p) {
@@ -227,21 +263,28 @@ float mapWaypoints(vec3 p) {
         )
     );
 
-    float axis = fLine(p, wayAxis) - .02;
+    // float axis = fLine(p, wayAxis) - .02;
+    
+    // float axis = fLine(p - wayOrigin, wayAxis) - .005;
+    // axis = max(axis, length(p - wayOrigin) - 1.);
+
+    float axis = fLine(p - wayOrigin, wayAxis) - .005;
+    axis = max(axis, length(p - wayOrigin) - 1.);
 
     float d = min(path, blocks);
-    //d = min(d, axis);
+    d = min(d, axis);
 
-    //d = min(d, length(p - debug0) - .03);
-    //d = min(d, length(p - debug1) - .03);
-    float pl = abs(dot(p, wayAxis)) - .01;
-    pl = max(pl, length(p - wayOrigin) - .5);
-    d = min(d, pl);
+    // d = min(d, length(p - debug0) - .03);
+    // d = min(d, length(p - debug1) - .03);
+
+    // float pl = abs(dot(p, wayAxis)) - .01;
+    // pl = max(pl, length(p - wayOrigin) - .5);
+    // d = min(d, pl);
 
     // d = min(d, fLine(p - debug0, wayAxis) - .005);
     // d = min(d, fLine(p - debug1, wayAxis) - .005);
 
-    d = min(d, fLine(p - wayOrigin, wayAxis) - .005);
+    
 
     return d;
 }

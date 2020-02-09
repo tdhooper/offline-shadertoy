@@ -101,8 +101,8 @@ module.exports = (project) => {
         const texture = dep.node.buffer.color[0]._texture;
         gl.activeTexture(gl.TEXTURE0);
         gl.bindTexture(texture.target, texture.texture);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-        gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+        // gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
         const s = {};
         s[dep.uniform] = dep.node.buffer;
         state = Object.assign(s, state);
