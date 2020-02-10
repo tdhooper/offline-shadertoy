@@ -269,7 +269,7 @@ float mapWaypoints(vec3 p) {
     // axis = max(axis, length(p - wayOrigin) - 1.);
 
     float axis = fLine(p - wayOrigin, wayAxis) - .005;
-    axis = max(axis, length(p - wayOrigin) - 1.);
+    // axis = max(axis, length(p - wayOrigin) - 1.);
 
     float d = min(path, blocks);
     d = min(d, axis);
