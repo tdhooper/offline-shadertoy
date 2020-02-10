@@ -13,38 +13,35 @@ vec3 calcCylinderNormal(vec3 a, vec3 b, vec3 c) {
 vec3 calcAxis() {
     vec3 up = vec3(0,-1,0);
 
+    // calculate first four points, ignoring scaling
+    // these form a cylinder
     vec3 v0, v1, v2, v3;
-    vec4 r0, r1, r2, r3;
-
+    vec4 r;
     v0 = vec3(0);
-    r0 = QUATERNION_IDENTITY;
-
     v1 = stepPosition;
-    r1 = q_look_at(stepNormal, up);
+    r = q_look_at(stepNormal, up);
+    v2 = v1 + rotate_vector(stepPosition, r);
+    r = q_look_at(rotate_vector(stepNormal, r), rotate_vector(up, r));
+    v3 = v2 + rotate_vector(stepPosition, r);
 
-    v2 = v1 + rotate_vector(stepPosition, r1);
-    r2 = q_look_at(rotate_vector(stepNormal, r1), rotate_vector(up, r1));
-
-    v3 = v2 + rotate_vector(stepPosition, r2);
-    r3 = q_look_at(rotate_vector(stepNormal, r2), rotate_vector(up, r2));
-
-
+    // calculate normals for the two middle points
+    // based on samples from each side
     vec3 n0 = calcCylinderNormal(v0, v1, v2);
     vec3 n1 = calcCylinderNormal(v1, v2, v3);
 
-    // rotation matrix for cylinder direction
-    vec3 nor = normalize(cross(n0, n1));
+    // get the cylinder axis
+    vec3 axis = normalize(cross(n0, n1));
 
-    return nor;
+    return axis;
 }
 
 
+// find angle between ab and ac
 float findAngle(vec2 a, vec2 b, vec2 c) {
-    // find angle between ab and ac
     return acos(dot(normalize(b - a), normalize(c - a)));
 }
 
-// calculate signed angle between each spoke of spiral
+// calculate signed angle between each spoke of the spiral
 // we can do this by ignoring the scaling factor
 float calcSpokeAngle(vec2 a, vec2 b, vec2 c) {
     float angle = findAngle(b, a, c);
@@ -134,7 +131,7 @@ vec3 calcCenter(vec3 axis) {
 
     // calculate first two points, with scaling
     // these are the logarithmic points
-    vec3 v0s, v1s, v2s;
+    vec3 v0s, v1s;
     float s;
     s = 1. / stepScale;
     v0s = vec3(0);
@@ -152,25 +149,6 @@ vec3 calcCenter(vec3 axis) {
     vec3 center = vec3(0, center2) * mi;
 
     return center;
-}
-
-
-
-
-vec3 findCenter() {
-    vec3 up = vec3(0,-1,0);
-
-    float s = 1. / stepScale;
-    vec3 v = vec3(0);
-    vec4 r = QUATERNION_IDENTITY;
-
-    for (int i = 0; i < 100; i++) {
-        s *= stepScale;
-        v += rotate_vector(stepPosition * s, r);
-        r = q_look_at(rotate_vector(stepNormal, r), rotate_vector(up, r));
-    }
-
-    return v;
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
