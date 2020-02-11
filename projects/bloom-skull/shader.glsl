@@ -284,7 +284,8 @@ vec3 skullWithBloom(
     // vec4 rot = q_look_at(stepNormal, vec3(0,1,0));
     // p *= orientMatrix(stepNormal, vec3(0,1,0));
     // p = rotate_vector(p, rot);
-    p *= calcLookAtMatrix(vec3(0), stepNormal, vec3(0,-1,0));
+    mat3 m = -calcLookAtMatrix(vec3(0), -stepNormal, vec3(0,-1,0));
+    p *= m;
     p.y += calcSkullOffset(1.) * .1;
     // p.y += .1;
     t -= delay;
