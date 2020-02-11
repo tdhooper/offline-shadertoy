@@ -31,7 +31,8 @@ const main = require('./main.js');
 // face-fract
 // bloom
 // bloom-skull
+// log-camera
 
-const project = LOADPROJECT('bloom-skull');
+const project = LOADPROJECT('log-camera');
 
 main(project);
