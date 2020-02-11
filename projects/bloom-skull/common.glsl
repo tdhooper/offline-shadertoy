@@ -13,6 +13,9 @@ void main() {
 }
 
 vec3 stepPosition = vec3(.1, .1, .2) * 3.;
-// float stepScale = 1.;
-float stepScale = .7;
-vec3 stepNormal = normalize(vec3(1,3,.4));
+float stepScale = .3;
+vec3 stepNormal = normalize(vec3(1,1,.1));
+
+// vec3 stepPosition = vec3(.1, .1, .2) * 2.;
+// float stepScale = .6;
+// vec3 stepNormal = normalize(vec3(1,1,.4));

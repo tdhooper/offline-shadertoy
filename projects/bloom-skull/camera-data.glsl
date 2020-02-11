@@ -134,7 +134,7 @@ vec2 calcCenter(vec2 point0, vec2 point1, float scale, float spokeAngle) {
     return center;
 }
 
-vec3 calcCenter(mat3 mAxis, float spokeAngle) {
+vec3 calcCenter(vec3 axis, mat3 mAxis, float spokeAngle) {
 
     // calculate first two points, with scaling
     // these are the logarithmic points
@@ -155,14 +155,46 @@ vec3 calcCenter(mat3 mAxis, float spokeAngle) {
     // transform back into 3d
     vec3 center = vec3(0, center2) * inverse(mAxis);
 
+
+    float v1Height = dot(v1s, axis);
+    // project onto cylinder base at origin
+    vec3 v1p = v1s - axis * v1Height;
+    float v1Radius = length(v1p);
+
+    vec3 apex = center + axis * v1Height * (length(v1p) / length(center));
+
+    
+    // // height of cone
+    // a2 = b2+c2
+
+    // float height = sqrt(v1Height * v1Height + v1Radius * v1Radius);
+    // center -= dot(center, axis) * axis;
     return center;
+    // return apex;
+}
+
+vec3 findCenter() {
+    vec3 up = vec3(0,-1,0);
+
+    float s = 1. / stepScale;
+    vec3 v = vec3(0);
+    vec4 r = QUATERNION_IDENTITY;
+
+    for (int i = 0; i < 2; i++) {
+        s *= stepScale;
+        v += rotate_vector(stepPosition * s, r);
+        r = q_look_at(rotate_vector(stepNormal, r), rotate_vector(up, r));
+    }
+
+    return v;
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 axis = calcAxis();
     mat3 mAxis = calcAxisMatrix(axis);
     float spokeAngle = calcSpokeAngle(mAxis);
-    vec3 center = calcCenter(mAxis, spokeAngle);
+    // vec3 center = calcCenter(axis, mAxis, spokeAngle);
+    vec3 center = findCenter();
     if (fragCoord.x < 1.) {
         fragColor = vec4(center, 1);
     } else if (fragCoord.x < 2.) {

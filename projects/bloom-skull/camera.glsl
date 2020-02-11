@@ -1,6 +1,51 @@
 uniform sampler2D iChannel0; // camera-data.glsl filter: nearest wrap: clamp
 uniform vec2 iChannel0Size;
 
+
+mat3 orientMatrix(vec3 A, vec3 B) {
+    mat3 Fi = mat3(
+        A,
+        (B - dot(A, B) * A) / length(B - dot(A, B) * A),
+        cross(B, A)
+    );
+    mat3 G = mat3(
+        dot(A, B),              -length(cross(A, B)),   0,
+        length(cross(A, B)),    dot(A, B),              0,
+        0,                      0,                      1
+    );
+    return Fi * G * inverse(Fi);
+}
+
+
+// Cone with correct distances to tip and base circle. Y is up, 0 is in the middle of the base.
+float fCone(vec3 p, float radius, float height) {
+    vec2 q = vec2(length(p.xz), p.y);
+    vec2 tip = q - vec2(0, height);
+    vec2 mantleDir = normalize(vec2(height, radius));
+    float mantle = dot(tip, mantleDir);
+    float d = max(mantle, -q.y);
+    float projected = dot(tip, vec2(mantleDir.y, -mantleDir.x));
+    
+    // distance to tip
+    if ((q.y > height) && (projected < 0.)) {
+        d = max(d, length(tip));
+    }
+    
+    // distance to base ring
+    if ((q.x > radius) && (projected > length(vec2(height, radius)))) {
+        d = max(d, length(q - vec2(radius, 0)));
+    }
+    return d;
+}
+
+float fCone(vec3 p, vec3 n, vec3 base, vec3 apex, float radius) {
+    p -= base;
+    p *= orientMatrix(n, vec3(0,1,0));
+    float height = distance(base, apex);
+    return fCone(p, radius, height);
+}
+
+
 struct Waypoint {
     vec3 trans;
     vec4 rot;
@@ -16,10 +61,30 @@ vec3 wayOrigin;
 vec3 wayAxis;
 float wayAngle;
 
+
+
+vec3 findCenter() {
+    vec3 up = vec3(0,-1,0);
+
+    float s = 1. / stepScale;
+    vec3 v = vec3(0);
+    vec4 r = QUATERNION_IDENTITY;
+
+    for (int i = 0; i < 100; i++) {
+        s *= stepScale;
+        v += rotate_vector(stepPosition * s, r);
+        r = q_look_at(rotate_vector(stepNormal, r), rotate_vector(up, r));
+    }
+
+    return v;
+}
+
 void calcWaypoints() {
     wayOrigin = texture2D(iChannel0, vec2(0,0)).rgb;
     wayAxis = texture2D(iChannel0, vec2(.5,0)).rgb;
     wayAngle = texture2D(iChannel0, vec2(1,0)).r;
+
+    wayOrigin = findCenter();
 
     vec3 up = vec3(0,-1,0);
     vec3 normal = stepNormal;
@@ -83,10 +148,10 @@ vec3 tweenCameraPos(float t) {
 float tweenCamera(inout vec3 p, float t) {
     //float ramp = (pow(stepScale, t) - 1.) / (stepScale - 1.);
 
-    //t = -t;
+    // t = -t;
     //t *= 2.;
 
-    t = mix(-2., 2., t);
+    t = mix(-4., 0., t);
 
     float scale = pow(stepScale, t);
     //float scale = mix(1., stepScale, ramp);
@@ -94,12 +159,14 @@ float tweenCamera(inout vec3 p, float t) {
     float angle = abs(wayAngle) * t;
     vec4 rot = rotate_angle_axis(angle, wayAxis);
 
-    vec3 o = wayOrigin + wayAxis;
+    vec3 o = wayOrigin;
+
 
     p -= o;
+
     p = rotate_vector(p, rot);
-    // p += wayAxis * pow(t, stepScale) * sign(t) * dot(stepPosition, wayAxis);
-    p *= scale;
+    //p += wayAxis * pow(t, stepScale) * sign(t) * dot(stepPosition, wayAxis);
+    p *= scale;    
     p += o;
     return scale;
 
@@ -148,11 +215,30 @@ float fWaypoint(vec3 p, Waypoint w) {
 }
 
 
+float mapDebugWay(vec3 p) {
+    vec3 up = vec3(0,-1,0);
+
+    float s = 1. / stepScale;
+    vec3 v = vec3(0);
+    vec4 r = QUATERNION_IDENTITY;
+    float d = 1e12;
+
+    for (int i = 0; i < 50; i++) {
+        s *= stepScale;
+        v += rotate_vector(stepPosition * s, r);
+        d = min(d, length(p - v) - s * .1);
+        r = q_look_at(rotate_vector(stepNormal, r), rotate_vector(up, r));
+    }
+
+    return d;
+}
+
+
 float mapWaypoints(vec3 p) {
     float path = 1e12;
     vec3 pp = p;
     float scale;
-    const float WITER = 20.;
+    const float WITER = 3. * 3.;
     for (float i = 0.; i < WITER; i++){
         p = pp;
         scale = tweenCamera(p, i / (WITER - 1.));
@@ -174,28 +260,26 @@ float mapWaypoints(vec3 p) {
         )
     );
 
-    // float axis = fLine(p, wayAxis) - .02;
-    
-    // float axis = fLine(p - wayOrigin, wayAxis) - .005;
-    // axis = max(axis, length(p - wayOrigin) - 1.);
-
-    float axis = fLine(p - wayOrigin, wayAxis) - .005;
-    // axis = max(axis, length(p - wayOrigin) - 1.);
 
     float d = min(path, blocks);
+    // d = path;
+
+    d = min(d, length(p - wayOrigin) - .05);
+
+    float axis = fLine(p - wayOrigin, wayAxis) - .005;
+    
     d = min(d, axis);
 
-    // d = min(d, length(p - debug0) - .03);
-    // d = min(d, length(p - debug1) - .03);
+    // float cone = fCone(p, wayAxis, wayOrigin, wayOrigin+wayAxis*.5, length(wayOrigin));
+    // cone = abs(cone) - .001;
+    // cone = max(cone, -dot(p, wayAxis)+.02);
+    // d = min(d, cone);
 
-    // float pl = abs(dot(p, wayAxis)) - .01;
-    // pl = max(pl, length(p - wayOrigin) - .5);
-    // d = min(d, pl);
+    // d = min(d, abs(dot(p, wayAxis)) - .0001);
+    // d = min(d, length(p) - .2);
+    // d = min(d, length(p - way1.trans) - .1);
 
-    // d = min(d, fLine(p - debug0, wayAxis) - .005);
-    // d = min(d, fLine(p - debug1, wayAxis) - .005);
-
-    
+    d = min(d, mapDebugWay(p));
 
     return d;
 }
