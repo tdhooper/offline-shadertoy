@@ -62,28 +62,14 @@ vec3 wayAxis;
 float wayAngle;
 
 
+#pragma glslify: import('./camera-precalc.glsl')
 
-vec3 findCenter() {
-    vec3 up = vec3(0,-1,0);
-
-    float s = 1. / stepScale;
-    vec3 v = vec3(0);
-    vec4 r = QUATERNION_IDENTITY;
-
-    for (int i = 0; i < 100; i++) {
-        s *= stepScale;
-        v += rotate_vector(stepPosition * s, r);
-        r = q_look_at(rotate_vector(stepNormal, r), rotate_vector(up, r));
-    }
-
-    return v;
-}
 
 void calcWaypoints() {
-    wayOrigin = texture2D(iChannel0, vec2(0,0)).rgb;
-    wayAxis = texture2D(iChannel0, vec2(.5,0)).rgb;
-    wayAngle = texture2D(iChannel0, vec2(1,0)).r;
-
+    wayAxis = calcAxis();
+    mat3 mAxis = calcAxisMatrix(wayAxis);
+    wayAngle = calcSpokeAngle(mAxis);
+    // vec3 wayOrigin = calcCenter(wayAxis, mAxis, wayAngle);
     wayOrigin = findCenter();
 
     vec3 up = vec3(0,-1,0);
@@ -146,36 +132,14 @@ vec3 tweenCameraPos(float t) {
 }
 
 float tweenCamera(inout vec3 p, float t) {
-    //float ramp = (pow(stepScale, t) - 1.) / (stepScale - 1.);
-
-    // t = -t;
-    //t *= 2.;
-
-    t = mix(-4., 0., t);
-
+    t *= -5.;
     float scale = pow(stepScale, t);
-    //float scale = mix(1., stepScale, ramp);
-
     float angle = abs(wayAngle) * t;
     vec4 rot = rotate_angle_axis(angle, wayAxis);
-
-    vec3 o = wayOrigin;
-
-
-    p -= o;
-
+    p -= wayOrigin;
     p = rotate_vector(p, rot);
-    //p += wayAxis * pow(t, stepScale) * sign(t) * dot(stepPosition, wayAxis);
     p *= scale;    
-    p += o;
-    return scale;
-
-    // vec3 up = vec3(0,-1,0);
-    // vec4 rot = q_slerp(way1.rot, way2.rot, t);
-    // vec3 trans = tweenCameraPos(ramp);
-    // p *= scale;
-    // p = rotate_vector(p, rot);
-    // p += trans;
+    p += wayOrigin;
     return scale;
 }
 
@@ -214,24 +178,6 @@ float fWaypoint(vec3 p, Waypoint w) {
     return d;
 }
 
-
-float mapDebugWay(vec3 p) {
-    vec3 up = vec3(0,-1,0);
-
-    float s = 1. / stepScale;
-    vec3 v = vec3(0);
-    vec4 r = QUATERNION_IDENTITY;
-    float d = 1e12;
-
-    for (int i = 0; i < 50; i++) {
-        s *= stepScale;
-        v += rotate_vector(stepPosition * s, r);
-        d = min(d, length(p - v) - s * .1);
-        r = q_look_at(rotate_vector(stepNormal, r), rotate_vector(up, r));
-    }
-
-    return d;
-}
 
 
 float mapWaypoints(vec3 p) {
@@ -278,8 +224,6 @@ float mapWaypoints(vec3 p) {
     // d = min(d, abs(dot(p, wayAxis)) - .0001);
     // d = min(d, length(p) - .2);
     // d = min(d, length(p - way1.trans) - .1);
-
-    d = min(d, mapDebugWay(p));
 
     return d;
 }

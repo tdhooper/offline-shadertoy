@@ -2,11 +2,11 @@
 
 #pragma glslify: inverse = require(glsl-inverse)
 #pragma glslify: import('./quat.glsl')
+#pragma glslify: import('./camera.glsl')
 
 
 float delay = .7;
 
-#pragma glslify: import('./camera.glsl')
 
 
 const float PHI = 1.61803398875;
@@ -363,7 +363,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
-    stepScale = mix(1., .3, sin(iTime) * .5 + .5);
+    // stepScale = mix(1., .3, sin(iTime) * .5 + .5);
     calcWaypoints();
 
     vec3 col;
