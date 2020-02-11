@@ -158,6 +158,21 @@ vec2 calcCell(
 }
 
 
+// stepPosition needs to set the evential skull position for the camera
+// skullWithBloom needs the bloom position, that results in the skull position
+
+// is it still practical to put the skull transform in bloom?
+
+float calcSkullOffset(float t) {
+    float tt = clamp(t, 0., 1.);
+    tt = almostIdentityInv(tt);
+    tt *= 1.5;
+    
+    float bloomHeightMax = 1.;
+    float bloomHeight = mix(.1, bloomHeightMax, tt);;
+    return bloomHeight;
+}
+
 vec3 bloom(
     vec3 p,
     float t,
@@ -181,7 +196,7 @@ vec3 bloom(
     // float sk = length(skullP) - .4;
     // sk *= innerScale;
     nextP = p / skullScale;
-    float sk = (length(nextP) - .4) * skullScale;
+    // float sk = (length(nextP) - .4) * skullScale;
     nextScale *= skullScale;
 
     if (t <= 0.) {
@@ -243,6 +258,13 @@ void applyMat4(inout vec3 p, mat4 m) {
     p = (vec4(p, 1) * m).xyz;
 }
 
+mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
+    vec3 ww = normalize(ta - ro);
+    vec3 uu = normalize(cross(ww,up));
+    vec3 vv = normalize(cross(uu,ww));
+    return mat3(uu, vv, ww);
+}
+
 vec3 skullWithBloom(
     vec3 p,
     float t,
@@ -253,10 +275,18 @@ vec3 skullWithBloom(
 
     // skull
     float d = length(p) - .4;
+    d = fBox(p, vec3(.05, .3, .1));
     
     // bloom
     // p.y -= .35;
-    p += stepPosition;
+    
+    p -= stepPosition;
+    // vec4 rot = q_look_at(stepNormal, vec3(0,1,0));
+    // p *= orientMatrix(stepNormal, vec3(0,1,0));
+    // p = rotate_vector(p, rot);
+    p *= calcLookAtMatrix(vec3(0), stepNormal, vec3(0,-1,0));
+    p.y += calcSkullOffset(1.) * .1;
+    // p.y += .1;
     t -= delay;
     // if (t > 0.) {
         p /= stepScale;
@@ -280,8 +310,10 @@ vec3 opU(vec3 a, vec3 b) {
 }
 
 vec3 map(vec3 p) {
+    float t = iTime / 3.;
+    t = mod(t, 1.);
 
-    tweenCamera(p, mod(iTime, 1.));
+    float camScale = tweenCamera(p, t);
 
     float w = mapWaypoints(p);
 
@@ -289,8 +321,6 @@ vec3 map(vec3 p) {
 
     vec3 pp = p;
 
-    float t = iTime / 3.;
-    t = mod(t, 1.);
 
     // tweenCamera(p, t);
 
@@ -317,7 +347,7 @@ vec3 map(vec3 p) {
     t *= delay;
     // t += 2.;
 
-    for (float i = 0.; i < 3.; i++) {
+    for (float i = 0.; i < 2.; i++) {
         if (scale <= 0.) continue;
         vec3 res2 = skullWithBloom(p, t, nextP, nextScale, nextT) * scale;
         p = nextP;
@@ -333,8 +363,9 @@ vec3 map(vec3 p) {
 
     res.x = min(res.x, w);
 
-    res.x = w;
+    // res.x = w;
 
+    res.x /= camScale;
     return res;
 }
 

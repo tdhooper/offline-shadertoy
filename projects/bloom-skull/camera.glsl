@@ -159,7 +159,7 @@ float fLine(vec3 p, vec3 n) {
 
 
 float fWaypointB(vec3 p) {
-    float s = 2.;
+    float s = .5;
     float d = fBox(p, vec3(.02, .05, .03) * s);
     // d = min(d, max(length(p.yz) - .001, -p.x));
     // d = min(d, fLine(p, stepNormal) - .001);
@@ -190,7 +190,7 @@ float mapWaypoints(vec3 p) {
         p *= stepScale;
         scale *= stepScale;
         //path = min(path, length(p - tweenCameraPos(i / WITER)) - .005);
-        path = min(path, fWaypointB(p) / scale);
+        // path = min(path, fWaypointB(p) / scale);
     }
     p = pp;
 
@@ -209,11 +209,11 @@ float mapWaypoints(vec3 p) {
     float d = min(path, blocks);
     // d = path;
 
-    d = min(d, length(p - wayOrigin) - .05);
+    // d = min(d, length(p - wayOrigin) - .05);
 
     float axis = fLine(p - wayOrigin, wayAxis) - .005;
     
-    d = min(d, axis);
+    // d = min(d, axis);
 
     // float cone = fCone(p, wayAxis, wayOrigin, wayOrigin+wayAxis*.5, length(wayOrigin));
     // cone = abs(cone) - .001;
