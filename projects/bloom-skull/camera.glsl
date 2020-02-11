@@ -132,7 +132,6 @@ vec3 tweenCameraPos(float t) {
 }
 
 float tweenCamera(inout vec3 p, float t) {
-    t *= -5.;
     float scale = pow(stepScale, t);
     float angle = abs(wayAngle) * t;
     vec4 rot = rotate_angle_axis(angle, wayAxis);

@@ -281,6 +281,8 @@ vec3 opU(vec3 a, vec3 b) {
 
 vec3 map(vec3 p) {
 
+    tweenCamera(p, mod(iTime, 1.));
+
     float w = mapWaypoints(p);
 
     // return vec3(length(p) - .5, 0, 0);
