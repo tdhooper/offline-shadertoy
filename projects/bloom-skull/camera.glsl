@@ -14,10 +14,12 @@ Waypoint way3;
 
 vec3 wayOrigin;
 vec3 wayAxis;
+float wayAngle;
 
 void calcWaypoints() {
     wayOrigin = texture2D(iChannel0, vec2(0,0)).rgb;
-    wayAxis = texture2D(iChannel0, vec2(1,0)).rgb;
+    wayAxis = texture2D(iChannel0, vec2(.5,0)).rgb;
+    wayAngle = texture2D(iChannel0, vec2(1,0)).r;
 
     vec3 up = vec3(0,-1,0);
     vec3 normal = stepNormal;
@@ -79,13 +81,34 @@ vec3 tweenCameraPos(float t) {
 }
 
 float tweenCamera(inout vec3 p, float t) {
-    vec4 rot = q_slerp(way1.rot, way2.rot, t);
-    float ramp = (pow(stepScale, t) - 1.) / (stepScale - 1.);
-    float scale = mix(way1.scale, way2.scale, ramp);
-    vec3 trans = tweenCameraPos(ramp);
-    p *= scale;
+    //float ramp = (pow(stepScale, t) - 1.) / (stepScale - 1.);
+
+    //t = -t;
+    //t *= 2.;
+
+    t = mix(-2., 2., t);
+
+    float scale = pow(stepScale, t);
+    //float scale = mix(1., stepScale, ramp);
+
+    float angle = abs(wayAngle) * t;
+    vec4 rot = rotate_angle_axis(angle, wayAxis);
+
+    vec3 o = wayOrigin + wayAxis;
+
+    p -= o;
     p = rotate_vector(p, rot);
-    p += trans;
+    // p += wayAxis * pow(t, stepScale) * sign(t) * dot(stepPosition, wayAxis);
+    p *= scale;
+    p += o;
+    return scale;
+
+    // vec3 up = vec3(0,-1,0);
+    // vec4 rot = q_slerp(way1.rot, way2.rot, t);
+    // vec3 trans = tweenCameraPos(ramp);
+    // p *= scale;
+    // p = rotate_vector(p, rot);
+    // p += trans;
     return scale;
 }
 
@@ -104,25 +127,41 @@ float fLine(vec3 p, vec3 n) {
     return length((n * t) - p) ;
 }
 
+
+float fWaypointB(vec3 p) {
+    float s = 2.;
+    float d = fBox(p, vec3(.02, .05, .03) * s);
+    // d = min(d, max(length(p.yz) - .001, -p.x));
+    // d = min(d, fLine(p, stepNormal) - .001);
+    // d = min(d, abs(p.z) - .001);
+    p -= vec3(.01,.025,.04) * s;
+    d = min(d, fBox(p, vec3(.01,.025,.01) * s));
+    return d;
+}
+
 float fWaypoint(vec3 p, Waypoint w) {
     float s = 2.;
     p -= w.trans;
     p = rotate_vector(p, q_conj(w.rot));
-    float d = fBox(p, w.scale * vec3(.02, .05, .03) * s);
-    // d = min(d, max(length(p.yz) - .001, -p.x));
-    // d = min(d, fLine(p, stepNormal) - .001);
-    // d = min(d, abs(p.z) - .001);
-    p -= w.scale * vec3(.01,.025,.04) * s;
-    d = min(d, fBox(p, w.scale * vec3(.01,.025,.01) * s));
+    float d = fWaypointB(p / w.scale) * w.scale;
     return d;
 }
 
+
 float mapWaypoints(vec3 p) {
     float path = 1e12;
+    vec3 pp = p;
+    float scale;
     const float WITER = 20.;
     for (float i = 0.; i < WITER; i++){
-        path = min(path, length(p - tweenCameraPos(i / WITER)) - .005);
+        p = pp;
+        scale = tweenCamera(p, i / (WITER - 1.));
+        p *= stepScale;
+        scale *= stepScale;
+        //path = min(path, length(p - tweenCameraPos(i / WITER)) - .005);
+        path = min(path, fWaypointB(p) / scale);
     }
+    p = pp;
 
     float blocks = min(
         min(

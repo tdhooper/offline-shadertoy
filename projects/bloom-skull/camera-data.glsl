@@ -1,4 +1,4 @@
-// framebuffer size: 2x1
+// framebuffer size: 3x1
 
 #pragma glslify: inverse = require(glsl-inverse)
 #pragma glslify: import('./quat.glsl')
@@ -35,6 +35,15 @@ vec3 calcAxis() {
     return axis;
 }
 
+// rotation matrix for cylinder direction
+mat3 calcAxisMatrix(vec3 axis) {
+    vec3 up = vec3(0,-1,0);
+    vec3 nor = axis;
+    vec3 bin = normalize(cross(nor, up));
+    vec3 tan = normalize(cross(nor, bin));
+    mat3 mAxis = mat3(nor, bin, tan);
+    return mAxis;
+}
 
 // find angle between ab and ac
 float findAngle(vec2 a, vec2 b, vec2 c) {
@@ -49,6 +58,31 @@ float calcSpokeAngle(vec2 a, vec2 b, vec2 c) {
     // are we angled to the left or right?
     float side = sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
     return angle * -side;
+}
+
+float calcSpokeAngle(mat3 mAxis) {
+    vec3 up = vec3(0,-1,0);
+
+    // calculate first three points, ignoring scaling
+    // these form a circle
+    vec3 v0, v1, v2;
+    vec4 r;
+    v0 = vec3(0);
+    v1 = stepPosition;
+    r = q_look_at(stepNormal, up);
+    v2 = v1 + rotate_vector(stepPosition, r);
+
+    // project points onto axis plane
+    vec2 point0 = (v0 * mAxis).yz;
+    vec2 point1 = (v1 * mAxis).yz;
+    vec2 point2 = (v2 * mAxis).yz;
+
+    // calculate angle between each spoke of the circle
+    // this is the same for scaled and unscaled points, but it's easier
+    // to calculate for unscaled
+    float spokeAngle = calcSpokeAngle(point0, point1, point2);
+
+    return spokeAngle;
 }
 
 vec2 rotate(vec2 p, float a) {
@@ -100,34 +134,7 @@ vec2 calcCenter(vec2 point0, vec2 point1, float scale, float spokeAngle) {
     return center;
 }
 
-vec3 calcCenter(vec3 axis) {
-    vec3 up = vec3(0,-1,0);
-
-    // rotation matrix for cylinder direction
-    vec3 nor = axis;
-    vec3 bin = normalize(cross(nor, up));
-    vec3 tan = normalize(cross(nor, bin));
-    mat3 m = mat3(nor, bin, tan);
-    mat3 mi = inverse(m);
-
-    // calculate first three points, ignoring scaling
-    // these form a circle
-    vec3 v0, v1, v2;
-    vec4 r;
-    v0 = vec3(0);
-    v1 = stepPosition;
-    r = q_look_at(stepNormal, up);
-    v2 = v1 + rotate_vector(stepPosition, r);
-
-    // project points onto axis plane
-    vec2 point0 = (v0 * m).yz;
-    vec2 point1 = (v1 * m).yz;
-    vec2 point2 = (v2 * m).yz;
-
-    // calculate angle between each spoke of the circle
-    // this is the same for scaled and unscaled points, but it's easier
-    // to calculate for unscaled
-    float spokeAngle = calcSpokeAngle(point0, point1, point2);
+vec3 calcCenter(mat3 mAxis, float spokeAngle) {
 
     // calculate first two points, with scaling
     // these are the logarithmic points
@@ -139,25 +146,28 @@ vec3 calcCenter(vec3 axis) {
     v1s = stepPosition * s;
 
     // project points onto axis plane
-    vec2 point0s = (v0s * m).yz;
-    vec2 point1s = (v1s * m).yz;
+    vec2 point0s = (v0s * mAxis).yz;
+    vec2 point1s = (v1s * mAxis).yz;
 
     // calculate the center of the logarithmic spiral
     vec2 center2 = calcCenter(point0s, point1s, stepScale, spokeAngle);
 
     // transform back into 3d
-    vec3 center = vec3(0, center2) * mi;
+    vec3 center = vec3(0, center2) * inverse(mAxis);
 
     return center;
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 axis = calcAxis();
-    if (fragCoord.x > 1.) {
+    mat3 mAxis = calcAxisMatrix(axis);
+    float spokeAngle = calcSpokeAngle(mAxis);
+    vec3 center = calcCenter(mAxis, spokeAngle);
+    if (fragCoord.x < 1.) {
+        fragColor = vec4(center, 1);
+    } else if (fragCoord.x < 2.) {
         fragColor = vec4(axis, 1);
     } else {
-        vec3 center = calcCenter(axis);
-        // center = findCenter();
-        fragColor = vec4(center, 1);
+        fragColor = vec4(spokeAngle, 0, 0, 1);
     }
 }

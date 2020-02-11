@@ -405,7 +405,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             res = map(rayPosition);
             dist = res.x;
 
-            if (abs(dist) < .001) {
+            if (abs(dist) < .00001) {
                 break;
             }
             
