@@ -22,20 +22,13 @@ float map(vec3 p) {
     float d = 1e12;
     float part;
     float scale = 1.;
-    float flip = 1.;
-
-    mat3 rot = -basisMatrix(-stepForward, stepUp);
 
     for (float i = 0.; i < 4.; i++) {
         part = fPart(p) / scale;
         d = min(d, part);
-
         p -= stepPosition;
         p /= stepScale;
-        p *= rot;
-
-        flip *= -1.;
-
+        p *= stepRotate;
         scale /= stepScale;
     }
 
@@ -70,8 +63,9 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec3 stepForward = normalize(vec3(.0,.5,1));
+    vec3 stepUp = normalize(vec3(.5,1.,0));
     stepRotate = basisMatrix(stepForward, stepUp);
-    stepRotate2 = -basisMatrix(-stepForward, stepUp);
 
     calcWaypoints();
 

@@ -11,13 +11,10 @@ vec3 calcAxis() {
     // calculate first four points, ignoring scaling
     // these form a cylinder
     vec3 v0, v1, v2, v3;
-    vec4 r;
     v0 = vec3(0);
     v1 = stepPosition;
-    r = q_look_at(stepForward, stepUp);
-    v2 = v1 + rotate_vector(stepPosition, r);
-    r = q_look_at(rotate_vector(stepForward, r), rotate_vector(stepUp, r));
-    v3 = v2 + rotate_vector(stepPosition, r);
+    v2 = v1 + stepRotate * stepPosition;
+    v3 = v2 + stepRotate * stepRotate * stepPosition;
 
     // calculate normals for the two middle points
     // based on samples from each side
@@ -59,11 +56,9 @@ float calcSpokeAngle(mat3 mAxis) {
     // calculate first three points, ignoring scaling
     // these form a circle
     vec3 v0, v1, v2;
-    vec4 r;
     v0 = vec3(0);
     v1 = stepPosition;
-    r = q_look_at(stepForward, stepUp);
-    v2 = v1 + rotate_vector(stepPosition, r);
+    v2 = v1 + stepRotate * stepPosition;
 
     // project points onto axis plane
     vec2 point0 = (v0 * mAxis).yz;
@@ -169,12 +164,16 @@ vec3 calcCenter(vec3 axis, mat3 mAxis, float spokeAngle) {
 vec3 findCenter() {
     float s = 1. / stepScale;
     vec3 v = vec3(0);
-    vec4 r = QUATERNION_IDENTITY;
+    mat3 m = mat3(
+        1,0,0,
+        0,1,0,
+        0,0,1
+    );
 
     for (int i = 0; i < 100; i++) {
         s *= stepScale;
-        v += rotate_vector(stepPosition * s, r);
-        r = q_look_at(rotate_vector(stepForward, r), rotate_vector(stepUp, r));
+        v += m * stepPosition * s;
+        m *= stepRotate;
     }
 
     return v;

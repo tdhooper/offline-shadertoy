@@ -14,13 +14,9 @@ void main() {
 
 mat3 basisMatrix(vec3 forward, vec3 up) {
     vec3 ww = normalize(forward);
-    vec3 uu = normalize(cross(ww,up));
-    vec3 vv = normalize(cross(uu,ww));
+    vec3 uu = normalize(cross(up,ww));
+    vec3 vv = normalize(cross(ww,uu));
     return mat3(uu, vv, ww);
-}
-
-mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
-    return basisMatrix(ta - ro, up);
 }
 
 
@@ -37,9 +33,6 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 // vec3 stepNormal = normalize(vec3(.1,1,0));
 
 
-vec3 stepPosition = normalize(vec3(.5, 1, .5)) * .35;
+vec3 stepPosition = vec3(.0, .4, .3);
 float stepScale = .1;
-vec3 stepForward = vec3(0,0,1);
-vec3 stepUp = normalize(-stepPosition);
 mat3 stepRotate;
-mat3 stepRotate2;
