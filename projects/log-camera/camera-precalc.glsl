@@ -8,17 +8,15 @@ vec3 calcCylinderNormal(vec3 a, vec3 b, vec3 c) {
 }
 
 vec3 calcAxis() {
-    vec3 up = vec3(0,-1,0);
-
     // calculate first four points, ignoring scaling
     // these form a cylinder
     vec3 v0, v1, v2, v3;
     vec4 r;
     v0 = vec3(0);
     v1 = stepPosition;
-    r = q_look_at(stepNormal, up);
+    r = q_look_at(stepForward, stepUp);
     v2 = v1 + rotate_vector(stepPosition, r);
-    r = q_look_at(rotate_vector(stepNormal, r), rotate_vector(up, r));
+    r = q_look_at(rotate_vector(stepForward, r), rotate_vector(stepUp, r));
     v3 = v2 + rotate_vector(stepPosition, r);
 
     // calculate normals for the two middle points
@@ -58,15 +56,13 @@ float calcSpokeAngle(vec2 a, vec2 b, vec2 c) {
 }
 
 float calcSpokeAngle(mat3 mAxis) {
-    vec3 up = vec3(0,-1,0);
-
     // calculate first three points, ignoring scaling
     // these form a circle
     vec3 v0, v1, v2;
     vec4 r;
     v0 = vec3(0);
     v1 = stepPosition;
-    r = q_look_at(stepNormal, up);
+    r = q_look_at(stepForward, stepUp);
     v2 = v1 + rotate_vector(stepPosition, r);
 
     // project points onto axis plane
@@ -171,8 +167,6 @@ vec3 calcCenter(vec3 axis, mat3 mAxis, float spokeAngle) {
 }
 
 vec3 findCenter() {
-    vec3 up = vec3(0,-1,0);
-
     float s = 1. / stepScale;
     vec3 v = vec3(0);
     vec4 r = QUATERNION_IDENTITY;
@@ -180,7 +174,7 @@ vec3 findCenter() {
     for (int i = 0; i < 100; i++) {
         s *= stepScale;
         v += rotate_vector(stepPosition * s, r);
-        r = q_look_at(rotate_vector(stepNormal, r), rotate_vector(up, r));
+        r = q_look_at(rotate_vector(stepForward, r), rotate_vector(stepUp, r));
     }
 
     return v;
