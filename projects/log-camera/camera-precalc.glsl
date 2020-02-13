@@ -124,34 +124,25 @@ vec2 calcCenter(vec2 point0, vec2 point1, float scale, float spokeAngle) {
 
 vec3 calcCenter(vec3 axis, mat3 mAxis, float spokeAngle) {
 
-    // calculate first two points, with scaling
-    // these are the logarithmic points
-    vec3 v0s, v1s;
-    float s;
-    s = 1. / stepScale;
-    v0s = vec3(0);
-    s *= stepScale;
-    v1s = stepPosition * s;
+    // calculate first two points
+    vec3 v0 = vec3(0);
+    vec3 v1 = stepPosition;
 
     // project points onto axis plane
-    vec2 point0s = (v0s * mAxis).yz;
-    vec2 point1s = (v1s * mAxis).yz;
+    vec2 point0 = (v0 * mAxis).yz;
+    vec2 point1 = (v1 * mAxis).yz;
 
     // calculate the center of the logarithmic spiral
-    vec2 center2 = calcCenter(point0s, point1s, stepScale, spokeAngle);
+    vec2 center2 = calcCenter(point0, point1, stepScale, spokeAngle);
 
     // transform back into 3d
     vec3 center = vec3(0, center2) * inverse(mAxis);
 
+    // extrapolate the line between v0 and v1 to find the apex
+    float v1Height = dot(v1, axis);
+    float v1Radius = distance(center, v1 - axis * v1Height);
+    vec3 apex = center + axis * v1Height * (length(center) / (length(center) - v1Radius));
 
-    float v1Height = dot(v1s, axis);
-    // project onto cylinder base at origin
-    vec3 v1p = v1s - axis * v1Height;
-    float v1Radius = distance(center, v1p);
-
-    vec3 apex = center + axis * v1Height * (length(center)/(length(center) - v1Radius));
-
-    // return center;
     return apex;
 }
 
