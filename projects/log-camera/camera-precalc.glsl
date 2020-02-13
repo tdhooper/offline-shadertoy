@@ -10,11 +10,10 @@ vec3 calcCylinderNormal(vec3 a, vec3 b, vec3 c) {
 vec3 calcAxis() {
     // calculate first four points, ignoring scaling
     // these form a cylinder
-    vec3 v0, v1, v2, v3;
-    v0 = vec3(0);
-    v1 = stepPosition;
-    v2 = v1 + stepRotate * stepPosition;
-    v3 = v2 + stepRotate * stepRotate * stepPosition;
+    vec3 v0 = vec3(0);
+    vec3 v1 = stepPosition;
+    vec3 v2 = v1 + stepRotate * stepPosition;
+    vec3 v3 = v2 + stepRotate * stepRotate * stepPosition;
 
     // calculate normals for the two middle points
     // based on samples from each side
@@ -49,11 +48,10 @@ float calcSpokeAngle(vec2 a, vec2 b, vec2 c) {
 
 float calcSpokeAngle(mat3 mAxis) {
     // calculate first three points, ignoring scaling
-    // these form a circle
-    vec3 v0, v1, v2;
-    v0 = vec3(0);
-    v1 = stepPosition;
-    v2 = v1 + stepRotate * stepPosition;
+    // these form a circle when projected onto the axis
+    vec3 v0 = vec3(0);
+    vec3 v1 = stepPosition;
+    vec3 v2 = v1 + stepRotate * stepPosition;
 
     // project points onto axis plane
     vec2 point0 = (v0 * mAxis).xy;
