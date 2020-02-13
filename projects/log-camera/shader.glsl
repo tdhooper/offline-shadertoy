@@ -8,9 +8,11 @@
 float time;
 
 float fPart(vec3 p) {
+    float s = .2;
+    p /= s;
     float a = fBox(p, vec3(.05, .4, .1));
     float b = fBox(p - vec3(-.1, .3, .1), vec3(.1,.02,.02));
-    return min(a, b);
+    return min(a, b) * s;
     return length(p) - .2;
 }
 
@@ -63,8 +65,6 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec3 stepForward = normalize(vec3(.0,.5,1));
-    vec3 stepUp = normalize(vec3(.5,1.,0));
     stepRotate = basisMatrix(stepForward, stepUp);
 
     calcWaypoints();

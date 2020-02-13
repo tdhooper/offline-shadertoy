@@ -32,7 +32,14 @@ mat3 basisMatrix(vec3 forward, vec3 up) {
 // float stepScale = .1;
 // vec3 stepNormal = normalize(vec3(.1,1,0));
 
+// vec3 stepPosition = vec3(.0, .4, .3);
+// float stepScale = .1;
+// vec3 stepForward = normalize(vec3(.0,.5,1));
+// vec3 stepUp = normalize(vec3(.5,1.,0));
+// mat3 stepRotate;
 
-vec3 stepPosition = vec3(.0, .4, .3);
-float stepScale = .1;
+vec3 stepPosition = vec3(.2, .1, .0);
+float stepScale = .6;
+vec3 stepForward = normalize(vec3(.1,1.,1));
+vec3 stepUp = normalize(vec3(.5,1.,0));
 mat3 stepRotate;

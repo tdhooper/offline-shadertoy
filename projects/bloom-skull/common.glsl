@@ -28,3 +28,5 @@ void main() {
 vec3 stepPosition = normalize(vec3(.5, 1, .5)) * .35;
 float stepScale = .1;
 vec3 stepNormal = normalize(stepPosition);
+
+
