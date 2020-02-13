@@ -19,7 +19,7 @@ float fPart(vec3 p) {
 
 float map(vec3 p) {
     float camScale = tweenCamera(p, time);
-    float w = mapWaypoints(p);
+    float c = mapCameraDebug(p);
 
     float d = 1e12;
     float part;
@@ -34,7 +34,7 @@ float map(vec3 p) {
         scale /= stepScale;
     }
 
-    d = min(d, w);
+    d = min(d, c);
 
     d /= camScale;
 
@@ -67,7 +67,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     stepRotate = basisMatrix(stepForward, stepUp);
 
-    calcWaypoints();
+    cameraPrecalc();
 
     vec3 col;
 
