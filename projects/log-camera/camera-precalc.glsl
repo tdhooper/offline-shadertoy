@@ -147,18 +147,12 @@ vec3 calcCenter(vec3 axis, mat3 mAxis, float spokeAngle) {
     float v1Height = dot(v1s, axis);
     // project onto cylinder base at origin
     vec3 v1p = v1s - axis * v1Height;
-    float v1Radius = length(v1p);
+    float v1Radius = distance(center, v1p);
 
-    vec3 apex = center + axis * v1Height * (length(v1p) / length(center));
+    vec3 apex = center + axis * v1Height * (length(center)/(length(center) - v1Radius));
 
-    
-    // // height of cone
-    // a2 = b2+c2
-
-    // float height = sqrt(v1Height * v1Height + v1Radius * v1Radius);
-    // center -= dot(center, axis) * axis;
-    return center;
-    // return apex;
+    // return center;
+    return apex;
 }
 
 vec3 findCenter() {

@@ -14,8 +14,8 @@ void calcWaypoints() {
     wayAxis = calcAxis();
     mat3 mAxis = calcAxisMatrix(wayAxis);
     wayAngle = calcSpokeAngle(mAxis);
-    // vec3 wayOrigin = calcCenter(wayAxis, mAxis, wayAngle);
-    wayOrigin = findCenter();
+    wayOrigin = calcCenter(wayAxis, mAxis, wayAngle);
+    // wayOrigin = findCenter();
 }
 
 float tweenCamera(inout vec3 p, float t) {
