@@ -29,12 +29,7 @@ vec3 calcAxis() {
 
 // rotation matrix for cylinder direction
 mat3 calcAxisMatrix(vec3 axis) {
-    vec3 up = vec3(0,-1,0);
-    vec3 nor = axis;
-    vec3 bin = normalize(cross(nor, up));
-    vec3 tan = normalize(cross(nor, bin));
-    mat3 mAxis = mat3(nor, bin, tan);
-    return mAxis;
+    return basisMatrix(axis, vec3(0,1,0));
 }
 
 // find angle between ab and ac
@@ -61,9 +56,9 @@ float calcSpokeAngle(mat3 mAxis) {
     v2 = v1 + stepRotate * stepPosition;
 
     // project points onto axis plane
-    vec2 point0 = (v0 * mAxis).yz;
-    vec2 point1 = (v1 * mAxis).yz;
-    vec2 point2 = (v2 * mAxis).yz;
+    vec2 point0 = (v0 * mAxis).xy;
+    vec2 point1 = (v1 * mAxis).xy;
+    vec2 point2 = (v2 * mAxis).xy;
 
     // calculate angle between each spoke of the circle
     // this is the same for scaled and unscaled points, but it's easier
@@ -129,14 +124,14 @@ vec3 calcCenter(vec3 axis, mat3 mAxis, float spokeAngle) {
     vec3 v1 = stepPosition;
 
     // project points onto axis plane
-    vec2 point0 = (v0 * mAxis).yz;
-    vec2 point1 = (v1 * mAxis).yz;
+    vec2 point0 = (v0 * mAxis).xy;
+    vec2 point1 = (v1 * mAxis).xy;
 
     // calculate the center of the logarithmic spiral
     vec2 center2 = calcCenter(point0, point1, stepScale, spokeAngle);
 
     // transform back into 3d
-    vec3 center = vec3(0, center2) * inverse(mAxis);
+    vec3 center = vec3(center2, 0) * inverse(mAxis);
 
     // extrapolate the line between v0 and v1 to find the apex
     float v1Height = dot(v1, axis);
