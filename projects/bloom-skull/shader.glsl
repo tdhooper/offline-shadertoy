@@ -197,10 +197,6 @@ vec3 bloom(vec3 p, float t, inout float skullHeight, inout float skullScale) {
     skullScale = mix(.1, 1., smoothstep(.0, 1., t));
     // skullScale = 1.;
 
-    if (t <= 0.) {
-        return vec3(1e12, 0, 0);
-    }
-
     vec2 move = vec2(0, t) * skullOffset;
     float stretch = 5.;
 
@@ -308,6 +304,10 @@ vec3 opU(vec3 a, vec3 b) {
 
 vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     
+    if (t <= 0.) {
+        return vec3(1e12, 0, 0);
+    }
+
     float skullHeight;
     float skullScale;
 
@@ -338,8 +338,13 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
 }
 
 vec3 map(vec3 p) {
+
+    // return vec3(length(p) - .5, 0., 0.);
+
     float t = iTime / 3.;
     t = mod(t, 1.);
+
+    t += 1.;
 
     float camScale = tweenCamera(p, t);
 
@@ -356,13 +361,13 @@ vec3 map(vec3 p) {
 
     t *= delay;
 
+    t += 1.;
+
     // draw skull (with blooms)
     // translate
     // draw bloom
 
-    t += 1.;
-
-    for (float i = 0.; i < 3.; i++) {
+    for (float i = 0.; i < 4.; i++) {
         res2 = bloomWithSkull(p, scale, t);
         res = opU(res, res2);
     }
@@ -453,7 +458,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 break;
             }
             
-            if (rayLength > 60.) {
+            if (rayLength > 100.) {
                 bg = true;
                 break;
             }
