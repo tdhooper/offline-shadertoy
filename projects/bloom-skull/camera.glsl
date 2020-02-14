@@ -1,147 +1,186 @@
-uniform sampler2D iChannel0; // camera-data.glsl filter: nearest wrap: clamp
-uniform vec2 iChannel0Size;
 
-
-mat3 orientMatrix(vec3 A, vec3 B) {
-    mat3 Fi = mat3(
-        A,
-        (B - dot(A, B) * A) / length(B - dot(A, B) * A),
-        cross(B, A)
-    );
-    mat3 G = mat3(
-        dot(A, B),              -length(cross(A, B)),   0,
-        length(cross(A, B)),    dot(A, B),              0,
-        0,                      0,                      1
-    );
-    return Fi * G * inverse(Fi);
+vec3 calcCylinderNormal(vec3 a, vec3 b, vec3 c) {
+    vec3 tan = a - c;
+    vec3 bin = cross(a - b, c - b);
+    vec3 nor = normalize(cross(tan, bin));
+    return nor;
 }
 
+vec3 calcAxis() {
+    // calculate first four points, ignoring scaling
+    // these form a cylinder
+    vec3 v0 = vec3(0);
+    vec3 v1 = stepPosition;
+    vec3 v2 = v1 + stepRotate * stepPosition;
+    vec3 v3 = v2 + stepRotate * stepRotate * stepPosition;
 
-// Cone with correct distances to tip and base circle. Y is up, 0 is in the middle of the base.
-float fCone(vec3 p, float radius, float height) {
-    vec2 q = vec2(length(p.xz), p.y);
-    vec2 tip = q - vec2(0, height);
-    vec2 mantleDir = normalize(vec2(height, radius));
-    float mantle = dot(tip, mantleDir);
-    float d = max(mantle, -q.y);
-    float projected = dot(tip, vec2(mantleDir.y, -mantleDir.x));
+    // calculate normals for the two middle points
+    // based on samples from each side
+    vec3 n0 = calcCylinderNormal(v0, v1, v2);
+    vec3 n1 = calcCylinderNormal(v1, v2, v3);
+
+    // get the cylinder axis
+    vec3 axis = normalize(cross(n0, n1));
+
+    return axis;
+}
+
+// rotation matrix for cylinder direction
+mat3 calcAxisMatrix(vec3 axis) {
+    return basisMatrix(axis, vec3(0,1,0));
+}
+
+// find angle between ab and ac
+float findAngle(vec2 a, vec2 b, vec2 c) {
+    return acos(dot(normalize(b - a), normalize(c - a)));
+}
+
+// calculate signed angle between each spoke of the spiral
+// we can do this by ignoring the scaling factor
+float calcSpokeAngle(vec2 a, vec2 b, vec2 c) {
+    float angle = findAngle(b, a, c);
+    angle = PI - angle;
+    // are we angled to the left or right?
+    float side = sign((b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x));
+    return angle * -side;
+}
+
+float calcSpokeAngle(mat3 mAxis) {
+    // calculate first three points, ignoring scaling
+    // these form a circle when projected onto the axis
+    vec3 v0 = vec3(0);
+    vec3 v1 = stepPosition;
+    vec3 v2 = v1 + stepRotate * stepPosition;
+
+    // project points onto axis plane
+    vec2 point0 = (v0 * mAxis).xy;
+    vec2 point1 = (v1 * mAxis).xy;
+    vec2 point2 = (v2 * mAxis).xy;
+
+    // calculate angle between each spoke of the circle
+    // this is the same for scaled and unscaled points, but it's easier
+    // to calculate for unscaled
+    float spokeAngle = calcSpokeAngle(point0, point1, point2);
+
+    return spokeAngle;
+}
+
+vec2 rotate(vec2 p, float a) {
+    return p * mat2(cos(a), sin(a), -sin(a), cos(a));
+}
+
+vec2 calcCenter(vec2 point0, vec2 point1, float scale, float spokeAngle) {
+
+    // scaling factor for each iteration
+    float s = scale;
+
+    // distance between first two points
+    float side0 = distance(point0, point1);
+
+    // angle between each spoke
+    float angle0 = spokeAngle;
     
-    // distance to tip
-    if ((q.y > height) && (projected < 0.)) {
-        d = max(d, length(tip));
-    }
+    // length of side from first point to spiral center
     
-    // distance to base ring
-    if ((q.x > radius) && (projected > length(vec2(height, radius)))) {
-        d = max(d, length(q - vec2(radius, 0)));
-    }
-    return d;
+    // using cosine rule:
+    // https://en.wikipedia.org/wiki/Solution_of_triangles#Two_sides_and_the_included_angle_given_(SAS)
+    // c = sqrt(a^2 + b^2 - 2abcos(γ))
+    
+    // when b = a * s:
+    // c = sqrt(a^2 + (as)^2 - 2a(as)cos(Y))
+    
+    // solve for a:
+    // https://www.wolframalpha.com/widgets/view.jsp?id=c778a2d8bf30ef1d3c2d6bc5696defad
+    // a = c / sqrt(s^2 - 2 s cos(γ) + 1)
+
+    float side1 = side0 / sqrt((s * s) - 2. * s * cos(angle0) + 1.);
+    
+    // b = a * s
+    float side2 = s * side1;
+    
+    // opposite angle to side2, using sine law
+    // https://en.wikipedia.org/wiki/Law_of_sines#Example_1
+    //float angle1 = asin((side1 * sin(angle0)) / side0);
+    float angle2 = asin((side2 * sin(angle0)) / side0);
+
+    // find the center from the angle and side length
+    vec2 center = vec2(sin(angle2), cos(angle2)) * side1;
+ 
+    // rotate and translate into position
+    vec2 v = point1 - point0;
+    center = rotate(center, atan(v.x, v.y));
+    center += point0;
+    
+    return center;
 }
 
-float fCone(vec3 p, vec3 n, vec3 base, vec3 apex, float radius) {
-    p -= base;
-    p *= orientMatrix(n, vec3(0,1,0));
-    float height = distance(base, apex);
-    return fCone(p, radius, height);
+vec3 calcApex(vec3 axis, mat3 mAxis, float spokeAngle) {
+
+    // calculate first two points
+    vec3 v0 = vec3(0);
+    vec3 v1 = stepPosition;
+
+    // project points onto axis plane
+    vec2 point0 = (v0 * mAxis).xy;
+    vec2 point1 = (v1 * mAxis).xy;
+
+    // calculate the center of the logarithmic spiral
+    vec2 center2 = calcCenter(point0, point1, stepScale, spokeAngle);
+
+    // transform back into 3d
+    vec3 center = vec3(center2, 0) * inverse(mAxis);
+
+    // extrapolate the line between v0 and v1 to find the apex
+    float v1Height = dot(v1, axis);
+    float v1Radius = distance(center, v1 - axis * v1Height);
+    vec3 apex = center + axis * v1Height * (length(center) / (length(center) - v1Radius));
+
+    return apex;
 }
 
+// vec3 findApex() {
+//     float s = 1. / stepScale;
+//     vec3 v = vec3(0);
+//     mat3 m = mat3(
+//         1,0,0,
+//         0,1,0,
+//         0,0,1
+//     );
 
-struct Waypoint {
-    vec3 trans;
-    vec4 rot;
-    float scale;
-};
+//     for (int i = 0; i < 100; i++) {
+//         s *= stepScale;
+//         v += m * stepPosition * s;
+//         m *= stepRotate;
+//     }
 
-Waypoint way0;
-Waypoint way1;
-Waypoint way2;
-Waypoint way3;
+//     return v;
+// }
 
-vec3 wayOrigin;
-vec3 wayAxis;
-float wayAngle;
+vec3 cameraAxis;
+float cameraAngle;
+vec3 cameraApex;
 
-
-#pragma glslify: import('./camera-precalc.glsl')
-
-
-void calcWaypoints() {
-    wayAxis = calcAxis();
-    mat3 mAxis = calcAxisMatrix(wayAxis);
-    wayAngle = calcSpokeAngle(mAxis);
-    // vec3 wayOrigin = calcCenter(wayAxis, mAxis, wayAngle);
-    wayOrigin = findCenter();
-
-    vec3 up = vec3(0,-1,0);
-    vec3 normal = stepNormal;
-
-    way0.scale = 1. / stepScale;
-    way0.trans = vec3(0);
-    way0.rot = QUATERNION_IDENTITY;
-
-    way1.scale = way0.scale * stepScale;
-    way1.trans = stepPosition * way1.scale;
-    way1.rot = q_look_at(normal, up);
-
-    way2.scale = way1.scale * stepScale;
-    way2.trans = way1.trans + rotate_vector(stepPosition * way2.scale, way1.rot);
-    way2.rot = q_look_at(rotate_vector(normal, way1.rot), rotate_vector(up, way1.rot));
-
-    way3.scale = way2.scale * stepScale;
-    way3.trans = way2.trans + rotate_vector(stepPosition * way3.scale, way2.rot);
-    way3.rot = q_look_at(rotate_vector(normal, way2.rot), rotate_vector(up, way2.rot));
-}
-
-
-vec3 Catmull(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t){
-    return (((-p0 + p1*3. - p2*3. + p3)*t*t*t + (p0*2. - p1*5. + p2*4. - p3)*t*t + (-p0 + p2)*t + p1*2.)*.5);
-}
-
-vec3 bezier(vec3 p0, vec3 p1, vec3 p2, vec3 p3, float t) {
-    vec3 a0 = mix(p0, p1, t);
-    vec3 a1 = mix(p1, p2, t);
-    vec3 a2 = mix(p2, p3, t);
-    vec3 b0 = mix(a0, a1, t);
-    vec3 b1 = mix(a1, a2, t);
-    return mix(a0, b1, t);
-}
-
-vec3 midpointNormal(vec3 a, vec3 b, vec3 c) {
-    vec3 an = normalize(a - b);
-    vec3 cn = normalize(c - b);
-    vec3 mid = mix(an, cn, .5);
-    return normalize(-mid);
-}
-
-vec3 planeNormal(vec3 a, vec3 b, vec3 c) {
-    return normalize(cross(b - a, c - a));
-}
-
-vec3 controlDir(vec3 a, vec3 b, vec3 c) {
-    return cross(
-        midpointNormal(a, b, c),
-        planeNormal(a, b, c)
-    );
-}
-
-vec3 tweenCameraPos(float t) {
-    vec3 c1 = way1.trans - controlDir(way0.trans, way1.trans, way2.trans) * distance(way1.trans, way2.trans) * .6;
-    vec3 c2 = way2.trans + controlDir(way1.trans, way2.trans, way3.trans) * distance(way1.trans, way2.trans) * .2;
-    t = pow(t, 1.08); // correct for non-constant speed
-    return bezier(way1.trans, c1, c2, way2.trans, t);
+void cameraPrecalc() {
+    cameraAxis = calcAxis();
+    mat3 mAxis = calcAxisMatrix(cameraAxis);
+    cameraAngle = calcSpokeAngle(mAxis);
+    cameraApex = calcApex(cameraAxis, mAxis, cameraAngle);
+    // cameraApex = findApex();
 }
 
 float tweenCamera(inout vec3 p, float t) {
     float scale = pow(stepScale, t);
-    float angle = abs(wayAngle) * t;
-    vec4 rot = rotate_angle_axis(angle, wayAxis);
-    p -= wayOrigin;
+    float angle = abs(cameraAngle) * t;
+    vec4 rot = rotate_angle_axis(angle, cameraAxis);
+    p -= cameraApex;
     p = rotate_vector(p, rot);
     p *= scale;    
-    p += wayOrigin;
+    p += cameraApex;
     return scale;
 }
 
+
+// DEBUG VIEWS
 
 float vmax(vec3 v) {
     return max(max(v.x, v.y), v.z);
@@ -157,72 +196,30 @@ float fLine(vec3 p, vec3 n) {
     return length((n * t) - p) ;
 }
 
-
-float fWaypointB(vec3 p) {
-    float s = .5;
+float fCameraDebug(vec3 p) {
+    float s = 1.;
     float d = fBox(p, vec3(.02, .05, .03) * s);
-    // d = min(d, max(length(p.yz) - .001, -p.x));
-    // d = min(d, fLine(p, stepNormal) - .001);
-    // d = min(d, abs(p.z) - .001);
     p -= vec3(.01,.025,.04) * s;
     d = min(d, fBox(p, vec3(.01,.025,.01) * s));
     return d;
 }
 
-float fWaypoint(vec3 p, Waypoint w) {
-    float s = 2.;
-    p -= w.trans;
-    p = rotate_vector(p, q_conj(w.rot));
-    float d = fWaypointB(p / w.scale) * w.scale;
-    return d;
-}
-
-
-
-float mapWaypoints(vec3 p) {
+float mapCameraDebug(vec3 p) {
     float path = 1e12;
     vec3 pp = p;
     float scale;
-    const float WITER = 3. * 3.;
+    const float WITER = 6.;
     for (float i = 0.; i < WITER; i++){
         p = pp;
-        scale = tweenCamera(p, i / (WITER - 1.));
-        p *= stepScale;
-        scale *= stepScale;
-        //path = min(path, length(p - tweenCameraPos(i / WITER)) - .005);
-        // path = min(path, fWaypointB(p) / scale);
+        scale = tweenCamera(p, -i);
+        path = min(path, fCameraDebug(p) / scale);
     }
     p = pp;
 
-    float blocks = min(
-        min(
-            fWaypoint(p, way0),
-            fWaypoint(p, way1)
-        ),
-        min(
-            fWaypoint(p, way2),
-            fWaypoint(p, way3)
-        )
-    );
-
-
-    float d = min(path, blocks);
-    // d = path;
-
-    // d = min(d, length(p - wayOrigin) - .05);
-
-    float axis = fLine(p - wayOrigin, wayAxis) - .005;
-    
-    // d = min(d, axis);
-
-    // float cone = fCone(p, wayAxis, wayOrigin, wayOrigin+wayAxis*.5, length(wayOrigin));
-    // cone = abs(cone) - .001;
-    // cone = max(cone, -dot(p, wayAxis)+.02);
-    // d = min(d, cone);
-
-    // d = min(d, abs(dot(p, wayAxis)) - .0001);
-    // d = min(d, length(p) - .2);
-    // d = min(d, length(p - way1.trans) - .1);
+    float d = path;
+    float axis = fLine(p - cameraApex, cameraAxis) - .002;
+    d = min(d, axis);
+    d = min(d, length(p - cameraApex) - .02);
 
     return d;
 }
