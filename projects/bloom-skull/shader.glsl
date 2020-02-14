@@ -183,15 +183,19 @@ float calcSkullOffset(float t) {
     return bloomHeight;
 }
 
-vec3 bloom(vec3 p, float t, inout float bloomHeight) {
+vec3 bloom(vec3 p, float t, inout float skullHeight, inout float skullScale) {
 
     float bloomHeightMax = skullOffset;
 
     t = clamp(t, 0., 1.);
     t = almostIdentityInv(t);
 
-    bloomHeight = mix(.1, bloomHeightMax, t);
+    float bloomHeight = mix(.1, bloomHeightMax, t);
     p.y -= bloomHeight;
+
+    skullHeight = bloomHeight;
+    skullScale = mix(.1, 1., smoothstep(.0, 1., t));
+    // skullScale = 1.;
 
     if (t <= 0.) {
         return vec3(1e12, 0, 0);
@@ -304,22 +308,23 @@ vec3 opU(vec3 a, vec3 b) {
 
 vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     
-    float bloomHeight;
+    float skullHeight;
+    float skullScale;
 
     // bloom
-    vec3 bl = bloom(p, t, bloomHeight);
+    vec3 bl = bloom(p, t, skullHeight, skullScale);
+    bl.x *= scale;
 
     // get skull offset and scale from bloom
-    p.y -= bloomHeight;
+    p.y -= skullHeight;
+    p /= skullScale;
+    scale *= skullScale;
 
-    // skull
+    // skull with sub blooms
     vec3 sk = vec3(length(p) - skullRadius, 0, 0);
-    // sk = fBox(p, vec3(.05, .3, .1));
+    sk.x *= scale;
     
     vec3 res = opU(bl, sk);
-    res.x *= scale;
-
-    // sub blooms
 
     // set location for next bloomWithSkull
     // this is the camera
