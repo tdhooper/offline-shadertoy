@@ -264,20 +264,7 @@ float newLeaf(vec3 p, vec2 uv) {
     return d;
 }
 
-float newLeaf2(vec3 p, vec2 uv) {
-    float d = 1e12;
-    // orient
-    pR(p.xz, -uv.x);
-    pR(p.yz, uv.y);
-
-    p.z -= .5;
-    return length(p) - .2;
-
-}
-
-float leaf(vec3 p, vec2 uv) {
-   return newLeaf2(p, uv);
-
+float leafOld(vec3 p, vec2 uv) {
     float thick = clamp(uv.y, .7, 1.);
     thick = 1.;
     float th = thick * .16;
@@ -300,6 +287,22 @@ float leaf(vec3 p, vec2 uv) {
     return d;
 }
 
+
+// need to calculate appear time
+// then just subtract from total time
+
+float tLeaf;
+
+float leaf(vec3 p, vec2 uv) {
+    float d = 1e12;
+    // orient
+    pR(p.xz, -uv.x);
+    pR(p.yz, uv.y);
+
+    p.z -= .5;
+    return length(p) - .2;
+
+}
 
 vec2 calcCell(
     vec2 cell,
@@ -349,8 +352,6 @@ vec3 bloom2(vec3 p) {
 
     vec2 uuu = uv;
 
-    uv -= move;
-
     vec2 cc = vec2(5., 8.);
     //cc.y += floor(sin(iTime * .5) * 3.);
     float aa = atan(cc.x / cc.y);
@@ -363,18 +364,9 @@ vec3 bloom2(vec3 p) {
     mat2 transform = mRot * mScale;
     mat2 transformI = inverse(transform);
 
+    uv -= move;
     uv = transform * uv;
     vec2 cell = round(uv / scale);
-
-    // cell.x = min(cell.x, 1.);
-
-    //bound = leafBound(p, ((cell + vec2(0, 0)) * transform * scale) + move);
-    //if (bound > .01) {
-    //    return bound;
-    //}
-
-    vec2 ocell = cell;
-    // cell *= 0.;
 
     float d = 1e12;
 
@@ -388,16 +380,6 @@ vec3 bloom2(vec3 p) {
     d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), transform, transformI, scale, move, stretch)));
     d = min(d, leaf(p, calcCell(cell, vec2(0, 1), transform, transformI, scale, move, stretch)));
     d = min(d, leaf(p, calcCell(cell, vec2(1, 1), transform, transformI, scale, move, stretch)));
-
-
-cell = ocell;
-    
-    // float b = length(p.xz) - .2;
-    // b = fCapsule(p + vec3(0,bloomHeight,0), 1., bloomHeight);
-    // if (b < d) {
-    //     float c = cell.x / 5. + cell.y / 2.;
-    //     return vec3(b, c, 1.);
-    // }
 
     return vec3(d, 0, 0);
 }
