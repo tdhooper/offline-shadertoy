@@ -264,8 +264,19 @@ float newLeaf(vec3 p, vec2 uv) {
     return d;
 }
 
+float newLeaf2(vec3 p, vec2 uv) {
+    float d = 1e12;
+    // orient
+    pR(p.xz, -uv.x);
+    pR(p.yz, uv.y);
+
+    p.z -= .5;
+    return length(p) - .1;
+
+}
+
 float leaf(vec3 p, vec2 uv) {
-   return newLeaf(p, uv);
+   return newLeaf2(p, uv);
 
     float thick = clamp(uv.y, .7, 1.);
     thick = 1.;
@@ -302,8 +313,8 @@ vec2 calcCell(
     cell += offset;
     cell = transformI * cell; // remove warp
 
-    cell.y = min(cell.y, -.5/stretch); // clamp
-    cell.y = max(cell.y, -.9); // clamp
+    // cell.y = min(cell.y, -.5/stretch); // clamp
+    // cell.y = max(cell.y, -.9); // clamp
 
     cell = transform * cell; // warp
     cell = round(cell); // snap
@@ -318,7 +329,6 @@ vec3 bloom2(vec3 p) {
 
     float bound = length(p - vec3(0,-1.2,0)) - 3.3;
     bound = max(bound, p.y - 1.1);
-    // bound = length(p + vec3(0, bloomHeight, 0)) - bloomHeight/1.;
     if (bound > .01) {
         // return vec2(bound, 0.);
     }
@@ -327,14 +337,14 @@ vec3 bloom2(vec3 p) {
     t = mod(t, 1.);
     t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
 
-    vec2 move = vec2(0, t) * bloomHeightMax;
+    vec2 move = vec2(0, t);
     float stretch = 5.;
 
     // move *= 0.;
 
     vec2 uv = vec2(
         atan(p.x, p.z),
-        circleFlat(vec2(-p.y, length(p.xz)), bloomHeight)
+        atan(-p.y, length(p.xz))
     );
 
     vec2 uuu = uv;
