@@ -305,7 +305,7 @@ float leaf(vec3 p, vec2 uv) {
 }
 
 vec2 calcCell(
-    vec2 cell,
+    vec2 uv,
     vec2 offset,
     mat2 transform,
     mat2 transformI,
@@ -313,6 +313,11 @@ vec2 calcCell(
     vec2 move,
     float stretch
 ) {
+    uv -= move;
+    uv = transform * uv;
+
+    vec2 cell = round(uv / scale);
+
     cell += offset;
     cell = transformI * cell; // remove warp
 
@@ -364,22 +369,18 @@ vec3 bloom2(vec3 p) {
     mat2 transform = mRot * mScale;
     mat2 transformI = inverse(transform);
 
-    uv -= move;
-    uv = transform * uv;
-    vec2 cell = round(uv / scale);
-
     float d = 1e12;
 
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, 0), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, -1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, 0), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, -1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, 0), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(uv, vec2(-1, 0), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(uv, vec2(0, -1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(uv, vec2(0, 0), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(uv, vec2(1, -1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(uv, vec2(1, 0), transform, transformI, scale, move, stretch)));
 
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, 1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, 1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(uv, vec2(-1, -1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(uv, vec2(-1, 1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(uv, vec2(0, 1), transform, transformI, scale, move, stretch)));
+    d = min(d, leaf(p, calcCell(uv, vec2(1, 1), transform, transformI, scale, move, stretch)));
 
     return vec3(d, 0, 0);
 }
