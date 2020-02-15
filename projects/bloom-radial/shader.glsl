@@ -271,7 +271,7 @@ float newLeaf2(vec3 p, vec2 uv) {
     pR(p.yz, uv.y);
 
     p.z -= .5;
-    return length(p) - .1;
+    return length(p) - .2;
 
 }
 
@@ -314,7 +314,7 @@ vec2 calcCell(
     cell = transformI * cell; // remove warp
 
     // cell.y = min(cell.y, -.5/stretch); // clamp
-    // cell.y = max(cell.y, -.9); // clamp
+    cell.y = max(cell.y, (-6.)/stretch); // clamp
 
     cell = transform * cell; // warp
     cell = round(cell); // snap
@@ -333,12 +333,12 @@ vec3 bloom2(vec3 p) {
         // return vec2(bound, 0.);
     }
 
-    float t = iTime / 5.1;
+    float t = iTime / 2.;
     t = mod(t, 1.);
-    t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
+    // t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
 
     vec2 move = vec2(0, t);
-    float stretch = 5.;
+    float stretch = mix(.5, 5., t);
 
     // move *= 0.;
 
