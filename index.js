@@ -30,9 +30,10 @@ const main = require('./main.js');
 // h157-phase
 // face-fract
 // bloom
+// bloom-radial
 // bloom-skull
 // log-camera
 
-const project = LOADPROJECT('bloom-skull');
+const project = LOADPROJECT('bloom-radial');
 
 main(project);
