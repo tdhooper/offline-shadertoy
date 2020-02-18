@@ -291,18 +291,25 @@ float leafOld(vec3 p, vec2 uv) {
 // need to calculate appear time
 // then just subtract from total time
 
-float tLeaf;
+float leafStartOffset;
 
-float leaf(vec3 p, vec2 uv) {
+vec3 leaf(vec3 p, vec2 uv) {
     float d = 1e12;
     // orient
     pR(p.xz, -uv.x);
     pR(p.yz, uv.y);
 
-    p.z -= .5;
-    return length(p) - .2;
+    float tLeaf = time + leafStartOffset/11.;
 
+    p.z -= .5;
+    // p.z -= pow(tLeaf * 2., 2.);
+    d = length(p) - .1;
+
+    
+    return vec3(d, tLeaf, 1.);
 }
+
+// calculate tLeaf (leave appear time) here
 
 vec2 calcCell(
     vec2 uv,
@@ -322,14 +329,23 @@ vec2 calcCell(
     cell = transformI * cell; // remove warp
 
     // cell.y = min(cell.y, -.5/stretch); // clamp
-    cell.y = max(cell.y, (-6.)/stretch); // clamp
+    // cell.y = max(cell.y, (-6.)/stretch); // clamp
 
     cell = transform * cell; // warp
     cell = round(cell); // snap
     cell *= scale; // move into real units
     cell = transformI * cell; // remove warp
+
+    leafStartOffset = cell.y * stretch;
+
     cell += move; // offset
+
     return cell;
+}
+
+
+vec3 opU(vec3 a, vec3 b) {
+    return a.x < b.x ? a : b;
 }
 
 
@@ -341,8 +357,7 @@ vec3 bloom2(vec3 p) {
         // return vec2(bound, 0.);
     }
 
-    float t = iTime / 2.;
-    t = mod(t, 1.);
+    float t = time;
     // t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
 
     vec2 move = vec2(0, t);
@@ -369,20 +384,20 @@ vec3 bloom2(vec3 p) {
     mat2 transform = mRot * mScale;
     mat2 transformI = inverse(transform);
 
-    float d = 1e12;
+    vec3 res = vec3(1e12, 0, 0);
 
-    d = min(d, leaf(p, calcCell(uv, vec2(-1, 0), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(uv, vec2(0, -1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(uv, vec2(0, 0), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(uv, vec2(1, -1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(uv, vec2(1, 0), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCell(uv, vec2(-1, 0), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCell(uv, vec2(0, -1), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCell(uv, vec2(0, 0), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCell(uv, vec2(1, -1), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCell(uv, vec2(1, 0), transform, transformI, scale, move, stretch)));
 
-    d = min(d, leaf(p, calcCell(uv, vec2(-1, -1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(uv, vec2(-1, 1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(uv, vec2(0, 1), transform, transformI, scale, move, stretch)));
-    d = min(d, leaf(p, calcCell(uv, vec2(1, 1), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCell(uv, vec2(-1, -1), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCell(uv, vec2(-1, 1), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCell(uv, vec2(0, 1), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCell(uv, vec2(1, 1), transform, transformI, scale, move, stretch)));
 
-    return vec3(d, 0, 0);
+    return res;
 }
 
 vec3 map(vec3 p) {
@@ -420,7 +435,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime = mod(iTime / 1., 1.);
+    float mTime = mod(iTime / 1., 10.);
     time = mTime;
 
     vec2 o = vec2(0);
