@@ -292,12 +292,13 @@ float leafOld(vec3 p, vec2 uv) {
 // then just subtract from total time
 
 float leafStartOffset;
+float maxBloomOffset = PI / 6.;
 
 vec3 leaf(vec3 p, vec2 uv) {
     float d = 1e12;
     // orient
     pR(p.xz, -uv.x);
-    pR(p.zy, uv.y - PI / 2.);
+    pR(p.zy, uv.y - maxBloomOffset);
 
     // leafStartOffset = .5;
 
@@ -308,7 +309,7 @@ vec3 leaf(vec3 p, vec2 uv) {
     tLeaf = max(tLeaf, 0.);
 
     p.z -= .5;
-    p.z -= tLeaf*3.;
+    // p.z -= tLeaf*3.;
     d = length(p) - .1;
 
     
@@ -318,7 +319,7 @@ vec3 leaf(vec3 p, vec2 uv) {
 // calculate tLeaf (leave appear time) here
 
 float stretchStart = .5;
-float stretchEnd = 5.;
+float stretchEnd = 15.;
 
 vec2 calcCell(
     vec2 uv,
@@ -331,6 +332,8 @@ vec2 calcCell(
 ) {
     // uv -= move;
 
+    float sz = maxBloomOffset + PI / 2.;
+
     uv = transform * uv;
     uv /= scale;
 
@@ -341,12 +344,12 @@ vec2 calcCell(
 
     cell *= scale;
     cell = transformI * cell; // remove warp
-    cell.y *= stretch / PI / stretchStart;
+    cell.y *= stretch / sz / stretchStart;
     
     // not sure why this magic number
-    cell.y = max(cell.y, 1.3); // clamp
+    cell.y = max(cell.y, 1.5); // clamp
 
-    cell.y /= stretch / PI / stretchStart;
+    cell.y /= stretch / sz / stretchStart;
     cell = transform * cell; // warp
     cell /= scale;
 
@@ -359,7 +362,7 @@ vec2 calcCell(
 
     // ====== NORMAL space ======
 
-    float y = (cell.y * stretch) / PI;    
+    float y = (cell.y * stretch) / sz;    
     leafStartOffset = (stretchStart - y) / (stretchStart - stretchEnd);
 
     return cell;
@@ -389,7 +392,7 @@ vec3 bloom2(vec3 p) {
 
     vec2 uv = vec2(
         atan(p.x, p.z),
-        atan(p.y, length(p.xz)) + PI / 2.
+        atan(p.y, length(p.xz)) + maxBloomOffset
     );
 
     vec2 uuu = uv;
@@ -457,7 +460,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime = mod(iTime / 1., 1.);
+    float mTime = mod(iTime / 1., 10.);
     time = mTime;
 
     vec2 o = vec2(0);
