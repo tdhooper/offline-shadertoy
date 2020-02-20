@@ -308,9 +308,13 @@ vec3 leaf(vec3 p, vec2 uv) {
 
     tLeaf = max(tLeaf, 0.);
 
-    p.z -= .5;
-    // p.z -= tLeaf*3.;
-    d = length(p) - .1;
+    if (tLeaf > 0.) {
+        float len = tLeaf*3.;
+        d = length(p.xy) - .1;
+        d = max(d, p.z - len);
+        d = max(d, -p.z);
+        d = min(d, length(p - vec3(0,0,len)) - .1);
+    }
 
     
     return vec3(d, tLeaf, 1.);
