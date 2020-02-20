@@ -302,7 +302,7 @@ vec3 leaf(vec3 p, vec2 uv) {
 
     // leafStartOffset = .5;
 
-    float tLeaf = time - max(0., leafStartOffset);
+    float tLeaf = time - leafStartOffset;
     //tLeaf = leafStartOffset;
     // tLeaf /= 10.;
 
@@ -318,8 +318,8 @@ vec3 leaf(vec3 p, vec2 uv) {
 
 // calculate tLeaf (leave appear time) here
 
-float stretchStart = .5;
-float stretchEnd = 15.;
+float stretchStart = .25;
+float stretchEnd = 3.;
 
 vec2 calcCell(
     vec2 uv,
@@ -347,7 +347,8 @@ vec2 calcCell(
     cell.y *= stretch / sz / stretchStart;
     
     // not sure why this magic number
-    cell.y = max(cell.y, 1.5); // clamp
+    // cell.y = max(cell.y, 1.5); // clamp
+    cell.y = max(cell.y, 1.); // clamp
 
     cell.y /= stretch / sz / stretchStart;
     cell = transform * cell; // warp
@@ -359,6 +360,8 @@ vec2 calcCell(
 
     cell *= scale; // move into real units
     cell = transformI * cell; // remove warp
+
+
 
     // ====== NORMAL space ======
 
@@ -460,7 +463,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime = mod(iTime / 1., 10.);
+    float mTime = mod(iTime / 1., 1.);
     time = mTime;
 
     vec2 o = vec2(0);
