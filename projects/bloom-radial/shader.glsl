@@ -296,6 +296,7 @@ float maxBloomOffset = PI / 6.;
 
 vec3 leaf(vec3 p, vec2 uv) {
     float d = 1e12;
+    float d2 = 1e12;
     // orient
     pR(p.xz, -uv.x);
     pR(p.zy, uv.y - maxBloomOffset);
@@ -309,11 +310,31 @@ vec3 leaf(vec3 p, vec2 uv) {
     tLeaf = max(tLeaf, 0.);
 
     if (tLeaf > 0.) {
-        float len = tLeaf*3.;
-        d = length(p.xy) - .1;
+        // p.x /= 3.;
+        float len = max(tLeaf*3. - .2, 0.);
+        len = pow(len, .33);
+
+        // wedge
+        vec3 n = normalize(vec3(1,0,.75));
+        float wedge = -dot(p, n);
+        wedge = max(wedge, dot(p, n * vec3(1,1,-1)));
+        wedge = smax(wedge, p.z - len, len);
+
+        float r = len / 8.;
+        d = length(p.xy) - r;
         d = max(d, p.z - len);
         d = max(d, -p.z);
-        d = min(d, length(p - vec3(0,0,len)) - .1);
+        d = min(d, length(p - vec3(0,0,len)) - r);
+
+        len *= .75;
+        pR(p.zy, -.6);
+        d2 = length(p - vec3(0,len,0)) - len;
+        d2 = abs(d2) - .05;
+        d2 = smax(d2, wedge, .05);
+        d2 = max(d2, p.y - len);
+
+        d = min(d, d2);
+        d = d2;
     }
 
     
@@ -322,8 +343,8 @@ vec3 leaf(vec3 p, vec2 uv) {
 
 // calculate tLeaf (leave appear time) here
 
-float stretchStart = .25;
-float stretchEnd = 3.;
+float stretchStart = .15;
+float stretchEnd = 2.;
 
 vec2 calcCell(
     vec2 uv,
@@ -352,7 +373,7 @@ vec2 calcCell(
     
     // not sure why this magic number
     // cell.y = max(cell.y, 1.5); // clamp
-    cell.y = max(cell.y, 1.); // clamp
+    cell.y = max(cell.y, 1.5); // clamp
 
     cell.y /= stretch / sz / stretchStart;
     cell = transform * cell; // warp
@@ -467,8 +488,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime = mod(iTime / 1., 1.);
+    float mTime = mod(iTime / 4., 1.);
     time = mTime;
+    time = sin(time * PI * 2. - PI/2.) * .5 + .5;
 
     vec2 o = vec2(0);
 
