@@ -299,12 +299,16 @@ vec3 leaf(vec3 p, vec2 uv) {
     pR(p.xz, -uv.x);
     pR(p.zy, uv.y - PI / 2.);
 
-    float tLeaf = time - (1. - leafStartOffset);
-    tLeaf = leafStartOffset/PI;
+    // leafStartOffset = .5;
+
+    float tLeaf = time - max(0., leafStartOffset);
+    //tLeaf = leafStartOffset;
     // tLeaf /= 10.;
 
+    tLeaf = max(tLeaf, 0.);
+
     p.z -= .5;
-    // p.z -= pow(tLeaf * 2., 2.);
+    p.z -= tLeaf*3.;
     d = length(p) - .1;
 
     
@@ -312,6 +316,9 @@ vec3 leaf(vec3 p, vec2 uv) {
 }
 
 // calculate tLeaf (leave appear time) here
+
+float stretchStart = .5;
+float stretchEnd = 5.;
 
 vec2 calcCell(
     vec2 uv,
@@ -323,24 +330,60 @@ vec2 calcCell(
     float stretch
 ) {
     // uv -= move;
+
     uv = transform * uv;
     uv /= scale;
 
-    vec2 cell = round(uv);
+    // ====== ROT space ======
 
+    vec2 cell = round(uv);
     cell += offset;
+
     cell = transformI * cell; // remove warp
+
+    // ====== NORMAL space ======
 
     // cell.y = min(cell.y, -.5/stretch); // clamp
     // cell.y = max(cell.y, (-6.)/stretch); // clamp
-
     cell = transform * cell; // warp
+
+    // ====== ROT space ======
+
     cell = round(cell); // snap
 
     cell *= scale; // move into real units
     cell = transformI * cell; // remove warp
 
-    leafStartOffset = cell.y * stretch;
+    // ====== NORMAL space ======
+
+    float y = (cell.y * stretch) / PI;    
+    leafStartOffset = (stretchStart - y) / (stretchStart - stretchEnd);
+
+    // leafStartOffset = (y - (1. - yEnd)) / y;
+
+    // float a = sqrt(y + 1.);
+    // leafStartOffset = sqrt(a * a - (y - 1.) * (y - 1.));
+    
+
+    // find x for y = 1
+    // 1 = m / (a + x * (b - a))
+    // x = (a - m) / (a - b)
+
+    // slope is 1. / (stretchEnd - stretchStart)
+
+
+    // when will they cross 1
+    // stretch = .5 -> 5.
+    // y = x
+    // y = a + t * (b - a)
+
+
+    // y = m * (a + x * (b - a)) / a
+
+    // find x for y = 1
+    // 1 = m * (a + x * (b - a)) / a
+
+    // leafStartOffset = (stretchStart * (y - 1.)) / (y * (stretchStart - stretchEnd));
 
     // cell += move; // offset
 
@@ -365,7 +408,7 @@ vec3 bloom2(vec3 p) {
     // t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
 
     vec2 move = vec2(0, t);
-    float stretch = mix(.5, 5., t);
+    float stretch = mix(stretchStart, stretchEnd, t);
 
     // move *= 0.;
 
@@ -439,7 +482,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime = mod(iTime / 1., 10.);
+    float mTime = mod(iTime / 1., 1.);
     time = mTime;
 
     vec2 o = vec2(0);
@@ -492,6 +535,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col = nor * .5 + .5;
             if (res.z == 1.) {
                 col = spectrum(res.y);
+                // col *= res.y > 0. && res.y < 1. ? 1. : .2;
+                // col *= mod(res.y, 1.);
                 col *= clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5;
             }
         }
