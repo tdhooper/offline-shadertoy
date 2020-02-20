@@ -339,13 +339,16 @@ vec2 calcCell(
     vec2 cell = round(uv);
     cell += offset;
 
+    cell *= scale;
     cell = transformI * cell; // remove warp
+    cell.y *= stretch / PI / stretchStart;
+    
+    // not sure why this magic number
+    cell.y = max(cell.y, 1.3); // clamp
 
-    // ====== NORMAL space ======
-
-    // cell.y = min(cell.y, -.5/stretch); // clamp
-    // cell.y = max(cell.y, (-6.)/stretch); // clamp
+    cell.y /= stretch / PI / stretchStart;
     cell = transform * cell; // warp
+    cell /= scale;
 
     // ====== ROT space ======
 
@@ -358,34 +361,6 @@ vec2 calcCell(
 
     float y = (cell.y * stretch) / PI;    
     leafStartOffset = (stretchStart - y) / (stretchStart - stretchEnd);
-
-    // leafStartOffset = (y - (1. - yEnd)) / y;
-
-    // float a = sqrt(y + 1.);
-    // leafStartOffset = sqrt(a * a - (y - 1.) * (y - 1.));
-    
-
-    // find x for y = 1
-    // 1 = m / (a + x * (b - a))
-    // x = (a - m) / (a - b)
-
-    // slope is 1. / (stretchEnd - stretchStart)
-
-
-    // when will they cross 1
-    // stretch = .5 -> 5.
-    // y = x
-    // y = a + t * (b - a)
-
-
-    // y = m * (a + x * (b - a)) / a
-
-    // find x for y = 1
-    // 1 = m * (a + x * (b - a)) / a
-
-    // leafStartOffset = (stretchStart * (y - 1.)) / (y * (stretchStart - stretchEnd));
-
-    // cell += move; // offset
 
     return cell;
 }
