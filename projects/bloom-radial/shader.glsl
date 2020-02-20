@@ -297,9 +297,11 @@ vec3 leaf(vec3 p, vec2 uv) {
     float d = 1e12;
     // orient
     pR(p.xz, -uv.x);
-    pR(p.yz, uv.y);
+    pR(p.zy, uv.y - PI / 2.);
 
-    float tLeaf = time + leafStartOffset/11.;
+    float tLeaf = time - (1. - leafStartOffset);
+    tLeaf = leafStartOffset/PI;
+    // tLeaf /= 10.;
 
     p.z -= .5;
     // p.z -= pow(tLeaf * 2., 2.);
@@ -320,10 +322,11 @@ vec2 calcCell(
     vec2 move,
     float stretch
 ) {
-    uv -= move;
+    // uv -= move;
     uv = transform * uv;
+    uv /= scale;
 
-    vec2 cell = round(uv / scale);
+    vec2 cell = round(uv);
 
     cell += offset;
     cell = transformI * cell; // remove warp
@@ -333,12 +336,13 @@ vec2 calcCell(
 
     cell = transform * cell; // warp
     cell = round(cell); // snap
+
     cell *= scale; // move into real units
     cell = transformI * cell; // remove warp
 
     leafStartOffset = cell.y * stretch;
 
-    cell += move; // offset
+    // cell += move; // offset
 
     return cell;
 }
@@ -367,7 +371,7 @@ vec3 bloom2(vec3 p) {
 
     vec2 uv = vec2(
         atan(p.x, p.z),
-        atan(-p.y, length(p.xz))
+        atan(p.y, length(p.xz)) + PI / 2.
     );
 
     vec2 uuu = uv;
