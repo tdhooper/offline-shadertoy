@@ -309,33 +309,43 @@ vec3 leaf(vec3 p, vec2 uv) {
 
     tLeaf = max(tLeaf, 0.);
 
+    float core = length(p) - .1;
+
     if (tLeaf > 0.) {
         // p.x /= 3.;
         float len = max(tLeaf*3. - .2, 0.);
         len = pow(len, .33);
 
         // wedge
-        vec3 n = normalize(vec3(1,0,.75));
+        float ins = .1;
+        p.z += ins;
+        vec3 n = normalize(vec3(1,0,.6));
         float wedge = -dot(p, n);
         wedge = max(wedge, dot(p, n * vec3(1,1,-1)));
-        wedge = smax(wedge, p.z - len, len);
+        wedge = smax(wedge, p.z - len - ins, len);
+        p.z -= ins;
 
         float r = len / 8.;
         d = length(p.xy) - r;
         d = max(d, p.z - len);
         d = max(d, -p.z);
-        d = min(d, length(p - vec3(0,0,len)) - r);
+        d = p.z < len ? d : length(p - vec3(0,0,len)) - r;
 
-        len *= .75;
-        pR(p.zy, -.6);
+        float top = p.y - len * .7;
+        float curve = smoothstep(0., .2, tLeaf);
+        // curve = 0.;
+        len *= mix(1.5, .65, curve);
+        pR(p.zy, -mix(.2, .7, curve));
         d2 = length(p - vec3(0,len,0)) - len;
         d2 = abs(d2) - .05;
         d2 = smax(d2, wedge, .05);
-        d2 = max(d2, p.y - len);
+        d2 = max(d2, top);
 
-        d = min(d, d2);
+        // d = min(d, d2);
         d = d2;
     }
+
+    // d = smin(d, core, .05);
 
     
     return vec3(d, tLeaf, 1.);
@@ -399,6 +409,11 @@ vec2 calcCell(
 
 vec3 opU(vec3 a, vec3 b) {
     return a.x < b.x ? a : b;
+    float k = .01;
+    vec3 c = a.x < b.x ? a : b;
+    c.x = smin(a.x, b.x, k);
+    // c.x = min(a.x, b.x);
+    return c;    
 }
 
 
@@ -422,6 +437,9 @@ vec3 bloom2(vec3 p) {
         atan(p.x, p.z),
         atan(p.y, length(p.xz)) + maxBloomOffset
     );
+
+    // uv.x = 0.;
+    // uv.y = 1.;
 
     vec2 uuu = uv;
 
