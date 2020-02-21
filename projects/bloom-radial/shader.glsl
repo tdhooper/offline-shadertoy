@@ -288,32 +288,23 @@ float leafOld(vec3 p, vec2 uv) {
 }
 
 
-// need to calculate appear time
-// then just subtract from total time
+vec3 leaf(vec3 p, vec3 cellData) {
+    vec2 cell = cellData.xy;
+    float cellTime = cellData.z;
 
-float leafStartOffset;
-float maxBloomOffset = PI / 6.;
-
-vec3 leaf(vec3 p, vec2 uv) {
     float d = 1e12;
     float d2 = 1e12;
     // orient
-    pR(p.xz, -uv.x);
-    pR(p.zy, uv.y - maxBloomOffset);
+    pR(p.xz, -cell.x);
+    pR(p.zy, cell.y);
 
-    // leafStartOffset = .5;
-
-    float tLeaf = time - leafStartOffset;
-    //tLeaf = leafStartOffset;
-    // tLeaf /= 10.;
-
-    tLeaf = max(tLeaf, 0.);
+    cellTime = max(cellTime, 0.);
 
     float core = length(p) - .1;
 
-    if (tLeaf > 0.) {
+    if (cellTime > 0.) {
         // p.x /= 3.;
-        float len = max(tLeaf*3. - .2, 0.);
+        float len = max(cellTime*3. - .2, 0.);
         len = pow(len, .33);
 
         // wedge
@@ -332,7 +323,7 @@ vec3 leaf(vec3 p, vec2 uv) {
         d = p.z < len ? d : length(p - vec3(0,0,len)) - r;
 
         float top = p.y - len * .7;
-        float curve = smoothstep(0., .2, tLeaf);
+        float curve = smoothstep(0., .2, cellTime);
         // curve = 0.;
         len *= mix(1.5, .65, curve);
         pR(p.zy, -mix(.2, .7, curve));
@@ -347,126 +338,92 @@ vec3 leaf(vec3 p, vec2 uv) {
 
     // d = smin(d, core, .05);
 
-    
-    return vec3(d, tLeaf, 1.);
+    return vec3(d, cellTime, 1.);
 }
 
-// calculate tLeaf (leave appear time) here
-
-float stretchStart = .15;
-float stretchEnd = 2.;
-
-vec2 calcCell(
-    vec2 uv,
+vec3 calcCellData(
+    vec2 cell,
     vec2 offset,
+    float maxBloomOffset,
     mat2 transform,
     mat2 transformI,
-    float scale,
-    vec2 move,
-    float stretch
+    float stretch,
+    float stretchStart,
+    float stretchEnd
 ) {
-    // uv -= move;
 
     float sz = maxBloomOffset + PI / 2.;
 
-    uv = transform * uv;
-    uv /= scale;
+    cell = transform * cell;
 
-    // ====== ROT space ======
-
-    vec2 cell = round(uv);
+    // Snap to cell center
+    cell = round(cell);
     cell += offset;
 
-    cell *= scale;
-    cell = transformI * cell; // remove warp
+    // Hide leaves outside the growth area
+    cell = transformI * cell;
     cell.y *= stretch / sz / stretchStart;
-    
-    // not sure why this magic number
-    // cell.y = max(cell.y, 1.5); // clamp
-    cell.y = max(cell.y, 1.5); // clamp
-
+    cell.y = max(cell.y, .5/stretchStart); // clamp, not sure why this magic number
     cell.y /= stretch / sz / stretchStart;
-    cell = transform * cell; // warp
-    cell /= scale;
+    cell = transform * cell;
 
-    // ====== ROT space ======
+    // Snap after clamp
+    cell = round(cell);
 
-    cell = round(cell); // snap
+    cell = transformI * cell;
 
-    cell *= scale; // move into real units
-    cell = transformI * cell; // remove warp
+    // calculate cell time
+    float y = cell.y * (stretch / sz);
+    float cellAppearTime = (stretchStart - y) / (stretchStart - stretchEnd);
+    float cellTime = time - cellAppearTime;
 
+    cell.y -= maxBloomOffset;
 
-
-    // ====== NORMAL space ======
-
-    float y = (cell.y * stretch) / sz;    
-    leafStartOffset = (stretchStart - y) / (stretchStart - stretchEnd);
-
-    return cell;
+    return vec3(cell, cellTime);
 }
-
 
 vec3 opU(vec3 a, vec3 b) {
     return a.x < b.x ? a : b;
-    float k = .01;
-    vec3 c = a.x < b.x ? a : b;
-    c.x = smin(a.x, b.x, k);
-    // c.x = min(a.x, b.x);
-    return c;    
 }
-
 
 vec3 bloom2(vec3 p) {
 
-    float bound = length(p - vec3(0,-1.2,0)) - 3.3;
-    bound = max(bound, p.y - 1.1);
-    if (bound > .01) {
-        // return vec2(bound, 0.);
-    }
-
     float t = time;
-    // t = smoothstep(0., .7, t) - pow(rangec(.7, 1., t), 2.);
-
     vec2 move = vec2(0, t);
+    float stretchStart = .25;
+    float stretchEnd = 1.5;
     float stretch = mix(stretchStart, stretchEnd, t);
+    float maxBloomOffset = PI / 6.;
 
-    // move *= 0.;
 
-    vec2 uv = vec2(
+    vec2 cell = vec2(
         atan(p.x, p.z),
         atan(p.y, length(p.xz)) + maxBloomOffset
     );
 
-    // uv.x = 0.;
-    // uv.y = 1.;
-
-    vec2 uuu = uv;
-
     vec2 cc = vec2(5., 8.);
-    //cc.y += floor(sin(iTime * .5) * 3.);
     float aa = atan(cc.x / cc.y);
     //float aa = 0.5585993153435624;
     float scale = (PI*2.) / sqrt(cc.x*cc.x + cc.y*cc.y);
-    // scale /= 2.;
     //float scale = 0.6660163105297472;
     mat2 mRot = mat2(cos(aa), -sin(aa), sin(aa), cos(aa));
     mat2 mScale = mat2(1,0,0,stretch);
-    mat2 transform = mRot * mScale;
+    mat2 mScale2 = mat2(1./scale,0,0,1./scale);
+    mat2 transform = mRot * mScale * mScale2;
     mat2 transformI = inverse(transform);
 
     vec3 res = vec3(1e12, 0, 0);
 
-    res = opU(res, leaf(p, calcCell(uv, vec2(-1, 0), transform, transformI, scale, move, stretch)));
-    res = opU(res, leaf(p, calcCell(uv, vec2(0, -1), transform, transformI, scale, move, stretch)));
-    res = opU(res, leaf(p, calcCell(uv, vec2(0, 0), transform, transformI, scale, move, stretch)));
-    res = opU(res, leaf(p, calcCell(uv, vec2(1, -1), transform, transformI, scale, move, stretch)));
-    res = opU(res, leaf(p, calcCell(uv, vec2(1, 0), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCellData(cell, vec2(-1, 0), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd)));
+    res = opU(res, leaf(p, calcCellData(cell, vec2(0, -1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd)));
+    res = opU(res, leaf(p, calcCellData(cell, vec2(0, 0), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd)));
+    res = opU(res, leaf(p, calcCellData(cell, vec2(1, -1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd)));
+    res = opU(res, leaf(p, calcCellData(cell, vec2(1, 0), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd)));
 
-    res = opU(res, leaf(p, calcCell(uv, vec2(-1, -1), transform, transformI, scale, move, stretch)));
-    res = opU(res, leaf(p, calcCell(uv, vec2(-1, 1), transform, transformI, scale, move, stretch)));
-    res = opU(res, leaf(p, calcCell(uv, vec2(0, 1), transform, transformI, scale, move, stretch)));
-    res = opU(res, leaf(p, calcCell(uv, vec2(1, 1), transform, transformI, scale, move, stretch)));
+    res = opU(res, leaf(p, calcCellData(cell, vec2(-1, -1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd)));
+    res = opU(res, leaf(p, calcCellData(cell, vec2(-1, 1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd)));
+    res = opU(res, leaf(p, calcCellData(cell, vec2(0, 1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd)));
+    res = opU(res, leaf(p, calcCellData(cell, vec2(1, 1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd)));
 
     return res;
 }
