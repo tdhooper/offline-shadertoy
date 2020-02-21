@@ -36,24 +36,9 @@ mat2 inverse(mat2 m) {
 const float PI  = 3.14159265359;
 const float PHI = 1.61803398875;
 
-float vmax(vec3 v) {
-    return max(max(v.x, v.y), v.z);
-}
-
-// Box: correct distance to corners
-float fBox(vec3 p, vec3 b) {
-    vec3 d = abs(p) - b;
-    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
-}
 
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
-}
-
-
-float smax2(float a, float b, float r) {
-    vec2 u = max(vec2(r + a,r + b), vec2(0));
-    return min(-r, max (a, b)) + length(u);
 }
 
 float smin(float a, float b, float k){
@@ -73,220 +58,15 @@ float rangec(float a, float b, float t) {
     return clamp(range(a, b, t), 0., 1.);
 }
 
-// Cylinder standing upright on the xz plane
-float fCylinder(vec3 p, float r, float height) {
-    float d = length(p.xz) - r;
-    d = max(d, abs(p.y) - height);
-    return d;
-}
-
-// Capsule: A Cylinder with round caps on both sides
 float fCapsule(vec3 p, float r, float c) {
-    c -= r;
-    // return fCylinder(p, r, c);
     return mix(length(p.xz) - r, length(vec3(p.x, abs(p.y) - c, p.z)) - r, step(c, abs(p.y)));
 }
 
-
-vec2 cmul (vec2 a, vec2 b) {
-  return vec2(
-    a.x * b.x - a.y * b.y,
-    a.y * b.x + a.x * b.y
-  );
-}
-
-vec2 cdiv (vec2 a, vec2 b) {
-  float e, f;
-  float g = 1.0;
-  float h = 1.0;
-
-  if( abs(b.x) >= abs(b.y) ) {
-    e = b.y / b.x;
-    f = b.x + b.y * e;
-    h = e;
-  } else {
-    e = b.x / b.y;
-    f = b.x * e + b.y;
-    g = e;
-  }
-
-  return (a * g + h * vec2(a.y, -a.x)) / f;
-} 
-
-float circleFlat(vec2 p, float o) {
-    p.x -= o;
-    vec2 a = vec2(-o, 0);
-    vec2 b = vec2(o, 0);
-    // Complex function from rreusser https://www.shadertoy.com/view/tlcGzf
-    vec2 p2 = cdiv(cmul(p - a, b), cmul(p - b, a));
-    float d = length(p2);
-    d = ((1. - d) * o) / (-1. - d);
-    d += o;
-    return d;
-}
-
-float circleFlatRadius(float x, float o) {
-    x = o - x;
-    float left = abs(x);
-    float right = (o * o) / left;
-    float d = max(0., right - left) * sign(x);
-    return d / 2.;
-}
-
-
 float time;
-
-float bloom(vec3 p) {
-    float d = 1e12;
-    float part;
-    p.y -= .1;
-    vec3 pp = p;
-    float a, j;
-    vec3 s;
-    const float n = 40.;
-    for (float i = 1.; i < n; i ++) {
-        a = i * PHI * PI * 2.;
-        p = pp;
-        //p.xz -= vec2(sin(a), cos(a)) * i * .005;
-        j = pow(i/n, 1.5);
-        p.y += j * .2;
-        pR(p.xz, -a);
-        pR(p.yz, mix(.3, .8, i/n));
-        s = vec3(.05,.05,.01) * mix(.1, 1., i/n);
-        s.y = mix(.01, .15, i/n);
-        p.y -= s.y / 2.;
-        part = fBox(p, s - s.z) - s.z;
-        d = min(d, part);
-    }
-    return d;
-}
 
 vec2 round(vec2 a) {
     return floor(a + .5);
 }
-
-vec2 fib(vec2 n) {
-    vec2 uv = vec2(5., 8.);
-    float aa = atan(uv.x / uv.y);
-    float r = (PI*2.) / sqrt(uv.x*uv.x + uv.y*uv.y);
-    //n.y = min(n.y, 1.);
-    //n.y = max(n.y, .7);
-    pR(n, aa);
-    vec2 cell = round(n / r);
-    n = cell * r;    
-    pR(n, -aa);
-
-    return n;
-}
-
-float bloomHeight = 1.;
-float bloomHeightMax = 1.;
-
-float leafBound(vec3 p, vec2 uv) {
-    float d = abs(length(p) - uv.y) - .16;
-    //return d;
-    //d = max(d, p.y);
-    pR(p.xz, -uv.x);
-   // vec3 n = normalize(vec3(1,0,.5));
-    
-    float width = mix(.5, .1, min(uv.y, 1.));
-    width = .75 / uv.y;
-    vec3 n = normalize(vec3(1,0,width));
-
-    d = max(d, -dot(p, n));
-    d = max(d, dot(p, n * vec3(1,1,-1)));
-    return d;
-}
-
-float debugLeaf(vec3 p, vec2 uv) {
-
-    float bound = length(p + vec3(0, bloomHeight, 0)) - bloomHeight * 3.;
-
-    //return bound;
-
-    float r = circleFlatRadius(uv.y, bloomHeight);
-    if (r == 0.) {
-        return 1e12;
-    }
-    p.y += uv.y - r;
-    float d2 = abs(length(p) - abs(r)) - .05;
-
-    float d = abs(length(p) - uv.y) - .01;
-    // d = min(d, d2);
-    d = d2;
-    d = max(d, bound);
-    pR(p.xz, -uv.x);
-    d = max(d, abs(p.x) - .05);
-
-
-    return d;
-}
-
-float newLeaf(vec3 p, vec2 uv) {
-    float r = circleFlatRadius(uv.y, bloomHeight);
-    if (r == 0.) {
-        return 1e12;
-    }
-
-    // orient
-    pR(p.xz, -uv.x);
-
-    // wedge
-    vec3 n = normalize(vec3(1,0,.75));
-    float wedge = -dot(p, n);
-    wedge = max(wedge, dot(p, n * vec3(1,1,-1)));
-
-    float e = uv.y / bloomHeightMax;
-    e = 1. - abs(1. - e);
-
-    // sphere
-    float thick = mix(.01, .1, pow(e * bloomHeightMax, .5));
-    p.y += uv.y - r;
-    float sphere = abs(length(p) - abs(r)) - thick;
-
-    // top
-    float len = 1. - e;
-    len = sqrt(1. - len * len);
-    float a = (10. * len) / (2. * PI * r);
-    a = min(a, PI);
-    n = vec3(0, sin(a), cos(a));
-    float top = dot(p, n);
-
-    float round = mix(-1.5, 1.5, len);
-    round = max(0., round);
-    // round = 0.;
-    float d = smax(wedge, top, round);
-    d = smax(d, sphere, thick);
-
-    // 
-    // pR(p.xz, -uv.x);
-    // d = max(d, abs(p.x) - .05);
-    return d;
-}
-
-float leafOld(vec3 p, vec2 uv) {
-    float thick = clamp(uv.y, .7, 1.);
-    thick = 1.;
-    float th = thick * .16;
-    pR(p.xz, -uv.x);
-    //d = max(d, abs(p.x) - .05);
-    float width = mix(.5, .1, min(uv.y, 1.));
-    width = .75 / uv.y;
-    width *= thick;
-    vec3 n = normalize(vec3(1,0,width));
-    float d = -dot(p, n);
-    d = max(d, dot(p, n * vec3(1,1,-1)));
-    float len = mix(PI / 1.2, PI / 2., pow(uv.y/2.9, 2.));
-    len = max(len, 0.);
-    d = smax(d, dot(p, vec3(0,sin(len),cos(len))), thick);
-    d = smax(d, abs(length(p) - uv.y) - thick * th, th);
-    //vec3 n = vec3(sin(uv.x + PI/2.), 0, cos(uv.x + PI/2.));
-    //d = max(d, abs(dot(p, n)) - .05);
-    p.z -= uv.y;
-    //d = min(d, length(p) - .1);
-    return d;
-}
-
 
 vec3 leaf(vec3 p, vec3 cellData) {
     vec2 cell = cellData.xy;
@@ -317,10 +97,7 @@ vec3 leaf(vec3 p, vec3 cellData) {
         p.z -= ins;
 
         float r = len / 8.;
-        d = length(p.xy) - r;
-        d = max(d, p.z - len);
-        d = max(d, -p.z);
-        d = p.z < len ? d : length(p - vec3(0,0,len)) - r;
+        d = fCapsule(p.xzy, r, len);
 
         float top = p.y - len * .7;
         float curve = smoothstep(0., .2, cellTime);
