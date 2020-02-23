@@ -11,6 +11,7 @@ const regl = require('regl')({
     'oes_standard_derivatives',
     'oes_texture_float',
     'oes_texture_float_linear',
+    'ext_shader_texture_lod',
   ],
   // pixelRatio: 1.,
   pixelRatio: .5,

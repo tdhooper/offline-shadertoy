@@ -3,6 +3,8 @@ precision highp float;
 uniform vec2 iResolution;
 uniform float iTime;
 
+uniform sampler2D iChannel0; // /images/noise.png
+
 varying vec3 eye;
 varying vec3 dir;
 
@@ -11,6 +13,8 @@ void mainImage(out vec4 a, in vec2 b);
 void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
+
+#extension GL_EXT_shader_texture_lod : enable
 
 // --------------------------------------------------------
 // Spectrum colour palette
@@ -25,6 +29,36 @@ vec3 spectrum(float n) {
     return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
 }
 
+
+vec2 hash2( vec2 p )
+{
+    // texture based white noise
+    return texture2DLodEXT( iChannel0, (p+0.5)/256.0, 0.).xy;
+    
+    // procedural white noise   
+    //return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);
+}
+
+// https://www.shadertoy.com/view/ldl3W8
+float voronoi( in vec2 x )
+{
+    vec2 cell = floor(x);
+
+    float d = 1e12;
+    for( int j=-1; j<=1; j++ )
+    for( int i=-1; i<=1; i++ )
+    {
+        vec2 offset = vec2(float(i),float(j));
+        vec2 pos = hash2( cell + offset );
+        // #ifdef ANIMATE
+        // o = 0.5 + 0.5*sin( iTime + 6.2831*o );
+        // #endif  
+        vec2 r = cell + offset + pos;
+        d = min(d, length(x - r));
+    }
+
+    return d;
+}
 
 
 mat2 inverse(mat2 m) {
@@ -75,6 +109,7 @@ vec4 leaf(vec3 p, vec3 cellData) {
     float d = 1e12;
     float d2 = 1e12;
     float slice = 1e12;
+    float wedge;
 
     // orient
     pR(p.xz, -cell.x);
@@ -98,7 +133,7 @@ vec4 leaf(vec3 p, vec3 cellData) {
         float ins = .25;
         p.z += ins;
         vec3 n = normalize(vec3(1,0,.35));
-        float wedge = -dot(p, n);
+        wedge = -dot(p, n);
         wedge = max(wedge, dot(p, n * vec3(1,1,-1)));
         wedge = smax(wedge, p.z - len*1.12 - ins, len);
         p.z -= ins;
@@ -133,10 +168,16 @@ vec4 leaf(vec3 p, vec3 cellData) {
     }
 
     p = pp;
+    len = llen;
+
+    vec2 uv = p.xz / len;
+
+    float v = voronoi((uv+4.)*30.);
+    float v2 = voronoi((uv+4.)*2.+cell.x);
 
     // d = smin(d, core, .05);
-    len = llen;
     vec3 col = vec3(.15,.15,.4);
+    col = mix(col, vec3(.05,.12,.3), 1.-v2);
     float tip = length(p - vec3(0,.2,len*.9));
     // d = min(d, tip - .1);
 
@@ -144,7 +185,13 @@ vec4 leaf(vec3 p, vec3 cellData) {
     tip *= smoothstep(.07, .0, abs(slice));
     col = mix(col, vec3(1,.2,.5), tip);
 
-    
+    float vs = 1.-uv.y*1.;
+    vs *= smoothstep(.2, -.1, wedge);
+    vs *= smoothstep(.0, .05, abs(slice));
+    v = smoothstep(vs + .1, vs - .5, v*1.5);
+    col = mix(col, vec3(.05,.05,.2), v);
+
+    // col = vec3(mod(uv, .5) / .5, 0);
 
     return vec4(d, col);
 }
@@ -324,6 +371,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     #endif
 
         vec2 p = (-iResolution.xy + 2.0*(fragCoord+o))/iResolution.y;
+
+        // float vv = voronoi((p * 1. + 2.) * 2.);
+        // vv = step(vv, .5);
+        // fragColor = vec4(vec3(vv), 1); return;
 
         vec3 camPos = eye;
         vec3 rayDirection = normalize(dir);
