@@ -12,7 +12,7 @@ const regl = require('regl')({
     'oes_texture_float',
     'oes_texture_float_linear',
   ],
-  // pixelRatio: .15,
+  // pixelRatio: 1.,
   pixelRatio: .5,
   attributes: {
     preserveDrawingBuffer: true,
