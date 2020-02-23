@@ -68,32 +68,39 @@ vec2 round(vec2 a) {
     return floor(a + .5);
 }
 
-vec3 leaf(vec3 p, vec3 cellData) {
+vec4 leaf(vec3 p, vec3 cellData) {
     vec2 cell = cellData.xy;
     float cellTime = cellData.z;
 
     float d = 1e12;
     float d2 = 1e12;
+    float slice = 1e12;
+
     // orient
     pR(p.xz, -cell.x);
     pR(p.zy, cell.y);
+
+    vec3 pp = p;
 
     cellTime = max(cellTime, 0.);
 
     float core = length(p) - .1;
 
+    float len = max(cellTime*3. - .2, 0.);
+    len = pow(len, .33);
+    float llen = len;
+
+
     if (cellTime > 0.) {
         // p.x /= 3.;
-        float len = max(cellTime*3. - .2, 0.);
-        len = pow(len, .33);
 
         // wedge
-        float ins = .1;
+        float ins = .25;
         p.z += ins;
-        vec3 n = normalize(vec3(1,0,.4));
+        vec3 n = normalize(vec3(1,0,.35));
         float wedge = -dot(p, n);
         wedge = max(wedge, dot(p, n * vec3(1,1,-1)));
-        wedge = smax(wedge, p.z - len*1.1 - ins, len);
+        wedge = smax(wedge, p.z - len*1.12 - ins, len);
         p.z -= ins;
 
         // wedge2
@@ -113,8 +120,8 @@ vec3 leaf(vec3 p, vec3 cellData) {
         // curve = 0.;
         len *= mix(1.5, .65, curve);
         pR(p.zy, -mix(.2, .7, curve));
-        d2 = length(p - vec3(0,len,0)) - len;
-        d2 = abs(d2) - .05;
+        slice = length(p - vec3(0,len,0)) - len;
+        d2 = abs(slice) - .05;
         
         float d3 = smax(d2, wedge, .05);
         float d4 = smax(d2, wedge2, .05);
@@ -125,9 +132,21 @@ vec3 leaf(vec3 p, vec3 cellData) {
         d = d3;
     }
 
-    // d = smin(d, core, .05);
+    p = pp;
 
-    return vec3(d, cellTime, 1.);
+    // d = smin(d, core, .05);
+    len = llen;
+    vec3 col = vec3(.15,.15,.4);
+    float tip = length(p - vec3(0,.2,len*.9));
+    // d = min(d, tip - .1);
+
+    tip = smoothstep(.6, .0, tip);
+    tip *= smoothstep(.07, .0, abs(slice));
+    col = mix(col, vec3(1,.2,.5), tip);
+
+    
+
+    return vec4(d, col);
 }
 
 vec3 calcCellData(
@@ -172,11 +191,11 @@ vec3 calcCellData(
     return vec3(cell, cellTime);
 }
 
-vec3 opU(vec3 a, vec3 b) {
+vec4 opU(vec4 a, vec4 b) {
     return a.x < b.x ? a : b;
 }
 
-vec3 bloom2(vec3 p, float t) {
+vec4 bloom2(vec3 p, float t) {
 
     p.y -= .05;
 
@@ -211,7 +230,7 @@ vec3 bloom2(vec3 p, float t) {
     mat2 transform = mRot * mScale * mScale2;
     mat2 transformI = inverse(transform);
 
-    vec3 res = vec3(1e12, 0, 0);
+    vec4 res = vec4(1e12, 0, 0, 0);
 
     res = opU(res, leaf(p, calcCellData(cell, vec2(-1, 0), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t)));
     res = opU(res, leaf(p, calcCellData(cell, vec2(0, -1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t)));
@@ -227,7 +246,7 @@ vec3 bloom2(vec3 p, float t) {
     return res;
 }
 
-vec3 map(vec3 p) {
+vec4 map(vec3 p) {
     float t;
 
     // p.x += time * .5;
@@ -241,7 +260,7 @@ vec3 map(vec3 p) {
     t = time + .5;
     t = sin(t * PI - PI/2.) * .5 + .5;
     pR(p.xz, time * PI);
-    vec3 res = bloom2(p, t);
+    vec4 res = bloom2(p, t);
 
     p = pp;
     p.y *= -1.;
@@ -250,7 +269,7 @@ vec3 map(vec3 p) {
     t = time - .5;
     t = sin(t * PI - PI/2.) * .5 + .5;
     pR(p.xz, time * PI);
-    vec3 res2 = bloom2(p, t);
+    vec4 res2 = bloom2(p, t);
     res = opU(res, res2);
     // res = res2;
     
@@ -316,7 +335,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float rayLength = 0.;
         float dist = 0.;
         bool bg = false;
-        vec3 res;
+        vec4 res;
 
         for (int i = 0; i < 300; i++) {
             rayLength += dist;
@@ -334,17 +353,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             }
         }
 
-        col =  vec3(.19,.19,.22) * .5;
+        col = vec3(.18,.24,.36);
         
         if ( ! bg) {
             vec3 nor = calcNormal(rayPosition);
             col = nor * .5 + .5;
-            if (res.z == 1.) {
-                col = spectrum(res.y);
-                // col *= res.y > 0. && res.y < 1. ? 1. : .2;
-                // col *= mod(res.y, 1.);
-                col *= clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5;
-            }
+            col = res.yzw;
+            // if (res.z == 1.) {
+            //     col = spectrum(res.y);
+            //     // col *= res.y > 0. && res.y < 1. ? 1. : .2;
+            //     // col *= mod(res.y, 1.);
+            // }
+            col *= clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5;
         }
 
         tot += col;
