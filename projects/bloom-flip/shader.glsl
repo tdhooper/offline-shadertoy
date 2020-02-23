@@ -109,7 +109,7 @@ vec4 leaf(vec3 p, vec3 cellData) {
     float d = 1e12;
     float d2 = 1e12;
     float slice = 1e12;
-    float wedge;
+    float wedge, wedges;
 
     // orient
     pR(p.xz, -cell.x);
@@ -160,6 +160,7 @@ vec4 leaf(vec3 p, vec3 cellData) {
         
         float d3 = smax(d2, wedge, .05);
         float d4 = smax(d2, wedge2, .05);
+        wedges = smin(wedge, wedge2, .01);
         d3 = smin(d3, d4, .01);
         d3 = max(d3, top);
 
@@ -167,29 +168,36 @@ vec4 leaf(vec3 p, vec3 cellData) {
         d = d3;
     }
 
-    p = pp;
-    len = llen;
-
-    vec2 uv = p.xz / len;
-
-    float v = voronoi((uv+4.)*30.);
-    float v2 = voronoi((uv+4.)*2.+cell.x);
-
-    // d = smin(d, core, .05);
     vec3 col = vec3(.15,.15,.4);
-    col = mix(col, vec3(.05,.12,.3), 1.-v2);
-    float tip = length(p - vec3(0,.2,len*.9));
-    // d = min(d, tip - .1);
 
-    tip = smoothstep(.6, .0, tip);
-    tip *= smoothstep(.07, .0, abs(slice));
-    col = mix(col, vec3(1,.2,.5), tip);
+    if (d < .01) {
 
-    float vs = 1.-uv.y*1.;
-    vs *= smoothstep(.2, -.1, wedge);
-    vs *= smoothstep(.0, .05, abs(slice));
-    v = smoothstep(vs + .1, vs - .5, v*1.5);
-    col = mix(col, vec3(.05,.05,.2), v);
+        p = pp;
+        len = llen;
+
+        vec2 uv = p.xz / len;
+
+        float v = voronoi((uv+4.)*30.);
+        float v2 = voronoi((uv+4.)*2.+cell.x);
+
+        // d = smin(d, core, .05);
+
+        col = mix(col, vec3(.05,.12,.3), 1.-v2);
+        float tip = length(p - vec3(0,.2,len*.9));
+        // d = min(d, tip - .1);
+
+        tip = smoothstep(.5, .0, tip);
+        tip *= smoothstep(.07, .0, abs(slice+.01));
+        tip *= smoothstep(-.2, .0, wedges);
+        tip = pow(tip, 1.5);
+        col = mix(col, vec3(1,.2,.5), tip);
+
+        float vs = 1.-uv.y*1.;
+        vs *= smoothstep(.0, -.1, wedges);
+        vs *= smoothstep(.0, .05, abs(slice));
+        v = smoothstep(vs + .1, vs - .5, v*1.5);
+        col = mix(col, vec3(.05,.05,.2), v);
+    }
 
     // col = vec3(mod(uv, .5) / .5, 0);
 
