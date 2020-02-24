@@ -357,6 +357,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
     return mat3( uu, vv, ww );
 }
 
+
 // #define AA 3
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -418,7 +419,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col = vec3(.18,.24,.36);
         
         if ( ! bg) {
+
+            vec3 lightpos = vec3(1,1,0);
+
             vec3 nor = calcNormal(rayPosition);
+            vec3 viewdir = normalize(camPos - rayPosition);
+            vec3 lightdir = normalize(lightpos - rayPosition);
+
             col = nor * .5 + .5;
             col = res.yzw;
             // if (res.z == 1.) {
