@@ -16,6 +16,9 @@ void main() {
 
 #extension GL_EXT_shader_texture_lod : enable
 
+// Reference image https://images.squarespace-cdn.com/content/v1/5968af67414fb590cb8f77e3/1503430627560-ORAR051BSQFDS3PL0LZ2/ke17ZwdGBToddI8pDm48kL3VKmwKI3leYB51VJjLFB8UqsxRUqqbr1mOJYKfIPR7LoDQ9mXPOjoJoqy81S2I8N_N4V1vUb5AoIIIbLZhVYxCRW4BPu10St3TBAUQYVKcgK5SGg9Ovb1yloBBOHcruw_mYLfAhRzzgArFCB07Dw0L8n4JypuoE5Tg6Wg5Oyvs/Echeveria-peacockii3.jpg?format=2500w
+// https://rareplant.me/cacti-succulents/echeveria-peacockii-subsessilis
+
 // --------------------------------------------------------
 // Spectrum colour palette
 // IQ https://www.shadertoy.com/view/ll2GD3
