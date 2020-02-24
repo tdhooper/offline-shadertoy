@@ -178,11 +178,11 @@ vec4 leaf(vec3 p, vec3 cellData) {
         vec2 uv = p.xz / len;
 
         float v = voronoi((uv+4.)*30.);
-        float v2 = voronoi((uv+4.)*2.+cell.x);
+        float v2 = voronoi((uv+4.)*4.+cell.x);
 
         // d = smin(d, core, .05);
 
-        col = mix(col, vec3(.05,.12,.3), 1.-v2);
+        col = mix(col, vec3(.125,.2,.4), 1.-v2);
         float tip = length(p - vec3(0,.2,len*.9));
         // d = min(d, tip - .1);
 
@@ -196,7 +196,10 @@ vec4 leaf(vec3 p, vec3 cellData) {
         vs *= smoothstep(.0, -.1, wedges);
         vs *= smoothstep(.0, .05, abs(slice));
         v = smoothstep(vs + .1, vs - .5, v*1.5);
-        col = mix(col, vec3(.05,.05,.2), v);
+        col = mix(col, vec3(.05,.05,.2), v*v2);
+
+        // col = mix(col, vec3(.45,.7,.6), smoothstep(.1, 1.8, cell.y));
+        col = mix(col, vec3(.6,1.,.9), smoothstep(.1, 1.8, cell.y) * .66);
     }
 
     // col = vec3(mod(uv, .5) / .5, 0);
