@@ -16,6 +16,8 @@ void main() {
 
 #extension GL_EXT_shader_texture_lod : enable
 
+#pragma glslify: import('./pbr.glsl')
+
 // Reference image https://images.squarespace-cdn.com/content/v1/5968af67414fb590cb8f77e3/1503430627560-ORAR051BSQFDS3PL0LZ2/ke17ZwdGBToddI8pDm48kL3VKmwKI3leYB51VJjLFB8UqsxRUqqbr1mOJYKfIPR7LoDQ9mXPOjoJoqy81S2I8N_N4V1vUb5AoIIIbLZhVYxCRW4BPu10St3TBAUQYVKcgK5SGg9Ovb1yloBBOHcruw_mYLfAhRzzgArFCB07Dw0L8n4JypuoE5Tg6Wg5Oyvs/Echeveria-peacockii3.jpg?format=2500w
 // https://rareplant.me/cacti-succulents/echeveria-peacockii-subsessilis
 
@@ -70,7 +72,7 @@ mat2 inverse(mat2 m) {
 }
 
 
-const float PI  = 3.14159265359;
+// const float PI  = 3.14159265359;
 const float PHI = 1.61803398875;
 
 
@@ -310,6 +312,8 @@ vec4 bloom2(vec3 p, float t) {
 vec4 map(vec3 p) {
     float t;
 
+    // return vec4(length(p) - 1., vec3(.5));
+
     // p.x += time * .5;
 
     
@@ -351,6 +355,41 @@ vec3 calcNormal(vec3 pos){
     }
     return normalize(nor);
 }
+
+// https://www.shadertoy.com/view/lsKcDD
+float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
+{
+    float res = 1.0;
+    float t = mint;
+    float ph = 1e10;
+    
+    for( int i=0; i<64; i++ )
+    {
+        float h = map( ro + rd*t ).x;
+        res = min( res, 10.0*h/t );
+        t += h;
+        if( res<0.0001 || t>tmax ) break;
+        
+    }
+    return clamp( res, 0.0, 1.0 );
+}
+
+// https://www.shadertoy.com/view/Xds3zN
+float calcAO( in vec3 pos, in vec3 nor )
+{
+    float occ = 0.0;
+    float sca = 1.0;
+    for( int i=0; i<5; i++ )
+    {
+        float hr = 0.01 + 0.12*float(i)/4.0;
+        vec3 aopos =  nor * hr + pos;
+        float dd = map( aopos ).x;
+        occ += -(dd-hr)*sca;
+        sca *= 0.95;
+    }
+    return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
+}
+
 
 mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 {
@@ -430,13 +469,25 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             vec3 lightdir = normalize(lightpos - rayPosition);
 
             col = nor * .5 + .5;
-            col = res.yzw;
+            
+            vec3 albedo = res.yzw;
+            // albedo = vec3(1.,0,0);
+            col = albedo;
             // if (res.z == 1.) {
             //     col = spectrum(res.y);
             //     // col *= res.y > 0. && res.y < 1. ? 1. : .2;
             //     // col *= mod(res.y, 1.);
             // }
-            col *= clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5;
+            // col = albedo * (clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5);
+
+            uLcd = vec3(5.); // light.color * light.candelas
+            uLd = lightpos; // -light.transform[2].xyz
+
+            float sha = softshadow( rayPosition, lightpos, 0.001, .9 );
+
+            col = doLighting(rayPosition, camPos, nor, albedo, 0., vec3(.0)) * sha;
+
+            col += .5 * albedo * calcAO(rayPosition, nor);
         }
 
         tot += col;
