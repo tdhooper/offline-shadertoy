@@ -16,8 +16,6 @@ void main() {
 
 #extension GL_EXT_shader_texture_lod : enable
 
-#pragma glslify: import('./pbr.glsl')
-
 // Reference image https://images.squarespace-cdn.com/content/v1/5968af67414fb590cb8f77e3/1503430627560-ORAR051BSQFDS3PL0LZ2/ke17ZwdGBToddI8pDm48kL3VKmwKI3leYB51VJjLFB8UqsxRUqqbr1mOJYKfIPR7LoDQ9mXPOjoJoqy81S2I8N_N4V1vUb5AoIIIbLZhVYxCRW4BPu10St3TBAUQYVKcgK5SGg9Ovb1yloBBOHcruw_mYLfAhRzzgArFCB07Dw0L8n4JypuoE5Tg6Wg5Oyvs/Echeveria-peacockii3.jpg?format=2500w
 // https://rareplant.me/cacti-succulents/echeveria-peacockii-subsessilis
 
@@ -38,10 +36,10 @@ vec3 spectrum(float n) {
 vec2 hash2( vec2 p )
 {
     // texture based white noise
-    return texture2DLodEXT( iChannel0, (p+0.5)/256.0, 0.).xy;
+    // return texture2DLodEXT( iChannel0, (p+0.5)/256.0, 0.).xy;
     
     // procedural white noise   
-    //return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);
+    return fract(sin(vec2(dot(p,vec2(127.1,311.7)),dot(p,vec2(269.5,183.3))))*43758.5453);
 }
 
 // https://www.shadertoy.com/view/ldl3W8
@@ -72,7 +70,7 @@ mat2 inverse(mat2 m) {
 }
 
 
-// const float PI  = 3.14159265359;
+const float PI  = 3.14159265359;
 const float PHI = 1.61803398875;
 
 
@@ -309,15 +307,31 @@ vec4 bloom2(vec3 p, float t) {
     return res;
 }
 
+
+float vmax(vec3 v) {
+    return max(max(v.x, v.y), v.z);
+}
+
+// Box: correct distance to corners
+float fBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
+
 vec4 map(vec3 p) {
     float t;
 
+    // pR(p.xy, -.5);
+
+    // return vec4(fBox(p, vec3(.5,2,.5)), vec3(.5));
     // return vec4(length(p) - 1., vec3(.5));
 
     // p.x += time * .5;
 
     
     pR(p.xy, time * -PI);
+
+    // return vec4(fBox(p, vec3(.5,2,1)), vec3(.5));
 
     vec3 pp = p;
 
@@ -343,7 +357,7 @@ vec4 map(vec3 p) {
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3(.0005,0,0);
+    vec3 eps = vec3(.00005,0,0);
     vec3 nor = vec3(0);
     float invert = 1.;
     vec3 npos;
@@ -360,14 +374,14 @@ vec3 calcNormal(vec3 pos){
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
     float res = 1.0;
-    float t = mint;
+    float t = mint/10.;
     float ph = 1e10;
     
-    for( int i=0; i<64; i++ )
+    for( int i=0; i<364; i++ )
     {
         float h = map( ro + rd*t ).x;
         res = min( res, 10.0*h/t );
-        t += h;
+        t += h*.25;
         if( res<0.0001 || t>tmax ) break;
         
     }
@@ -390,6 +404,163 @@ float calcAO( in vec3 pos, in vec3 nor )
     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
 }
 
+// https://www.shadertoy.com/view/Xds3zN
+float calcAO2( in vec3 pos, in vec3 nor )
+{
+    float occ = 0.0;
+    float sca = 1.0;
+    for( int i=0; i<5; i++ )
+    {
+        float hr = 0.01 + 0.12*float(i)/4.0;
+        vec3 aopos =  -nor * hr + pos;
+        float dd = -map( aopos ).x;
+        occ += -(dd-hr)*sca;
+        sca *= 0.95;
+    }
+    return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
+}
+
+vec2 hash2( const float n ) {
+    return fract(sin(vec2(n,n+1.))*vec2(43758.5453123));
+}
+// ray bouncing function "borrowed" from I can't remember where
+// https://www.shadertoy.com/view/3dyXzD
+vec3 randDir( vec3 n, vec2 seed ) {
+    vec3  uu = normalize( cross( n, vec3(0.0,1.0,1.0) ) );
+    vec3  vv = cross( uu, n );
+    
+    float ra = sqrt(seed.y);
+    float rx = ra*cos(6.2831*seed.x); 
+    float ry = ra*sin(6.2831*seed.x);
+    float rz = sqrt( 1.0-seed.y );
+    vec3  rr = vec3( rx*uu + ry*vv + rz*n );
+
+    return normalize( rr );
+}
+
+//Random number [0:1] without sine
+#define HASHSCALE1 .1031
+float hash(float p)
+{
+    vec3 p3  = fract(vec3(p) * HASHSCALE1);
+    p3 += dot(p3, p3.yzx + 19.19);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+vec3 randomSphereDir(vec2 rnd)
+{
+    float s = rnd.x*PI*2.;
+    float t = rnd.y*2.-1.;
+    return vec3(sin(s), cos(s), t) / sqrt(1.0 + t * t);
+}
+vec3 randomHemisphereDir(vec3 dir, vec2 seed)
+{
+    vec3 v = randomSphereDir( vec2(hash(seed.x), hash(seed.y)) );
+    return v * sign(dot(v, dir));
+}
+vec3 randomHemisphereDir(vec3 dir, float i)
+{
+    vec3 v = randomSphereDir( vec2(hash(i+1.), hash(i+2.)) );
+    return v * sign(dot(v, dir));
+}
+
+
+float ambientOcclusion( in vec3 p, in vec3 n, in float maxDist, in float falloff )
+{
+    const int nbIte = 32;
+    const float nbIteInv = 1./float(nbIte);
+    const float rad = 1.-1.*nbIteInv; //Hemispherical factor (self occlusion correction)
+    
+    float ao = 0.0;
+    
+    for( int i=0; i<nbIte; i++ )
+    {
+        float l = hash(float(i))*maxDist;
+        vec3 rd = normalize(n+randomHemisphereDir(n, l )*rad)*l; // mix direction with the normal
+                                                                // for self occlusion problems!
+        
+        ao += (l - max(map( p + rd ).x,0.)) / maxDist * falloff;
+    }
+    
+    return clamp( 1.-ao*nbIteInv, 0., 1.);
+}
+
+
+
+
+
+float hitLength(vec3 pos, vec3 dir, float maxDist) {
+    float len = 0.;
+    float dist = .1;
+    vec3 rayPos;
+    for (int i = 0; i < 50; i++) {
+        len += dist;
+        dist = map(pos + dir * len).x;
+        if (abs(dist) < .001) {
+            break;
+        }
+        if (len > maxDist) {
+            len = maxDist;
+            break;
+        }
+    }
+    return len / maxDist;
+}
+
+float hitLengthFast(vec3 pos, vec3 dir, float maxDist) {
+    float len = 0.;
+    const int steps = 20;
+    float dist = maxDist / float(steps);
+    vec3 rayPos;
+    for (int i = 0; i < steps; i++) {
+        len += dist;
+        dist = map(pos + dir * len).x;
+        if (abs(dist) < .001) {
+            break;
+        }
+        if (len > maxDist) {
+            len = maxDist;
+            break;
+        }
+    }
+    return len / maxDist;
+}
+
+float calcAO3(vec3 pos, vec3 nor, vec2 seed, float maxDist) {
+    float len = 0.;
+    // seed = vec2(0);
+    const float SAMPLES = 3.;
+    for (float x = 0.; x < SAMPLES; x++)
+    for (float y = 0.; y < SAMPLES; y++)
+    {
+        vec2 s = seed + vec2(x, y) / SAMPLES;
+        s = hash2(s);
+        vec3 dir = randDir(nor, s);
+        len += hitLengthFast(pos, dir, maxDist);
+    }
+
+    len /= SAMPLES * SAMPLES;
+    return len;
+}
+
+float calcAO3Brute(vec3 pos, vec3 nor, vec2 seed, float maxDist) {
+    float len = 0.;
+    // seed = vec2(0);
+    const float SAMPLES = 20.;
+    for (float x = 0.; x < SAMPLES; x++)
+    for (float y = 0.; y < SAMPLES; y++)
+    {
+        vec2 s = vec2(x, y) / SAMPLES;
+        s = hash2(seed + s);
+        // vec3 dir = randomHemisphereDir(nor, s);
+        vec3 dir = randDir(nor, s);
+        len += hitLength(pos, dir, maxDist);
+    }
+
+    len /= SAMPLES * SAMPLES;
+    return len;
+}
+
 
 mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 {
@@ -398,6 +569,50 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
     vec3 vv = normalize( cross(uu,ww));
     return mat3( uu, vv, ww );
 }
+
+float subsurface(vec3 pos, vec3 rd, vec3 nor, vec3 lig) {
+
+    return calcAO2(pos, nor);
+    return map(pos + -nor * .1).x * 20.;
+
+
+    // thickness from pos to light
+    vec3 d = mix(normalize(lig - pos), -nor, .5);
+    // vec3 d = normalize(mix(rd, -nor, 0.5));
+    // suggested by Shane
+    // vec3 d = refract(rd, nor, 1.0/1.5);
+    vec3 o = pos;
+    float a = 0.0;
+    
+    const float max_scatter = .5;
+    for(float i = .1; i < max_scatter; i += .2)
+    {
+        o += i * d;
+        float t = map(o).x;
+        if (t > 0.) {
+            break;
+        }
+        a += t;
+    }
+    float thickness = max(0.0, -a);
+    return 1.-(thickness*10.);
+    const float scatter_strength = 16.0;
+    return scatter_strength*pow(max_scatter*0.5, 3.0)/thickness;
+}
+
+// vec4 subsurface2(vec3 o, vec3 dir){
+//     vec3 p = o;
+//     float e = 0.0;
+//     for(int i = 0; i < 7; ++i){
+//         float d = map(p);
+//         e += -d;
+//         if(d > -0.001)
+//             break;
+//         p -= d*dir;
+//     }
+    
+//     return vec4(p, e);
+// }
 
 
 // #define AA 3
@@ -462,32 +677,58 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         
         if ( ! bg) {
 
-            vec3 lightpos = vec3(1,1,0);
+            // lightingPass = true;
 
-            vec3 nor = calcNormal(rayPosition);
-            vec3 viewdir = normalize(camPos - rayPosition);
-            vec3 lightdir = normalize(lightpos - rayPosition);
-
-            col = nor * .5 + .5;
+            vec3 pos = rayPosition;
+            vec3 rd = rayDirection;
+            vec2 seed = hash2(p + time);
+            // seed *= .0000001;
+            // seed *= 0.;
             
+            vec3  nor = calcNormal(pos);
+            
+            float occ = calcAO3(pos, nor, seed, 1.);
+            vec3  lig = normalize( vec3(.5, 1., -1.) );
+            vec3  lba = normalize( vec3(.5, -1., -.5) );
+            vec3  hal = normalize( lig - rd );
+            float amb = sqrt(clamp( 0.5+0.5*nor.y, 0.0, 1.0 ));
+            float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
+            float bac = clamp( dot( nor, lba ), 0.0, 1.0 )*clamp( 1.0-pos.y,0.0,1.0);
+            float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
+
+            // occ = mix(1., occ, .8);
+            
+            // dif *= mix(1., softshadow( pos, lig, 0.001, .9 ), .5);
+            // dif *= occ;
+
             vec3 albedo = res.yzw;
-            // albedo = vec3(1.,0,0);
-            col = albedo;
-            // if (res.z == 1.) {
-            //     col = spectrum(res.y);
-            //     // col *= res.y > 0. && res.y < 1. ? 1. : .2;
-            //     // col *= mod(res.y, 1.);
-            // }
-            // col = albedo * (clamp(dot(nor, vec3(1,1,0)), 0., 1.) * .5 + .5);
+            col = albedo * occ * amb;
 
-            uLcd = vec3(5.); // light.color * light.candelas
-            uLd = lightpos; // -light.transform[2].xyz
+            // col = vec3(seed, 0.);
+            // col = -nor * .5 + .5;
 
-            float sha = softshadow( rayPosition, lightpos, 0.001, .9 );
+            // float ss = max(0., subsurface(pos, rd, nor, lig));
+            // dif = mix(dif, ss, .2);
+            // dif = mix(dif, .2, .2);
 
-            col = doLighting(rayPosition, camPos, nor, albedo, 0., vec3(.0)) * sha;
 
-            col += .5 * albedo * calcAO(rayPosition, nor);
+            // fragColor = vec4(vec3(ss), 1); return;
+
+            // float NdotH = dot(nor, hal);
+            // float HdotV = dot(hal, rd);
+            // float spe = pow(clamp(NdotH, 0., 1.), 16.)
+            //     * dif
+            //     * (0.04 + 0.96 * pow( clamp(1. + HdotV, 0., 1.), 5.));
+
+            // vec3 lin = vec3(0.0);
+            // lin += 2.80*dif*vec3(1.30,1.00,0.70);
+            // lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
+            // lin += 1.55*bac*vec3(0.25,0.25,0.25)*occ;
+            // lin += 0.25*fre*vec3(1.00,1.00,1.00)*occ;
+
+            // col = res.yzw;
+            // col = col * lin;
+            // col += 5.00 * spe * vec3(1.10,0.90,0.70);
         }
 
         tot += col;
