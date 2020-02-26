@@ -204,7 +204,7 @@ vec4 leaf(vec3 p, vec3 cellData) {
 
         // col = mix(col, vec3(.45,.7,.6), smoothstep(.1, 1.8, cell.y));
         // col = mix(col, vec3(.0,1.,.7), smoothstep(.3, 1.8, cell.y));
-        col *= mix(vec3(1), vec3(.75,3.,.7), smoothstep(.1, 1.8, cell.y));
+        col *= mix(vec3(1), vec3(.5,5.,1.8), smoothstep(.2, 1.8, cell.y) * .75);
     }
 
     // col = vec3(mod(uv, .5) / .5, 0);
@@ -707,8 +707,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             vec3 pos = rayPosition;
             vec3 rd = rayDirection;
             vec2 seed = hash2(p + time);
-            // seed *= .0000001;
-            seed *= 0.;
+            seed *= .0000001;
+            // seed *= 0.;
             
             vec3  nor = calcNormal(pos);
             
