@@ -203,7 +203,8 @@ vec4 leaf(vec3 p, vec3 cellData) {
         col = mix(col, vec3(.05,.05,.2), v*v2);
 
         // col = mix(col, vec3(.45,.7,.6), smoothstep(.1, 1.8, cell.y));
-        col = mix(col, vec3(.6,1.,.9), smoothstep(.1, 1.8, cell.y) * .66);
+        // col = mix(col, vec3(.0,1.,.7), smoothstep(.3, 1.8, cell.y));
+        col *= mix(vec3(1), vec3(.75,3.,.7), smoothstep(.1, 1.8, cell.y));
     }
 
     // col = vec3(mod(uv, .5) / .5, 0);
@@ -358,6 +359,8 @@ vec4 map(vec3 p) {
     vec4 res2 = bloom2(p, t);
     res = opU(res, res2);
     // res = res2;
+
+    // res.yzw = vec3(.5);
     
     return res;
 }
@@ -704,12 +707,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             vec3 rd = rayDirection;
             vec2 seed = hash2(p + time);
             // seed *= .0000001;
-            // seed *= 0.;
+            seed *= 0.;
             
             vec3  nor = calcNormal(pos);
             
             float occ = calcAO3(pos, nor, seed, 1.);
-            vec3  lig = normalize( vec3(.5, 1., -1.) );
+            vec3  lig = normalize( vec3(.1, .5, -2.) );
             vec3  lba = normalize( vec3(.5, -1., -.5) );
             vec3  hal = normalize( lig - rd );
             float amb = sqrt(clamp( 0.5+0.5*nor.y, 0.0, 1.0 ));
@@ -719,11 +722,25 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
             // occ = mix(1., occ, .8);
             
-            // dif *= mix(1., softshadow( pos, lig, 0.001, .9 ), .5);
+            // dif *= softshadow( pos, lig, 0.001, .9 );
             // dif *= occ;
 
+            vec3 lin = vec3(0);
+            lin += 1.50 * amb * vec3(1.30,1.00,0.70) * occ; // red
+            lin += 1.00 * amb * vec3(0.40,0.60,1.15) * mix(occ, 1., .5); // blue
+            lin += 0.25 * fre * vec3(1.00,1.00,1.00) * occ;
+
             vec3 albedo = res.yzw;
-            col = albedo * occ * amb;
+            col = albedo * lin;
+
+            // float NdotH = dot(nor, hal);
+            // float HdotV = dot(hal, rd);
+            // float spe = pow(clamp(NdotH, 0., 1.), 16.)
+            //     * dif
+            //     * (0.04 + 0.96 * pow( clamp(1. + HdotV, 0., 1.), 5.));
+            // col += 5.00 * spe;
+
+            // col = vec3(amb) * occ;
 
             // col = vec3(seed, 0.);
             // col = -nor * .5 + .5;
