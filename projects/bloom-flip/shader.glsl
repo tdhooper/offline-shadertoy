@@ -669,9 +669,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 camPos = eye;
         vec3 rayDirection = normalize(dir);
 
-        // camPos = vec3(0,0,-4.5);
-        // mat3 camMat = calcLookAtMatrix( camPos, vec3(0), 0.);
-        // rayDirection = normalize( camMat * vec3(p.xy,2.8) );
+        camPos = vec3(0,0,-2.6);
+        mat3 camMat = calcLookAtMatrix( camPos, vec3(0,-.05,0), 0.);
+        rayDirection = normalize( camMat * vec3(p.xy,1.8) );
 
         modelMat = rotZ(-.9) * rotX(.05) * rotY(-1.1);
 
@@ -697,7 +697,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             }
         }
 
-        col = vec3(.18,.24,.36);
+        col = vec3(.2,.2,.35) * 2.5;
+        // col = vec3(.2,.4,.4)*.5;
         
         if ( ! bg) {
 
@@ -726,9 +727,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             // dif *= occ;
 
             vec3 lin = vec3(0);
-            lin += 1.50 * amb * vec3(1.30,1.00,0.70) * occ; // red
-            lin += 1.00 * amb * vec3(0.40,0.60,1.15) * mix(occ, 1., .5); // blue
-            lin += 0.25 * fre * vec3(1.00,1.00,1.00) * occ;
+            lin += 1.70 * amb * vec3(1.30,1.00,0.70) * occ;
+            lin += 0.90 * amb * vec3(0.30,0.80,1.30) * mix(occ, 1., .5);
+            lin += 1.00 * fre * vec3(1.00,1.00,1.00) * occ;
 
             vec3 albedo = res.yzw;
             col = albedo * lin;
