@@ -16,6 +16,7 @@ void main() {
 
 #extension GL_EXT_shader_texture_lod : enable
 
+
 // Reference image https://images.squarespace-cdn.com/content/v1/5968af67414fb590cb8f77e3/1503430627560-ORAR051BSQFDS3PL0LZ2/ke17ZwdGBToddI8pDm48kL3VKmwKI3leYB51VJjLFB8UqsxRUqqbr1mOJYKfIPR7LoDQ9mXPOjoJoqy81S2I8N_N4V1vUb5AoIIIbLZhVYxCRW4BPu10St3TBAUQYVKcgK5SGg9Ovb1yloBBOHcruw_mYLfAhRzzgArFCB07Dw0L8n4JypuoE5Tg6Wg5Oyvs/Echeveria-peacockii3.jpg?format=2500w
 // https://rareplant.me/cacti-succulents/echeveria-peacockii-subsessilis
 
@@ -318,18 +319,24 @@ float fBox(vec3 p, vec3 b) {
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
+mat3 modelMat;
+
 vec4 map(vec3 p) {
+    p *= modelMat;
     float t;
 
     // pR(p.xy, -.5);
-
-    // return vec4(fBox(p, vec3(.5,2,.5)), vec3(.5));
     // return vec4(length(p) - 1., vec3(.5));
 
     // p.x += time * .5;
 
     
     pR(p.xy, time * -PI);
+
+    // return vec4(
+    //     fBox(p, vec3(.5,2,.5)),
+    //     sign(p) * .5 + .5
+    // );
 
     // return vec4(fBox(p, vec3(.5,2,1)), vec3(.5));
 
@@ -614,6 +621,17 @@ float subsurface(vec3 pos, vec3 rd, vec3 nor, vec3 lig) {
 //     return vec4(p, e);
 // }
 
+mat3 rotX(float a) {
+    return mat3(1,0,0, 0,cos(a),-sin(a), 0,sin(a),cos(a));
+}
+
+mat3 rotY(float a) {
+    return mat3(cos(a),0,sin(a), 0,1,0, -sin(a),0,cos(a));
+}
+
+mat3 rotZ(float a) {
+    return mat3(cos(a),-sin(a),0, sin(a),cos(a),0, 0,0,1);
+}
 
 // #define AA 3
 
@@ -648,8 +666,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 camPos = eye;
         vec3 rayDirection = normalize(dir);
 
-        // mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
+        // camPos = vec3(0,0,-4.5);
+        // mat3 camMat = calcLookAtMatrix( camPos, vec3(0), 0.);
         // rayDirection = normalize( camMat * vec3(p.xy,2.8) );
+
+        modelMat = rotZ(-.9) * rotX(.05) * rotY(-1.1);
 
         vec3 rayPosition = camPos;
         float rayLength = 0.;
