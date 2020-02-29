@@ -138,7 +138,7 @@ vec3 opU(vec3 a, vec3 b) {
 void calcSkullAnim(float t, inout float skullHeight, inout float skullScale) {
     t = clamp(t, 0., 1.);
     skullHeight = mix(.2, skullOffset, almostIdentityInv(rangec(.35, .7, t)));
-    skullScale = mix(.1, 1., almostIdentityInv(rangec(.35, .5, t)));
+    skullScale = mix(.0, 1., almostIdentityInv(rangec(.35, .5, t)));
 }
 
 vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
@@ -150,21 +150,24 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     // bloom
     float bt = smoothstep(0., .6, t);
     Model blm = drawBloom(p, bt);
-    vec3 bl = vec3(blm.d, 0, 0);
-    bl.x *= scale;
+    vec3 res = vec3(blm.d, 0, 0);
+    res.x *= scale;
 
     float skullHeight;
     float skullScale;
     calcSkullAnim(t, skullHeight, skullScale);
     p.y -= skullHeight;
-    p /= skullScale;
-    scale *= skullScale;
 
-    // skull with sub blooms
-    vec3 sk = vec3(length(p) - skullRadius, 0, 0);
-    sk.x *= scale;
-    
-    vec3 res = opU(bl, sk);
+    if (skullScale > 0.) {
+        p /= skullScale;
+        scale *= skullScale;
+
+        // skull with sub blooms
+        vec3 sk = vec3(length(p) - skullRadius, 0, 0);
+        sk.x *= scale;
+        
+        res = opU(res, sk);
+    }
 
     // set location for next bloomWithSkull
     // this is the camera

@@ -157,20 +157,20 @@ void calcPhyllotaxis() {
 }
 
 Model drawBloom(vec3 p, float t) {
-
     // t = mod(iTime, 1.);
 
-    t = rangec(-.1, 1., t);
-
     Model res = Model(1e12, p, vec2(0), vec2(0), 0., 0., 0.);
-
-    p.y -= mix(0., .25, t);
 
     float bound = length(p) - mix(.7, 1.5, t);
     if (bound > .01) {
         res.d = bound;
         return res;
     }
+
+    t = rangec(-.1, 1., t);
+
+
+    p.y -= mix(0., .25, t);
 
     vec2 move = vec2(0, t);
     float stretchStart = .25;
