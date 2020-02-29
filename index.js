@@ -35,6 +35,6 @@ const main = require('./main.js');
 // bloom-skull
 // log-camera
 
-const project = LOADPROJECT('bloom-flip');
+const project = LOADPROJECT('bloom-skull');
 
 main(project);

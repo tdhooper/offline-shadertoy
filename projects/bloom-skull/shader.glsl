@@ -104,6 +104,28 @@ vec2 round(vec2 a) {
     return floor(a + .5);
 }
 
+
+
+struct Model {
+    float d;
+    vec3 p;
+    vec2 uv;
+    vec2 cell;
+    float wedges;
+    float slice;
+    float len;
+};
+
+Model opU(Model a, Model b) {
+    if (a.d < b.d) {
+        return a;
+    } else {
+        return b;
+    }
+}
+
+#pragma glslify: import('./bloom.glsl')
+
 float leaf(vec3 p, vec2 uv, float bloomHeight, float bloomHeightMax) {
     float r = circleFlatRadius(uv.y, bloomHeight);
     if (r == 0.) {
