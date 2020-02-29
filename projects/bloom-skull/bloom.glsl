@@ -126,7 +126,8 @@ vec3 calcCellData(
     // Hide leaves outside the growth area
     cell = transformI * cell;
     cell.y *= stretch / sz / stretchStart;
-    cell.y = max(cell.y, .5/stretchStart); // clamp, not sure why this magic number
+    cell.y = max(cell.y, .55/stretchStart); // clamp, not sure why this magic number
+    cell.y = min(cell.y, 1.21/stretchStart); // clamp, not sure why this magic number
     cell.y /= stretch / sz / stretchStart;
     cell = transform * cell;
 
@@ -156,11 +157,16 @@ void calcPhyllotaxis() {
 }
 
 Model drawBloom(vec3 p, float t) {
+
+    // t = mod(iTime, 1.);
+
+    t = rangec(-.1, 1., t);
+
     Model res = Model(1e12, p, vec2(0), vec2(0), 0., 0., 0.);
 
-    p.y -= .05;
+    p.y -= mix(0., .25, t);
 
-    float bound = length(p) - mix(.6, 1.3, t);
+    float bound = length(p) - mix(.7, 1.5, t);
     if (bound > .01) {
         res.d = bound;
         return res;
@@ -168,9 +174,9 @@ Model drawBloom(vec3 p, float t) {
 
     vec2 move = vec2(0, t);
     float stretchStart = .25;
-    float stretchEnd = 1.;
+    float stretchEnd = 2.;
     float stretch = mix(stretchStart, stretchEnd, t);
-    float maxBloomOffset = PI / 2.;
+    float maxBloomOffset = PI / 5.;
 
     vec2 cell = vec2(
         atan(p.x, p.z),

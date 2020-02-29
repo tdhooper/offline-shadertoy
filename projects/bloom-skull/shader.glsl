@@ -14,8 +14,8 @@ mat3 basisMatrix(vec3 forward, vec3 up) {
 #pragma glslify: import('./quat.glsl')
 #pragma glslify: import('./camera.glsl')
 
-float skullOffset = 1.5;
-float skullRadius = .4;
+float skullOffset;
+float skullRadius;
 vec3 bloomPosition;
 float delay = .7;
 
@@ -136,12 +136,9 @@ vec3 opU(vec3 a, vec3 b) {
 }
 
 void calcSkullAnim(float t, inout float skullHeight, inout float skullScale) {
-    float bloomHeightMax = skullOffset;
     t = clamp(t, 0., 1.);
-    t = almostIdentityInv(t);
-    float bloomHeight = mix(.1, bloomHeightMax, t);
-    skullHeight = bloomHeight;
-    skullScale = mix(.1, 1., smoothstep(.0, 1., t));
+    skullHeight = mix(.2, skullOffset, almostIdentityInv(rangec(.35, .7, t)));
+    skullScale = mix(.1, 1., almostIdentityInv(rangec(.35, .5, t)));
 }
 
 vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
@@ -151,7 +148,7 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     }
 
     // bloom
-    float bt = rangec(0., .5, t);
+    float bt = smoothstep(0., .6, t);
     Model blm = drawBloom(p, bt);
     vec3 bl = vec3(blm.d, 0, 0);
     bl.x *= scale;
@@ -246,7 +243,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
-    skullOffset = 1.5;
+    skullOffset = 1.;
     skullRadius = .4;
     bloomPosition = normalize(vec3(1,1,1)) * skullRadius;
 
@@ -262,6 +259,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     float mTime = mod(iTime/3., 1.);
     time = mTime;
+    // time = 1.;
 
     vec2 o = vec2(0);
 
