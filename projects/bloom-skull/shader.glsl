@@ -205,7 +205,7 @@ float calcSkullOffset(float t) {
     return bloomHeight;
 }
 
-vec3 bloom(vec3 p, float t, inout float skullHeight, inout float skullScale) {
+vec3 bloom(vec3 p, float t) {
 
     float bloomHeightMax = skullOffset;
 
@@ -214,10 +214,6 @@ vec3 bloom(vec3 p, float t, inout float skullHeight, inout float skullScale) {
 
     float bloomHeight = mix(.1, bloomHeightMax, t);
     p.y -= bloomHeight;
-
-    skullHeight = bloomHeight;
-    skullScale = mix(.1, 1., smoothstep(.0, 1., t));
-    // skullScale = 1.;
 
     vec2 move = vec2(0, t) * skullOffset;
     float stretch = 5.;
@@ -324,20 +320,28 @@ vec3 opU(vec3 a, vec3 b) {
     return a.x < b.x ? a : b;
 }
 
+void calcSkullAnim(float t, inout float skullHeight, inout float skullScale) {
+    float bloomHeightMax = skullOffset;
+    t = clamp(t, 0., 1.);
+    t = almostIdentityInv(t);
+    float bloomHeight = mix(.1, bloomHeightMax, t);
+    skullHeight = bloomHeight;
+    skullScale = mix(.1, 1., smoothstep(.0, 1., t));
+}
+
 vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     
     if (t <= 0.) {
         return vec3(1e12, 0, 0);
     }
 
-    float skullHeight;
-    float skullScale;
-
     // bloom
-    vec3 bl = bloom(p, t, skullHeight, skullScale);
+    vec3 bl = bloom(p, t);
     bl.x *= scale;
 
-    // get skull offset and scale from bloom
+    float skullHeight;
+    float skullScale;
+    calcSkullAnim(t, skullHeight, skullScale);
     p.y -= skullHeight;
     p /= skullScale;
     scale *= skullScale;
