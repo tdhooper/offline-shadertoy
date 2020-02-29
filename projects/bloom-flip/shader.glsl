@@ -213,8 +213,6 @@ vec4 leaf(vec3 p, vec3 cellData) {
     return vec4(d, col);
 }
 
-bool ddd = false;
-
 vec3 calcCellData(
     vec2 cell,
     vec2 offset,
@@ -238,11 +236,7 @@ vec3 calcCellData(
     // Hide leaves outside the growth area
     cell = transformI * cell;
     cell.y *= stretch / sz / stretchStart;
-    if (ddd) {
-        cell.y = max(cell.y, (1.01)/stretchStart); // clamp, not sure why this magic number
-    } else {
-        cell.y = max(cell.y, .5/stretchStart); // clamp, not sure why this magic number
-    }
+    cell.y = max(cell.y, (1.01)/stretchStart); // clamp, not sure why this magic number
     cell.y /= stretch / sz / stretchStart;
     cell = transform * cell;
 
@@ -265,14 +259,12 @@ vec4 opU(vec4 a, vec4 b) {
     return a.x < b.x ? a : b;
 }
 
-vec4 bloom2(vec3 p, float t, bool hh) {
+vec4 bloom2(vec3 p, float t) {
 
     p.y -= .05;
-ddd = hh;
-    if (hh) {
-        p.x *= -1.;
-        pR(p.xz, 1.5);
-    }
+
+    p.x *= -1.;
+    pR(p.xz, 1.5);
 
     // float bound = -p.y-.3;
     // bound = max(bound, length(p) - 2.);
@@ -282,16 +274,10 @@ ddd = hh;
 
     // t = rangec(-.2, 1., t);
 
-    // bool hh = false;
-    // hh = true;
 
     vec2 move = vec2(0, t);
-    float stretchStart = .25;
-    float stretchEnd = 1.;
-    if (hh) {
-        stretchStart *= 1.5;
-        stretchEnd *= 2.5;
-    }
+    float stretchStart = .25 * 1.5;
+    float stretchEnd = 1. * 2.5;
     float stretch = mix(stretchStart, stretchEnd, t);
     float maxBloomOffset = PI / 2.;
 
@@ -301,16 +287,10 @@ ddd = hh;
         atan(p.y, length(p.xz)) + maxBloomOffset
     );
 
-    vec2 cc = vec2(5., 8.);
-    if (hh) {
-        cc = vec2(3,5);
-    }
+    vec2 cc = vec2(3,5);
     float aa = atan(cc.x / cc.y);
     //float aa = 0.5585993153435624;
     float scale = (PI*2.) / sqrt(cc.x*cc.x + cc.y*cc.y);
-    if (hh) {
-        // scale *= 2.;
-    }
     //float scale = 0.6660163105297472;
     mat2 mRot = mat2(cos(aa), -sin(aa), sin(aa), cos(aa));
     mat2 mScale = mat2(1,0,0,stretch);
@@ -335,22 +315,10 @@ ddd = hh;
     res = opU(res, leaf(p, calcCellData(cell, vec2(0, -1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t)));
     res = opU(res, leaf(p, calcCellData(cell, vec2(-1, -1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t)));
 
-    float m = 1. * stretch;
-
-    if (cell.y > m) {
+    if (cell.y > stretch) {
         // left, right (for middle bits)
         res = opU(res, leaf(p, calcCellData(cell, vec2(1, -1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t)));
         res = opU(res, leaf(p, calcCellData(cell, vec2(-1, 1), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t)));
-    }
-
-    vec3 cd = calcCellData(cell, vec2(-1, 0), maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t);
-
-    float dbg = length(p) - .7;
-    if (dbg < res.x) {
-        // res.x = dbg;
-        // if (cell.y > m) {
-        //     res.yzw = cd/4.;
-        // }
     }
 
     return res;
@@ -394,7 +362,7 @@ vec4 map(vec3 p) {
     t = time + .5;
     t = sin(t * PI - PI/2.) * .5 + .5;
     pR(p.xz, time * PI);
-    vec4 res = bloom2(p, t, true);
+    vec4 res = bloom2(p, t);
 
     p = pp;
     p.y *= -1.;
@@ -403,7 +371,7 @@ vec4 map(vec3 p) {
     t = time - .5;
     t = sin(t * PI - PI/2.) * .5 + .5;
     pR(p.xz, time * PI);
-    vec4 res2 = bloom2(p, t, true);
+    vec4 res2 = bloom2(p, t);
     res = opU(res, res2);
     // res = res2;
 
@@ -693,6 +661,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     float mTime = mod(iTime / 2., 1.);
     time = mTime;
+    // time = .5;
     // time = sin(time * PI * 2. - PI/2.) * .5 + .5;
 
     vec2 o = vec2(0);
