@@ -156,8 +156,15 @@ void calcPhyllotaxis() {
 }
 
 Model drawBloom(vec3 p, float t) {
+    Model res = Model(1e12, p, vec2(0), vec2(0), 0., 0., 0.);
 
     p.y -= .05;
+
+    float bound = length(p) - mix(.6, 1.3, t);
+    if (bound > .01) {
+        res.d = bound;
+        return res;
+    }
 
     vec2 move = vec2(0, t);
     float stretchStart = .25;
@@ -174,7 +181,6 @@ Model drawBloom(vec3 p, float t) {
     mat2 transform = phyllotaxis * mStretch;
     mat2 transformI = inverse(transform);
 
-    Model res = Model(1e12, p, vec2(0), vec2(0), 0., 0., 0.);
     //res.d = length(p) - 1.; return res;
 
     // compile speed optim from IQ

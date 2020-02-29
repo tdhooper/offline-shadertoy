@@ -126,142 +126,6 @@ Model opU(Model a, Model b) {
 
 #pragma glslify: import('./bloom.glsl')
 
-float leaf(vec3 p, vec2 uv, float bloomHeight, float bloomHeightMax) {
-    float r = circleFlatRadius(uv.y, bloomHeight);
-    if (r == 0.) {
-        return 1e12;
-    }
-
-    // orient
-    pR(p.xz, -uv.x);
-
-    // wedge
-    vec3 n = normalize(vec3(1,0,.75));
-    float wedge = -dot(p, n);
-    wedge = max(wedge, dot(p, n * vec3(1,1,-1)));
-
-    float e = uv.y / bloomHeightMax;
-    e = 1. - abs(1. - e);
-
-    // sphere
-    float thick = mix(.01, .1, pow(e * bloomHeightMax, .5));
-    p.y += uv.y - r;
-    float sphere = abs(length(p) - abs(r)) - thick;
-
-    // top
-    float len = 1. - e;
-    len = sqrt(1. - len * len);
-    float a = (10. * len) / (2. * PI * r);
-    a = min(a, PI);
-    n = vec3(0, sin(a), cos(a));
-    float top = dot(p, n);
-
-    float round = mix(-1.5, 1.5, len);
-    round = max(0., round);
-    // round = 0.;
-    float d = smax(wedge, top, round);
-    d = smax(d, sphere, thick);
-
-    // 
-    // pR(p.xz, -uv.x);
-    // d = max(d, abs(p.x) - .05);
-    return d;
-}
-
-vec2 calcCell(
-    vec2 cell,
-    vec2 offset,
-    mat2 transform,
-    mat2 transformI,
-    float scale,
-    vec2 move,
-    float stretch
-) {
-    cell += offset;
-    cell = transformI * cell; // remove warp
-    cell.y = min(cell.y, -.5/stretch); // clamp
-    cell.y = max(cell.y, -.9); // clamp
-    cell = transform * cell; // warp
-    cell = round(cell); // snap
-    cell *= scale; // move into real units
-    cell = transformI * cell; // remove warp
-    cell += move; // offset
-    return cell;
-}
-
-
-// stepPosition needs to set the evential skull position for the camera
-// skullWithBloom needs the bloom position, that results in the skull position
-
-// is it still practical to put the skull transform in bloom?
-
-float calcSkullOffset(float t) {
-    float tt = clamp(t, 0., 1.);
-    tt = almostIdentityInv(tt);
-    tt *= 1.5;
-    
-    float bloomHeightMax = 1.;
-    float bloomHeight = mix(.1, bloomHeightMax, tt);;
-    return bloomHeight;
-}
-
-vec3 bloom(vec3 p, float t) {
-
-    float bloomHeightMax = skullOffset;
-
-    t = clamp(t, 0., 1.);
-    t = almostIdentityInv(t);
-
-    float bloomHeight = mix(.1, bloomHeightMax, t);
-    p.y -= bloomHeight;
-
-    vec2 move = vec2(0, t) * skullOffset;
-    float stretch = 5.;
-
-    // move *= 0.;
-
-    vec2 uv = vec2(
-        atan(p.x, p.z),
-        circleFlat(vec2(-p.y, length(p.xz)), bloomHeight)
-    );
-
-    vec2 uuu = uv;
-
-    uv -= move;
-
-    vec2 cc = vec2(5., 8.);
-    //cc.y += floor(sin(iTime * .5) * 3.);
-    float aa = atan(cc.x / cc.y);
-    //float aa = 0.5585993153435624;
-    float scale = (PI*2.) / sqrt(cc.x*cc.x + cc.y*cc.y);
-    // scale /= 2.;
-    //float scale = 0.6660163105297472;
-    mat2 mRot = mat2(cos(aa), -sin(aa), sin(aa), cos(aa));
-    mat2 mScale = mat2(1,0,0,stretch);
-    mat2 transform = mRot * mScale;
-    mat2 transformI = inverse(transform);
-
-    uv = transform * uv;
-    vec2 cell = round(uv / scale);
-
-    float d = 1e12;
-
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, 0), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, -1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, 0), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, -1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, 0), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
-
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, -1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
-    d = min(d, leaf(p, calcCell(cell, vec2(-1, 1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
-    d = min(d, leaf(p, calcCell(cell, vec2(0, 1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
-    d = min(d, leaf(p, calcCell(cell, vec2(1, 1), transform, transformI, scale, move, stretch), bloomHeight, bloomHeightMax));
-
-    // d = min(d, sk);
-
-    return vec3(d, 0, 0);
-}
-
 
 void applyMat4(inout vec3 p, mat4 m) {
     p = (vec4(p, 1) * m).xyz;
@@ -287,7 +151,9 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     }
 
     // bloom
-    vec3 bl = bloom(p, t);
+    float bt = rangec(0., .5, t);
+    Model blm = drawBloom(p, bt);
+    vec3 bl = vec3(blm.d, 0, 0);
     bl.x *= scale;
 
     float skullHeight;
@@ -318,9 +184,7 @@ vec3 map(vec3 p) {
 
     // return vec3(length(p) - .5, 0., 0.);
 
-    float t = iTime / 3.;
-    t = mod(t, 1.);
-
+    float t = time;
     t += 1.;
 
     float camScale = tweenCamera(p, t);
@@ -391,11 +255,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     stepRotate = basisMatrix(cross(vec3(0,0,1), bloomPosition), bloomPosition);
 
     cameraPrecalc();
+    calcPhyllotaxis();
 
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime = mod(iTime / 1., 1.);
+    float mTime = mod(iTime/3., 1.);
     time = mTime;
 
     vec2 o = vec2(0);
