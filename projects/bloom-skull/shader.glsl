@@ -127,7 +127,12 @@ Model opU(Model a, Model b) {
 #pragma glslify: import('./bloom.glsl')
 
 float drawSkull(vec3 p, float t) {
-    return length(p) - skullRadius;
+    float scale = skullRadius;
+    p /= scale;
+    float d = length(p) - 1.;
+    p.x = abs(p.x);
+    d = smax(d, -(length(p - vec3(.4,.5,.6)) - .2), .3);
+    return d * scale;
 }
 
 void applyMat4(inout vec3 p, mat4 m) {
