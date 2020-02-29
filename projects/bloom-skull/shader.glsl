@@ -267,55 +267,6 @@ void applyMat4(inout vec3 p, mat4 m) {
     p = (vec4(p, 1) * m).xyz;
 }
 
-mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
-    vec3 ww = normalize(ta - ro);
-    vec3 uu = normalize(cross(ww,up));
-    vec3 vv = normalize(cross(uu,ww));
-    return mat3(uu, vv, ww);
-}
-
-// vec3 skullWithBloom(
-//     vec3 p,
-//     float t,
-//     inout vec3 nextP,
-//     inout float nextScale,
-//     inout float nextT
-// ) {
-
-//     // skull
-//     float d = length(p) - .4;
-//     d = fBox(p, vec3(.05, .3, .1));
-    
-//     // bloom
-
-//     float bl = bloom(p, t, nextP, nextScale).x * stepScale;
-//     d = min(d, part);
-//     p -= stepPosition;
-//     p /= stepScale;
-//     p *= stepRotate;
-//     scale /= stepScale;
-
-
-//     p.y += calcSkullOffset(1.) * .1;
-//     // p.y += .1;
-//     t -= delay;
-//     // if (t > 0.) {
-//         p /= stepScale;
-//         float bl = bloom(p, t, nextP, nextScale).x * stepScale;
-//         nextScale *= stepScale;
-//         d = min(d, bl);
-//     // }
-
-//     nextT = t;
-
-//     return vec3(d, 0, 0);
-// }
-
-// vec3 skull(vec3 p, float t) {
-//     float d = length(p) - .4 * smoothstep(.4, .73, t);
-//     return vec3(d, 0, 0);
-// }
-
 vec3 opU(vec3 a, vec3 b) {
     return a.x < b.x ? a : b;
 }
