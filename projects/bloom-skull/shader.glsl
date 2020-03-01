@@ -154,7 +154,7 @@ vec3 opU(vec3 a, vec3 b) {
 void calcSkullAnim(float t, inout float skullHeight, inout float skullScale) {
     // t = clamp(t, 0., 1.);
     skullHeight = mix(.2, skullOffset, easeOutSine(rangec(.35, 1.2, t)));
-    skullScale = mix(.0, 1., easeOutSine(rangec(.35, .5, t)));
+    skullScale = mix(.0, 1., easeOutSine(rangec(.4, .7, t)));
 }
 
 vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
@@ -164,7 +164,8 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     }
 
     // bloom
-    float bt = smoothstep(0., .6, t);
+    float bt = smoothstep(0., 1., t);
+    bt = easeOutSine(bt);
     Model blm = drawBloom(p, bt);
     vec3 res = vec3(blm.d, 0, 0);
     res.x *= scale;
@@ -177,7 +178,8 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
 
     float rt = 1. - easeOutSine(rangec(.0, 1.2, t));
     pR(p.xz, rt * -5.);
-    // pR(p.xz, .1);
+    pR(p.yz, rt * 2.);
+    
 
     if (skullScale > 0.) {
         p /= skullScale;
@@ -281,7 +283,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // position 2  =  position  +  rotation * position
 
-    delay = .5;
+    delay = .7;
 
     cameraPrecalc();
     calcPhyllotaxis();
