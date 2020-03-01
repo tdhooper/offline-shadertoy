@@ -16,8 +16,10 @@ mat3 basisMatrix(vec3 forward, vec3 up) {
 
 float skullOffset;
 float skullRadius;
+mat3 skullRotate;
 vec3 bloomPosition;
-float delay = .7;
+mat3 bloomRotate;
+float delay;
 
 const float PHI = 1.61803398875;
 
@@ -126,12 +128,17 @@ Model opU(Model a, Model b) {
 
 #pragma glslify: import('./bloom.glsl')
 
-float drawSkull(vec3 p, float t) {
-    float scale = skullRadius;
-    p /= scale;
+float drawSkull(vec3 p) {
     float d = length(p) - 1.;
     p.x = abs(p.x);
     d = smax(d, -(length(p - vec3(.4,.5,.6)) - .2), .3);
+    return d;
+}
+
+float drawSkullWithBlooms(vec3 p, float t) {
+    float scale = skullRadius;
+    p /= scale;
+    float d = drawSkull(p);
     return d * scale;
 }
 
@@ -165,13 +172,14 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     float skullScale;
     calcSkullAnim(t, skullHeight, skullScale);
     p.y -= skullHeight;
+    p *= skullRotate;
 
     if (skullScale > 0.) {
         p /= skullScale;
         scale *= skullScale;
 
         // skull with sub blooms
-        float skd = drawSkull(p, t);
+        float skd = drawSkullWithBlooms(p, t);
         vec3 sk = vec3(skd, 0, 0);
         sk.x *= scale;
         
@@ -182,7 +190,7 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     // this is the camera
     p -= bloomPosition;
     p /= stepScale;
-    p *= stepRotate;
+    p *= bloomRotate;
     scale *= stepScale;
     t -= delay;
 
@@ -257,11 +265,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     skullOffset = 1.;
     skullRadius = .4;
-    bloomPosition = normalize(vec3(1,1,1)) * skullRadius;
+    skullRotate = basisMatrix(vec3(-.0,0,1), vec3(0,1,-1));
 
-    stepPosition = vec3(0,skullOffset,0) + bloomPosition;
-    stepScale = .1;
-    stepRotate = basisMatrix(cross(vec3(0,0,1), bloomPosition), bloomPosition);
+    bloomPosition = normalize(vec3(1,.2,-.3)) * skullRadius * .8;
+    bloomRotate = basisMatrix(cross(vec3(0,-1.,.5), bloomPosition), bloomPosition);
+
+    stepPosition = vec3(0,skullOffset,0) + skullRotate * bloomPosition;
+    stepScale = .2;
+    stepRotate = skullRotate * bloomRotate;
+
+    // position 2  =  position  +  rotation * position
+
+    delay = 1.;
 
     cameraPrecalc();
     calcPhyllotaxis();
@@ -321,6 +336,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if ( ! bg) {
             vec3 nor = calcNormal(rayPosition);
             col = nor * .5 + .5;
+            col *= clamp(dot(nor, vec3(1,1,0)) * .5 + .5, 0., 1.);
         }
 
         tot += col;
