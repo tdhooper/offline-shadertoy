@@ -133,9 +133,9 @@ float drawSkull(vec3 p) {
     float d = length(p) - 1.;
     d = abs(d) - .1;
     p.x = abs(p.x);
-    d = smax(d, -(length(p - normalize(vec3(.5,1.,.4))) - .3), .1);
-    d = smax(d, -(length(p - normalize(vec3(0,.4,.6))) - .1), .1);
-    d = smax(d, -(length(p - normalize(vec3(0,-.5,1))) - .7), .1);
+    d = smax(d, -(length(p - normalize(vec3(.3,.1,.6))) - .3), .1);
+    d = smax(d, -(length(p - normalize(vec3(0,-.2,.8))) - .1), .1);
+    d = smax(d, -(length(p - normalize(vec3(0,-1,0))) - .7), .1);
     return d;
 }
 
@@ -180,9 +180,10 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     p.y -= skullHeight;
     p *= skullRotate;
 
-    float rt = 1. - easeOutSine(rangec(.0, 1.2, t));
+    float rt = 1. - easeOutSine(rangec(.0, 1.5, t));
+    pR(p.yz, rt * 5.);
     pR(p.xz, rt * -5.);
-    pR(p.yz, rt * 2.);
+    
     
 
     if (skullScale > 0.) {
@@ -236,7 +237,18 @@ vec3 map(vec3 p) {
     // translate
     // draw bloom
 
-    for (float i = 0.; i < 4.; i++) {
+
+    t += delay;
+    scale /= stepScale;
+    p *= inverse(bloomRotate);
+    p *= stepScale;
+    p += bloomPosition;
+    p *= inverse(skullRotate);
+    p.y += skullOffset;
+
+
+
+    for (float i = 0.; i < 5.; i++) {
         res2 = bloomWithSkull(p, scale, t);
         res = opU(res, res2);
     }
@@ -276,7 +288,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     skullOffset = 1.5;
     skullRadius = .3;
-    skullRotate = basisMatrix(vec3(-.5,0,1), vec3(0,1,-1));
+    skullRotate = basisMatrix(vec3(-.5,1,.7), vec3(0,.5,-.9));
 
     bloomPosition = normalize(vec3(1,.2,-.3)) * skullRadius * .8;
     bloomRotate = basisMatrix(cross(vec3(0,-1.,.5), bloomPosition), bloomPosition);
@@ -336,7 +348,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 break;
             }
             
-            if (rayLength > 100.) {
+            if (rayLength > 150.) {
                 bg = true;
                 break;
             }
