@@ -170,8 +170,9 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     // bloom
     float bt = smoothstep(0., 1., t);
     bt = easeOutSine(bt);
-    Model blm = drawBloom(p, bt);
-    vec3 res = vec3(blm.d, 0, 0);
+    float bs = 1.2;
+    Model blm = drawBloom(p / bs, bt);
+    vec3 res = vec3(blm.d * bs, 0, 0);
     res.x *= scale;
 
     float skullHeight;
@@ -181,8 +182,13 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     p *= skullRotate;
 
     float rt = 1. - easeOutSine(rangec(.0, 1.5, t));
-    pR(p.yz, rt * 5.);
-    pR(p.xz, rt * -5.);
+    
+    // pR(p.xz, rt * -5.);
+    // pR(p.yz, rt * 5.);
+    // pR(p.xy, rt * 5.);
+    
+    
+    
     
     
 
@@ -210,7 +216,6 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
 }
 
 vec3 map(vec3 p) {
-
     // return vec3(length(p) - .5, 0., 0.);
 
     float t = time;
@@ -238,17 +243,15 @@ vec3 map(vec3 p) {
     // draw bloom
 
 
-    t += delay;
-    scale /= stepScale;
-    p *= inverse(bloomRotate);
-    p *= stepScale;
-    p += bloomPosition;
-    p *= inverse(skullRotate);
-    p.y += skullOffset;
+    // t += delay;
+    // scale /= stepScale;
+    // p *= inverse(bloomRotate);
+    // p *= stepScale;
+    // p += bloomPosition;
+    // p *= inverse(skullRotate);
+    // p.y += skullOffset;
 
-
-
-    for (float i = 0.; i < 5.; i++) {
+    for (float i = 0.; i < 4.; i++) {
         res2 = bloomWithSkull(p, scale, t);
         res = opU(res, res2);
     }
@@ -288,9 +291,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     skullOffset = 1.5;
     skullRadius = .3;
-    skullRotate = basisMatrix(vec3(-.5,1,.7), vec3(0,.5,-.9));
+    skullRotate = basisMatrix(vec3(.5,1,.4), vec3(-.9,1.,0));
 
-    bloomPosition = normalize(vec3(1,.2,-.3)) * skullRadius * .8;
+    bloomPosition = normalize(vec3(1,.8,-.2)) * skullRadius * .75;
     bloomRotate = basisMatrix(cross(vec3(0,-1.,.5), bloomPosition), bloomPosition);
 
     stepPosition = vec3(0,skullOffset,0) + skullRotate * bloomPosition;
@@ -354,12 +357,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             }
         }
 
-        col =  vec3(.19,.19,.22) * .5;
+        vec3 bgCol = vec3(.19,.19,.22) * .5;
+        col = bgCol;
         
         if ( ! bg) {
             vec3 nor = calcNormal(rayPosition);
             col = nor * .5 + .5;
             col *= clamp(dot(nor, vec3(1,1,0)) * .5 + .5, 0., 1.);
+            float fog = 1. - exp((rayLength - 3.) * -.2);
+            col = mix(col, bgCol, fog);
         }
 
         tot += col;
