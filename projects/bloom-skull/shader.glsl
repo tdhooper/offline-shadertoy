@@ -131,8 +131,11 @@ Model opU(Model a, Model b) {
 
 float drawSkull(vec3 p) {
     float d = length(p) - 1.;
+    d = abs(d) - .1;
     p.x = abs(p.x);
-    d = smax(d, -(length(p - vec3(.4,.5,.6)) - .2), .3);
+    d = smax(d, -(length(p - normalize(vec3(.5,1.,.4))) - .3), .1);
+    d = smax(d, -(length(p - normalize(vec3(0,.4,.6))) - .1), .1);
+    d = smax(d, -(length(p - normalize(vec3(0,-.5,1))) - .7), .1);
     return d;
 }
 
@@ -157,6 +160,7 @@ void calcSkullAnim(float t, inout float skullHeight, inout float skullScale) {
     skullScale = mix(.0, 1., easeOutSine(rangec(.4, .7, t)));
 }
 
+// draw bloom with a skull inside
 vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     
     if (t <= 0.) {
