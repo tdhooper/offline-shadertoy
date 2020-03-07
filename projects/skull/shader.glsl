@@ -44,7 +44,13 @@ struct Model {
 vec3 modelAlbedo = vec3(.5);
 
 float map(vec3 p) {
-    return length(p) - .5;
+    float d = length(p) - .5;
+    d = 1e12;
+    d = min(d, abs(p.x) - .001);
+    d = min(d, abs(p.y) - .001);
+    d = min(d, abs(p.z) - .001);
+    d = max(d, length(p) - .7);
+    return d;
 }
 
 float hitDebugPlane = 0.;

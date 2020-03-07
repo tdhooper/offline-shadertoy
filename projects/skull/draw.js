@@ -8,11 +8,12 @@ const meshData = fs.readFileSync('projects/skull/skull.obj');
 var mesh = parseOBJ(meshData);
 
 const model = mat4.create();
-// mat4.rotateX(model, model, -.38);
 // mat4.rotateY(model, model, .56);
 // mat4.rotateZ(model, model, .01);
 mat4.scale(model, model, [.55,.55,.55]);
-mat4.translate(model, model, [0,0,-.75]);
+mat4.translate(model, model, [.12,.6,0]);
+mat4.rotateX(model, model, Math.PI / 2.);
+mat4.rotateY(model, model, -.02);
 
 
 function init(drawRaymarch, renderNodes, uniforms) {
@@ -45,7 +46,7 @@ function init(drawRaymarch, renderNodes, uniforms) {
       void main() {
         vec3 color = vnormal * .5 + .5;
         vec3 lig = vec3(0,1.5,.5);
-        lig = vec3(0,1,0);
+        lig = normalize(vec3(1,1,0));
         // if ( ! guiSplit) {
           color = vec3(1) * pow(clamp(dot(lig, vnormal) * .5 + .5, 0., 1.), 1./2.2);
         // }
