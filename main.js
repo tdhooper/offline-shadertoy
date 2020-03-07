@@ -213,7 +213,7 @@ module.exports = (project) => {
 
   let projectDraw;
   if (project.draw) {
-    projectDraw = project.draw(drawRaymarch, uniforms);
+    projectDraw = project.draw(drawRaymarch, renderNodes, uniforms);
   }
 
   const camera = createCamera(canvas, {
