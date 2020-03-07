@@ -43,13 +43,144 @@ struct Model {
 
 vec3 modelAlbedo = vec3(.5);
 
+
+
+float smin(float a, float b, float k){
+    float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
+    return (1. - f) * a + f  * b - f * (1. - f) * k;
+}
+
+float smax(float a, float b, float k) {
+    return -smin(-a, -b, k);
+}
+
+float smin2(float a, float b, float r) {
+    vec2 u = max(vec2(r - a,r - b), vec2(0));
+    return max(r, min (a, b)) - length(u);
+}
+
+float smax2(float a, float b, float r) {
+    vec2 u = max(vec2(r + a,r + b), vec2(0));
+    return min(-r, max (a, b)) + length(u);
+}
+
+float smin3(float a, float b, float k){
+    return min(
+        smin(a, b, k),
+        smin2(a, b, k)
+    );
+}
+
+float smax3(float a, float b, float k){
+    return max(
+        smax(a, b, k),
+        smax2(a, b, k)
+    );
+}
+
+
+
+
+
+void pR(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+vec3 pRx(vec3 p, float a) {
+    pR(p.yz, a); return p;
+}
+
+vec3 pRy(vec3 p, float a) {
+    pR(p.xz, a); return p;
+}
+
+vec3 pRz(vec3 p, float a) {
+    pR(p.xy, a); return p;
+}
+
+
+
+// iq https://www.shadertoy.com/view/MldfWn
+float sdEllipse( vec2 p, in vec2 ab )
+{
+    p = abs( p ); if( p.x > p.y ){ p=p.yx; ab=ab.yx; }
+
+    float l = ab.y*ab.y - ab.x*ab.x;
+    
+    float m = ab.x*p.x/l; 
+    float n = ab.y*p.y/l; 
+    float m2 = m*m;
+    float n2 = n*n;
+    
+    float c = (m2 + n2 - 1.0)/3.0; 
+    float c3 = c*c*c;
+
+    float q = c3 + m2*n2*2.0;
+    float d = c3 + m2*n2;
+    float g = m + m*n2;
+
+    float co;
+
+    if( d<0.0 )
+    {
+        float h = acos(q/c3)/3.0;
+        float s = cos(h);
+        float t = sin(h)*sqrt(3.0);
+        float rx = sqrt( -c*(s + t + 2.0) + m2 );
+        float ry = sqrt( -c*(s - t + 2.0) + m2 );
+        co = ( ry + sign(l)*rx + abs(g)/(rx*ry) - m)/2.0;
+    }
+    else
+    {
+        float h = 2.0*m*n*sqrt( d );
+        float s = sign(q+h)*pow( abs(q+h), 1.0/3.0 );
+        float u = sign(q-h)*pow( abs(q-h), 1.0/3.0 );
+        float rx = -s - u - c*4.0 + 2.0*m2;
+        float ry = (s - u)*sqrt(3.0);
+        float rm = sqrt( rx*rx + ry*ry );
+        co = (ry/sqrt(rm-rx) + 2.0*g/rm - m)/2.0;
+    }
+
+    float si = sqrt( 1.0 - co*co );
+ 
+    vec2 r = ab * vec2(co,si);
+    
+    return length(r-p) * sign(p.y-r.y);
+}
+
+// generic ellipsoid - approximated distance: https://www.shadertoy.com/view/tdS3DG
+float sdEllipsoid( in vec3 p, in vec3 r ) 
+{
+    float k0 = length(p/r);
+    float k1 = length(p/(r*r));
+    return k0*(k0-1.0)/k1;
+}
+
+// symmetric ellipsoid - EXACT distance
+float sdEllipsoidXXZ( in vec3 p, in vec2 r ) 
+{
+    return sdEllipse( vec2( length(p.xy), p.z ), r );
+}
+
+
+
 float map(vec3 p) {
-    float d = length(p) - .5;
-    d = 1e12;
-    d = min(d, abs(p.x) - .001);
-    d = min(d, abs(p.y) - .001);
-    d = min(d, abs(p.z) - .001);
-    d = max(d, length(p) - .7);
+    p.x = abs(p.x);
+    float d = 1e12;
+    float back = sdEllipsoidXXZ(p - vec3(0,-.12,.16), vec2(.38, .29));
+    d = min(d, back);
+    float forehead = sdEllipsoidXXZ(pRx(p - vec3(0,-.15,-.13), .5), vec2(.35, .44) * .97);
+    d = smin(d, forehead, .22);
+    float backbump = sdEllipsoidXXZ(pRx(pRy(p - vec3(.22,-.27,.05), -.25), .25), vec2(.1, .2) * .5);
+    d = smin(d, backbump, .3);
+    float topbump = sdEllipsoidXXZ(pRx(p - vec3(0,-.33,-.05), -.0), vec2(.1, .15) * .5);
+    d = smin(d, topbump, .3);
+    // d = topbump;
+    // d = 1e12;
+    // d = min(d, abs(p.x) - .001);
+    // d = min(d, abs(p.y) - .001);
+    // d = min(d, abs(p.z) - .001);
+    // d = max(d, length(p) - .7);
     return d;
 }
 
@@ -129,6 +260,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
         if (rayLength > MAX_TRACE_DISTANCE) {
             break;
         }
+        //mapDebug
         currentDist = map(rayOrigin + rayDirection * rayLength);
         rayLength += currentDist;
         steps += 1.;
@@ -225,13 +357,13 @@ void main() {
 
     // alpha = .5;
 
-    if ( ! guiBlendError) {
+    if ( ! guiBlendError && ! guiBlend) {
         alpha = 1.;
     }
 
-    if (guiBlend) {
-        alpha = polyD > rayD ? 0. : 1.;
-    }
+    // if (guiBlend) {
+    //     alpha = polyD > rayD ? 0. : 1.;
+    // }
 
 
     if (guiSplit) {
