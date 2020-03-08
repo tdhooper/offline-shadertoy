@@ -22,11 +22,13 @@ varying vec2 vVertex;
 uniform vec3 debugPlanePosition;
 uniform mat4 debugPlaneMatrix;
 
+uniform bool guiModel;
 uniform bool guiBlend;
 uniform bool guiBlendError;
 uniform bool guiSplit;
 
 
+#define PI 3.141592653589793
 
 vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
     return a + b*cos( 6.28318*(c*t+d) );
@@ -86,6 +88,11 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+// Shortcut for 45-degrees rotation
+void pR45(inout vec2 p) {
+    p = (p + vec2(p.y, -p.x))*sqrt(0.5);
+}
+
 vec3 pRx(vec3 p, float a) {
     pR(p.yz, a); return p;
 }
@@ -97,6 +104,43 @@ vec3 pRy(vec3 p, float a) {
 vec3 pRz(vec3 p, float a) {
     pR(p.xy, a); return p;
 }
+
+
+
+// sdUberprim with precomputed constants
+float sdUnterprim(vec3 p, vec4 s, vec3 r, vec2 ba, float sz2) {
+    vec3 d = abs(p) - s.xyz;
+    float q = length(max(d.xy, 0.0)) + min(0.0,max(d.x,d.y)) - r.x;
+    // hole support: without this line, all results are convex
+#ifndef CONVEX    
+    q = abs(q) - s.w;
+#endif
+    
+    vec2 pa = vec2(q, p.z - s.z);
+    vec2 diag = pa - vec2(r.z,sz2) * clamp(dot(pa,ba), 0.0, 1.0);
+    vec2 h0 = vec2(max(q - r.z,0.0),p.z + s.z);
+    vec2 h1 = vec2(max(q,0.0),p.z - s.z);
+    
+    return sqrt(min(dot(diag,diag),min(dot(h0,h0),dot(h1,h1))))
+        * sign(max(dot(pa,vec2(-ba.y, ba.x)), d.z)) - r.y;
+}
+
+// s: width, height, depth, thickness
+// r: xy corner radius, z corner radius, bottom radius offset
+float sdUberprim(vec3 p, vec4 s, vec3 r) {
+    // these operations can be precomputed
+    s.xy -= r.x;
+#ifdef CONVEX  
+    r.x -= r.y;
+#else
+    r.x -= s.w;
+    s.w -= r.y;
+#endif
+    s.z -= r.y;
+    vec2 ba = vec2(r.z, -2.0*s.z);
+    return sdUnterprim(p, s, r, ba/dot(ba,ba), ba.y);
+}
+
 
 
 
@@ -162,19 +206,100 @@ float sdEllipsoidXXZ( in vec3 p, in vec2 r )
     return sdEllipse( vec2( length(p.xy), p.z ), r );
 }
 
+// Torus in the XZ-plane
+float fTorus(vec3 p, float smallRadius, float largeRadius) {
+    return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
+}
+
+float fEllipseTorus(vec3 p, vec2 smallRadius, float largeRadius) {
+    vec2 c = vec2(length(p.xz), p.y);
+    c.x -= largeRadius;
+    return sdEllipse(c, smallRadius);
+}
+
+float fTorusEdge(vec3 p, float smallRadius, float largeRadius) {
+    p.x += largeRadius;
+    return fTorus(p, smallRadius, largeRadius);
+}
+
+// curve the x axis around the y axis
+void pCurve(inout vec3 p, float r) {
+    p.z -= r;
+    p = vec3(atan(p.x, -p.z) * r, p.y, length(p.xz) - r);
+}
+
+float fZygomatic(vec3 p) {
+    vec3 pp = p;
+    p = pRy(pRx(pRz(p - vec3(.35,.215,-.26), .3), .12), -.2);
+    float largeRadius = .35;
+    p.x += largeRadius;
+    vec3 c = vec3(atan(p.z, p.x), length(p.xz), p.y);
+    float top = -.02;
+    float bottom = .02;
+    top = mix(top, -.04, smoothstep(.4, -.27, c.x));
+    top = mix(top, -.1, smoothstep(-.12, -.27, c.x));
+    top = mix(top, -.17, smoothstep(-.1, -.45, c.x));
+    bottom = mix(bottom, .12, smoothstep(.3, -.33, c.x));
+    bottom = mix(bottom, .04, smoothstep(-.3, -.7, c.x));
+    float width = .01;
+    width = mix(width, .03, smoothstep(.2, -.6, c.x));
+    vec2 smallRadius = vec2(width, distance(top, bottom) / 2.);
+    c.y -= largeRadius;
+    c.z -= top + smallRadius.y;
+    float rot = smoothstep(.3, -.27, c.x);
+    pR(c.yz, rot * -.3);
+    float d = sdEllipse(c.yz, smallRadius);
+    p = pp;
+    p = pRy(p - vec3(.2,.125,-.45), 1.);
+    float cut = length(p.xy) - .11;
+    p = pp;
+    p = pRy(pRz(p - vec3(.35,0,0), .4), -.1);
+    cut = min(cut, p.x);
+    d = smax(d, -cut, .04);
+    return d;
+}
 
 
 float map(vec3 p) {
     p.x = abs(p.x);
+    vec3 pp = p;
     float d = 1e12;
-    float back = sdEllipsoidXXZ(p - vec3(0,-.12,.16), vec2(.38, .29));
+    float back = sdEllipsoidXXZ(p - vec3(0,-.11,.16), vec2(.4, .32));
     d = min(d, back);
-    float forehead = sdEllipsoidXXZ(pRx(p - vec3(0,-.15,-.13), .5), vec2(.35, .44) * .97);
+    float base = length(p - vec3(0,-.08,.25)) - .15;
+    d = smin(d, base, .3);
+    float baseside = length(p - vec3(.2,.1,.25)) - .05;
+    d = smin(d, baseside, .25);
+    float forehead = sdEllipsoidXXZ(pRx(p - vec3(0,-.15,-.14), .5), vec2(.35, .44) * .97);
     d = smin(d, forehead, .22);
-    float backbump = sdEllipsoidXXZ(pRx(pRy(p - vec3(.22,-.27,.05), -.25), .25), vec2(.1, .2) * .5);
-    d = smin(d, backbump, .3);
-    float topbump = sdEllipsoidXXZ(pRx(p - vec3(0,-.33,-.05), -.0), vec2(.1, .15) * .5);
+    float foreheadside = length(p - vec3(.17,-.13,-.3)) - .05;
+    d = smin(d, foreheadside, .25);
+    float backbump = sdEllipsoidXXZ(pRx(pRy(p - vec3(.27,-.29,.0), -.25), .0), vec2(.1, .5) * .25);
+    d = smin(d, backbump, .34);
+    float topbump = sdEllipsoidXXZ(p - vec3(0,-.33,-.05), vec2(.1, .15) * .5);
     d = smin(d, topbump, .3);
+    float side = sdEllipsoidXXZ(pRz(p - vec3(.25,.05,-.0), .3).yzx, vec2(.1, .05) * .8);
+    d = smin(d, side, .25);
+    float sphenoid = sdEllipsoidXXZ(pRy(pRz(p - vec3(.1,.2,-.2), .4), -.5).yzx, vec2(.05, .025));
+    d = smin(d, sphenoid, .3);
+    float sphenoidcut = sdEllipsoidXXZ(pRx(pRz(p - vec3(.4,.1,-.35), .4), .3).xzy, vec2(.005, .25) * .5);
+    d = smax(d, -sphenoidcut, .3);
+    float zygomatic = fZygomatic(p);
+    d = smin(d, zygomatic, .1);
+    p = pRy(pRz(p - vec3(.18,.105,-.47), .15), .4);
+    pCurve(p, .25);
+    float socket = fTorus(p.yzx, .02, .1);
+    float thic = .02;
+    socket = sdUberprim(p, vec4(.155,.12,thic,0), vec3(.12,thic,thic));
+    d = smin(d, socket, .05);
+    p = pp;
+
+    // p -= vec3(.15,.1,-.5);
+    // pCurve(p, .1);
+    // d = fTorus((p).yzx, .02, .1);
+    // d = length(p.yz) - .1;
+    // d = max(d, -p.x);
+
     // d = topbump;
     // d = 1e12;
     // d = min(d, abs(p.x) - .001);
@@ -233,7 +358,7 @@ const int NUM_OF_TRACE_STEPS = 150;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3(.00001,0,0);
+    vec3 eps = vec3(.0001,0,0);
     vec3 nor = vec3(0);
     float invert = 1.;
     for (int i = 0; i < NORMAL_STEPS; i++){
@@ -243,6 +368,16 @@ vec3 calcNormal(vec3 pos){
     }
     return normalize(nor);
 }
+
+// vec3 calcNormal( in vec3 pos )
+// {
+//     vec2 e = vec2(1.0,-1.0)*0.5773*0.0001;
+//     return normalize( e.xyy*map( pos + e.xyy) + 
+//                       e.yyx*map( pos + e.yyx) + 
+//                       e.yxy*map( pos + e.yxy) + 
+//                       e.xxx*map( pos + e.xxx) );
+// }
+
 
 Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
 
@@ -369,6 +504,10 @@ void main() {
     if (guiSplit) {
         alpha = hit.pos.x < 0. ? 0. : 1.;
         // alpha = 0.;
+    }
+
+    if (guiModel) {
+        alpha = 0.;
     }
 
     vec3 polyColor = texture2D(uSource, gl_FragCoord.xy / iResolution.xy).rgb;

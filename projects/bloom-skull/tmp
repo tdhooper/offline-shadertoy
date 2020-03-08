@@ -1,0 +1,180 @@
+
+vec3 col;
+float px;
+
+#define PI 3.1415926
+
+void draw(float d, vec3 c) {
+    d /= px;
+    d = clamp(d, 0., 1.);
+    col = mix(c, col, d);
+}
+
+float marker(vec2 p, vec2 pos, float rot, float scl) {
+    scl /= 2.;
+    scl = .1;
+    p -= pos;
+    float d = length(p) - scl / 2.;
+    vec2 nor = vec2(sin(rot), cos(rot));
+    vec2 bin = nor.yx * vec2(1,-1);
+    float l = abs(dot(p, bin)) - scl / 8.;
+    l = max(l, -dot(p, nor));
+    l = max(l, dot(p, nor) - scl * 1.5);
+    //d = min(d, l);
+    return d;
+}
+
+vec2 rotate(vec2 p, float a) {
+    return p * mat2(cos(a), sin(a), -sin(a), cos(a));
+}
+
+vec2 findCenter(vec2 posT, float rotT, float sclT) {
+    vec2 pos = vec2(0);
+    float rot = 0.;
+    vec2 nor = vec2(0, 1);
+    float scl = 1.;
+    for (int i = 0; i < 500; i++) {
+        pos += rotate(posT, rot) * scl;
+        scl *= sclT;
+        rot += rotT;
+    }
+    return pos;
+}
+
+
+float sectionAngle(vec2 posT, float rotT) {
+    vec2 a = vec2(0);    
+    vec2 b = posT;
+    vec2 c = posT + rotate(posT, rotT);
+    float angle = acos(dot(normalize(a - b), normalize(c - b)));
+    return PI - angle;
+}
+
+vec2 calcCenter(vec2 posT, float rotT, float sclT) {
+    float side0 = length(posT);
+    float angle0 = sectionAngle(posT, rotT);
+    float side1 = side0 / sqrt((sclT * sclT) - 2. * sclT * cos(angle0) + 1.);
+    float side2 = sclT * side1;
+    float angle1 = asin((side1 * sin(angle0)) / side0);
+    vec2 center = vec2(sin(angle1), cos(angle1)) * side2;
+    return center;
+}
+
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
+    vec2 p = (-iResolution.xy + 2.*fragCoord)/iResolution.y;
+    
+    float scale = 3.;
+    
+    px = scale/iResolution.y;    
+    p *= scale;
+
+    vec2 uv = p;
+    
+    col = vec3(1);
+    
+    float ax = min(abs(p.x), abs(p.y)) - px/2.;
+    draw(ax, vec3(0));
+    
+    // three params:
+    // * step distance (from translate)
+    // * step scale
+    // * step rotation
+    // rotate result by translate angle to y axis
+    
+    vec2 posT = vec2(iMouse.x, iMouse.y) / iResolution.xy;
+    posT *= 3.;
+    posT = vec2(1.2,1.5);
+    posT.x = 0.;
+    float rotT = mod(iTime, PI * 2.);
+    rotT = .9;
+    //rotT = (iMouse.x/iResolution.x) * 10.;
+    //rotT = PI * .1;
+    float sclT = .6;
+    sclT = (iMouse.y/iResolution.y) * 3.;
+    
+    
+    vec2 pos = vec2(0);
+    float rot = 0.;
+    vec2 nor = vec2(0, 1);
+    float scl = 1.;
+    
+    for (int i = 0; i < 50; i++) {
+        //if (i < 2 || i == 50) {
+            draw(marker(p, pos, rot - rotT + atan(posT.x, posT.y) - PI, scl), vec3(1,0,0));
+        //}
+        pos += rotate(posT, rot) * scl;
+        scl *= sclT;
+        rot += rotT;
+    }
+
+    // create routine to draw logarighmic spiral with given
+    // a and k values
+
+    // find a and k values for our spiral
+    // find center
+    
+    // in 3d, find plane - hard???
+    
+    
+    
+    pos = vec2(0);
+    rot = 0.;
+    scl = 1.;
+    
+    float t = .5;
+
+    float ramp = (pow(sclT, t) - 1.) / (sclT - 1.);
+    float sclN = mix(1., sclT, ramp);
+    float rotN = mix(rot, rotT, t);
+    vec2 posN = posT - rotate(posT, rot) * .4;
+    
+    
+    for (int i = 0; i < 10; i++) {
+        //draw(marker(p, pos, rot, scl), vec3(0,1,0));
+        pos += rotate(posN, rot) * scl;
+        scl *= sclN;
+        rot += rotN;
+    }
+    
+    //draw(marker(p, pos, rot, scl), vec3(0,1,0));
+
+    const float limit = 50.;
+    for (float i = 0.; i < limit; i++) {
+        pos = vec2(0);
+        rot = 0.;
+        scl = 1.;
+        t = (i / limit) * 2.;
+        float ramp = (pow(sclT, t) - 1.) / (sclT - 1.);
+        scl = mix(1., sclT, ramp);
+        rot = mix(rot, rotT, t);
+        pos = posT - rotate(posT, rot) * (1.-t);
+        //draw(length(p - pos) - px * 4., vec3(0, 1, 0));
+    }
+    
+    vec2 cc = findCenter(posT, rotT, sclT);
+    draw(length(p - cc) - px * 4., vec3(0, 0, 1));
+    
+    
+    vec2 ccc = calcCenter(posT, rotT, sclT);
+    draw(length(p - ccc) - px * 4., vec3(0, 0, 1));
+
+    
+    float r = 1.;
+    vec2 o = posT;
+    
+    //draw(abs(length(p - o) - 1.) - .01, vec3(0,1,0));
+    
+    vec2 yc = posT - vec2(0, pow(sclT, pos.y));
+    
+    //draw(abs(length(p - yc) - .1) - .01, vec3(0,1,0));
+    
+    
+    vec2 cn = findCenter(posT, uv.x*.5, sclT);
+    draw(abs(p.y - cn.x) - .01, vec3(0,0,0));
+    
+    
+
+    fragColor = vec4(col,1.0);
+}

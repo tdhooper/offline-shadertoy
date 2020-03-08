@@ -1,5 +1,5 @@
 {
-  "id": "skull02",
+  "id": "skull03",
   "camera": {
     "rotation": [
       0.03146904706954956,
@@ -70,6 +70,10 @@
   ],
   "controls": {
     "closed": true,
+    "model": {
+      "type": "toggle",
+      "value": false
+    },
     "blend": {
       "type": "toggle",
       "value": true

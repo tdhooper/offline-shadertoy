@@ -8,7 +8,9 @@
 // (often seen in heatmaps in papers etc)
 //
 
-#define PI 3.14159265359
+#ifndef PI
+    #define PI 3.14159265359
+#endif
 
 vec3 fusion(float x) {
     float t = clamp(x,0.0,1.0);

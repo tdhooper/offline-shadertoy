@@ -89,7 +89,7 @@ function init(drawRaymarch, renderNodes, uniforms) {
     }
 
     drawPolygons(Object.assign({model: model, albedo: [1,1,1]}, state));
-    drawPolygons(Object.assign({model: model2, albedo: [1,1,1]}, state));
+    // drawPolygons(Object.assign({model: model2, albedo: [1,1,1]}, state));
 
     setup(state, (context) => {
       drawRaymarch(state, () => {
