@@ -225,6 +225,7 @@ float fTorusEdge(vec3 p, float smallRadius, float largeRadius) {
 // curve the x axis around the y axis
 void pCurve(inout vec3 p, float r) {
     p.z -= r;
+    r = abs(r);
     p = vec3(atan(p.x, -p.z) * r, p.y, length(p.xz) - r);
 }
 
@@ -259,6 +260,28 @@ float fZygomatic(vec3 p) {
     return d;
 }
 
+float fMaxilla(vec3 p) {
+    vec3 pp = p;
+    p = pRx(p - vec3(0,.42,-.29), .4);
+    float gum = sdEllipsoidXXZ(p, vec2(.2, .27));
+    float gumback = pRy(p, .55).z - .01;
+    gumback = smin(gumback, pRy(p, -.55).z - .08, .04);
+    gum = smax(gum, gumback, .08);
+    p = pRx(p, .02);
+    pCurve(p.zxy, -.8);
+    gum = smax(gum, p.y, .02);
+    p = pp;
+    p = pRx(p - vec3(0,.33,-.32), .3);
+    float maxilla = length(p.xz) - .18;
+    maxilla = smax(maxilla, -(length((p - vec3(0,0,.1)).xz) - .1), .1);
+    maxilla = smax(maxilla, p.y - .02, .1);
+    maxilla = smax(maxilla, -p.y - .2, .1);
+    gum = smin(gum, maxilla, .07);
+    p = pp;
+    float roof = sdEllipsoidXXZ(p - vec3(0,.47,-.28), vec2(.13, .22));
+    gum = smax(gum, -roof, .03);
+    return gum;
+}
 
 float map(vec3 p) {
     p.x = abs(p.x);
@@ -284,6 +307,9 @@ float map(vec3 p) {
     d = smin(d, sphenoid, .3);
     float sphenoidcut = sdEllipsoidXXZ(pRx(pRz(p - vec3(.4,.1,-.35), .4), .3).xzy, vec2(.005, .25) * .5);
     d = smax(d, -sphenoidcut, .3);
+    p = pp;
+    float maxilla = fMaxilla(p);
+    d = smin(d, maxilla, .1);
     float zygomatic = fZygomatic(p);
     d = smin(d, zygomatic, .1);
     p = pRy(pRz(p - vec3(.18,.105,-.47), .15), .4);
@@ -292,7 +318,6 @@ float map(vec3 p) {
     float thic = .02;
     socket = sdUberprim(p, vec4(.155,.12,thic,0), vec3(.12,thic,thic));
     d = smin(d, socket, .05);
-    p = pp;
 
     // p -= vec3(.15,.1,-.5);
     // pCurve(p, .1);
