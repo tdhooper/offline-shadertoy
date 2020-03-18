@@ -280,7 +280,20 @@ float fMaxilla(vec3 p) {
     p = pp;
     float roof = sdEllipsoidXXZ(p - vec3(0,.47,-.28), vec2(.13, .22));
     gum = smax(gum, -roof, .03);
-    return gum;
+    float d = gum;
+
+    p -= vec3(.2,.28,-.39);
+    float t = dot(p, normalize(vec3(7,3,6))) - .06;
+    t = smin(t, dot(p, normalize(vec3(-1,1,15))) - .03, .02);
+    t = smax2(t, -dot(p, normalize(vec3(-3,-6,10))) - .055, .06);
+    t = smax2(t, -dot(p, normalize(vec3(-2.5,1.5,.7))) - .06, .03);
+    // t = max(t, length(p) - .15);
+    d = smin(d, t, .04);
+    // d = smin(d, t, .0);
+    
+    // d = max(d, length(p) - .15);
+
+    return d;
 }
 
 float map(vec3 p) {
@@ -310,14 +323,17 @@ float map(vec3 p) {
     p = pp;
     float maxilla = fMaxilla(p);
     d = smin(d, maxilla, .1);
-    float zygomatic = fZygomatic(p);
-    d = smin(d, zygomatic, .1);
-    p = pRy(pRz(p - vec3(.18,.105,-.47), .15), .4);
-    pCurve(p, .25);
-    float socket = fTorus(p.yzx, .02, .1);
-    float thic = .02;
-    socket = sdUberprim(p, vec4(.155,.12,thic,0), vec3(.12,thic,thic));
-    d = smin(d, socket, .05);
+
+    d = maxilla;
+
+    // float zygomatic = fZygomatic(p);
+    // d = smin(d, zygomatic, .1);
+    // p = pRy(pRz(p - vec3(.18,.105,-.47), .15), .4);
+    // pCurve(p, .25);
+    // float socket = fTorus(p.yzx, .02, .1);
+    // float thic = .02;
+    // socket = sdUberprim(p, vec4(.155,.12,thic,0), vec3(.12,thic,thic));
+    // d = smin(d, socket, .05);
 
     // p -= vec3(.15,.1,-.5);
     // pCurve(p, .1);
