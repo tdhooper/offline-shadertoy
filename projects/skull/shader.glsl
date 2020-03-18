@@ -142,6 +142,32 @@ float sdUberprim(vec3 p, vec4 s, vec3 r) {
 }
 
 
+float vmax(vec3 v) {
+    return max(max(v.x, v.y), v.z);
+}
+
+float vmax(vec2 v) {
+    return max(v.x, v.y);
+}
+
+float fBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
+
+float fCorner(vec3 p, float r) {
+    vec3 d = p + r;
+    return length(max(d, vec3(0))) + vmax(min(d, vec3(0))) - r;
+}
+
+float fCorner(vec2 p, float r) {
+    vec2 d = p + r;
+    return length(max(d, vec2(0))) + vmax(min(d, vec2(0))) - r;
+}
+
+
+
+
 
 
 // iq https://www.shadertoy.com/view/MldfWn
@@ -264,12 +290,10 @@ float fMaxilla(vec3 p) {
     vec3 pp = p;
     p = pRx(p - vec3(0,.42,-.29), .4);
     float gum = sdEllipsoidXXZ(p, vec2(.2, .27));
-    float gumback = pRy(p, .55).z - .01;
-    gumback = smin(gumback, pRy(p, -.55).z - .08, .04);
-    gum = smax(gum, gumback, .08);
+    
     p = pRx(p, .02);
     pCurve(p.zxy, -.8);
-    gum = smax(gum, p.y, .02);
+    float base = p.y;
     p = pp;
     p = pRx(p - vec3(0,.33,-.32), .3);
     float maxilla = length(p.xz) - .18;
@@ -277,23 +301,32 @@ float fMaxilla(vec3 p) {
     maxilla = smax(maxilla, p.y - .02, .1);
     maxilla = smax(maxilla, -p.y - .2, .1);
     gum = smin(gum, maxilla, .07);
-    p = pp;
-    float roof = sdEllipsoidXXZ(p - vec3(0,.47,-.28), vec2(.13, .22));
-    gum = smax(gum, -roof, .03);
     float d = gum;
+    p = pp;
+    
 
     p -= vec3(.2,.28,-.39);
     float t = dot(p, normalize(vec3(7,3,6))) - .06;
     t = smin(t, dot(p, normalize(vec3(-1,1,15))) - .03, .02);
     t = smax2(t, -dot(p, normalize(vec3(-3,-6,10))) - .055, .06);
     t = smax2(t, -dot(p, normalize(vec3(-2.5,1.5,.7))) - .06, .03);
-    // t = max(t, length(p) - .15);
     d = smin(d, t, .04);
-    // d = smin(d, t, .0);
-    
-    // d = max(d, length(p) - .15);
-
     p = pp;
+
+
+    
+    float foramen = length(p - vec3(.17,.27,-.475)) - .0001;
+    d = smax(d, -foramen, .02);
+
+    float bridge = length((p - vec3(0,.055,-.71)).zy) - .17;
+    d = smax(d, -bridge, .01);
+
+    float bridge2 = length(pRx(p - vec3(.13,.1,-.6), 1.1).xy) - .12;
+    d = smax(d, -bridge2, .02);
+
+    float socket = length(p - vec3(.18,.1,-.47)) - .11;
+    d = smax(d, -socket, .05);
+
     p -= vec3(.0,.25,-.5);
     p = pRx(p, .4);
     float nosb = sdEllipse(p.xy - vec2(.0,.005), vec2(.02,.075));
@@ -306,8 +339,30 @@ float fMaxilla(vec3 p) {
     d = smax(d, -nos, .04);
     p = pp;
 
-    float foramen = length(p - vec3(.17,.27,-.475)) - .0001;
-    d = smax(d, -foramen, .02);
+    p = pRx(p - vec3(0,.42,-.29), .1);
+    float gumback = pRy(p, .55).z - .01;
+    gumback = smin(gumback, pRy(p, -.55).z - .08, .04);
+    d = smax(d, gumback, .08);
+    p = pp;
+
+    // d = gumback;
+
+    d = smax(d, base, .02);
+    float roof = sdEllipsoidXXZ(p - vec3(0,.47,-.28), vec2(.13, .22));
+    d = smax(d, -roof, .03);
+
+    p = p - vec3(.17,.3,-.24);
+    float part = dot(p, normalize(vec3(1,-.2,1)));
+    // part = max(part, length(p) - .03);
+    // d = part;
+    d = smax(d, part, .03);
+    p = pp;
+
+    float cut = fCorner(pRz(pRx(p - vec3(.04,.18,-.45), .25), .15).zy * vec2(-1,1), .01);
+    d = smax(d, -cut, .04);
+
+    float cut2 = fCorner(pRx(p - vec3(0,.07,-.5), -.6).zy - vec2(.1,0), 0.);
+    d = smax(d, -cut2, .02);
 
     return d;
 }
@@ -338,9 +393,10 @@ float map(vec3 p) {
     d = smax(d, -sphenoidcut, .3);
     p = pp;
     float maxilla = fMaxilla(p);
-    d = smin(d, maxilla, .1);
+    // d = smin(d, maxilla, .1);
+    d = min(d, maxilla);
 
-    d = maxilla;
+    // d = maxilla;
 
     // float zygomatic = fZygomatic(p);
     // d = smin(d, zygomatic, .1);
