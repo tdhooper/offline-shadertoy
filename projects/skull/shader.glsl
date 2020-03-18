@@ -293,6 +293,22 @@ float fMaxilla(vec3 p) {
     
     // d = max(d, length(p) - .15);
 
+    p = pp;
+    p -= vec3(.0,.25,-.5);
+    p = pRx(p, .4);
+    float nosb = sdEllipse(p.xy - vec2(.0,.005), vec2(.02,.075));
+    p = pRz(p, -.5);
+    float nos = sdEllipse(p.xy, vec2(.05,.1));
+    nos = max(nos, -p.z-.15);
+    nosb = max(nosb, -p.z-.15);
+    d = smin(d, nos, .075);
+    d = smin(d, nosb, .05);
+    d = smax(d, -nos, .04);
+    p = pp;
+
+    float foramen = length(p - vec3(.17,.27,-.475)) - .0001;
+    d = smax(d, -foramen, .02);
+
     return d;
 }
 
