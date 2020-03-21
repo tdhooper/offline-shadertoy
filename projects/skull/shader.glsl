@@ -255,7 +255,7 @@ void pCurve(inout vec3 p, float r) {
     p = vec3(atan(p.x, -p.z) * r, p.y, length(p.xz) - r);
 }
 
-float fZygomatic(vec3 p) {
+float fZygomatic2(vec3 p) {
     vec3 pp = p;
     p = pRy(pRx(pRz(p - vec3(.35,.215,-.26), .3), .12), -.2);
     float largeRadius = .35;
@@ -286,47 +286,107 @@ float fZygomatic(vec3 p) {
     return d;
 }
 
+float fZygomatic(vec3 p) {
+    float o = 1e12;
+    float s = 1e12;
+    float part;
+    p -= vec3(.33,.23,-.35);
+    vec3 pp = p;
+    
+    // surface
+    part = dot(p, normalize(vec3(1,-.05,-.4)));
+    s = min(s, part);
+
+    p -= vec3(-.06,0,-.09);
+    part = dot(p, normalize(vec3(.8,-.05,-1)));
+    s = smax(s, part, .03);
+
+    // outline
+    p = pp;
+    p = pRz(pRy(p - vec3(-.12,-.12,-.08), .6), .4);
+    part = sdEllipse(p.xy, vec2(.08,.095));
+    part = min(part, p.x);
+    o = -part;
+
+    p = pp;
+    p = p - vec3(.0,-.06,.04);
+    p = p * vec3(1,1,-1);
+    pCurve(p.yxz, .25);
+    part = fCorner(p.zy * vec2(-1,1), .03);
+    o = smax(o, -part, .04);
+
+    p = pp;
+    p = pRx(p - vec3(.0,.065,.065), .55);
+    p = p * vec3(1,-1,1);
+    pCurve(p.zxy, .4);
+    part = -p.y;
+    o = smax(o, -part, .01);    
+    // return max(p.y, length(p) - .1);
+
+    float d = smax(o, s, .05);
+
+    // join
+    p = pp;
+    p -= vec3(-.06,.055,-.08);
+    part = dot(p, normalize(vec3(-2,3,-1.3)));
+    d = smax(d, part, .02);
+
+
+    // p = pp;
+    // p = p - vec3(-.12,-.12,-.08);
+    // d = length(p) - .01;
+    // d = min(d, dot(p, normalize(vec3(1,0,0))));
+
+    return d;
+}
+
 float fMaxilla(vec3 p) {
+    float d = 1e12;
+
+    // Gum
     vec3 pp = p;
     p = pRx(p - vec3(0,.42,-.29), .4);
     float gum = sdEllipsoidXXZ(p, vec2(.2, .27));
-    
+    d = gum;
+
+    // Gum base (used later)
     p = pRx(p, .02);
     pCurve(p.zxy, -.8);
     float base = p.y;
+
+    // Core
     p = pp;
     p = pRx(p - vec3(0,.33,-.32), .3);
     float maxilla = length(p.xz) - .18;
     maxilla = smax(maxilla, -(length((p - vec3(0,0,.1)).xz) - .1), .1);
     maxilla = smax(maxilla, p.y - .02, .1);
     maxilla = smax(maxilla, -p.y - .2, .1);
-    gum = smin(gum, maxilla, .07);
-    float d = gum;
+    d = smin(d, maxilla, .07);
     p = pp;
-    
 
+    // Cheek
     p -= vec3(.2,.28,-.39);
     float t = dot(p, normalize(vec3(7,3,6))) - .06;
     t = smin(t, dot(p, normalize(vec3(-1,1,15))) - .03, .02);
     t = smax2(t, -dot(p, normalize(vec3(-3,-6,10))) - .055, .06);
-    t = smax2(t, -dot(p, normalize(vec3(-2.5,1.5,.7))) - .06, .03);
+    t = smax2(t, -dot(p, normalize(vec3(-2.5,1.5,.7))) - .06, .01);
     d = smin(d, t, .04);
     p = pp;
 
-
-    
     float foramen = length(p - vec3(.17,.27,-.475)) - .0001;
     d = smax(d, -foramen, .02);
 
+    // Nose bridge
     float bridge = length((p - vec3(0,.055,-.71)).zy) - .17;
     d = smax(d, -bridge, .01);
-
     float bridge2 = length(pRx(p - vec3(.13,.1,-.6), 1.1).xy) - .12;
     d = smax(d, -bridge2, .02);
 
+    // Eye socket part 1
     float socket = length(p - vec3(.18,.1,-.47)) - .11;
     d = smax(d, -socket, .05);
 
+    // Nose hole
     p -= vec3(.0,.25,-.5);
     p = pRx(p, .4);
     float nosb = sdEllipse(p.xy - vec2(.0,.005), vec2(.02,.075));
@@ -339,28 +399,27 @@ float fMaxilla(vec3 p) {
     d = smax(d, -nos, .04);
     p = pp;
 
+    // Gum back
     p = pRx(p - vec3(0,.42,-.29), .1);
     float gumback = pRy(p, .55).z - .01;
     gumback = smin(gumback, pRy(p, -.55).z - .08, .04);
     d = smax(d, gumback, .08);
     p = pp;
 
-    // d = gumback;
-
+    // Gum part 2
     d = smax(d, base, .02);
     float roof = sdEllipsoidXXZ(p - vec3(0,.47,-.28), vec2(.13, .22));
     d = smax(d, -roof, .03);
 
+    // Back of maxilla
     p = p - vec3(.17,.3,-.24);
     float part = dot(p, normalize(vec3(1,-.2,1)));
-    // part = max(part, length(p) - .03);
-    // d = part;
     d = smax(d, part, .03);
     p = pp;
 
+    // Eye socket part 2
     float cut = fCorner(pRz(pRx(p - vec3(.04,.18,-.45), .25), .15).zy * vec2(-1,1), .01);
     d = smax(d, -cut, .04);
-
     float cut2 = fCorner(pRx(p - vec3(0,.07,-.5), -.6).zy - vec2(.1,0), 0.);
     d = smax(d, -cut2, .02);
 
@@ -397,6 +456,9 @@ float map(vec3 p) {
     d = min(d, maxilla);
 
     // d = maxilla;
+
+    float zygomatic = fZygomatic(p);
+    d = smin2(d, zygomatic, .0);
 
     // float zygomatic = fZygomatic(p);
     // d = smin(d, zygomatic, .1);

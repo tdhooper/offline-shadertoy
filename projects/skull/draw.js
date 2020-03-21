@@ -45,16 +45,17 @@ function init(drawRaymarch, renderNodes, uniforms) {
     frag: glslify`
       #extension GL_OES_standard_derivatives : enable
       precision mediump float;
-      uniform bool guiSplit;
+      uniform bool guiModel;
       uniform vec3 albedo;
       varying vec3 vnormal;
       void main() {
         vec3 color = vnormal * .5 + .5;
         vec3 lig = vec3(0,1.5,.5);
         lig = normalize(vec3(1,1,0));
-        // if ( ! guiSplit) {
-          color = albedo * pow(clamp(dot(lig, vnormal) * .5 + .5, 0., 1.), 1./2.2);
-        // }
+        if ( ! guiModel) {
+          color = albedo;
+          color *= pow(clamp(dot(lig, vnormal) * .5 + .5, 0., 1.), 1./2.2);
+        }
         gl_FragColor = vec4(color, 1);
       }
     `,
