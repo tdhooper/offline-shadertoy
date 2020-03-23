@@ -293,21 +293,47 @@ float fZygomatic(vec3 p) {
     p -= vec3(.33,.23,-.35);
     vec3 pp = p;
     
-    // surface
+    // surface base
     part = dot(p, normalize(vec3(1,-.05,-.4)));
     s = min(s, part);
 
-    p -= vec3(-.06,0,-.09);
-    part = dot(p, normalize(vec3(.8,-.05,-1)));
+    // surface top curve
+    p = pp;
+    p -= vec3(0,-.07,0);
+    part = dot(p, normalize(vec3(1.,.07,-.4)));
+    s = smin(s, part, .01);
+
+    // surface front curve
+    p -= vec3(-.06,.07,-.09);
+    part = dot(p, normalize(vec3(.8,.1,-1)));
     s = smax(s, part, .03);
 
-    // outline
+    // cheek bump
+    p = pp;
+    p -= vec3(-.06,.02,-.03);
+    s = smin(s, length(p) - .01, .1);
+
+    // surface back
+    float s2 = -(s + .04);
+    p = pp;
+    p = pRy(p - vec3(-.06,-.12,-.1), -.2);
+    part = length(p.zy) - .12;
+    s2 = smin(s2, part, .02);
+
+    s = max(s, s2);
+
+    // outline eye
     p = pp;
     p = pRz(pRy(p - vec3(-.12,-.12,-.08), .6), .4);
     part = sdEllipse(p.xy, vec2(.08,.095));
-    part = min(part, p.x);
+    p = pRz(p - vec3(.035,.08543,0), -.5);
+    if (p.x < 0.) part = p.y;
+    part = smax(part, p.z-.09, .12);
     o = -part;
 
+    // return part;
+
+    // outline top left corner
     p = pp;
     p = p - vec3(.0,-.06,.04);
     p = p * vec3(1,1,-1);
@@ -315,21 +341,27 @@ float fZygomatic(vec3 p) {
     part = fCorner(p.zy * vec2(-1,1), .03);
     o = smax(o, -part, .04);
 
+    // outline bottom
     p = pp;
-    p = pRx(p - vec3(.0,.065,.065), .55);
+    p = pRx(p - vec3(.0,.072,.065), .55);
     p = p * vec3(1,-1,1);
-    pCurve(p.zxy, .4);
+    pCurve(p.zxy, .5);
     part = -p.y;
-    o = smax(o, -part, .01);    
-    // return max(p.y, length(p) - .1);
+    o = max(o, -part);
 
     float d = smax(o, s, .05);
 
-    // join
+    // join front
     p = pp;
     p -= vec3(-.06,.055,-.08);
     part = dot(p, normalize(vec3(-2,3,-1.3)));
     d = smax(d, part, .02);
+
+    // join back
+    p = pp;
+    p -= vec3(0,-.005,.1);
+    part = fCorner(p.zy * vec2(-1,1), .015);
+    d = smax(d, -part, .02);
 
 
     // p = pp;
