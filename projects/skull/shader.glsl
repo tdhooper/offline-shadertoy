@@ -351,6 +351,12 @@ float fZygomatic(vec3 p) {
 
     float d = smax(o, s, .05);
 
+    // inside corner
+    p = pp;
+    p = pRz(pRx(pRy(p - vec3(-.05,-.03,-.02), 1.1), .3), -.2);
+    part = fCorner(p * vec3(1,1,-1), .04);
+    d = smax(d, -part, .02);
+
     // join front
     p = pp;
     p -= vec3(-.06,.055,-.08);
@@ -361,6 +367,19 @@ float fZygomatic(vec3 p) {
     p = pp;
     p -= vec3(0,-.005,.1);
     part = fCorner(p.zy * vec2(-1,1), .015);
+    d = smax(d, -part, .02);
+
+    // join behind
+    p = pp;
+    p -= vec3(-.1,-.04,0);
+    part = dot(p, vec3(1,.2,-.3));
+    d = smax(d, -part, .02);
+
+    // join top
+    p = pp;
+    p -= vec3(-.04,-.19,-.03);
+    part = dot(p, vec3(.3,1,-.2));
+    // return part;
     d = smax(d, -part, .02);
 
 
@@ -491,6 +510,8 @@ float map(vec3 p) {
 
     float zygomatic = fZygomatic(p);
     d = smin2(d, zygomatic, .0);
+
+    // return zygomatic;
 
     // float zygomatic = fZygomatic(p);
     // d = smin(d, zygomatic, .1);
