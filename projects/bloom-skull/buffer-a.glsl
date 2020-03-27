@@ -26,7 +26,7 @@ mat3 basisMatrix(vec3 forward, vec3 up) {
 #pragma glslify: inverse = require(glsl-inverse)
 #pragma glslify: import('./quat.glsl')
 #pragma glslify: import('./camera.glsl')
-#pragma glslify: easeOutSine = require(glsl-easings/sine-out)
+#pragma glslify: easeOutSine = require(glsl-easings/circular-out)
 
 float skullOffset;
 float skullRadius;
@@ -141,8 +141,15 @@ Model opU(Model a, Model b) {
 }
 
 #pragma glslify: import('./bloom.glsl')
+#pragma glslify: sdSkull = require(../skull/skull.glsl)
 
 float drawSkull(vec3 p) {
+    float s = 2.5;
+    //pR(p.xz, -.8);
+    //pR(p.xz, -.8);
+    pR(p.yz, -.3);
+    return sdSkull((p.xyz * vec3(1,-1,-1)) / s) * s;
+
     float d = length(p) - 1.;
     d = abs(d) - .1;
     p.x = abs(p.x);
@@ -194,11 +201,14 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     p.y -= skullHeight;
     p *= skullRotate;
 
-    float rt = 1. - easeOutSine(rangec(.0, 1.5, t));
+    float rt = 1. - easeOutSine(rangec(.0, 2.2, t));
+    //rt = 1. - rangec(.0, 2., t);
     
-    // pR(p.xz, rt * -5.);
+    //pR(p.xz, rt * 9.);
     // pR(p.yz, rt * 5.);
-    // pR(p.xy, rt * 5.);
+       // pR(p.xy, 1.);
+
+    //pR(p.xy, rt * 3.);
     
     
     
@@ -304,9 +314,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     skullOffset = 1.5;
     skullRadius = .3;
-    skullRotate = basisMatrix(vec3(.5,1,.4), vec3(-.9,1.,0));
+    skullRotate = basisMatrix(vec3(.5,1,-.4), vec3(-.9,1.,0));
+    //skullRotate = basisMatrix(vec3(1,0,0), vec3(0,1,0));
 
-    bloomPosition = normalize(vec3(1,.8,-.2)) * skullRadius * .75;
+    bloomPosition = normalize(vec3(1,.8,-.2)) * skullRadius;
     bloomRotate = basisMatrix(cross(vec3(0,-1.,.5), bloomPosition), bloomPosition);
 
     stepPosition = vec3(0,skullOffset,0) + skullRotate * bloomPosition;
@@ -315,7 +326,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     // position 2  =  position  +  rotation * position
 
-    delay = .7;
+    delay = 1.5;
 
     cameraPrecalc();
     calcPhyllotaxis();
@@ -323,7 +334,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime = mod(iTime/3., 1.);
+    float mTime = mod(iTime/1., 1.);
     time = mTime;
     // time = 1.;
 
