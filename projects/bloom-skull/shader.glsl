@@ -36,7 +36,7 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale) {
     float centerDepth = centerTex.a * uFar;
     float centerSize = getBlurSize(centerDepth, focusPoint, focusScale);
     vec3 color = centerTex.rgb;
-    //return color;
+    // return color;
     float tot = 1.0;
 
     float radius = RAD_SCALE;
@@ -64,7 +64,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
     // uv.x = 1.- uv.x;
     uPixelSize = vec2(.001) / (iResolution.xy / iResolution.x);
-    vec3 col = depthOfField(uv, .031 * uFar, .08);
+    vec3 col = depthOfField(uv, .045 * uFar, .08);
     col = pow(col, vec3(0.4545));
     fragColor = vec4(col, 1);
 }

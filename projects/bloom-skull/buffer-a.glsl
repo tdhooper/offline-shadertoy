@@ -26,7 +26,8 @@ mat3 basisMatrix(vec3 forward, vec3 up) {
 #pragma glslify: inverse = require(glsl-inverse)
 #pragma glslify: import('./quat.glsl')
 #pragma glslify: import('./camera.glsl')
-#pragma glslify: easeOutSine = require(glsl-easings/circular-out)
+#pragma glslify: easeOutSine = require(glsl-easings/sine-out)
+#pragma glslify: easeOutCirc = require(glsl-easings/circular-out)
 
 float skullOffset;
 float skullRadius;
@@ -145,9 +146,9 @@ Model opU(Model a, Model b) {
 
 float drawSkull(vec3 p) {
     float s = 2.5;
+    // pR(p.xz, .8);
     //pR(p.xz, -.8);
-    //pR(p.xz, -.8);
-    pR(p.yz, -.3);
+    // pR(p.yz, -.3);
     return sdSkull((p.xyz * vec3(1,-1,-1)) / s) * s;
 
     float d = length(p) - 1.;
@@ -176,8 +177,8 @@ vec3 opU(vec3 a, vec3 b) {
 
 void calcSkullAnim(float t, inout float skullHeight, inout float skullScale) {
     // t = clamp(t, 0., 1.);
-    skullHeight = mix(.2, skullOffset, easeOutSine(rangec(.35, 1.2, t)));
-    skullScale = mix(.0, 1., easeOutSine(rangec(.4, .7, t)));
+    skullHeight = mix(.2, skullOffset, easeOutSine(rangec(.55, 1.5, t)));
+    skullScale = mix(.0, 1., easeOutSine(rangec(.45, 1., t)));
 }
 
 // draw bloom with a skull inside
@@ -188,8 +189,8 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     }
 
     // bloom
-    float bt = smoothstep(0., 1., t);
-    bt = easeOutSine(bt);
+    float bt = smoothstep(0., 2., t);
+    bt = easeOutCirc(bt);
     float bs = 1.2;
     Model blm = drawBloom(p / bs, bt);
     vec3 res = vec3(blm.d * bs, 0, 0);
@@ -201,12 +202,12 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     p.y -= skullHeight;
     p *= skullRotate;
 
-    float rt = 1. - easeOutSine(rangec(.0, 2.2, t));
+    float rt = 1. - easeOutCirc(rangec(.0, 3., t));
     //rt = 1. - rangec(.0, 2., t);
     
-    //pR(p.xz, rt * 9.);
-    // pR(p.yz, rt * 5.);
-       // pR(p.xy, 1.);
+    //pR(p.xz, rt * 5.);
+    pR(p.yz, rt * 5.);
+     //pR(p.xy, 1.);
 
     //pR(p.xy, rt * 3.);
     
@@ -312,16 +313,18 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
-    skullOffset = 1.5;
+    skullOffset = 1.8;
     skullRadius = .3;
     skullRotate = basisMatrix(vec3(.5,1,-.4), vec3(-.9,1.,0));
-    //skullRotate = basisMatrix(vec3(1,0,0), vec3(0,1,0));
+    skullRotate = basisMatrix(vec3(.9,1,.9), vec3(1,0,1));
 
-    bloomPosition = normalize(vec3(1,.8,-.2)) * skullRadius;
-    bloomRotate = basisMatrix(cross(vec3(0,-1.,.5), bloomPosition), bloomPosition);
+    bloomPosition = vec3(.8,.8,-.1) * skullRadius;
+    // bloomPosition += vec3(0,0,.1);
+    bloomRotate = basisMatrix(vec3(-.5,1,0), vec3(1,0,0));
+    //  bloomPosition -= vec3(0,0,.1);
 
     stepPosition = vec3(0,skullOffset,0) + skullRotate * bloomPosition;
-    stepScale = .2;
+    stepScale = .15;
     stepRotate = skullRotate * bloomRotate;
 
     // position 2  =  position  +  rotation * position
@@ -334,7 +337,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime = mod(iTime/1., 1.);
+    float mTime = mod(iTime/2., 1.);
     time = mTime;
     // time = 1.;
 

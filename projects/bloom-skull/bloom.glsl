@@ -159,6 +159,8 @@ void calcPhyllotaxis() {
 Model drawBloom(vec3 p, float t) {
     // t = mod(iTime, 1.);
 
+    pR(p.xz, .7);
+
     Model res = Model(1e12, p, vec2(0), vec2(0), 0., 0., 0.);
 
     float bound = length(p) - mix(.7, 1.5, t);
