@@ -34,10 +34,6 @@ float smax3(float a, float b, float k){
     );
 }
 
-
-
-
-
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
@@ -57,6 +53,10 @@ vec3 pRy(vec3 p, float a) {
 
 vec3 pRz(vec3 p, float a) {
     pR(p.xy, a); return p;
+}
+
+float range(float vmin, float vmax, float value) {
+    return clamp((value - vmin) / (vmax - vmin), 0., 1.);
 }
 
 
@@ -312,16 +312,16 @@ float fZygomatic(vec3 p) {
     d = smax(d, -part, .02);
 
     // join front
-    p = pp;
-    p -= vec3(-.06,.055,-.08);
-    part = dot(p, normalize(vec3(-2,3,-1.3)));
-    d = smax(d, part, .02);
+    // p = pp;
+    // p -= vec3(-.06,.055,-.08);
+    // part = dot(p, normalize(vec3(-2,3,-1.3)));
+    // d = smax(d, part, .02);
 
     // join back
-    p = pp;
-    p -= vec3(0,-.005,.1);
-    part = fCorner(p.zy * vec2(-1,1), .015);
-    d = smax(d, -part, .02);
+    // p = pp;
+    // p -= vec3(0,-.005,.1);
+    // part = fCorner(p.zy * vec2(-1,1), .015);
+    // d = smax(d, -part, .02);
 
     // join behind
     p = pp;
@@ -342,6 +342,18 @@ float fZygomatic(vec3 p) {
     // d = length(p) - .01;
     // d = min(d, dot(p, normalize(vec3(1,0,0))));
 
+    return d;
+}
+
+float fZygomaticArch(vec3 p) {
+    return fZygomatic2(p);
+
+    vec3 pp = p;
+    p = pRy(pRx(pRz(p - vec3(.35,.215,-.26), .3), .12), -.2);
+    p.x += .35;
+    vec2 c = vec2(length(p.xz), p.y);
+    c.x -= .35;
+    float d = sdEllipse(c, vec2(.01, .02));
     return d;
 }
 
@@ -374,12 +386,12 @@ float fMaxilla(vec3 p) {
     float t = dot(p, normalize(vec3(7,3,6))) - .06;
     t = smin(t, dot(p, normalize(vec3(-1,1,15))) - .03, .02);
     t = smax2(t, -dot(p, normalize(vec3(-3,-6,10))) - .055, .06);
-    t = smax2(t, -dot(p, normalize(vec3(-2.5,1.5,.7))) - .06, .01);
+    // t = smax2(t, -dot(p, normalize(vec3(-2.5,1.5,.7))) - .06, .01);
     d = smin(d, t, .04);
     p = pp;
 
-    float foramen = length(p - vec3(.17,.27,-.475)) - .0001;
-    d = smax(d, -foramen, .02);
+    // float foramen = length(p - vec3(.17,.27,-.475)) - .0001;
+    // d = smax(d, -foramen, .02);
 
     // Nose bridge
     float bridge = length((p - vec3(0,.055,-.71)).zy) - .17;
@@ -455,15 +467,38 @@ float sdSkull(vec3 p) {
     d = smin(d, sphenoid, .3);
     float sphenoidcut = sdEllipsoidXXZ(pRx(pRz(p - vec3(.4,.1,-.35), .4), .3).xzy, vec2(.005, .25) * .5);
     d = smax(d, -sphenoidcut, .3);
+    float cranium = d;
     p = pp;
-    float maxilla = fMaxilla(p);
-    // d = smin(d, maxilla, .1);
-    d = min(d, maxilla);
 
-    // d = maxilla;
+    float maxilla = fMaxilla(p);
+    maxilla = smin(maxilla, cranium, .0);
 
     float zygomatic = fZygomatic(p);
-    d = smin2(d, zygomatic, .0);
+    zygomatic = smin(zygomatic, cranium, .0);
+
+    float arch = fZygomaticArch(p);
+    arch = smin(arch, cranium, .08);
+
+    float join;
+
+    p -= vec3(.2,.28,-.39);
+    join = dot(p, normalize(vec3(-2.5,1.5,.7))) + .06;
+    p = pp;
+
+    d = mix(zygomatic, maxilla, smoothstep(-.03, .03, join));
+
+    p -= vec3(.33,.23,-.35);
+    p -= vec3(0,-.005,.1);
+    join = dot(p, vec3(.4,0,1));
+
+    // return max(join, length(p) - .1);
+
+    p = pp;
+
+    d = mix(d, arch, smoothstep(0., .08, join + .03));
+
+    // d = smin2(d, zygomatic, .0);
+
 
     // return zygomatic;
 
