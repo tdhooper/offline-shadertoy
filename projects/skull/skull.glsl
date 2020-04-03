@@ -95,6 +95,9 @@ float sdUberprim(vec3 p, vec4 s, vec3 r) {
     return sdUnterprim(p, s, r, ba/dot(ba,ba), ba.y);
 }
 
+float vmin(vec2 v) {
+    return min(v.x, v.y);
+}
 
 float vmax(vec3 v) {
     return max(max(v.x, v.y), v.z);
@@ -186,6 +189,11 @@ float sdEllipsoidXXZ( in vec3 p, in vec2 r )
     return sdEllipse( vec2( length(p.xy), p.z ), r );
 }
 
+float sdEllipsoidXXZPill(vec3 p, vec2 r) {
+    p.z = min(p.z, 0.);
+    return sdEllipsoidXXZ(p, r);
+}
+
 // Torus in the XZ-plane
 float fTorus(vec3 p, float smallRadius, float largeRadius) {
     return length(vec2(length(p.xz) - largeRadius, p.y)) - smallRadius;
@@ -200,6 +208,27 @@ float fEllipseTorus(vec3 p, vec2 smallRadius, float largeRadius) {
 float fTorusEdge(vec3 p, float smallRadius, float largeRadius) {
     p.x += largeRadius;
     return fTorus(p, smallRadius, largeRadius);
+}
+
+float fPipe90(vec3 p, float smallRadius, float largeRadius) {
+    float d = length(max(p.xz, vec2(0))) + vmax(min(p.xz, vec2(0)));
+    vec2 c = vec2(d - largeRadius, p.y);
+    return length(c) - smallRadius;
+}
+
+float fPipe90FlatOld(vec3 p, float smallRadius, float largeRadius) {
+    float d = length(max(p.xz, vec2(0))) - largeRadius;
+    d = min(d, max(p.z - largeRadius, 0.));
+    vec2 c = vec2(d, max(p.y, 0.));
+    return length(c) - smallRadius;
+}
+
+float fPipe90Flat(vec3 p, float smallRadius, float largeRadius) {
+    float d = length(max(p.xz, vec2(0))) - largeRadius;
+    // d = min(d, max(p.z - largeRadius, 0.));
+    d = min(d, 0.);
+    vec2 c = vec2(d, max(p.y, 0.));
+    return length(c) - smallRadius;
 }
 
 // curve the x axis around the y axis
@@ -443,8 +472,52 @@ float fMaxilla(vec3 p) {
     return d;
 }
 
+float fBrow2(vec3 p) {
+    vec3 pp = p;
+    p = pRx(pRy(pRz(p - vec3(.13,.05,-.42), .3), .4), .4);
+    float d = fPipe90Flat(-p.xzy, .02, .12);
+    float f = -p.z - .02;
+    p = pp;
+    p = pRx(p - vec3(0,-.11,-.5), -.3);
+    float part = -p.z;
+    float mask = smax(f, part, .05);
+    d = max(d, mask);
+    return d;
+}
+
+float fBrow(vec3 p) {
+    vec3 pp = p;
+    float d;
+    p = pRx(p - vec3(0,-.11,-.555), -.26);
+    d = -p.z;
+    return d;
+}
+
+float fSocketBump(vec3 p) {
+    p = pRz(p - vec3(.13,.04,-.35), .5);
+    return sdEllipsoidXXZ(p.xzy, vec2(.19,.13));
+    return length(p) - .17;
+}
+
+float fSocketBump2(vec3 p) {
+    p -= vec3(.13,.09,-.39);
+    return length(p) - .17;
+}
+
+float fSocketCut(vec3 p) {
+    p = pRz(p - vec3(.16,.08,-.4), .2);
+    p.z = max(p.z, 0.);
+    return sdEllipsoidXXZ(p.xzy, vec2(.08,.06));
+}
+
 float sdSkull(vec3 p) {
+    // return fPipe90(p, .1, .5);
+
     p.x = abs(p.x);
+
+    // p = pRx(pRy(pRz(p - vec3(.13,.05,-.42), .3), .4), .4);
+    // return fPipe90Flat(-p.xzy, .02, .12);
+
     vec3 pp = p;
     float d = 1e12;
     float back = sdEllipsoidXXZ(p - vec3(0,-.11,.16), vec2(.4, .32));
@@ -457,12 +530,26 @@ float sdSkull(vec3 p) {
     d = smin(d, forehead, .22);
     float foreheadside = length(p - vec3(.17,-.13,-.3)) - .05;
     d = smin(d, foreheadside, .25);
+    // float foreheadlower = length(p - vec3(0,-.0,-.25)) - .3;
+    // d = smin(d, foreheadlower, .05);
+    // return d;
+    float socketbump = smin(fSocketBump(p), fSocketBump(p * vec3(-1,1,1)), .15);
+    d = smin(d, socketbump, .11);
+    float socketcut = smin(fSocketCut(p), fSocketCut(p * vec3(-1,1,1)), .2);
+    d = smax(d, -socketcut, .12);
+    p = pRz(p - vec3(.15,.06,-.38), .8);
+    float socket = sdEllipsoidXXZ(p.xzy, vec2(.13,.1));
+    d = smax(d, -socket-.02, .04);
+    p = pp;
+
     float backbump = sdEllipsoidXXZ(pRx(pRy(p - vec3(.27,-.29,.0), -.25), .0), vec2(.1, .5) * .25);
     d = smin(d, backbump, .34);
     float topbump = sdEllipsoidXXZ(p - vec3(0,-.33,-.05), vec2(.1, .15) * .5);
     d = smin(d, topbump, .3);
     float side = sdEllipsoidXXZ(pRz(p - vec3(.25,.05,-.0), .3).yzx, vec2(.1, .05) * .8);
     d = smin(d, side, .25);
+    return d;
+
     float sphenoid = sdEllipsoidXXZ(pRy(pRz(p - vec3(.1,.2,-.2), .4), -.5).yzx, vec2(.05, .025));
     d = smin(d, sphenoid, .3);
     float sphenoidcut = sdEllipsoidXXZ(pRx(pRz(p - vec3(.4,.1,-.35), .4), .3).xzy, vec2(.005, .25) * .5);
@@ -470,14 +557,22 @@ float sdSkull(vec3 p) {
     float cranium = d;
     p = pp;
 
+    return d;
+
     float maxilla = fMaxilla(p);
-    maxilla = smin(maxilla, cranium, .0);
+    maxilla = smin(maxilla, cranium, .05);
 
     float zygomatic = fZygomatic(p);
-    zygomatic = smin(zygomatic, cranium, .0);
+    zygomatic = smin(zygomatic, cranium, .08);
 
     float arch = fZygomaticArch(p);
     arch = smin(arch, cranium, .08);
+
+    float brow = fBrow(p);
+    // brow = smin(brow, cranium, .08);
+
+    // return cranium;
+    // return brow;
 
     float join;
 
@@ -490,9 +585,6 @@ float sdSkull(vec3 p) {
     p -= vec3(.33,.23,-.35);
     p -= vec3(0,-.005,.1);
     join = dot(p, vec3(.4,0,1));
-
-    // return max(join, length(p) - .1);
-
     p = pp;
 
     d = mix(d, arch, smoothstep(0., .08, join + .03));
