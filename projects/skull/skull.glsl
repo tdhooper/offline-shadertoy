@@ -494,9 +494,14 @@ float fBrow(vec3 p) {
 }
 
 float fSocketBump(vec3 p) {
-    p = pRz(p - vec3(.13,.04,-.35), .5);
-    return sdEllipsoidXXZ(p.xzy, vec2(.19,.13));
-    return length(p) - .17;
+    vec3 pp = p;
+    p = pRz(pp - vec3(.13,.04,-.35), .2);
+    float d = sdEllipsoidXXZ(p.xzy, vec2(.19,.13));
+    p = pp - vec3(.14,.15,-.35);
+    d = smin(d, sdEllipsoidXXZ(p, vec2(.19,.16)), .07);
+    p = pp - vec3(.24,.03,-.38);
+    d = smin(d, length(p) + .005, .15);
+    return d;
 }
 
 float fSocketBump2(vec3 p) {
@@ -504,10 +509,29 @@ float fSocketBump2(vec3 p) {
     return length(p) - .17;
 }
 
-float fSocketCut(vec3 p) {
-    p = pRz(p - vec3(.16,.08,-.4), .2);
+float fSocketInset(vec3 p) {
+    vec3 pp = p;
+    p = pRz(pp - vec3(.16,.08,-.4), .3);
     p.z = max(p.z, 0.);
-    return sdEllipsoidXXZ(p.xzy, vec2(.08,.06));
+    float d = sdEllipsoidXXZ(p.xzy, vec2(.08,.05));
+    p = pRz(pp - vec3(.18,.15,-.4), .2);
+    d = smin(d, sdEllipsoidXXZ(p.xzy, vec2(.042,.02)), .16);
+    p = pp - vec3(.235,.1,-.43);
+    d = smin(d, length(p) - .023, .08);
+    p = pp - vec3(.26,.11,-.36);
+    d = smax(d, dot(p, normalize(vec3(1,.2,1))) + .01, .04);
+    return d;
+}
+
+float fSocket(vec3 p) {
+    vec3 pp = p;
+    p = pRz(pp - vec3(.15,.06,-.38), .7);
+    float d = sdEllipsoidXXZ(p.xzy, vec2(.11,.08));
+    p = pRz(pp - vec3(.15,.16,-.38), -.15);
+    d = smin(d, sdEllipsoidXXZ(p.xzy, vec2(.08,.03)), .1);
+    p = pp - vec3(.26,.11,-.36);
+    d = smax(d, dot(p, normalize(vec3(1.5,.2,1))) + .01, .04);
+    return d;
 }
 
 float sdSkull(vec3 p) {
@@ -534,12 +558,13 @@ float sdSkull(vec3 p) {
     // d = smin(d, foreheadlower, .05);
     // return d;
     float socketbump = smin(fSocketBump(p), fSocketBump(p * vec3(-1,1,1)), .15);
-    d = smin(d, socketbump, .11);
-    float socketcut = smin(fSocketCut(p), fSocketCut(p * vec3(-1,1,1)), .2);
-    d = smax(d, -socketcut, .12);
-    p = pRz(p - vec3(.15,.06,-.38), .8);
-    float socket = sdEllipsoidXXZ(p.xzy, vec2(.13,.1));
-    d = smax(d, -socket-.02, .04);
+    d = smin(d, socketbump, .09);
+
+    float socketinset = smin(fSocketInset(p), fSocketInset(p * vec3(-1,1,1)), .2);
+    //return socketinset;
+    d = smax(d, -socketinset, .12);
+    float socket = fSocket(p);
+    d = smax(d, -socket, .04);
     p = pp;
 
     float backbump = sdEllipsoidXXZ(pRx(pRy(p - vec3(.27,-.29,.0), -.25), .0), vec2(.1, .5) * .25);
