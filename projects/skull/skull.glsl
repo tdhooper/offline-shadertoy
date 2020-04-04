@@ -1,5 +1,5 @@
 
-
+#define saturate(x) clamp(x, 0., 1.)
 
 float smin(float a, float b, float k){
     float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
@@ -216,19 +216,22 @@ float fPipe90(vec3 p, float smallRadius, float largeRadius) {
     return length(c) - smallRadius;
 }
 
-float fPipe90FlatOld(vec3 p, float smallRadius, float largeRadius) {
-    float d = length(max(p.xz, vec2(0))) - largeRadius;
-    d = min(d, max(p.z - largeRadius, 0.));
-    vec2 c = vec2(d, max(p.y, 0.));
-    return length(c) - smallRadius;
+float fCone(vec3 p, float angle) {
+    vec2 c = vec2(length(p.xz), p.y);
+    pR(c, angle);
+    return length(max(c, vec2(0))) + vmax(min(c, vec2(0)));
 }
 
-float fPipe90Flat(vec3 p, float smallRadius, float largeRadius) {
-    float d = length(max(p.xz, vec2(0))) - largeRadius;
-    // d = min(d, max(p.z - largeRadius, 0.));
-    d = min(d, 0.);
-    vec2 c = vec2(d, max(p.y, 0.));
-    return length(c) - smallRadius;
+// Distance to line segment between <a> and <b>, used for fCapsule() version 2below
+float fLineSegment(vec3 p, vec3 a, vec3 b) {
+    vec3 ab = b - a;
+    float t = saturate(dot(p - a, ab) / dot(ab, ab));
+    return length((ab*t + a) - p);
+}
+
+// Capsule version 2: between two end points <a> and <b> with radius r 
+float fCapsule(vec3 p, vec3 a, vec3 b, float r) {
+    return fLineSegment(p, a, b) - r;
 }
 
 // curve the x axis around the y axis
@@ -411,39 +414,39 @@ float fMaxilla(vec3 p) {
     p = pp;
 
     // Cheek
-    p -= vec3(.2,.28,-.39);
-    float t = dot(p, normalize(vec3(7,3,6))) - .06;
-    t = smin(t, dot(p, normalize(vec3(-1,1,15))) - .03, .02);
-    t = smax2(t, -dot(p, normalize(vec3(-3,-6,10))) - .055, .06);
-    // t = smax2(t, -dot(p, normalize(vec3(-2.5,1.5,.7))) - .06, .01);
-    d = smin(d, t, .04);
-    p = pp;
+    // p -= vec3(.2,.28,-.39);
+    // float t = dot(p, normalize(vec3(7,3,6))) - .06;
+    // t = smin(t, dot(p, normalize(vec3(-1,1,15))) - .03, .02);
+    // t = smax2(t, -dot(p, normalize(vec3(-3,-6,10))) - .055, .06);
+    // t = smax2(t, -dot(p, normalize(vec3(-2.5,1.5,.7))) - .06, .01); // cut
+    // d = smin(d, t, .04);
+    // p = pp;
 
     // float foramen = length(p - vec3(.17,.27,-.475)) - .0001;
     // d = smax(d, -foramen, .02);
 
     // Nose bridge
-    float bridge = length((p - vec3(0,.055,-.71)).zy) - .17;
-    d = smax(d, -bridge, .01);
-    float bridge2 = length(pRx(p - vec3(.13,.1,-.6), 1.1).xy) - .12;
-    d = smax(d, -bridge2, .02);
+    // float bridge = length((p - vec3(0,.055,-.71)).zy) - .17;
+    // d = smax(d, -bridge, .01);
+    // float bridge2 = length(pRx(p - vec3(.13,.1,-.6), 1.1).xy) - .12;
+    // d = smax(d, -bridge2, .02);
 
     // Eye socket part 1
-    float socket = length(p - vec3(.18,.1,-.47)) - .11;
-    d = smax(d, -socket, .05);
+    // float socket = length(p - vec3(.18,.1,-.47)) - .11;
+    // d = smax(d, -socket, .05);
 
     // Nose hole
-    p -= vec3(.0,.25,-.5);
-    p = pRx(p, .4);
-    float nosb = sdEllipse(p.xy - vec2(.0,.005), vec2(.02,.075));
-    p = pRz(p, -.5);
-    float nos = sdEllipse(p.xy, vec2(.05,.1));
-    nos = max(nos, -p.z-.15);
-    nosb = max(nosb, -p.z-.15);
-    d = smin(d, nos, .075);
-    d = smin(d, nosb, .05);
-    d = smax(d, -nos, .04);
-    p = pp;
+    // p -= vec3(.0,.25,-.5);
+    // p = pRx(p, .4);
+    // float nosb = sdEllipse(p.xy - vec2(.0,.005), vec2(.02,.075));
+    // p = pRz(p, -.5);
+    // float nos = sdEllipse(p.xy, vec2(.05,.1));
+    // nos = max(nos, -p.z-.15);
+    // nosb = max(nosb, -p.z-.15);
+    // d = smin(d, nos, .075);
+    // d = smin(d, nosb, .05);
+    // d = smax(d, -nos, .04);
+    // p = pp;
 
     // Gum back
     p = pRx(p - vec3(0,.42,-.29), .1);
@@ -464,34 +467,84 @@ float fMaxilla(vec3 p) {
     p = pp;
 
     // Eye socket part 2
-    float cut = fCorner(pRz(pRx(p - vec3(.04,.18,-.45), .25), .15).zy * vec2(-1,1), .01);
-    d = smax(d, -cut, .04);
-    float cut2 = fCorner(pRx(p - vec3(0,.07,-.5), -.6).zy - vec2(.1,0), 0.);
-    d = smax(d, -cut2, .02);
+    // float cut = fCorner(pRz(pRx(p - vec3(.04,.18,-.45), .25), .15).zy * vec2(-1,1), .01);
+    // d = smax(d, -cut, .04);
+    // float cut2 = fCorner(pRx(p - vec3(0,.07,-.5), -.6).zy - vec2(.1,0), 0.);
+    // d = smax(d, -cut2, .02);
 
     return d;
 }
 
-float fBrow2(vec3 p) {
+float fMaxillaCore(vec3 p) {
+    float d = 1e12;
     vec3 pp = p;
-    p = pRx(pRy(pRz(p - vec3(.13,.05,-.42), .3), .4), .4);
-    float d = fPipe90Flat(-p.xzy, .02, .12);
-    float f = -p.z - .02;
+
+    // Core
+    p = pRx(p - vec3(0,.33,-.32), .3);
+    d = length(p.xz) - .18;
+    d = smax(d, -(length((p - vec3(0,0,.1)).xz) - .1), .1);
+    d = smax(d, p.y - .02, .1);
+    d = smax(d, -p.y - .1, .1);
     p = pp;
-    p = pRx(p - vec3(0,-.11,-.5), -.3);
-    float part = -p.z;
-    float mask = smax(f, part, .05);
-    d = max(d, mask);
+
+    // Gum
+    p = pRx(p - vec3(0,.42,-.29), .4);
+    d = smin(d, sdEllipsoidXXZ(p, vec2(.2, .27)), .07);
+    p = pp;
+
+    // Gum back inner
+    p = pRx(p - vec3(0,.42,-.29), .1);
+    float gumback = pRy(p, .55).z - .01;
+    gumback = smin(gumback, pRy(p, -.55).z - .08, .04);
+    d = smax(d, gumback, .08);
+    p = pp;
+
+    // Gum back outer
+    p = p - vec3(.17,.3,-.24);
+    float part = dot(p, normalize(vec3(1,-.2,1)));
+    d = smax(d, part, .03);
+    p = pp;
+
     return d;
 }
 
-float fBrow(vec3 p) {
-    vec3 pp = p;
-    float d;
-    p = pRx(p - vec3(0,-.11,-.555), -.26);
-    d = -p.z;
-    return d;
+float fMaxillaBottom(vec3 p) {
+    float b = p.z + .15;
+    p = pRx(p - vec3(0,.42,-.29), .42);
+    pCurve(p.zxy, -.8);
+    float d = p.y;
+    return min(d, -b);
 }
+
+// float fMaxillaBottom(vec3 p) {
+
+//     // Gum back
+//     p = pRx(p - vec3(0,.42,-.29), .1);
+//     float gumback = pRy(p, .55).z - .01;
+//     gumback = smin(gumback, pRy(p, -.55).z - .08, .04);
+//     d = smax(d, gumback, .08);
+//     p = pp;
+
+//     // Gum part 2
+//     d = smax(d, base, .02);
+//     float roof = sdEllipsoidXXZ(p - vec3(0,.47,-.28), vec2(.13, .22));
+//     d = smax(d, -roof, .03);
+
+//     // Back of maxilla
+//     p = p - vec3(.17,.3,-.24);
+//     float part = dot(p, normalize(vec3(1,-.2,1)));
+//     d = smax(d, part, .03);
+//     p = pp;
+
+//     // Gum base (used later)
+//     p = pRx(p - vec3(0,.42,-.29), .4);
+//     p = pRx(p, .02);
+//     pCurve(p.zxy, -.8);
+//     float base = p.y;
+
+
+//     return d;
+// }
 
 float fSocketBump(vec3 p) {
     vec3 pp = p;
@@ -502,11 +555,6 @@ float fSocketBump(vec3 p) {
     p = pp - vec3(.24,.03,-.38);
     d = smin(d, length(p) + .005, .15);
     return d;
-}
-
-float fSocketBump2(vec3 p) {
-    p -= vec3(.13,.09,-.39);
-    return length(p) - .17;
 }
 
 float fSocketInset(vec3 p) {
@@ -534,14 +582,17 @@ float fSocket(vec3 p) {
     return d;
 }
 
+float fNoseCut(vec3 p) {
+    float r = .3;
+    p = pRy(pRx(p - vec3(0,.49,-.57), -.45), .35);
+    return length(p.yz + vec2(0,r)) - r;
+}
+
 float sdSkull(vec3 p) {
-    // return fPipe90(p, .1, .5);
+
+    // return fCone(p, .2);
 
     p.x = abs(p.x);
-
-    // p = pRx(pRy(pRz(p - vec3(.13,.05,-.42), .3), .4), .4);
-    // return fPipe90Flat(-p.xzy, .02, .12);
-
     vec3 pp = p;
     float d = 1e12;
     float back = sdEllipsoidXXZ(p - vec3(0,-.11,.16), vec2(.4, .32));
@@ -554,38 +605,105 @@ float sdSkull(vec3 p) {
     d = smin(d, forehead, .22);
     float foreheadside = length(p - vec3(.17,-.13,-.3)) - .05;
     d = smin(d, foreheadside, .25);
-    // float foreheadlower = length(p - vec3(0,-.0,-.25)) - .3;
-    // d = smin(d, foreheadlower, .05);
-    // return d;
     float socketbump = smin(fSocketBump(p), fSocketBump(p * vec3(-1,1,1)), .15);
     d = smin(d, socketbump, .09);
 
+    p = pRx(p - vec3(0,.23,-.45), -.55);
+    float bridge = sdEllipse(p.xz, vec2(.06, .15));
+    bridge = max(bridge, -p.y-.3);
+    d = smin(d, bridge, .1);
+    p = pp;
+
+    // p = pRx(p - vec3(0,.35,-.25), -.55);
+    // float bridge2 = sdEllipse(p.xz, vec2(.09, .375));
+    // d = smin(d, bridge2, .1);
+    // p = pp;
+
+    // bridge = max(bridge, p.y - .1);
+// return min(bridge, bridge2);
+
+    p = pRy(pRx(p - vec3(.22,.3,-.4), .4), -.1);
+    float cheek = smax(sdEllipsoidXXZ(p.zyx, vec2(.02, .05)), -p.z, 0.05);
+    d = smin(d, cheek, 0.1);
+    p = pp;
+    float maxilla = fMaxillaCore(p);
+    d = smin(d, maxilla, .08);
+    float foramen = fCone(pRx(pRy(p - vec3(.17,.27,-.465), .5), -.5) * vec3(1,-1,1), .6);
+    d = smax(d, -foramen - .01, .05);
+
     float socketinset = smin(fSocketInset(p), fSocketInset(p * vec3(-1,1,1)), .2);
-    //return socketinset;
     d = smax(d, -socketinset, .12);
     float socket = fSocket(p);
     d = smax(d, -socket, .04);
-    p = pp;
-
     float backbump = sdEllipsoidXXZ(pRx(pRy(p - vec3(.27,-.29,.0), -.25), .0), vec2(.1, .5) * .25);
     d = smin(d, backbump, .34);
     float topbump = sdEllipsoidXXZ(p - vec3(0,-.33,-.05), vec2(.1, .15) * .5);
     d = smin(d, topbump, .3);
     float side = sdEllipsoidXXZ(pRz(p - vec3(.25,.05,-.0), .3).yzx, vec2(.1, .05) * .8);
     d = smin(d, side, .25);
-    return d;
-
-    float sphenoid = sdEllipsoidXXZ(pRy(pRz(p - vec3(.1,.2,-.2), .4), -.5).yzx, vec2(.05, .025));
-    d = smin(d, sphenoid, .3);
-    float sphenoidcut = sdEllipsoidXXZ(pRx(pRz(p - vec3(.4,.1,-.35), .4), .3).xzy, vec2(.005, .25) * .5);
-    d = smax(d, -sphenoidcut, .3);
-    float cranium = d;
     p = pp;
 
-    return d;
+
+    // float sphenoid = sdEllipsoidXXZ(pRy(pRz(p - vec3(.1,.2,-.2), .4), -.5).yzx, vec2(.05, .025));
+    // d = smin(d, sphenoid, .3);
+    // float sphenoidcut = sdEllipsoidXXZ(pRx(pRz(p - vec3(.4,.1,-.35), .4), .3).xzy, vec2(.005, .25) * .5);
+    // d = smax(d, -sphenoidcut, .3);
+
+    p = pRx(p - vec3(0,.2,-.5), -.2);
+    d = smin(d, max(length(p.xz) - .03, -p.y-.3), .05);
+    p = pp;
+
+    p = pRy(pRz(p - vec3(.125,.55,-.5), -.245), .5);
+    p.x = max(p.x, 0.);
+    float caninesocket = length(p.xz) - .01;
+    caninesocket = smax(caninesocket, -p.y-.2, .01);
+    d = smin(d, caninesocket, .03);
+    p = pp;
+
+    // d = smin(d, fCapsule(p, vec3(.125,.55,-.5), vec3(.045,.23,-.5), .01), .03);
+
+    float nosecut = smin(fNoseCut(p), fNoseCut(p * vec3(-1,1,1)), .04);
+    d = smax(d, -nosecut, .01);
+    // return front;
+    p = pp;
+
+
+    // // Nose bridge
+    // float bridge = length((p - vec3(0,.055,-.71)).zy) - .17;
+    // d = smax(d, -bridge, .01);
+    // float bridge2 = length(pRx(p - vec3(.13,.1,-.6), 1.1).xy) - .12;
+    // d = smax(d, -bridge2, .02);
+
+    // Nose hole
+    p -= vec3(.0,.25,-.5);
+    p = pRx(p, .4);
+    float nosb = sdEllipse(p.xy - vec2(.0,.005), vec2(.02,.075));
+    p = pRz(p, -.5);
+    float nos = sdEllipse(p.xy, vec2(.05,.1));
+    nos = max(nos, -p.z-.15);
+    nos = smax(nos, p.z-.05, .05);
+    nosb = max(max(nosb, -p.z-.15), p.z-.05);
+    d = smin(d, nos, .075);
+    d = smin(d, nosb, .05);
+    d = smax(d, -nos, .04);
+    p = pp;
+
+    p = pp;
+    d = smax(d, fMaxillaBottom(p), .02);
+    float roof = sdEllipsoidXXZ(p - vec3(0,.47,-.28), vec2(.13, .22));
+    d = smax(d, -roof, .03);
+
+
+/*
+    float cranium = d;
+
+    return cranium;
+    p = pp;
 
     float maxilla = fMaxilla(p);
-    maxilla = smin(maxilla, cranium, .05);
+    maxilla = smin(maxilla, cranium, .0);
+
+    return maxilla;
 
     float zygomatic = fZygomatic(p);
     zygomatic = smin(zygomatic, cranium, .08);
@@ -593,7 +711,7 @@ float sdSkull(vec3 p) {
     float arch = fZygomaticArch(p);
     arch = smin(arch, cranium, .08);
 
-    float brow = fBrow(p);
+    // float brow = fBrow(p);
     // brow = smin(brow, cranium, .08);
 
     // return cranium;
@@ -613,7 +731,7 @@ float sdSkull(vec3 p) {
     p = pp;
 
     d = mix(d, arch, smoothstep(0., .08, join + .03));
-
+*/
     // d = smin2(d, zygomatic, .0);
 
 
