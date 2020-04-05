@@ -534,7 +534,7 @@ float fArchhole(vec3 p) {
     float h = .1;
     p.z += .013;
     p.z -= h;
-    d = smin(d, sdEllipse(p.xz, vec2(.03, h)), .02);
+    d = smin(d, sdEllipse(p.xz, vec2(.03, h)), .04);
     p = pp - vec3(-.05,0,-.05);
     d = smax(d, dot(p, normalize(vec3(-1,-.05,-.4))) - .005, .05);
     p = pp - vec3(-.038,-.1,.05);
@@ -545,6 +545,8 @@ float fArchhole(vec3 p) {
     d = smax(d, -dot(p, normalize(vec3(-.1,1,.35))), .05);
     p = pp - vec3(0,.2,.04);
     d = smax(d, dot(p, normalize(vec3(-.2,.8,1))), .05);
+    p = pp;
+    d = smax(d, p.y-.25, .1);
     return d;
 }
 
@@ -655,6 +657,8 @@ float sdSkull(vec3 p) {
 
     float archhole = fArchhole(p);
     d = smax(d, -archhole, .03);
+
+    // d = min(d, archhole);
 
     float zygomatic = fZygomatic(p);
     // d = smin(d, zygomatic, .0);
