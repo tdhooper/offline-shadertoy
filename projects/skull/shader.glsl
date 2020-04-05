@@ -97,7 +97,7 @@ struct Hit {
 
 const float MAX_TRACE_DISTANCE = 3.5;
 const float INTERSECTION_PRECISION = .0001;
-const int NUM_OF_TRACE_STEPS = 150;
+const int NUM_OF_TRACE_STEPS = 550;
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
@@ -222,7 +222,10 @@ void main() {
     float rayD = getDepth(depth);
 
     if (guiBlendError && ! hit.isBackground && ! guiSplit) {
-        color = spectrum(smoothstep(.1, -.02, polyD - rayD));
+        color = spectrum((1. - smoothstep(.0, .04, distance(polyD, rayD))) * .6);
+        if (polyD > rayD) {
+            color *= .5;
+        }
     }
 
     float alpha = smoothstep(.06, -.06, polyD - rayD);
