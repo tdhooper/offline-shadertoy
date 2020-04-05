@@ -575,7 +575,7 @@ float sdSkull(vec3 p) {
     d = smin(d, backbump, .34);
     float topbump = sdEllipsoidXXZ(p - vec3(0,-.33,-.05), vec2(.1, .15) * .5);
     d = smin(d, topbump, .3);
-    float side = sdEllipsoidXXZ(pRz(p - vec3(.25,.05,-.0), .3).yzx, vec2(.1, .05) * .8);
+    float side = sdEllipsoidXXZ(pRz(p - vec3(.2,.05,-.0), .3).yzx, vec2(.1, .05));
     d = smin(d, side, .25);
     p = pp;
 
@@ -625,6 +625,51 @@ float sdSkull(vec3 p) {
     d = smax(d, fMaxillaBottom(p), .02);
     float roof = sdEllipsoidXXZ(p - vec3(0,.47,-.28), vec2(.13, .22));
     d = smax(d, -roof, .03);
+
+    // float archhole = fPillHalf(pRx(pRz(p - vec3(.3,.0,-.3), .2), .2)) - .01;
+    // d = smax(d, -archhole, .1);
+    // return archhole;
+
+    // float r = .3;
+    // p = pRx(pRz(pRy(p - vec3(.3,.28,-.2), -.5), .2), .5);
+    // float sidecut = sdEllipsoidXXZ(p.zyx, vec2(.4, .02));
+    // sidecut = smax(sidecut, -p.z+.00, .1);
+    // // sidecut = smax(sidecut, -p.x, .05);
+    // sidecut -= .01;
+    // d = smax(d, -sidecut, .05);
+    // return max(sidecut-.1, -p.z-.15);
+
+    p = pRy(pRx(pRz(p - vec3(.29,.1,-.3), .3), .2), -.6);
+    vec3 p2 = p;
+    p2.z = min(p2.z, 0.);
+    float archhole = length(p2.xz) - .035;
+    archhole = smax(archhole, abs(p.y - .06) - .19, .09);
+    p = pp;
+    p = pRy(pRz(pRx(p - vec3(.32,-.0,-.34), .6), .3), -.6);
+    p.z = min(p.z, 0.);
+    archhole = smin(archhole, fPillHalf(p) - .02, .05);
+    p = pp;
+    p = pRy(pRz(pRx(p - vec3(.265,.3,-.34), -.2), .2), .0);
+    archhole = smin(archhole, smax(length(p.xz) - .01, length(p) - .2, .01), .05);
+    p = pp;
+    p = pRz(p - vec3(.25,.27,-.31), .3);
+    archhole = smin(archhole, sdEllipsoidXXZ(p.xzy, vec2(.015, .06)), .05);
+    p = pp;
+    p = pRz(pRx(p - vec3(.25,.24,-.24), .4), .3);
+    archhole = smin(archhole, sdEllipsoidXXZ(p.xzy, vec2(.04, .08)), .05);
+
+    // p = pp;
+    // return archhole;
+    d = smax(d, -archhole, .03);
+    // d = min(d, sdEllipsoidXXZ(p.xzy, vec2(.015, .06)));
+
+
+
+
+    // p = pRy(pRz(pRx(p - vec3(.32,-.0,-.34), .6), .3), -.6);
+    // p.z = min(p.z, 0.);
+    // d = smax(d, -(fPillHalf(p) - .02), .05);
+    // return fPillHalf(p) - .02;
 
 
 /*
