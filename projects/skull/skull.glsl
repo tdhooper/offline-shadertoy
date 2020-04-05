@@ -435,36 +435,6 @@ float fMaxillaBottom(vec3 p) {
     return min(d, -b);
 }
 
-// float fMaxillaBottom(vec3 p) {
-
-//     // Gum back
-//     p = pRx(p - vec3(0,.42,-.29), .1);
-//     float gumback = pRy(p, .55).z - .01;
-//     gumback = smin(gumback, pRy(p, -.55).z - .08, .04);
-//     d = smax(d, gumback, .08);
-//     p = pp;
-
-//     // Gum part 2
-//     d = smax(d, base, .02);
-//     float roof = sdEllipsoidXXZ(p - vec3(0,.47,-.28), vec2(.13, .22));
-//     d = smax(d, -roof, .03);
-
-//     // Back of maxilla
-//     p = p - vec3(.17,.3,-.24);
-//     float part = dot(p, normalize(vec3(1,-.2,1)));
-//     d = smax(d, part, .03);
-//     p = pp;
-
-//     // Gum base (used later)
-//     p = pRx(p - vec3(0,.42,-.29), .4);
-//     p = pRx(p, .02);
-//     pCurve(p.zxy, -.8);
-//     float base = p.y;
-
-
-//     return d;
-// }
-
 float fSocketBump(vec3 p) {
     vec3 pp = p;
     p = pRz(pp - vec3(.13,.04,-.35), .2);
@@ -513,7 +483,6 @@ float fNose(vec3 p) {
     d = smax(d, -sdEllipse(p.xy - vec2(0,.18), vec2(.02,.1)), 0.03);
     d = max(d, -p.z-.15);
     d = smax(d, p.z-.05, .05);
-    // d = max(d, -p.z-.05);
     return d;
 }
 
@@ -554,8 +523,6 @@ float fArchhole(vec3 p) {
 
 float sdSkull(vec3 p) {
 
-    // return fCone(p, .2);
-
     p.x = abs(p.x);
     vec3 pp = p;
     float d = 1e12;
@@ -577,14 +544,6 @@ float sdSkull(vec3 p) {
     bridge = max(bridge, -p.y-.3);
     d = smin(d, bridge, .1);
     p = pp;
-
-    // p = pRx(p - vec3(0,.35,-.25), -.55);
-    // float bridge2 = sdEllipse(p.xz, vec2(.09, .375));
-    // d = smin(d, bridge2, .1);
-    // p = pp;
-
-    // bridge = max(bridge, p.y - .1);
-// return min(bridge, bridge2);
 
     p = pRy(pRx(p - vec3(.22,.3,-.4), .4), -.1);
     float cheek = smax(sdEllipsoidXXZ(p.zyx, vec2(.02, .05)), -p.z, 0.05);
@@ -636,29 +595,17 @@ float sdSkull(vec3 p) {
     d = smin(d, nosb, .05);
     d = smax(d, -nos+.005, .02);
 
-
-    // // Nose bridge
-    // float bridge = length((p - vec3(0,.055,-.71)).zy) - .17;
-    // d = smax(d, -bridge, .01);
-    // float bridge2 = length(pRx(p - vec3(.13,.1,-.6), 1.1).xy) - .12;
-    // d = smax(d, -bridge2, .02);
-
-
     p = pp;
     d = smax(d, fMaxillaBottom(p), .02);
     float roof = sdEllipsoidXXZ(p - vec3(0,.47,-.28), vec2(.13, .22));
     d = smax(d, -roof, .03);
 
-
     float temporal = sdEllipsoidXXZ(pRy(pRz(p - vec3(.25,.1,-.03), .2), -.4).yzx, vec2(.18, .08));
     temporal = smax(temporal, dot(p.zy, normalize(vec2(-.3,1))) - .2, .1);
     d = smin(d, temporal, .15);
-    // return temporal;
 
     float archhole = fArchhole(p);
     d = smax(d, -archhole, .03);
-
-    // d = min(d, archhole);
 
     float zygomatic = fZygomatic(p);
     // d = smin(d, zygomatic, .0);
