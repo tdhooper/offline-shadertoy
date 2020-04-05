@@ -222,6 +222,11 @@ float fCone(vec3 p, float angle) {
     return length(max(c, vec2(0))) + vmax(min(c, vec2(0)));
 }
 
+float fPillHalf(vec3 p) {
+    p.y = min(p.y, 0.);
+    return length(p);
+}
+
 // Distance to line segment between <a> and <b>, used for fCapsule() version 2below
 float fLineSegment(vec3 p, vec3 a, vec3 b) {
     vec3 ab = b - a;
@@ -582,6 +587,22 @@ float fSocket(vec3 p) {
     return d;
 }
 
+float fNoseShape(vec3 p) {
+    p = pRz(p, -.4);
+    return sdEllipse(p.xy - vec2(-.055, 0), vec2(.1,.18));
+}
+
+float fNose(vec3 p) {
+    p = pRx(p - vec3(.0,.25,-.5), .4);
+    float d = smax(fNoseShape(p), fNoseShape(p * vec3(-1,1,1)), .02);
+    d = smax(d, p.y-.09, 0.04);
+    d = smax(d, -sdEllipse(p.xy - vec2(0,.18), vec2(.02,.1)), 0.03);
+    d = max(d, -p.z-.15);
+    d = smax(d, p.z-.05, .05);
+    // d = max(d, -p.z-.05);
+    return d;
+}
+
 float fNoseCut(vec3 p) {
     float r = .3;
     p = pRy(pRx(p - vec3(0,.49,-.57), -.45), .35);
@@ -663,12 +684,20 @@ float sdSkull(vec3 p) {
     d = smin(d, caninesocket, .03);
     p = pp;
 
-    // d = smin(d, fCapsule(p, vec3(.125,.55,-.5), vec3(.045,.23,-.5), .01), .03);
+    // Nose
+    float nos = fNose(p);
+    d = smin(d, nos-.01, .02);
+    p = pp;
 
     float nosecut = smin(fNoseCut(p), fNoseCut(p * vec3(-1,1,1)), .04);
     d = smax(d, -nosecut, .01);
-    // return front;
     p = pp;
+
+    // Nose hole
+    float nosb = fPillHalf((p - vec3(.0,.362,-.54)).xzy) - .005;
+    nosb = max(nosb, p.z+.4);
+    d = smin(d, nosb, .05);
+    d = smax(d, -nos+.005, .02);
 
 
     // // Nose bridge
@@ -677,19 +706,6 @@ float sdSkull(vec3 p) {
     // float bridge2 = length(pRx(p - vec3(.13,.1,-.6), 1.1).xy) - .12;
     // d = smax(d, -bridge2, .02);
 
-    // Nose hole
-    p -= vec3(.0,.25,-.5);
-    p = pRx(p, .4);
-    float nosb = sdEllipse(p.xy - vec2(.0,.005), vec2(.02,.075));
-    p = pRz(p, -.5);
-    float nos = sdEllipse(p.xy, vec2(.05,.1));
-    nos = max(nos, -p.z-.15);
-    nos = smax(nos, p.z-.05, .05);
-    nosb = max(max(nosb, -p.z-.15), p.z-.05);
-    d = smin(d, nos, .075);
-    d = smin(d, nosb, .05);
-    d = smax(d, -nos, .04);
-    p = pp;
 
     p = pp;
     d = smax(d, fMaxillaBottom(p), .02);

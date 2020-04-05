@@ -55,6 +55,7 @@ float hitDebugPlane = 0.;
 
 float mapDebug(vec3 p) {
     float d = map(p);
+    // d = 1e12;
     // return d;
 
     p = (debugPlaneMatrix * vec4(p, 1)).xyz;
@@ -66,8 +67,8 @@ float mapDebug(vec3 p) {
     hitDebugPlane = plane < abs(d) ? 1. : 0.;
     d = min(d, plane);
 
-    hitDebugPlane = marker < abs(d) ? 2. : hitDebugPlane;
-    d = min(d, marker);
+    // hitDebugPlane = marker < abs(d) ? 2. : hitDebugPlane;
+    // d = min(d, marker);
 
     return d;
 }
