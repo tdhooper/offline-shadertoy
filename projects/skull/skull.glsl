@@ -629,6 +629,7 @@ float sdSkull(vec3 p) {
     float maxilla = fMaxillaCore(p);
     d = smin(d, maxilla, .08);
     float foramen = fCone(pRx(pRy(p - vec3(.17,.27,-.465), .5), -.5) * vec3(1,-1,1), .6);
+    foramen = smax(foramen, p.y-.45, .1);
     d = smax(d, -foramen - .01, .05);
 
     float socketinset = smin(fSocketInset(p), fSocketInset(p * vec3(-1,1,1)), .2);
@@ -649,11 +650,13 @@ float sdSkull(vec3 p) {
     // float sphenoidcut = sdEllipsoidXXZ(pRx(pRz(p - vec3(.4,.1,-.35), .4), .3).xzy, vec2(.005, .25) * .5);
     // d = smax(d, -sphenoidcut, .3);
 
+    // bridge adjust
     p = pRx(p - vec3(0,.2,-.5), -.2);
     d = smin(d, max(length(p.xz) - .03, -p.y-.3), .05);
     p = pp;
 
-    p = pRy(pRz(p - vec3(.125,.55,-.5), -.245), .5);
+    // canine socket
+    p = pRy(pRz(p - vec3(.14,.55,-.495), -.4), .5);
     p.x = max(p.x, 0.);
     float caninesocket = length(p.xz) - .01;
     caninesocket = smax(caninesocket, -p.y-.2, .01);
