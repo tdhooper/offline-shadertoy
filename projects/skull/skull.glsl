@@ -523,107 +523,28 @@ float fNoseCut(vec3 p) {
     return length(p.yz + vec2(0,r)) - r;
 }
 
-// TODO: this could be neater
 float fArchhole(vec3 p) {
-    vec3 pp = p;
-    p = pRy(pRx(pRz(p - vec3(.29,.1,-.3), .3), .2), -.6);
-    vec3 p2 = p;
-    p2.z = min(p2.z, 0.);
-    float d = length(p2.xz) - .035;
-    d = smax(d, abs(p.y - .06) - .19, .09);
-    p = pp;
-    p = pRy(pRz(pRx(p - vec3(.32,-.0,-.34), .6), .3), -.6);
-    p.z = min(p.z, 0.);
-    d = smin(d, fPillHalf(p) - .02, .05);
-    p = pp;
-    p = pRy(pRz(pRx(p - vec3(.265,.3,-.34), -.2), .2), .0);
-    d = smin(d, smax(length(p.xz) - .01, length(p - vec3(0,-.07,0)) - .13, .01), .05);
-    p = pp;
-    p = pRz(p - vec3(.25,.27,-.31), .3);
-    d = smin(d, sdEllipsoidXXZ(p.xzy, vec2(.015, .06)), .05);
-    p = pp;
-    p = pRz(pRx(p - vec3(.25,.24,-.24), .4), .3);
-    d = smin(d, sdEllipsoidXXZ(p.xzy, vec2(.04, .08)), .05);
-    d = smax(d, -(length((pp - vec3(.0,.07,-.03)).zy) - .18), .05);
-    // return length((pp - vec3(.0,.07,-.03)).zy) - .01;
-    p = pp;
-    p = pRx(p - vec3(0,.28,-.15), -.6);
-    d = smax(d, p.z, .1);
-    // return abs(p.z) - .001;
-    p = pp;
-    p = pRx(p - vec3(0,-.1,-.13), .6);
-    d = smax(d, p.z, .1);
-    return d;
-}
-
-float fArchhole2(vec3 p) {
     p = pRz(pRy(p - vec3(.3,.15,-.25), -.4), .3);
     vec3 pp = p;
-
-    // outer
     p -= vec3(.045,0,0);
     float d = dot(p, normalize(vec3(1,0,-.12))) + .01;
-
-    // return d+.05;
-    // d = max(d, -p.x);
-    // p -= vec3(0,-.08,.27);
-    // d = max(d, -(length(p.zy) - .21));
-    // return max(length(p) - .2, abs(p.x) - .04);
-
-
-    // p = pp;
-    // p -= vec3(.045,0,0);
-    // d = smax(d, dot(p, normalize(vec3(1,0,-.04))), .05);
-
-    // return d;
-
-    // right
-
-    p = pp;
-    p -= vec3(0,0,-.085);
+    p = pp - vec3(0,0,-.085);
     d = smax(d, -dot(p, normalize(vec3(0,-.14,1))), .05);
-
-    // p = pp;
-    // p -= vec3(.01,.16,-.1);
-    // d = smax(d, -dot(p, normalize(vec3(.5,0,1))), .03);
-    // return max(abs(dot(p, normalize(vec3(.5,0,1))))-.001, length(p) - .5);
-    // return 1e12;
-
-    p = pp;
-    p = pRy(pRz(pRx(p - vec3(.035,.1,-.08), -.29), -.2), .6);
+    p = pRy(pRz(pRx(pp - vec3(.035,.1,-.08), -.29), -.2), .6);
     float h = .1;
     p.z += .013;
     p.z -= h;
-    float dd = sdEllipse(p.xz, vec2(.03, h));
-    // dd = max(dd, p.y-.1);
-    // dd = max(dd, -p.y-.2);
-    d = smin(d, dd, .02);
-
-    p = pp;
-    p -= vec3(-.05,0,-.05);
+    d = smin(d, sdEllipse(p.xz, vec2(.03, h)), .02);
+    p = pp - vec3(-.05,0,-.05);
     d = smax(d, dot(p, normalize(vec3(-1,-.05,-.4))) - .005, .05);
-
-    p = pp;
-    p -= vec3(-.038,-.1,.05);
-    d = smax(d, dot(p, normalize(vec3(-.8,-.21,.08))) - .005, .03); // here
-
-    p = pp;
-    p = pRz(pRy(p - vec3(0,-.084,.25), .4), -.27);
+    p = pp - vec3(-.038,-.1,.05);
+    d = smax(d, dot(p, normalize(vec3(-.8,-.21,.08))) - .005, .03);
+    p = pRz(pRy(pp - vec3(0,-.084,.25), .4), -.27);
     d = smax(d, -(length(p.zy) - .16), .15);
-
-    p = pp;
-    p -= vec3(.015,-.21,0);
+    p = pp - vec3(.015,-.21,0);
     d = smax(d, -dot(p, normalize(vec3(-.1,1,.35))), .05);
-
-    p = pp;
-    p -= vec3(0,.2,.04);
+    p = pp - vec3(0,.2,.04);
     d = smax(d, dot(p, normalize(vec3(-.2,.8,1))), .05);
-
-
-
-    // return length(p.xz) - .005;
-
-    
     return d;
 }
 
@@ -732,17 +653,8 @@ float sdSkull(vec3 p) {
     d = smin(d, temporal, .15);
     // return temporal;
 
-    float archhole = fArchhole2(p);
+    float archhole = fArchhole(p);
     d = smax(d, -archhole, .03);
-
-
-    // d = min(d, archhole);
-    // return archhole;
-    // return fArchhole2(p);
-    // return min(fArchhole(p), fArchhole2(p));
-
-    // d = min(d, archhole);
-
 
     float zygomatic = fZygomatic(p);
     // d = smin(d, zygomatic, .0);
