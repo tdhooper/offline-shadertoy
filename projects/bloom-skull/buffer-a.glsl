@@ -179,10 +179,17 @@ vec3 opU(vec3 a, vec3 b) {
     return a.x < b.x ? a : b;
 }
 
-void calcSkullAnim(float t, inout float skullHeight, inout float skullScale) {
-    // t = clamp(t, 0., 1.);
-    skullHeight = mix(.2, skullOffset, easeOutSine(rangec(.55, 1.5, t)));
-    skullScale = mix(.0, 1., easeOutSine(rangec(.45, 1., t)));
+void tweenSkull(inout vec3 p, inout float scale, float t) {
+    float skullHeight = mix(.2, skullOffset, easeOutSine(rangec(.55, 1.5, t)));
+    float skullScale = mix(.0, 1., easeOutSine(rangec(.45, 1., t)));
+    p.y -= skullHeight;
+    p *= skullRotate;
+
+    float rt = 1. - easeOutCirc(rangec(.0, 3., t));
+    pR(p.yz, rt * 5.);
+
+    p /= skullScale;
+    scale *= skullScale;
 }
 
 vec3 skullWithBloom(inout vec3 p, inout float scale, inout float t) {
@@ -209,17 +216,7 @@ vec3 skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     Model blm = drawBloom(p / bs, bt);
     res = opU(res, vec3(blm.d * bs * scale, 0, 0));
 
-    float skullHeight;
-    float skullScale;
-    calcSkullAnim(t, skullHeight, skullScale);
-    p.y -= skullHeight;
-    p *= skullRotate;
-
-    float rt = 1. - easeOutCirc(rangec(.0, 3., t));
-    pR(p.yz, rt * 5.);
-
-    p /= skullScale;
-    scale *= skullScale;
+    tweenSkull(p, scale, t);
 
     return res;
 }
@@ -255,10 +252,7 @@ vec3 map(vec3 p) {
     p += bloomPosition;
 
     // 3 iterations
-    // p.y -= skullOffset;
-    // p *= skullRotate;
-    // float rt = 1. - easeOutCirc(rangec(.0, 3., t));
-    // pR(p.yz, rt * 5.);
+    // tweenSkull(p, scale, t);
 
     for (float i = 0.; i < 4.; i++) {
         res2 = skullWithBloom(p, scale, t);
