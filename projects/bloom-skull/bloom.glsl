@@ -1,6 +1,6 @@
 
 
-Model leaf(vec3 p, vec3 cellData) {
+Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width) {
     //cellData = vec3(0,0,.1);
     
     vec2 cell = cellData.xy;
@@ -32,6 +32,7 @@ Model leaf(vec3 p, vec3 cellData) {
 
     if (cellTime > 0.) {
 
+
         // wedge
         float ins = .25;
         p.z += ins;
@@ -41,10 +42,11 @@ Model leaf(vec3 p, vec3 cellData) {
         wedge = smax(wedge, p.z - len*1.12 - ins, len);
         p.z -= ins;
 
+
         // wedge2
         ins = .2;
         p.z += ins;
-        n = normalize(vec3(1,0,.4));
+        n = normalize(vec3(1,0,width));
         float wedge2 = -dot(p, n);
         wedge2 = max(wedge2, dot(p, n * vec3(1,1,-1)));
         wedge2 = smax(wedge2, p.z - len*.95 - ins, len*.6);
@@ -58,14 +60,14 @@ Model leaf(vec3 p, vec3 cellData) {
         len *= mix(1.5, .65, curve);
         pR(p.zy, -mix(.2, .7, curve));
         slice = length(p - vec3(0,len,0)) - len;
-        d2 = abs(slice) - .05;
+        d2 = abs(slice) - thickness;
         d2 = max(d2, top);
         
-        float d3 = smax(d2, wedge, .05);
-        float d4 = smax(d2, wedge2, .05);
+        float d3 = smax(d2, wedge, thickness);
+        float d4 = smax(d2, wedge2, thickness);
         wedges = smin(wedge, wedge2, .01);
         d3 = smin(d3, d4, .01);
-        d = d3;
+        d = mix(d4, d3, pointy);
         
         p = pp;
         len = llen;
@@ -112,7 +114,8 @@ vec3 calcCellData(
     float stretch,
     float stretchStart,
     float stretchEnd,
-    float t
+    float t,
+    bool hideInside
 ) {
 
     float sz = maxBloomOffset + PI / 2.;
@@ -123,13 +126,15 @@ vec3 calcCellData(
     cell = round(cell);
     cell += offset;
 
-    // Hide leaves outside the growth area
-    cell = transformI * cell;
-    cell.y *= stretch / sz / stretchStart;
-    cell.y = max(cell.y, .55/stretchStart); // clamp, not sure why this magic number
-    cell.y = min(cell.y, 1.21/stretchStart); // clamp, not sure why this magic number
-    cell.y /= stretch / sz / stretchStart;
-    cell = transform * cell;
+    if (hideInside) {
+        // Hide leaves outside the growth area
+        cell = transformI * cell;
+        cell.y *= stretch / sz / stretchStart;
+        cell.y = max(cell.y, .55/stretchStart); // clamp, not sure why this magic number
+        cell.y = min(cell.y, 1.21/stretchStart); // clamp, not sure why this magic number
+        cell.y /= stretch / sz / stretchStart;
+        cell = transform * cell;
+    }
 
     // Snap after clamp
     cell = round(cell);
@@ -156,9 +161,16 @@ void calcPhyllotaxis() {
     phyllotaxis = mRot * mScale;
 }
 
-Model drawBloom(vec3 p, float t) {
+Model drawBloom(
+    vec3 p,
+    float t,
+    float density,
+    float thickness,
+    float pointy,
+    float width,
+    bool hideInside
+) {
     // t = mod(iTime, 1.);
-
     pR(p.xz, .7);
 
     Model res = Model(1e12, p, vec2(0), vec2(0), 0., 0., 0.);
@@ -176,7 +188,7 @@ Model drawBloom(vec3 p, float t) {
 
     vec2 move = vec2(0, t);
     float stretchStart = .25;
-    float stretchEnd = 2.;
+    float stretchEnd = density;
     float stretch = mix(stretchStart, stretchEnd, t);
     float maxBloomOffset = PI / 5.;
 
@@ -195,7 +207,13 @@ Model drawBloom(vec3 p, float t) {
     for( int m=0; m<3; m++ )
     for( int n=0; n<3; n++ )
     {
-        res = opU(res, leaf(p, calcCellData(cell, vec2(m, n) - 1., maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t)));
+        res = opU(res, leaf(
+            p,
+            calcCellData(cell, vec2(m, n) - 1., maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t, hideInside),
+            thickness,
+            pointy,
+            width
+        ));
     }
 
     return res;
