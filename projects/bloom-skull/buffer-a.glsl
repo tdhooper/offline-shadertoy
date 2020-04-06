@@ -164,10 +164,19 @@ float drawSkull(vec3 p) {
     return d;
 }
 
+#define DEBUG_BLOOMS
+
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
     p /= scale;
     float d = drawSkull(p);
+
+    #ifdef DEBUG_BLOOMS
+        if (t > .8) { // when is it realistic to start showing blooms
+            d = min(d, length(p.xz) - .1);
+        }
+    #endif
+
     return d * scale;
 }
 
@@ -226,22 +235,28 @@ vec3 skullWithBloom(inout vec3 p, inout float scale, inout float t) {
 
 vec3 map(vec3 p) {
 
+    float scale = 1.;
     float t = time;
-    t += 1.;
 
+    #ifdef DEBUG_BLOOMS
+        t += .0001;
+        t *= delay;
+        scale = 3.;
+        p /= scale;
+        pR(p.yz, -1.9);
+        pR(p.xy, -2.3);
+        pR(p.xz, -.4 + t/2.);
+        return skullWithBloom(p, scale, t);
+    #endif
+
+    t += 1.;
     float camScale = tweenCamera(p, t);
 
     float w = mapCameraDebug(p);
 
     vec3 res = vec3(1e12, 0, 0);
 
-    // return vec3((length(p) - .5) / camScale, 0., 0.);
 
-    // draw bloom with skull (takes p, scale, time)
-    //      updates p, scale, time
-    //      loop
-
-    float scale = 1.;
     vec3 res2;
 
     t *= delay;
@@ -320,7 +335,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime = mod(iTime/2., 1.);
+    float mTime =iTime/2.;
+
+    #ifndef DEBUG_BLOOMS
+        mTime = mod(mTime, 1.);
+    #endif
+
     time = mTime;
     // time = 1.;
 
