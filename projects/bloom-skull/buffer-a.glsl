@@ -192,6 +192,14 @@ void tweenSkull(inout vec3 p, inout float scale, float t) {
     scale *= skullScale;
 }
 
+vec3 drawFinalBloom(vec3 p, float t, float scale) {
+    float bt = smoothstep(0., 2., t);
+    bt = easeOutCirc(bt);
+    float bs = 1.2;
+    Model blm = drawBloom(p / bs, bt);
+    return vec3(blm.d * bs * scale, 0, 0);
+}
+
 vec3 skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     
     if (t <= .0 || scale <= 0.) {
@@ -210,11 +218,8 @@ vec3 skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     scale *= stepScale;
     t -= delay;
 
-    float bt = smoothstep(0., 2., t);
-    bt = easeOutCirc(bt);
-    float bs = 1.2;
-    Model blm = drawBloom(p / bs, bt);
-    res = opU(res, vec3(blm.d * bs * scale, 0, 0));
+    vec3 bloom = drawFinalBloom(p, t, scale);
+    res = opU(res, bloom);
 
     tweenSkull(p, scale, t);
 
@@ -245,14 +250,15 @@ vec3 map(vec3 p) {
     t += 1.;
 
     // 4 iterations
-    t += delay;
-    scale /= stepScale;
-    p *= inverse(bloomRotate);
-    p *= stepScale;
-    p += bloomPosition;
+    // t += delay;
+    // scale /= stepScale;
+    // p *= inverse(bloomRotate);
+    // p *= stepScale;
+    // p += bloomPosition;
 
     // 3 iterations
-    // tweenSkull(p, scale, t);
+    res = drawFinalBloom(p, t, scale);
+    tweenSkull(p, scale, t);
 
     for (float i = 0.; i < 4.; i++) {
         res2 = skullWithBloom(p, scale, t);
