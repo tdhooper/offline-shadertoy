@@ -170,7 +170,7 @@ float drawSkull(vec3 p) {
     return d;
 }
 
-// #define DEBUG_BLOOMS
+#define DEBUG_BLOOMS
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
@@ -241,6 +241,7 @@ Model skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     return model;
 }
 
+// C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --use-angle=gl
 Model map(vec3 p) {
 
     float scale = 1.;
