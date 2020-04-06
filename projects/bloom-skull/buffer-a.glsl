@@ -221,8 +221,6 @@ vec3 skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     vec3 bloom = drawFinalBloom(p, t, scale);
     res = opU(res, bloom);
 
-    tweenSkull(p, scale, t);
-
     return res;
 }
 
@@ -258,9 +256,9 @@ vec3 map(vec3 p) {
 
     // 3 iterations
     res = drawFinalBloom(p, t, scale);
-    tweenSkull(p, scale, t);
 
     for (float i = 0.; i < 4.; i++) {
+        tweenSkull(p, scale, t);
         res2 = skullWithBloom(p, scale, t);
         res = opU(res, res2);
     }
