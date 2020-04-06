@@ -133,6 +133,10 @@ struct Model {
     float len;
 };
 
+Model newModel() {
+    return Model(1e12, vec3(0), vec2(0), vec2(0), 0., 0., 0.);
+}
+
 Model opU(Model a, Model b) {
     if (a.d < b.d) {
         return a;
@@ -146,9 +150,11 @@ Model opU(Model a, Model b) {
 
 float drawSkull(vec3 p) {
     float s = 2.5;
+
     // pR(p.xz, .8);
     //pR(p.xz, -.8);
     // pR(p.yz, -.3);
+
     float bound = length(p - vec3(0,-.2,0)) - .8 * s;
     if (bound > .001) {
         return bound;
@@ -164,7 +170,7 @@ float drawSkull(vec3 p) {
     return d;
 }
 
-#define DEBUG_BLOOMS
+// #define DEBUG_BLOOMS
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
@@ -201,23 +207,25 @@ void tweenSkull(inout vec3 p, inout float scale, float t) {
     scale *= skullScale;
 }
 
-vec3 drawFinalBloom(vec3 p, float t, float scale) {
+Model drawFinalBloom(vec3 p, float t, float scale) {
     float bt = smoothstep(0., 2., t);
     bt = easeOutCirc(bt);
     float bs = 1.2;
     Model blm = drawBloom(p / bs, bt);
-    return vec3(blm.d * bs * scale, 0, 0);
+    blm.d *= bs * scale;
+    return blm;
 }
 
-vec3 skullWithBloom(inout vec3 p, inout float scale, inout float t) {
+Model skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     
     if (t <= .0 || scale <= 0.) {
-        return vec3(1e12, 0, 0);
+        return newModel();
     }
 
     // skull with sub blooms
     float d = drawSkullWithBlooms(p, t) * scale;
-    vec3 res = vec3(d, 0, 0);
+    Model model = newModel();
+    model.d = d;
     
     // set location for next bloomWithSkull
     // this is the camera
@@ -227,13 +235,13 @@ vec3 skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     scale *= stepScale;
     t -= delay;
 
-    vec3 bloom = drawFinalBloom(p, t, scale);
-    res = opU(res, bloom);
+    Model bloom = drawFinalBloom(p, t, scale);
+    model = opU(model, bloom);
 
-    return res;
+    return model;
 }
 
-vec3 map(vec3 p) {
+Model map(vec3 p) {
 
     float scale = 1.;
     float t = time;
@@ -254,10 +262,8 @@ vec3 map(vec3 p) {
 
     float w = mapCameraDebug(p);
 
-    vec3 res = vec3(1e12, 0, 0);
-
-
-    vec3 res2;
+    Model model = newModel();
+    Model model2;
 
     t *= delay;
     t += 1.;
@@ -270,18 +276,17 @@ vec3 map(vec3 p) {
     // p += bloomPosition;
 
     // 3 iterations
-    res = drawFinalBloom(p, t, scale);
+    model = drawFinalBloom(p, t, scale);
 
     for (float i = 0.; i < 4.; i++) {
         tweenSkull(p, scale, t);
-        res2 = skullWithBloom(p, scale, t);
-        res = opU(res, res2);
+        model2 = skullWithBloom(p, scale, t);
+        model = opU(model, model2);
     }
 
-    // res.x = min(res.x, w);
-    res.x /= camScale;
+    model.d /= camScale;
 
-    return res;
+    return model;
 }
 
 const int NORMAL_STEPS = 6;
@@ -292,12 +297,23 @@ vec3 calcNormal(vec3 pos){
     vec3 npos;
     for (int i = 0; i < NORMAL_STEPS; i++){
         npos = pos + eps * invert;
-        nor += map(npos).x * eps * invert;
+        nor += map(npos).d * eps * invert;
         eps = eps.zxy;
         invert *= -1.;
     }
     return normalize(nor);
 }
+
+// normal function, call de() in a for loop for faster compile times.
+// vec3 calcNormal(vec3 p) {
+//     vec4 n = vec4(0);
+//     for (int i = 0 ; i < 4 ; i++) {
+//         vec4 s = vec4(p, 0);
+//         s[i] += 0.001;
+//         n[i] = map(s.xyz).x;
+//     }
+//     return normalize(n.xyz-n.w);
+// }
 
 mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 {
@@ -370,14 +386,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float rayLength = 0.;
         float dist = 0.;
         bool bg = false;
-        vec3 res;
+        Model model;
         const float MAX_DIST = 100.;
 
         for (int i = 0; i < 300; i++) {
             rayLength += dist;
             rayPosition = camPos + rayDirection * rayLength;
-            res = map(rayPosition);
-            dist = res.x;
+            model = map(rayPosition);
+            dist = model.d;
 
             if (abs(dist) < .00001) {
                 break;
