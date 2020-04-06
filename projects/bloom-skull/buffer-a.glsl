@@ -23,6 +23,14 @@ mat3 basisMatrix(vec3 forward, vec3 up) {
     return mat3(uu, vv, ww);
 }
 
+mat3 orientMatrix(vec3 up, vec3 forward) {
+    up.z *= -1.;
+    vec3 uu = normalize(up);
+    vec3 ww = normalize(cross(forward,uu));
+    vec3 vv = normalize(cross(ww,uu));
+    return mat3(ww, uu, vv);
+}
+
 #pragma glslify: inverse = require(glsl-inverse)
 #pragma glslify: import('./quat.glsl')
 #pragma glslify: import('./camera.glsl')
@@ -210,11 +218,19 @@ void tweenSkull(inout vec3 p, inout float scale, float t) {
 Model drawFinalBloom(vec3 p, float t, float scale) {
     float bt = smoothstep(0., 2., t);
     bt = easeOutCirc(bt);
-    float bs = 1.2;
+    float bs = 1.4;
     Model blm = drawBloom(p / bs, bt);
     blm.d *= bs * scale;
     return blm;
 }
+
+Model drawBloom(vec3 p, float t, float scale) {
+    p /= scale;
+    Model model = drawBloom(p, t);
+    model.d *= scale;
+    return model;
+}
+
 
 Model skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     
@@ -223,10 +239,34 @@ Model skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     }
 
     // skull with sub blooms
-    float d = drawSkullWithBlooms(p, t) * scale;
+    float d = drawSkullWithBlooms(p, t);
     Model model = newModel();
     model.d = d;
-    
+
+    Model bloom;
+    vec3 pp = p;
+
+    p -= vec3(-.2,.2,.25)*1.05;
+    p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
+    bloom = drawBloom(p, t-.5, .08);
+    model = opU(model, bloom);
+    p = pp;
+
+    p -= vec3(.28,.1,.15);
+    p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
+    bloom = drawBloom(p, t-.8, .1);
+    model = opU(model, bloom);
+    p = pp;
+
+    p -= vec3(.22,.23,.2) * 1.05;
+    p *= orientMatrix(vec3(.5,.3,-.2), vec3(1,1,0));
+    bloom = drawBloom(p, t-1., .06);
+    model = opU(model, bloom);
+    p = pp;
+
+
+    model.d *= scale;
+
     // set location for next bloomWithSkull
     // this is the camera
     p -= bloomPosition;
@@ -235,7 +275,7 @@ Model skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     scale *= stepScale;
     t -= delay;
 
-    Model bloom = drawFinalBloom(p, t, scale);
+    bloom = drawFinalBloom(p, t, scale);
     model = opU(model, bloom);
 
     return model;
@@ -333,7 +373,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     skullRotate = basisMatrix(vec3(.5,1,-.4), vec3(-.9,1.,0));
     skullRotate = basisMatrix(vec3(.9,1,.9), vec3(1,0,1));
 
-    bloomPosition = vec3(.8,.8,-.1) * skullRadius;
+    bloomPosition = vec3(.8,.8,-.1) * skullRadius * 1.1;
     // bloomPosition += vec3(0,0,.1);
     bloomRotate = basisMatrix(vec3(-.5,1,0), vec3(1,0,0));
     //  bloomPosition -= vec3(0,0,.1);
@@ -414,7 +454,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col = nor * .5 + .5;
             col *= clamp(dot(nor, vec3(1,1,0)) * .5 + .5, 0., 1.);
             float fog = 1. - exp((rayLength - 3.) * -.5);
-            col = mix(col, bgCol, clamp(fog, 0., 1.));
+            // col = mix(col, bgCol, clamp(fog, 0., 1.));
         }
 
         tot += col;

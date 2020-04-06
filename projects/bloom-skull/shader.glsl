@@ -36,7 +36,7 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale) {
     float centerDepth = centerTex.a * uFar;
     float centerSize = getBlurSize(centerDepth, focusPoint, focusScale);
     vec3 color = centerTex.rgb;
-    // return color;
+    return color;
     float tot = 1.0;
 
     float radius = RAD_SCALE;
