@@ -36,6 +36,6 @@ const main = require('./main.js');
 // log-camera
 // skull
 
-const project = LOADPROJECT('skull');
+const project = LOADPROJECT('bloom-skull');
 
 main(project);

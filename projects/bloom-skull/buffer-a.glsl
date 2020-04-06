@@ -149,6 +149,10 @@ float drawSkull(vec3 p) {
     // pR(p.xz, .8);
     //pR(p.xz, -.8);
     // pR(p.yz, -.3);
+    float bound = length(p - vec3(0,-.2,0)) - .8 * s;
+    if (bound > .001) {
+        return bound;
+    }
     return sdSkull((p.xyz * vec3(1,-1,-1)) / s) * s;
 
     float d = length(p) - 1.;
