@@ -185,53 +185,16 @@ void calcSkullAnim(float t, inout float skullHeight, inout float skullScale) {
     skullScale = mix(.0, 1., easeOutSine(rangec(.45, 1., t)));
 }
 
-// draw bloom with a skull inside
-vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
+vec3 skullWithBloom(inout vec3 p, inout float scale, inout float t) {
     
-    if (t <= 0.) {
+    if (t <= .0 || scale <= 0.) {
         return vec3(1e12, 0, 0);
     }
 
-    // bloom
-    float bt = smoothstep(0., 2., t);
-    bt = easeOutCirc(bt);
-    float bs = 1.2;
-    Model blm = drawBloom(p / bs, bt);
-    vec3 res = vec3(blm.d * bs, 0, 0);
-    res.x *= scale;
-
-    float skullHeight;
-    float skullScale;
-    calcSkullAnim(t, skullHeight, skullScale);
-    p.y -= skullHeight;
-    p *= skullRotate;
-
-    float rt = 1. - easeOutCirc(rangec(.0, 3., t));
-    //rt = 1. - rangec(.0, 2., t);
+    // skull with sub blooms
+    float d = drawSkullWithBlooms(p, t) * scale;
+    vec3 res = vec3(d, 0, 0);
     
-    //pR(p.xz, rt * 5.);
-    pR(p.yz, rt * 5.);
-     //pR(p.xy, 1.);
-
-    //pR(p.xy, rt * 3.);
-    
-    
-    
-    
-    
-
-    if (skullScale > 0.) {
-        p /= skullScale;
-        scale *= skullScale;
-
-        // skull with sub blooms
-        float skd = drawSkullWithBlooms(p, t);
-        vec3 sk = vec3(skd, 0, 0);
-        sk.x *= scale;
-        
-        res = opU(res, sk);
-    }
-
     // set location for next bloomWithSkull
     // this is the camera
     p -= bloomPosition;
@@ -240,11 +203,28 @@ vec3 bloomWithSkull(inout vec3 p, inout float scale, inout float t) {
     scale *= stepScale;
     t -= delay;
 
+    float bt = smoothstep(0., 2., t);
+    bt = easeOutCirc(bt);
+    float bs = 1.2;
+    Model blm = drawBloom(p / bs, bt);
+    res = opU(res, vec3(blm.d * bs * scale, 0, 0));
+
+    float skullHeight;
+    float skullScale;
+    calcSkullAnim(t, skullHeight, skullScale);
+    p.y -= skullHeight;
+    p *= skullRotate;
+
+    float rt = 1. - easeOutCirc(rangec(.0, 3., t));
+    pR(p.yz, rt * 5.);
+
+    p /= skullScale;
+    scale *= skullScale;
+
     return res;
 }
 
 vec3 map(vec3 p) {
-    // return vec3(length(p) - .5, 0., 0.);
 
     float t = time;
     t += 1.;
@@ -255,6 +235,8 @@ vec3 map(vec3 p) {
 
     vec3 res = vec3(1e12, 0, 0);
 
+    // return vec3((length(p) - .5) / camScale, 0., 0.);
+
     // draw bloom with skull (takes p, scale, time)
     //      updates p, scale, time
     //      loop
@@ -263,24 +245,23 @@ vec3 map(vec3 p) {
     vec3 res2;
 
     t *= delay;
-
     t += 1.;
 
-    // draw skull (with blooms)
-    // translate
-    // draw bloom
+    // 4 iterations
+    t += delay;
+    scale /= stepScale;
+    p *= inverse(bloomRotate);
+    p *= stepScale;
+    p += bloomPosition;
 
-
-    // t += delay;
-    // scale /= stepScale;
-    // p *= inverse(bloomRotate);
-    // p *= stepScale;
-    // p += bloomPosition;
-    // p *= inverse(skullRotate);
-    // p.y += skullOffset;
+    // 3 iterations
+    // p.y -= skullOffset;
+    // p *= skullRotate;
+    // float rt = 1. - easeOutCirc(rangec(.0, 3., t));
+    // pR(p.yz, rt * 5.);
 
     for (float i = 0.; i < 4.; i++) {
-        res2 = bloomWithSkull(p, scale, t);
+        res2 = skullWithBloom(p, scale, t);
         res = opU(res, res2);
     }
 
