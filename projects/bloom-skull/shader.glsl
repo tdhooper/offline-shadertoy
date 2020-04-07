@@ -1,7 +1,7 @@
 precision highp float;
 
 uniform vec2 iResolution;
-uniform sampler2D uTexture; // buffer-a.glsl filter: linear wrap: repeat
+uniform sampler2D uTexture; // buffer-a.glsl filter: linear wrap: clamp
 uniform float iTime;
 
 void mainImage(out vec4 a, in vec2 b);
@@ -65,6 +65,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // uv.x = 1.- uv.x;
     uPixelSize = vec2(.001) / (iResolution.xy / iResolution.x);
     vec3 col = depthOfField(uv, .045 * uFar, .08);
-    col = pow(col, vec3(0.4545));
+    //col = pow(col, vec3(0.4545));
     fragColor = vec4(col, 1);
 }

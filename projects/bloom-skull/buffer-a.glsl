@@ -3,6 +3,8 @@ precision highp float;
 uniform vec2 iResolution;
 uniform float iTime;
 
+uniform sampler2D iChannel2; // buffer-b.glsl filter: linear wrap: mirror
+
 varying vec3 eye;
 varying vec3 dir;
 
@@ -121,6 +123,27 @@ float circleFlatRadius(float x, float o) {
     return d / 2.;
 }
 
+#define Smooth
+
+//Tri-linear Texturing Function
+vec3 t3(sampler2D tex, vec3 p, vec3 n)
+{
+    p -= .5;
+   // p -= .5;
+    //mat3 R = mat3(vec3(cos(T),sin(T),0),vec3(-sin(T),cos(T),0),vec3(0,0,-1));
+    //p *= R/8.0;
+    //n *= R;
+    #ifdef Smooth
+ 	return  (texture2D(tex,p.xy).rgb*n.z*n.z
+            +texture2D(tex,p.zy).rgb*n.x*n.x
+            +texture2D(tex,p.xz).rgb*n.y*n.y);
+    #else
+    return (texture2D(tex,p.xy).rgb
+           +texture2D(tex,p.zy).rgb
+           +texture2D(tex,p.xz).rgb)/3.0;
+    #endif
+}
+
 
 float time;
 
@@ -158,6 +181,7 @@ Model opU(Model a, Model b) {
 
 float drawSkull(vec3 p) {
     float s = 2.5;
+    float d;
 
     // pR(p.xz, .8);
     //pR(p.xz, -.8);
@@ -167,9 +191,25 @@ float drawSkull(vec3 p) {
     if (bound > .001) {
         return bound;
     }
-    return sdSkull((p.xyz * vec3(1,-1,-1)) / s) * s;
+    d = sdSkull((p.xyz * vec3(1,-1,-1)) / s) * s;
+    if (d < .1) {
+        vec3 e = vec3(.01,0,0);
+        // vec3 nor = normalize(vec3(
+        //     sdSkull(((p.xyz + e.xyy) * vec3(1,-1,-1)) / s) * s,
+        //     sdSkull(((p.xyz + e.yxy) * vec3(1,-1,-1)) / s) * s,
+        //     sdSkull(((p.xyz + e.yyx) * vec3(1,-1,-1)) / s) * s
+        // ));
+        vec3 tex = t3(iChannel2, p/1.5, normalize(p));
+        float disp = tex.r;
+        disp = disp * 3. - 1.3;
+        disp = smoothstep(-.5, 5., disp) * 10.;
+        disp *= .3;
+        disp = abs(disp - .1) - .1;
+        d += disp * .03;
+    }
+    return d;
 
-    float d = length(p) - 1.;
+    d = length(p) - 1.;
     d = abs(d) - .1;
     p.x = abs(p.x);
     d = smax(d, -(length(p - normalize(vec3(.3,.1,.6))) - .3), .1);
@@ -178,7 +218,7 @@ float drawSkull(vec3 p) {
     return d;
 }
 
-// #define DEBUG_BLOOMS
+#define DEBUG_BLOOMS
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
@@ -415,7 +455,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime =iTime/2.;
+    float mTime =iTime/6.;
 
     #ifndef DEBUG_BLOOMS
         mTime = mod(mTime, 1.);
@@ -439,6 +479,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     #endif
 
         vec2 p = (-iResolution.xy + 2.0*(fragCoord+o))/iResolution.y;
+
+        //fragColor = texture2D(iChannel2, fragCoord.xy/iResolution.xy); return;
 
         vec3 camPos = eye;
         vec3 rayDirection = normalize(dir);
@@ -475,9 +517,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if ( ! bg) {
             vec3 nor = calcNormal(rayPosition);
             col = nor * .5 + .5;
-            col *= clamp(dot(nor, vec3(1,1,0)) * .5 + .5, 0., 1.);
-            float fog = 1. - exp((rayLength - 3.) * -.5);
-            // col = mix(col, bgCol, clamp(fog, 0., 1.));
+            //col *= clamp(dot(nor, vec3(1,1,0)) * .5 + .5, 0., 1.);
+            //float fog = 1. - exp((rayLength - 3.) * -.5);
+            //col = mix(col, bgCol, clamp(fog, 0., 1.));
+            //col = dbgnor * .5 + .5;
+            //col = t3(iChannel2, rayPosition, nor);
+            //col = texture2D(iChannel2, abs(rayPosition.xy)/2.).rrr;
+            col = nor * .5 + .5;
         }
 
         tot += col;
