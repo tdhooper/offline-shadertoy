@@ -4,6 +4,7 @@ uniform vec2 iResolution;
 
 uniform sampler2D volumeData; // volume-generate.glsl filter: linear wrap: clamp
 uniform vec2 volumeDataSize;
+uniform mat4 cameraMatrix;
 
 // uniform sampler2D iChannel2; // buffer-b.glsl filter: linear wrap: mirror
 
@@ -488,6 +489,10 @@ float calcAO( in vec3 pos, in vec3 nor )
     return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
 }
 
+vec3 worldToCam(vec3 v) {
+    return (vec4(v, 1) * cameraMatrix).xyz;
+}
+
 vec3 doShading(vec3 pos, vec3 rd, Model model) {
     vec3 col = vec3(.3);
 
@@ -502,10 +507,10 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
 
 			vec3 nor = calcNormal(pos);
             float occ = calcAO( pos, nor );
-            vec3  lig = normalize( vec3(-.2, 1.5, .3) );
-            vec3  lba = normalize( vec3(.5, -1., -.5) );
+            vec3  lig = normalize( worldToCam(vec3(-.5, 1, .5)) );
+            vec3  lba = normalize( worldToCam(vec3(.5, -1., -.5)) );
             vec3  hal = normalize( lig - rd );
-            float amb = sqrt(clamp( 0.5+0.5*nor.y, 0.0, 1.0 ));
+            float amb = sqrt(clamp( 0.5+0.5*worldToCam(nor).y, 0.0, 1.0 ));
             float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
             float bac = clamp( dot( nor, lba ), 0.0, 1.0 )*clamp( 1.0-pos.y,0.0,1.0);
             float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
@@ -534,6 +539,11 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
 		col = col*lin;
 		col += 7.00*spe*vec3(1.10,0.90,0.70);
 
+    //nor = (cameraMatrix * vec4(nor,1)).rgb;
+    // return vec3(clamp(dot(nor, (vec4(vec3(1,0,0),1) * cameraMatrix).rgb), 0., 1.));
+
+
+    // return (vec4(nor,1) * cameraMatrix).rgb * .5 + .5;
 
     //float lig = clamp(dot(nor, vec3(0,1,0)), .01, 1.);
     //col *= lig;
