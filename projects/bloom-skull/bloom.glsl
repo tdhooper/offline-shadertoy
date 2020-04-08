@@ -29,6 +29,8 @@ Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width) {
     len = pow(len, .33);
     float llen = len;
 
+    Model model = newModel();
+
 
     if (cellTime > 0.) {
 
@@ -72,10 +74,21 @@ Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width) {
         p = pp;
         len = llen;
         vec2 uv = p.xz / len;
-        return Model(d, p, uv, cell, wedges, slice, len);
+
+        model.p = p;
+        model.d = d;
+        model.isBloom = true;
+        model.uv = uv;
+        model.cell = cell;
+        model.wedges = wedges;
+        model.slice = slice;
+        model.len = len;
+        return model;
     }
 
-    return Model(d, p, vec2(0), vec2(0), 0., 0., 0.);
+    model.d = d;
+    model.p = p;
+    return model;
 }
 
 vec3 calcBloomAlbedo(Model model) {    
@@ -173,12 +186,12 @@ Model drawBloom(
     // t = mod(iTime, 1.);
     pR(p.xz, .7);
 
-    Model res = Model(1e12, p, vec2(0), vec2(0), 0., 0., 0.);
+    Model model = newModel();
 
     float bound = length(p) - mix(.7, 1.5, t);
     if (bound > .01) {
-        res.d = bound;
-        return res;
+        model.d = bound;
+        return model;
     }
 
     t = rangec(-.1, 1., t);
@@ -201,13 +214,11 @@ Model drawBloom(
     mat2 transform = phyllotaxis * mStretch;
     mat2 transformI = inverse(transform);
 
-    //res.d = length(p) - 1.; return res;
-
     // compile speed optim from IQ
     for( int m=0; m<3; m++ )
     for( int n=0; n<3; n++ )
     {
-        res = opU(res, leaf(
+        model = opU(model, leaf(
             p,
             calcCellData(cell, vec2(m, n) - 1., maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t, hideInside),
             thickness,
@@ -216,5 +227,5 @@ Model drawBloom(
         ));
     }
 
-    return res;
+    return model;
 }

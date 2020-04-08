@@ -60,11 +60,31 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale) {
     return color /= tot;
 }
 
+#pragma glslify: aces = require(glsl-tone-map/aces)
+#pragma glslify: range = require(glsl-range)
+
+float calcLum(vec3 color) {
+ 	float fmin = min(min(color.r, color.g), color.b); //Min. value of RGB
+ 	float fmax = max(max(color.r, color.g), color.b); //Max. value of RGB
+ 	return (fmax + fmin) / 2.0; // Luminance
+}
+ 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
     // uv.x = 1.- uv.x;
     uPixelSize = vec2(.001) / (iResolution.xy / iResolution.x);
     vec3 col = depthOfField(uv, .045 * uFar, .08);
-    //col = pow(col, vec3(0.4545));
+
+    col = max(col, vec3(.1));
+
+    float l = calcLum(col);
+
+    col = mix(col, col * 1.6, l);
+
+    col *= mix(vec3(1), vec3(1., 1., 3.), pow(1.-l, 2.) * .3);
+    col *= mix(vec3(1), vec3(.6, .6, 1.2), pow(l, 2.) * .3);
+
+    col = aces(col);
+
     fragColor = vec4(col, 1);
 }

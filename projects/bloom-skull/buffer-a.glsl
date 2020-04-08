@@ -160,6 +160,7 @@ vec2 round(vec2 a) {
 struct Model {
     float d;
     vec3 p;
+    bool isBloom;
     vec2 uv;
     vec2 cell;
     float wedges;
@@ -168,7 +169,7 @@ struct Model {
 };
 
 Model newModel() {
-    return Model(1e12, vec3(0), vec2(0), vec2(0), 0., 0., 0.);
+    return Model(1e12, vec3(0), false, vec2(0), vec2(0), 0., 0., 0.);
 }
 
 Model opU(Model a, Model b) {
@@ -240,7 +241,7 @@ float drawSkull(vec3 p) {
     return d;
 }
 
-#define DEBUG_BLOOMS
+//#define DEBUG_BLOOMS
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
@@ -375,7 +376,6 @@ Model map(vec3 p) {
     #ifdef DEBUG_BLOOMS
         t += .0001;
         t *= delay;
-        t = .0001;
         scale = 3.;
         p /= scale;
         pR(p.yz, -1.9);
@@ -451,6 +451,20 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 }
 
 // #define AA 3
+
+vec3 doShading(vec3 pos, Model model) {
+    vec3 col = vec3(.8);
+
+    if (model.isBloom) {
+        col = vec3(.6,.3,.3);
+    }
+
+    vec3 nor = calcNormal(pos);
+    float lig = clamp(dot(nor, vec3(0,1,0)), .01, 1.);
+    col *= lig;
+
+    return col;
+}
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
@@ -534,19 +548,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             }
         }
 
-        vec3 bgCol = vec3(.19,.19,.22) * 1.3;
+        vec3 bgCol = vec3(.1,0,0);
         col = bgCol;
         
         if ( ! bg) {
-            vec3 nor = calcNormal(rayPosition);
-            col = nor * .5 + .5;
-            //col *= clamp(dot(nor, vec3(1,1,0)) * .5 + .5, 0., 1.);
-            //float fog = 1. - exp((rayLength - 3.) * -.5);
-            //col = mix(col, bgCol, clamp(fog, 0., 1.));
-            //col = dbgnor * .5 + .5;
-            //col = t3(iChannel2, rayPosition, nor);
-            //col = texture2D(iChannel2, abs(rayPosition.xy)/2.).rrr;
-            col = nor * .5 + .5;
+            col = doShading(rayPosition, model);
         }
 
         tot += col;
