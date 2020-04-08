@@ -314,54 +314,59 @@ void stepTransform(inout vec3 p, inout float scale, inout float t) {
     t -= delay;
 }
 
+const float CUTOFF = 3.2; // remove old itrerations when they're out of view
+
 Model skullWithBloom(vec3 p, float scale, float t) {
     
     if (t <= .0 || scale <= 0.) {
         return newModel();
     }
 
-    // skull with sub blooms
-    float d = drawSkullWithBlooms(p, t);
     Model model = newModel();
-    model.d = d;
-
     Model bloom;
-    vec3 pp = p;
 
-    float density = 2.;
-    float thickness = .05;
-    float pointy = 1.;
-    float width = .4;
+    if (t < CUTOFF) {
+        // skull with sub blooms
+        float d = drawSkullWithBlooms(p, t);
+        model.d = d;
 
-    p -= vec3(-.2,.2,.25)*1.05;
-    p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
-    density = 1.;
-    thickness = .05;
-    pointy = 0.;
-    width = .4;
-    bloom = drawBloom(p, t-.5, .08, density, thickness, pointy, width);
-    model = opU(model, bloom);
-    p = pp;
+        vec3 pp = p;
 
-    p -= vec3(.28,.1,.15);
-    p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
-    density = 2.5;
-    thickness = .1;
-    pointy = 0.;
-    width = .2;
-    bloom = drawBloom(p, t-.8, .1, density, thickness, pointy, width);
-    model = opU(model, bloom);
-    p = pp;
+        float density = 2.;
+        float thickness = .05;
+        float pointy = 1.;
+        float width = .4;
 
-    p -= vec3(.22,.23,.2) * 1.05;
-    p *= orientMatrix(vec3(.5,.3,-.2), vec3(1,1,0));
-    density = .5;
-    thickness = .1;
-    pointy = 0.;
-    width = .5;
-    bloom = drawBloom(p, smoothstep(1.3, 1.8, t), .05, density, thickness, pointy, width);
-    model = opU(model, bloom);
-    p = pp;
+        p -= vec3(-.2,.2,.25)*1.05;
+        p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
+        density = 1.;
+        thickness = .05;
+        pointy = 0.;
+        width = .4;
+        bloom = drawBloom(p, t-.5, .08, density, thickness, pointy, width);
+        model = opU(model, bloom);
+        p = pp;
+
+        p -= vec3(.28,.1,.15);
+        p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
+        density = 2.5;
+        thickness = .1;
+        pointy = 0.;
+        width = .2;
+        bloom = drawBloom(p, t-.8, .1, density, thickness, pointy, width);
+        model = opU(model, bloom);
+        p = pp;
+
+        p -= vec3(.22,.23,.2) * 1.05;
+        p *= orientMatrix(vec3(.5,.3,-.2), vec3(1,1,0));
+        density = .5;
+        thickness = .1;
+        pointy = 0.;
+        width = .5;
+        bloom = drawBloom(p, smoothstep(1.3, 1.8, t), .05, density, thickness, pointy, width);
+        model = opU(model, bloom);
+        p = pp;
+    }
 
 
     model.d *= scale;
@@ -410,7 +415,7 @@ Model map(vec3 p) {
     // p += bloomPosition;
 
     // 3 iterations
-    if (time < .5) {
+    if (t < CUTOFF) {
         model = drawFinalBloom(p, t, scale);
     }
 
