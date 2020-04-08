@@ -189,7 +189,7 @@ Model drawBloom(
     Model model = newModel();
 
     float bound = length(p) - mix(.7, 1.5, t);
-    if (bound > .01) {
+    if ( ! lightingPass && bound > .01) {
         model.d = bound;
         return model;
     }

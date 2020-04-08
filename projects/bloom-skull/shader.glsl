@@ -24,7 +24,7 @@ float uFar = 2.; // Far plane
 
 const float GOLDEN_ANGLE = 2.39996323;
 const float MAX_BLUR_SIZE = 30.;
-const float RAD_SCALE = 0.5; // Smaller = nicer blur, larger = faster
+const float RAD_SCALE = 0.2; // Smaller = nicer blur, larger = faster
 
 float getBlurSize(float depth, float focusPoint, float focusScale) {
     float coc = clamp((1.0 / focusPoint - 1.0 / depth)*focusScale, -1.0, 1.0);
@@ -36,7 +36,7 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale) {
     float centerDepth = centerTex.a * uFar;
     float centerSize = getBlurSize(centerDepth, focusPoint, focusScale);
     vec3 color = centerTex.rgb;
-    return color;
+    // return color;
     float tot = 1.0;
 
     float radius = RAD_SCALE;
@@ -72,18 +72,25 @@ float calcLum(vec3 color) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
     // uv.x = 1.- uv.x;
-    uPixelSize = vec2(.001) / (iResolution.xy / iResolution.x);
+    uPixelSize = vec2(.002) / (iResolution.xy / iResolution.y);
     vec3 col = depthOfField(uv, .045 * uFar, .08);
 
-    col = max(col, vec3(.1));
+    // col = max(col, vec3(.1));
+    // float l = calcLum(col);
+    // col = mix(col, col * 1.6, l);
+    // col *= mix(vec3(1), vec3(1., 1., 3.), pow(1.-l, 2.) * .3);
+    // col *= mix(vec3(1), vec3(.6, .6, 1.2), pow(l, 2.) * .3);
+    // col = aces(col);
 
-    float l = calcLum(col);
+    // col = max(col, vec3(.05));
+    // float l = calcLum(col);
+    // col = mix(col, col * 1.3, l);
+    // col *= mix(vec3(1), vec3(1., 1., 3.), pow(1.-l, 2.) * .3);
+    // col *= mix(vec3(1), vec3(.6, .6, 1.2), pow(l, 2.) * .3);
+    
 
-    col = mix(col, col * 1.6, l);
-
-    col *= mix(vec3(1), vec3(1., 1., 3.), pow(1.-l, 2.) * .3);
-    col *= mix(vec3(1), vec3(.6, .6, 1.2), pow(l, 2.) * .3);
-
+    //col *= 1.3;    
+    col = pow( col, vec3(0.4545) );
     col = aces(col);
 
     fragColor = vec4(col, 1);

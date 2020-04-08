@@ -156,6 +156,7 @@ vec2 round(vec2 a) {
 }
 
 
+bool lightingPass;
 
 struct Model {
     float d;
@@ -191,7 +192,7 @@ float sdSkull(vec3 p) {
     #endif
     p += OFFSET / SCALE;
     float bound = fBox(p, 1./SCALE);
-    if (bound > .01) {
+    if ( ! lightingPass && bound > .01) {
         return bound;
     }
     // bound = max(bound, vmax(abs(mod(p + .0125, .025) - .0125)) - .003);
@@ -211,7 +212,7 @@ float drawSkull(vec3 p) {
     // pR(p.yz, -.3);
 
     float bound = length(p - vec3(0,-.2,0)) - .8 * s;
-    if (bound > .001) {
+    if ( ! lightingPass && bound > .001) {
         return bound;
     }
     d = sdSkull((p.xyz * vec3(1,-1,-1)) / s) * s;
@@ -452,16 +453,89 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 
 // #define AA 3
 
-vec3 doShading(vec3 pos, Model model) {
-    vec3 col = vec3(.8);
+// https://www.shadertoy.com/view/lsKcDD
+float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
+{
+    float res = 1.0;
+    float t = mint;
+    float ph = 1e10;
+    
+    for( int i=0; i<64; i++ )
+    {
+        float h = map( ro + rd*t ).d;
+        res = min( res, 10.0*h/t );
+        t += h;
+        if( res<0.0001 || t>tmax ) break;
+        
+    }
+    return clamp( res, 0.0, 1.0 );
+}
+
+// https://www.shadertoy.com/view/Xds3zN
+float calcAO( in vec3 pos, in vec3 nor )
+{
+    float occ = 0.0;
+    float sca = 1.0;
+    for( int i=0; i<5; i++ )
+    {
+        float hr = 0.01 + 0.12*float(i)/4.0;
+        vec3 aopos =  nor * hr + pos;
+        float dd = map( aopos ).d;
+        occ += -(dd-hr)*sca;
+        sca *= 0.95;
+    }
+    return clamp( 1.0 - 3.0*occ, 0.0, 1.0 );    
+}
+
+vec3 doShading(vec3 pos, vec3 rd, Model model) {
+    vec3 col = vec3(.3);
 
     if (model.isBloom) {
-        col = vec3(.6,.3,.3);
+        col = vec3(.3,.05,.05);
+        col = vec3(.5,1,.8) * .1;
+        //col += vec3(.06,.0,.03) * max(1. - 1. / 2., 0.);
+        //col = mix(col, col * .2, 0.);
     }
 
-    vec3 nor = calcNormal(pos);
-    float lig = clamp(dot(nor, vec3(0,1,0)), .01, 1.);
-    col *= lig;
+            lightingPass = true;
+
+			vec3 nor = calcNormal(pos);
+            float occ = calcAO( pos, nor );
+            vec3  lig = normalize( vec3(-.2, 1.5, .3) );
+            vec3  lba = normalize( vec3(.5, -1., -.5) );
+            vec3  hal = normalize( lig - rd );
+            float amb = sqrt(clamp( 0.5+0.5*nor.y, 0.0, 1.0 ));
+            float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
+            float bac = clamp( dot( nor, lba ), 0.0, 1.0 )*clamp( 1.0-pos.y,0.0,1.0);
+            float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
+
+            occ = mix(1., occ, .8);
+            
+            dif *= softshadow( pos, lig, 0.001, .9 );
+
+            float spe = pow( clamp( dot( nor, hal ), 0.0, 1.0 ),16.0)*
+                        dif *
+                        (0.04 + 0.96*pow( clamp(1.0+dot(hal,rd),0.0,1.0), 5.0 ));
+
+            vec3 lin = vec3(0.0);
+            
+            // lin += 2.80*dif*vec3(1.30,1.00,0.70);
+            // lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
+            // lin += 1.55*bac*vec3(0.25,0.25,0.25)*occ*vec3(2,0,1);
+            // lin += 0.25*fre*vec3(1.00,1.00,1.00)*occ;
+        	// col = col*lin;
+			// col += 5.00*spe*vec3(1.10,0.90,0.70);
+
+        lin += 3.80*dif*vec3(1.30,1.00,0.70);
+        lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
+        lin += 0.55*bac*vec3(0.25,0.25,0.25)*occ;
+        lin += 0.25*fre*vec3(1.00,1.00,1.00)*occ;
+		col = col*lin;
+		col += 7.00*spe*vec3(1.10,0.90,0.70);
+
+
+    //float lig = clamp(dot(nor, vec3(0,1,0)), .01, 1.);
+    //col *= lig;
 
     return col;
 }
@@ -529,6 +603,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         float rayLength = 0.;
         float dist = 0.;
         bool bg = false;
+        lightingPass = false;
         Model model;
         const float MAX_DIST = 100.;
 
@@ -548,11 +623,15 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             }
         }
 
-        vec3 bgCol = vec3(.1,0,0);
+        vec3 bgCol = vec3(.02,.0,.0);
+        bgCol = vec3(.005,0,.007);
         col = bgCol;
+
         
         if ( ! bg) {
-            col = doShading(rayPosition, model);
+            col = doShading(rayPosition, rayDirection, model);
+            float fog = 1. - exp((rayLength - 3.) * -.5);
+            col = mix(col, bgCol, clamp(fog, 0., 1.)); 
         }
 
         tot += col;
