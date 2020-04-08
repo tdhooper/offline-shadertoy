@@ -1,7 +1,6 @@
 precision highp float;
 
 uniform vec2 iResolution;
-uniform float iTime;
 
 uniform sampler2D volumeData; // volume-generate.glsl filter: linear wrap: clamp
 uniform vec2 volumeDataSize;
@@ -456,6 +455,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 // https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
+    // return 1.;
     float res = 1.0;
     float t = mint;
     float ph = 1e10;
@@ -474,6 +474,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 // https://www.shadertoy.com/view/Xds3zN
 float calcAO( in vec3 pos, in vec3 nor )
 {
+    // return 1.;
     float occ = 0.0;
     float sca = 1.0;
     for( int i=0; i<5; i++ )
@@ -566,10 +567,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    float mTime =iTime/6.;
-
-    #ifndef DEBUG_BLOOMS
-        mTime = mod(mTime, 1.);
+    #ifdef DEBUG_BLOOMS
+        mTime = iTime/6.;
     #endif
 
     time = mTime;

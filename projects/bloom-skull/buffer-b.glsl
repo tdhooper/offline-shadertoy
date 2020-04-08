@@ -3,7 +3,6 @@
 precision highp float;
 
 uniform vec2 iResolution;
-uniform float iTime;
 
 uniform sampler2D iChannel0; // images/grey-noise-small.png filter: nearest wrap: repeat
 uniform vec2 iChannel0Size;

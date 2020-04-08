@@ -2,7 +2,6 @@ precision highp float;
 
 uniform vec2 iResolution;
 uniform sampler2D uTexture; // buffer-a.glsl filter: linear wrap: clamp
-uniform float iTime;
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -24,7 +23,7 @@ float uFar = 2.; // Far plane
 
 const float GOLDEN_ANGLE = 2.39996323;
 const float MAX_BLUR_SIZE = 30.;
-const float RAD_SCALE = 0.2; // Smaller = nicer blur, larger = faster
+const float RAD_SCALE = .2; // Smaller = nicer blur, larger = faster
 
 float getBlurSize(float depth, float focusPoint, float focusScale) {
     float coc = clamp((1.0 / focusPoint - 1.0 / depth)*focusScale, -1.0, 1.0);
@@ -73,7 +72,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
     // uv.x = 1.- uv.x;
     uPixelSize = vec2(.002) / (iResolution.xy / iResolution.y);
-    vec3 col = depthOfField(uv, .045 * uFar, .08);
+
+    float scaleA = .04;
+    float focusA = .04;
+    float focusAStart = -.1;
+    float focusAEnd = .2;
+
+    float scaleB = .08;
+    float focusB = .05;
+    float focusBStart = .5;
+    float focusBEnd = .8;
+
+    float blend = smoothstep(focusAStart, focusAEnd, mTime) - smoothstep(focusBStart, focusBEnd, mTime) + smoothstep(focusAStart, focusAEnd, mTime - 1.);
+    float focus = mix(focusB, focusA, blend);
+    float scale = mix(scaleB, scaleA, blend);
+
+    vec3 col = depthOfField(uv, focus * uFar, scale);
 
     // col = max(col, vec3(.1));
     // float l = calcLum(col);

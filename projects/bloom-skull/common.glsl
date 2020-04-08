@@ -1,5 +1,8 @@
 precision highp float;
 
+uniform float iTime;
+float mTime = mod(iTime / 6., 1.);
+
 #define MIRROR
 
 vec2 texSubdivisions = vec2(13,6);
