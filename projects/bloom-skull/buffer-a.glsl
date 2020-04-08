@@ -198,7 +198,9 @@ float sdSkull(vec3 p) {
     // bound = max(bound, vmax(abs(mod(p + .0125, .025) - .0125)) - .003);
     p *= SCALE;
     float d = mapTex(volumeData, p, volumeDataSize);
-    // d = min(d, bound);
+    if (lightingPass && bound > .01) {
+        return d + bound;
+    }
     return d;
 }
 
@@ -302,7 +304,17 @@ Model drawBloom(vec3 p, float t, float scale, float density, float thickness, fl
 }
 
 
-Model skullWithBloom(inout vec3 p, inout float scale, inout float t) {
+void stepTransform(inout vec3 p, inout float scale, inout float t) {
+    // set location for next bloomWithSkull
+    // this is the camera
+    p -= bloomPosition;
+    p /= stepScale;
+    p *= bloomRotate;
+    scale *= stepScale;
+    t -= delay;
+}
+
+Model skullWithBloom(vec3 p, float scale, float t) {
     
     if (t <= .0 || scale <= 0.) {
         return newModel();
@@ -354,13 +366,7 @@ Model skullWithBloom(inout vec3 p, inout float scale, inout float t) {
 
     model.d *= scale;
 
-    // set location for next bloomWithSkull
-    // this is the camera
-    p -= bloomPosition;
-    p /= stepScale;
-    p *= bloomRotate;
-    scale *= stepScale;
-    t -= delay;
+    stepTransform(p, scale, t);
 
     bloom = drawFinalBloom(p, t, scale);
     model = opU(model, bloom);
@@ -404,12 +410,15 @@ Model map(vec3 p) {
     // p += bloomPosition;
 
     // 3 iterations
-    model = drawFinalBloom(p, t, scale);
+    if (time < .5) {
+        model = drawFinalBloom(p, t, scale);
+    }
 
-    for (float i = 0.; i < 4.; i++) {
+    for (float i = 0.; i < 3.; i++) {
         tweenSkull(p, scale, t);
         model2 = skullWithBloom(p, scale, t);
         model = opU(model, model2);
+        stepTransform(p, scale, t);
     }
 
     model.d /= camScale;
@@ -461,7 +470,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
     float t = mint;
     float ph = 1e10;
     
-    for( int i=0; i<64; i++ )
+    for( int i=0; i<256; i++ )
     {
         float h = map( ro + rd*t ).d;
         res = min( res, 10.0*h/t );
