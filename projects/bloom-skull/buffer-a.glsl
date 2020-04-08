@@ -3,7 +3,10 @@ precision highp float;
 uniform vec2 iResolution;
 uniform float iTime;
 
-uniform sampler2D iChannel2; // buffer-b.glsl filter: linear wrap: mirror
+uniform sampler2D volumeData; // volume-generate.glsl filter: linear wrap: clamp
+uniform vec2 volumeDataSize;
+
+// uniform sampler2D iChannel2; // buffer-b.glsl filter: linear wrap: mirror
 
 varying vec3 eye;
 varying vec3 dir;
@@ -177,7 +180,26 @@ Model opU(Model a, Model b) {
 }
 
 #pragma glslify: import('./bloom.glsl')
-#pragma glslify: sdSkull = require(../skull/skull.glsl)
+//#pragma glslify: sdSkull = require(../skull/skull.glsl)
+#pragma glslify: mapTex = require(./volume-read.glsl)
+
+
+float sdSkull(vec3 p) {
+    #ifdef MIRROR
+        p.x = -abs(p.x);
+    #endif
+    p += OFFSET / SCALE;
+    float bound = fBox(p, 1./SCALE);
+    if (bound > .01) {
+        return bound;
+    }
+    // bound = max(bound, vmax(abs(mod(p + .0125, .025) - .0125)) - .003);
+    p *= SCALE;
+    float d = mapTex(volumeData, p, volumeDataSize);
+    // d = min(d, bound);
+    return d;
+}
+
 
 float drawSkull(vec3 p) {
     float s = 2.5;
@@ -192,21 +214,21 @@ float drawSkull(vec3 p) {
         return bound;
     }
     d = sdSkull((p.xyz * vec3(1,-1,-1)) / s) * s;
-    if (d < .1) {
-        vec3 e = vec3(.01,0,0);
-        // vec3 nor = normalize(vec3(
-        //     sdSkull(((p.xyz + e.xyy) * vec3(1,-1,-1)) / s) * s,
-        //     sdSkull(((p.xyz + e.yxy) * vec3(1,-1,-1)) / s) * s,
-        //     sdSkull(((p.xyz + e.yyx) * vec3(1,-1,-1)) / s) * s
-        // ));
-        vec3 tex = t3(iChannel2, p/1.5, normalize(p));
-        float disp = tex.r;
-        disp = disp * 3. - 1.3;
-        disp = smoothstep(-.5, 5., disp) * 10.;
-        disp *= .3;
-        disp = abs(disp - .1) - .1;
-        d += disp * .03;
-    }
+    // if (d < .1) {
+    //     vec3 e = vec3(.01,0,0);
+    //     // vec3 nor = normalize(vec3(
+    //     //     sdSkull(((p.xyz + e.xyy) * vec3(1,-1,-1)) / s) * s,
+    //     //     sdSkull(((p.xyz + e.yxy) * vec3(1,-1,-1)) / s) * s,
+    //     //     sdSkull(((p.xyz + e.yyx) * vec3(1,-1,-1)) / s) * s
+    //     // ));
+    //     vec3 tex = t3(iChannel2, p/1.5, normalize(p));
+    //     float disp = tex.r;
+    //     disp = disp * 3. - 1.3;
+    //     disp = smoothstep(-.5, 5., disp) * 10.;
+    //     disp *= .3;
+    //     disp = abs(disp - .1) - .1;
+    //     d += disp * .03;
+    // }
     return d;
 
     d = length(p) - 1.;
@@ -353,6 +375,7 @@ Model map(vec3 p) {
     #ifdef DEBUG_BLOOMS
         t += .0001;
         t *= delay;
+        t = .0001;
         scale = 3.;
         p /= scale;
         pR(p.yz, -1.9);

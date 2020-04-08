@@ -14,7 +14,7 @@ const regl = require('regl')({
     'ext_shader_texture_lod',
   ],
   // pixelRatio: .5,
-  pixelRatio: 2,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
