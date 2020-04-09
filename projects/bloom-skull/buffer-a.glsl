@@ -244,7 +244,7 @@ float drawSkull(vec3 p) {
     return d;
 }
 
-//#define DEBUG_BLOOMS
+#define DEBUG_BLOOMS
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
@@ -283,7 +283,7 @@ void tweenSkull(inout vec3 p, inout float scale, float t) {
 
 Model drawFinalBloom(vec3 p, float t, float scale) {
 
-    float density = 2.;
+    vec2 density = vec2(.25, 2);
     float thickness = .05;
     float pointy = 1.;
     float width = .4;
@@ -296,7 +296,7 @@ Model drawFinalBloom(vec3 p, float t, float scale) {
     return blm;
 }
 
-Model drawBloom(vec3 p, float t, float scale, float density, float thickness, float pointy, float width) {
+Model drawBloom(vec3 p, float t, float scale, vec2 density, float thickness, float pointy, float width) {
     p /= scale;
     Model model = drawBloom(p, t, density, thickness, pointy, width, false);
     model.d *= scale;
@@ -332,14 +332,14 @@ Model skullWithBloom(vec3 p, float scale, float t) {
 
         vec3 pp = p;
 
-        float density = 2.;
+        vec2 density = vec2(.25, 2.);
         float thickness = .05;
         float pointy = 1.;
         float width = .4;
 
         p -= vec3(-.2,.2,.25)*1.05;
         p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
-        density = 1.;
+        density = vec2(.25, 1.);
         thickness = .05;
         pointy = 0.;
         width = .4;
@@ -349,7 +349,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
 
         p -= vec3(.28,.1,.15);
         p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
-        density = 2.5;
+        density = vec2(.25, 2.5);
         thickness = .1;
         pointy = 0.;
         width = .2;
@@ -359,7 +359,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
 
         p -= vec3(.22,.23,.2) * 1.05;
         p *= orientMatrix(vec3(.5,.3,-.2), vec3(1,1,0));
-        density = .5;
+        density = vec2(.25, .5);
         thickness = .1;
         pointy = 0.;
         width = .5;
@@ -386,8 +386,7 @@ Model map(vec3 p) {
     float t = time;
 
     #ifdef DEBUG_BLOOMS
-        t += .0001;
-        t *= delay;
+        t = iTime/2. + .001;
         scale = 3.;
         p /= scale;
         pR(p.yz, -1.9);

@@ -177,7 +177,7 @@ void calcPhyllotaxis() {
 Model drawBloom(
     vec3 p,
     float t,
-    float density,
+    vec2 density,
     float thickness,
     float pointy,
     float width,
@@ -200,8 +200,8 @@ Model drawBloom(
     p.y -= mix(0., .25, t);
 
     vec2 move = vec2(0, t);
-    float stretchStart = .25;
-    float stretchEnd = density;
+    float stretchStart = density.x;
+    float stretchEnd = density.y;
     float stretch = mix(stretchStart, stretchEnd, t);
     float maxBloomOffset = PI / 5.;
 
