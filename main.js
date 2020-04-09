@@ -20,7 +20,7 @@ const regl = require('regl')({
   },
 });
 const { mat4 } = require('gl-matrix');
-const WebCaptureClient = require('web-frames-capture');
+const webFramesCapture = require('web-frames-capture');
 const createMouse = require('./lib/mouse');
 const createCamera = require('./lib/camera');
 const StateStore = require('./lib/state-store');
@@ -341,22 +341,25 @@ module.exports = (project) => {
   let tick = regl.frame(() => draw());
   events.on('draw', () => draw(true));
 
-  const captureSetup = (config, done) => {
+  const captureSetup = (width, height, done) => {
+    console.log('captureSetup', width, height);
     tick.cancel();
     timer.pause();
-    canvas.width = config.width;
-    canvas.height = config.height;
-    canvas.style.width = config.width + 'px';
-    canvas.style.height = config.height + 'px';
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
     setTimeout(done, 1000);
   };
 
   const captureTeardown = () => {
+    console.log('captureTeardown');
     screenQuad = undefined;
     tick = regl.frame(draw);
   };
 
   const captureRender = (milliseconds, quad, done) => {
+    console.log('captureRender', milliseconds, quad);
     // setTimeout(function() {
       timer.set(milliseconds);
       screenQuad = quad;
@@ -370,10 +373,10 @@ module.exports = (project) => {
   let captureConfig = {
     fps: 35,
     seconds: 1, // (duration)
-    width: (640 * 3) / 2,
-    height: (360 * 3) / 2,
-    quads: true,
-    prefix: 'plode-',
+    width: 640,
+    height: 360,
+    //quads: true,
+    prefix: 'bloomskull-',
   };
 
   if (defaultState && defaultState.capture) {
@@ -385,7 +388,7 @@ module.exports = (project) => {
     }
   }
 
-  const webCapture = new WebCaptureClient(
+  webFramesCapture(
     canvas,
     captureSetup,
     captureTeardown,

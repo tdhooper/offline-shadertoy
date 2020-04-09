@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "budo index.js --ssl --css /styles/main.css --live"
+    "start": "budo index.js --css /styles/main.css --live"
   },
   "keywords": [],
   "author": "",
@@ -39,7 +39,7 @@
     "regl": "^1.3.9",
     "stats.js": "^0.17.0",
     "through2": "^3.0.0",
-    "web-frames-capture": "^1.0.0",
+    "web-frames-capture": "github:tdhooper/web-frames-capture#feature/cli",
     "webmidi": "^2.0.4"
   },
   "glslify": {
