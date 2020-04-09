@@ -353,17 +353,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         thickness = .05;
         pointy = 0.;
         width = .4;
-        bloom = drawBloom(p, smoothstep(0., 2., t - delay), .08, density, thickness, pointy, width);
-        model = opU(model, bloom);
-        p = pp;
-
-        p -= vec3(.28,.1,.15);
-        p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
-        density = vec2(.3, 2.5);
-        thickness = .1;
-        pointy = 0.;
-        width = .2;
-        bloom = drawBloom(p, smoothstep(0., 2., t - delay), .1, density, thickness, pointy, width);
+        bloom = drawBloom(p, easeOutCirc(smoothstep(-.5, 1., t - delay)), .08, density, thickness, pointy, width);
         model = opU(model, bloom);
         p = pp;
 
@@ -373,8 +363,17 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         thickness = .1;
         pointy = 0.;
         width = .5;
+        bloom = drawBloom(p, easeOutCirc(smoothstep(-.3, .8, t - delay)), .05, density, thickness, pointy, width);
+        model = opU(model, bloom);
+        p = pp;
 
-        bloom = drawBloom(p, smoothstep(0., 2., t - delay), .05, density, thickness, pointy, width);
+        p -= vec3(.28,.1,.15);
+        p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
+        density = vec2(.3, 2.5);
+        thickness = .1;
+        pointy = 0.;
+        width = .2;
+        bloom = drawBloom(p, easeOutCirc(smoothstep(-.1, 1.1, t - delay)), .1, density, thickness, pointy, width);
         model = opU(model, bloom);
         p = pp;
     }
