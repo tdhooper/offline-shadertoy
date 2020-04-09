@@ -139,15 +139,15 @@ vec3 calcCellData(
     cell = round(cell);
     cell += offset;
 
+    // Hide leaves outside the growth area
+    cell = transformI * cell;
+    cell.y *= stretch / sz / stretchStart;
+    cell.y = max(cell.y, 4.4/stretchEnd); // clamp, not sure why this magic number
     if (hideInside) {
-        // Hide leaves outside the growth area
-        cell = transformI * cell;
-        cell.y *= stretch / sz / stretchStart;
-        cell.y = max(cell.y, .55/stretchStart); // clamp, not sure why this magic number
         cell.y = min(cell.y, 1.21/stretchStart); // clamp, not sure why this magic number
-        cell.y /= stretch / sz / stretchStart;
-        cell = transform * cell;
     }
+    cell.y /= stretch / sz / stretchStart;
+    cell = transform * cell;
 
     // Snap after clamp
     cell = round(cell);

@@ -6,6 +6,12 @@ uniform sampler2D volumeData; // volume-generate.glsl filter: linear wrap: clamp
 uniform vec2 volumeDataSize;
 uniform mat4 cameraMatrix;
 
+uniform float guiDensityStart;
+uniform float guiDensityEnd;
+uniform float guiThickness;
+uniform float guiPointy;
+uniform float guiWidth;
+
 // uniform sampler2D iChannel2; // buffer-b.glsl filter: linear wrap: mirror
 
 varying vec3 eye;
@@ -339,31 +345,36 @@ Model skullWithBloom(vec3 p, float scale, float t) {
 
         p -= vec3(-.2,.2,.25)*1.05;
         p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
-        density = vec2(.25, 1.);
+        density = vec2(.08, 1.);
+        // density = vec2(guiDensityStart, guiDensityEnd);
+        // thickness = guiThickness;
+        // pointy = guiPointy;
+        // width = guiWidth;
         thickness = .05;
         pointy = 0.;
         width = .4;
-        bloom = drawBloom(p, t-.5, .08, density, thickness, pointy, width);
+        bloom = drawBloom(p, smoothstep(0., 2., t - delay), .08, density, thickness, pointy, width);
         model = opU(model, bloom);
         p = pp;
 
         p -= vec3(.28,.1,.15);
         p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
-        density = vec2(.25, 2.5);
+        density = vec2(.3, 2.5);
         thickness = .1;
         pointy = 0.;
         width = .2;
-        bloom = drawBloom(p, t-.8, .1, density, thickness, pointy, width);
+        bloom = drawBloom(p, smoothstep(0., 2., t - delay), .1, density, thickness, pointy, width);
         model = opU(model, bloom);
         p = pp;
 
         p -= vec3(.22,.23,.2) * 1.05;
         p *= orientMatrix(vec3(.5,.3,-.2), vec3(1,1,0));
-        density = vec2(.25, .5);
+        density = vec2(.03, .5);
         thickness = .1;
         pointy = 0.;
         width = .5;
-        bloom = drawBloom(p, smoothstep(1.3, 1.8, t), .05, density, thickness, pointy, width);
+
+        bloom = drawBloom(p, smoothstep(0., 2., t - delay), .05, density, thickness, pointy, width);
         model = opU(model, bloom);
         p = pp;
     }
@@ -386,7 +397,7 @@ Model map(vec3 p) {
     float t = time;
 
     #ifdef DEBUG_BLOOMS
-        t = iTime/2. + .001;
+        t = iTime/1.5 + .001;
         scale = 3.;
         p /= scale;
         pR(p.yz, -1.9);

@@ -1,5 +1,5 @@
 {
-  "id": "bloom-skull-06",
+  "id": "bloom-skull-07",
   "camera": {
     "rotation": [
       0.3263933062553406,
@@ -68,5 +68,48 @@
     184,
     114
   ],
-  "debugPlane": {}
+  "debugPlane": {},
+  "controls": {
+    "closed": true,
+    "densityStart": {
+      "type": "range",
+      "controller": 11,
+      "step": 0.01,
+      "min": 0,
+      "max": 1,
+      "value": 0.25
+    },
+    "densityEnd": {
+      "type": "range",
+      "controller": 12,
+      "step": 0.05,
+      "min": 0,
+      "max": 4,
+      "value": 2
+    },
+    "thickness": {
+      "type": "range",
+      "controller": 13,
+      "step": 0.01,
+      "min": 0,
+      "max": 0.5,
+      "value": 0.05
+    },
+    "width": {
+      "type": "range",
+      "controller": 14,
+      "step": 0.01,
+      "min": 0,
+      "max": 1,
+      "value": 0.4
+    },
+    "pointy": {
+      "type": "range",
+      "controller": 15,
+      "step": 0.1,
+      "min": 0,
+      "max": 1,
+      "value": 1
+    }
+  }
 }
