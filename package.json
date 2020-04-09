@@ -40,7 +40,7 @@
     "stats.js": "^0.17.0",
     "through2": "^3.0.0",
     "web-frames-capture": "github:tdhooper/web-frames-capture#feature/cli",
-    "webmidi": "^2.0.4"
+    "webmidi": "^2.5.1"
   },
   "glslify": {
     "transform": [
