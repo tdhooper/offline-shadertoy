@@ -337,7 +337,7 @@ void stepTransform(inout vec3 p, inout float scale, inout float t) {
 
 const float CUTOFF = 3.4; // remove old itrerations when they're out of view
 
-float fCracks(vec3 p, float d, float t) {
+vec3 fCracks(vec3 p, float t) {
     p.z += .02;
     p /= 1.2;
     float crack = 1e12;
@@ -347,25 +347,26 @@ float fCracks(vec3 p, float d, float t) {
     crack = min(crack, fCrack(pR2d(p.xz, 0.5) - vec2(.015,-.02), vec2(.12,.05), 10., 1., weight));
     crack = min(crack, fCrack(pR2d(p.xz, 2.5) - vec2(.0,-.0), vec2(.12,.05), 10., 4., weight));
     crack = min(crack, fCrack(pR2d(p.xz, 5.) - vec2(-.01,.02), vec2(.08,.02), 12., 3., weight));
-    crack += (1.-blend) * weight/2.;
-    crack -= min(d * mix(1.5, .2, blend), 0.);
     crack*= 1.2;
-    return crack;
+    return vec3(crack, weight, blend);
 }
 
-float fCracks2(vec3 p, float d, float t) {
+vec3 fCracks2(vec3 p,  float t) {
     float crack = 1e12;
     float blend = smoothstep(-.3, .7, t);
     float weight = mix(.001, .03, blend);
     pR(p.xz, 2.2);
     pR(p.xy, -.9);
     crack = min(crack, fCrack(p.xz - vec2(.015,-.02), vec2(.15,.03), 18., 11., weight));
-    crack += (1.-blend) * weight/2.;
-    crack -= min(d * mix(1.5, .2, blend), 0.);
-    return crack;
+    return vec3(crack, weight, blend);
 }
 
-void addCrack(vec3 p, inout Model skull, float crack) {
+void addCrack(vec3 p, inout Model skull, vec3 cd) {
+    float crack = cd.x;
+    float weight = cd.y;
+    float blend = cd.z;
+    crack += (1.-blend) * weight/2.;
+    crack -= min(skull.d * mix(1.5, .2, blend), 0.);
     crack = max(crack, -(p.y + .3));
     skull.d = cmax(skull.d, -crack, .003);
 }
@@ -406,7 +407,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         bt = easeOutCirc(smoothstep(-.5, 1., td));
         p -= vec3(-.2,.2,.25) * mix(1., 1.02, bt);
         p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
-        addCrack(p, skull, fCracks(p, skull.d, td));
+        addCrack(p, skull, fCracks(p, td));
         density = vec2(.08, 1.);
         thickness = .05;
         pointy = 0.;
@@ -429,7 +430,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
 
         p -= vec3(.28,.1,.15);
         p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
-        addCrack(p, skull, fCracks2(p, skull.d, td));
+        addCrack(p, skull, fCracks2(p, td));
         density = vec2(.3, 2.5);
         thickness = .1;
         pointy = 0.;
