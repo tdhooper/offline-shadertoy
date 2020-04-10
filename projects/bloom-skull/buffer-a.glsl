@@ -74,6 +74,14 @@ float smax(float a, float b, float k) {
     return -smin(-a, -b, k);
 }
 
+float cmin(float a, float b, float r) {
+    return min(min(a, b), (a - r + b)*sqrt(0.5));
+}
+
+float cmax(float a, float b, float r) {
+    return max(max(a, b), (a + r + b)*sqrt(0.5));
+}
+
 float range(float vmin, float vmax, float value) {
   return (value - vmin) / (vmax - vmin);
 }
@@ -178,10 +186,11 @@ struct Model {
     float slice;
     float len;
     float neg; // subtract from distance
+    float crackdepth;
 };
 
 Model newModel() {
-    return Model(1e12, vec3(0), false, vec2(0), vec2(0), 0., 0., 0., 1e12);
+    return Model(1e12, vec3(0), false, vec2(0), vec2(0), 0., 0., 0., 1e12, 0.);
 }
 
 Model opU(Model a, Model b) {
@@ -340,9 +349,25 @@ float fCracks(vec3 p, float d, float t) {
     crack = min(crack, fCrack(pR2d(p.xz, 5.) - vec2(-.01,.02), vec2(.08,.02), 12., 3., weight));
     crack += (1.-blend) * weight/2.;
     crack -= min(d * mix(1.5, .2, blend), 0.);
-    crack = max(crack, -(p.y + .3));
     crack*= 1.2;
     return crack;
+}
+
+float fCracks2(vec3 p, float d, float t) {
+    float crack = 1e12;
+    float blend = smoothstep(-.3, .7, t);
+    float weight = mix(.001, .03, blend);
+    pR(p.xz, 2.2);
+    pR(p.xy, -.9);
+    crack = min(crack, fCrack(p.xz - vec2(.015,-.02), vec2(.15,.03), 18., 11., weight));
+    crack += (1.-blend) * weight/2.;
+    crack -= min(d * mix(1.5, .2, blend), 0.);
+    return crack;
+}
+
+void addCrack(vec3 p, inout Model skull, float crack) {
+    crack = max(crack, -(p.y + .3));
+    skull.d = cmax(skull.d, -crack, .003);
 }
 
 Model skullWithBloom(vec3 p, float scale, float t) {
@@ -368,6 +393,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         // skull with sub blooms
         float d = drawSkullWithBlooms(p, t);
         skull.d = d;
+        skull.crackdepth = max(-skull.d, 0.);
         float td = t - delay;
 
         vec3 pp = p;
@@ -380,8 +406,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         bt = easeOutCirc(smoothstep(-.5, 1., td));
         p -= vec3(-.2,.2,.25) * mix(1., 1.02, bt);
         p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
-        crack = fCracks(p, skull.d, td);
-        skull.d = max(skull.d, -crack);
+        addCrack(p, skull, fCracks(p, skull.d, td));
         density = vec2(.08, 1.);
         thickness = .05;
         pointy = 0.;
@@ -404,11 +429,12 @@ Model skullWithBloom(vec3 p, float scale, float t) {
 
         p -= vec3(.28,.1,.15);
         p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
+        addCrack(p, skull, fCracks2(p, skull.d, td));
         density = vec2(.3, 2.5);
         thickness = .1;
         pointy = 0.;
         width = .2;
-        bloom = drawBloom(p, easeOutCirc(smoothstep(-.1, 1.1, td)), .1, density, thickness, pointy, width);
+        bloom = drawBloom(p, (smoothstep(0., 1.5, td)), .1, density, thickness, pointy, width);
         blooms = opU(blooms, bloom);
         p = pp;
 
@@ -558,6 +584,7 @@ vec3 worldToCam(vec3 v) {
 
 vec3 doShading(vec3 pos, vec3 rd, Model model) {
     vec3 col = vec3(.3);
+    col *= mix(1., .1, rangec(0., .05, model.crackdepth));
 
     if (model.isBloom) {
         col = vec3(.3,.05,.05);
@@ -612,6 +639,7 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
     //float lig = clamp(dot(nor, vec3(0,1,0)), .01, 1.);
     //col *= lig;
 
+    // col = nor * .5 + .5;
     return col;
 }
 
