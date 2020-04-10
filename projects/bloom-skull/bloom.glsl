@@ -83,6 +83,7 @@ Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width) {
         model.wedges = wedges;
         model.slice = slice;
         model.len = len;
+        model.neg = max(max(slice, top), wedges);
         return model;
     }
 
@@ -191,6 +192,7 @@ Model drawBloom(
     float bound = length(p) - mix(.7, 1.5, t);
     if ( ! lightingPass && bound > .01) {
         model.d = bound;
+        model.neg = bound;
         return model;
     }
 

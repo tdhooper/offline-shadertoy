@@ -177,18 +177,20 @@ struct Model {
     float wedges;
     float slice;
     float len;
+    float neg; // subtract from distance
 };
 
 Model newModel() {
-    return Model(1e12, vec3(0), false, vec2(0), vec2(0), 0., 0., 0.);
+    return Model(1e12, vec3(0), false, vec2(0), vec2(0), 0., 0., 0., 1e12);
 }
 
 Model opU(Model a, Model b) {
-    if (a.d < b.d) {
-        return a;
-    } else {
-        return b;
+    Model m = a;
+    if (b.d < a.d) {
+        m = b;
     }
+    m.neg = min(a.neg, b.neg);
+    return m;
 }
 
 #pragma glslify: import('./bloom.glsl')
@@ -255,12 +257,14 @@ float drawSkull(vec3 p) {
     return d;
 }
 
-// #define DEBUG_BLOOMS
+#define DEBUG_BLOOMS
+#define DISABLE_SHADING
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
     p /= scale;
     float d = drawSkull(p);
+    // d = max(d, -(d + .1));
 
     #ifdef DEBUG_BLOOMS
         if (t > .8) { // when is it realistic to start showing blooms
@@ -273,10 +277,6 @@ float drawSkullWithBlooms(vec3 p, float t) {
 
 void applyMat4(inout vec3 p, mat4 m) {
     p = (vec4(p, 1) * m).xyz;
-}
-
-vec3 opU(vec3 a, vec3 b) {
-    return a.x < b.x ? a : b;
 }
 
 void tweenSkull(inout vec3 p, inout float scale, float t) {
@@ -304,6 +304,7 @@ Model drawFinalBloom(vec3 p, float t, float scale) {
     float bs = 1.4;
     Model blm = drawBloom(p / bs, bt, density, thickness, pointy, width, true);
     blm.d *= bs * scale;
+    blm.neg *= bs * scale;
     return blm;
 }
 
@@ -329,6 +330,7 @@ const float CUTOFF = 3.4; // remove old itrerations when they're out of view
 
 float fCracks(vec3 p, float d, float t) {
     p.z += .02;
+    p /= 1.2;
     float crack = 1e12;
     float blend = smoothstep(-1., 0., t);
     float weight = mix(.001, .03, blend);
@@ -338,7 +340,8 @@ float fCracks(vec3 p, float d, float t) {
     crack = min(crack, fCrack(pR2d(p.xz, 5.) - vec2(-.01,.02), vec2(.08,.02), 12., 3., weight));
     crack += (1.-blend) * weight/2.;
     crack -= min(d * mix(1.5, .2, blend), 0.);
-    crack = max(crack, -(p.y + .5));
+    crack = max(crack, -(p.y + .3));
+    crack*= 1.2;
     return crack;
 }
 
@@ -352,6 +355,14 @@ Model skullWithBloom(vec3 p, float scale, float t) {
     Model skull = newModel();
     Model blooms = newModel();
     Model bloom;
+    float crack;
+    float bt;
+
+        // density = vec2(guiDensityStart, guiDensityEnd);
+        // thickness = guiThickness;
+        // pointy = guiPointy;
+        // width = guiWidth;
+
 
     if (t < CUTOFF) {
         // skull with sub blooms
@@ -366,23 +377,18 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         float pointy;
         float width;
 
-        p -= vec3(-.2,.2,.25)*1.05;
+        bt = easeOutCirc(smoothstep(-.5, 1., td));
+        p -= vec3(-.2,.2,.25) * mix(1., 1.02, bt);
         p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
-
-        float crack = fCracks(p, skull.d, td);
+        crack = fCracks(p, skull.d, td);
         skull.d = max(skull.d, -crack);
-        
-
-
         density = vec2(.08, 1.);
-        // density = vec2(guiDensityStart, guiDensityEnd);
-        // thickness = guiThickness;
-        // pointy = guiPointy;
-        // width = guiWidth;
         thickness = .05;
         pointy = 0.;
         width = .4;
-        bloom = drawBloom(p, easeOutCirc(smoothstep(-.5, 1., td)), .08, density, thickness, pointy, width);
+        // pR(p.xz, -1.5);
+        bloom = drawBloom(p, bt, .08, density, thickness, pointy, width);
+        skull.d = max(skull.d, -bloom.neg);
         blooms = opU(blooms, bloom);
         p = pp;
 
@@ -415,6 +421,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
     stepTransform(p, scale, t);
 
     bloom = drawFinalBloom(p, t, scale);
+    model.d = max(model.d, -bloom.neg);
     model = opU(model, bloom);
 
     return model;
@@ -508,7 +515,9 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 // https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
-    // return 1.;
+    #ifdef DISABLE_SHADING
+        return 1.;
+    #endif
     float res = 1.0;
     float t = mint;
     float ph = 1e10;
@@ -527,7 +536,9 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 // https://www.shadertoy.com/view/Xds3zN
 float calcAO( in vec3 pos, in vec3 nor )
 {
-    // return 1.;
+    #ifdef DISABLE_SHADING
+        return 1.;
+    #endif
     float occ = 0.0;
     float sca = 1.0;
     for( int i=0; i<5; i++ )
