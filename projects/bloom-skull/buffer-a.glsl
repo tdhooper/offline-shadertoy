@@ -621,7 +621,7 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
             vec3  hal = normalize( lig - rd );
             float amb = sqrt(clamp( 0.5+0.5*worldToCam(nor).y, 0.0, 1.0 ));
             float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
-            float bac = clamp( dot( nor, lba ), 0.0, 1.0 )*clamp( 1.0-pos.y,0.0,1.0);
+            float bac = clamp( dot( nor, lba ), 0.0, 1.0 )*clamp( 1.0-worldToCam(nor).y,0.0,1.0);
             float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
 
             occ = mix(1., occ, .8);
