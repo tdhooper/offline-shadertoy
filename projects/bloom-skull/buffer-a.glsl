@@ -617,7 +617,7 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
 			vec3 nor = calcNormal(pos);
             float occ = calcAO( pos, nor );
             vec3  lig = normalize( worldToCam(vec3(.5, 1, .2)) );
-            vec3  lba = normalize( worldToCam(vec3(-.5, -1., .2)) );
+            vec3  lba = normalize( worldToCam(vec3(-.5, -.8, .1)) );
             vec3  hal = normalize( lig - rd );
             float amb = sqrt(clamp( 0.5+0.5*worldToCam(nor).y, 0.0, 1.0 ));
             float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
@@ -644,7 +644,7 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
 
         lin += 3.80*dif*vec3(1.30,1.00,0.70);
         lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
-        lin += 0.55*bac*vec3(0.25,0.25,0.25)*occ;
+        lin += 0.55*bac*vec3(0.25,0.5,0.5)*occ;
         lin += 0.15*fre*vec3(1.00,1.00,1.00)*occ;
 		col = col*lin;
 		col += 7.00*spe*vec3(1.10,0.90,0.70);
