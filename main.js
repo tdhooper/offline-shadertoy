@@ -13,7 +13,7 @@ const regl = require('regl')({
     'oes_texture_float_linear',
     'ext_shader_texture_lod',
   ],
-  pixelRatio: .25,
+  pixelRatio: .5,
   // pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
@@ -371,7 +371,7 @@ module.exports = (project) => {
 
   // Default config used by the UI
   let captureConfig = {
-    fps: 35,
+    fps: 45,
     seconds: 1, // (duration)
     width: 640,
     height: 360,

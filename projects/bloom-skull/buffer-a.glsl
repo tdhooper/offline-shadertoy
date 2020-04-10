@@ -61,6 +61,10 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+vec2 pR2d(vec2 p, float a) {
+    return cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
 float smin(float a, float b, float k){
     float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
     return (1. - f) * a + f  * b - f * (1. - f) * k;
@@ -190,6 +194,7 @@ Model opU(Model a, Model b) {
 #pragma glslify: import('./bloom.glsl')
 //#pragma glslify: sdSkull = require(../skull/skull.glsl)
 #pragma glslify: mapTex = require(./volume-read.glsl)
+#pragma glslify: fCrack = require(./crack.glsl)
 
 
 float sdSkull(vec3 p) {
@@ -322,6 +327,21 @@ void stepTransform(inout vec3 p, inout float scale, inout float t) {
 
 const float CUTOFF = 3.2; // remove old itrerations when they're out of view
 
+float fCracks(vec3 p, float d, float t) {
+    p.z += .02;
+    float crack = 1e12;
+    float blend = smoothstep(-1., 0., t);
+    float weight = mix(.001, .03, blend);
+    pR(p.xz, .5);
+    crack = min(crack, fCrack(pR2d(p.xz, 0.5) - vec2(.015,-.02), vec2(.12,.05), 10., 1., weight));
+    crack = min(crack, fCrack(pR2d(p.xz, 2.5) - vec2(.0,-.0), vec2(.12,.05), 10., 4., weight));
+    crack = min(crack, fCrack(pR2d(p.xz, 5.) - vec2(-.01,.02), vec2(.08,.02), 12., 3., weight));
+    crack += (1.-blend) * weight/2.;
+    crack -= min(d * mix(1.5, .2, blend), 0.);
+    crack = max(crack, -(p.y + .5));
+    return crack;
+}
+
 Model skullWithBloom(vec3 p, float scale, float t) {
     
     if (t <= .0 || scale <= 0.) {
@@ -329,22 +349,31 @@ Model skullWithBloom(vec3 p, float scale, float t) {
     }
 
     Model model = newModel();
+    Model skull = newModel();
+    Model blooms = newModel();
     Model bloom;
 
     if (t < CUTOFF) {
         // skull with sub blooms
         float d = drawSkullWithBlooms(p, t);
-        model.d = d;
+        skull.d = d;
+        float td = t - delay;
 
         vec3 pp = p;
 
-        vec2 density = vec2(.25, 2.);
-        float thickness = .05;
-        float pointy = 1.;
-        float width = .4;
+        vec2 density;
+        float thickness;
+        float pointy;
+        float width;
 
         p -= vec3(-.2,.2,.25)*1.05;
         p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
+
+        float crack = fCracks(p, skull.d, td);
+        skull.d = max(skull.d, -crack);
+        
+
+
         density = vec2(.08, 1.);
         // density = vec2(guiDensityStart, guiDensityEnd);
         // thickness = guiThickness;
@@ -353,8 +382,8 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         thickness = .05;
         pointy = 0.;
         width = .4;
-        bloom = drawBloom(p, easeOutCirc(smoothstep(-.5, 1., t - delay)), .08, density, thickness, pointy, width);
-        model = opU(model, bloom);
+        bloom = drawBloom(p, easeOutCirc(smoothstep(-.5, 1., td)), .08, density, thickness, pointy, width);
+        blooms = opU(blooms, bloom);
         p = pp;
 
         p -= vec3(.22,.23,.2) * 1.05;
@@ -363,8 +392,8 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         thickness = .1;
         pointy = 0.;
         width = .5;
-        bloom = drawBloom(p, easeOutCirc(smoothstep(-.3, .8, t - delay)), .05, density, thickness, pointy, width);
-        model = opU(model, bloom);
+        bloom = drawBloom(p, easeOutCirc(smoothstep(-.3, .8, td)), .05, density, thickness, pointy, width);
+        blooms = opU(blooms, bloom);
         p = pp;
 
         p -= vec3(.28,.1,.15);
@@ -373,9 +402,11 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         thickness = .1;
         pointy = 0.;
         width = .2;
-        bloom = drawBloom(p, easeOutCirc(smoothstep(-.1, 1.1, t - delay)), .1, density, thickness, pointy, width);
-        model = opU(model, bloom);
+        bloom = drawBloom(p, easeOutCirc(smoothstep(-.1, 1.1, td)), .1, density, thickness, pointy, width);
+        blooms = opU(blooms, bloom);
         p = pp;
+
+        model = opU(skull, blooms);
     }
 
 
@@ -401,7 +432,7 @@ Model map(vec3 p) {
         p /= scale;
         pR(p.yz, -1.9);
         pR(p.xy, -2.3);
-        pR(p.xz, -.4 + t/2.);
+        //pR(p.xz, -.4 + t/2.);
         return skullWithBloom(p, scale, t);
     #endif
 
@@ -473,8 +504,6 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
     vec3 vv = normalize( cross(uu,ww));
     return mat3( uu, vv, ww );
 }
-
-// #define AA 3
 
 // https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
@@ -574,6 +603,8 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
     return col;
 }
 
+// #define AA 3
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     skullOffset = 1.8;
@@ -622,6 +653,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     #endif
 
         vec2 p = (-iResolution.xy + 2.0*(fragCoord+o))/iResolution.y;
+        //float crack = fCrack(p.xy, vec2(.05,.01)*10., 20., 0., .02);
+        //fragColor = vec4(step(crack, .0)); return;
 
         //fragColor = texture2D(iChannel2, fragCoord.xy/iResolution.xy); return;
 
