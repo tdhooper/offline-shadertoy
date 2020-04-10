@@ -266,8 +266,8 @@ float drawSkull(vec3 p) {
     return d;
 }
 
-#define DEBUG_BLOOMS
-#define DISABLE_SHADING
+// #define DEBUG_BLOOMS
+// #define DISABLE_SHADING
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
@@ -361,13 +361,25 @@ vec3 fCracks2(vec3 p,  float t) {
     return vec3(crack, weight, blend);
 }
 
+vec3 fCracks3(vec3 p,  float t) {
+    float crack = 1e12;
+    float blend = smoothstep(-.7, .3, t);
+    float weight = mix(.001, .03, blend);
+    pR(p.xz, 1.);
+    crack = min(crack, fCrack(p.xz - vec2(0,0), vec2(.12,.03), 13., 14., weight));
+    pR(p.xz, 2.6);
+    crack = min(crack, fCrack(p.xz - vec2(0,0), vec2(.12,.03), 16., 16., weight));
+    return vec3(crack, weight, blend);
+}
+
 void addCrack(vec3 p, inout Model skull, vec3 cd) {
     float crack = cd.x;
     float weight = cd.y;
     float blend = cd.z;
     crack += (1.-blend) * weight/2.;
     crack -= min(skull.d * mix(1.5, .2, blend), 0.);
-    crack = max(crack, -(p.y + .3));
+    crack = max(crack, -(p.y + .25));
+    crack = max(crack, -(skull.d + .06));
     skull.d = cmax(skull.d, -crack, .003);
 }
 
@@ -426,6 +438,12 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         width = .5;
         bloom = drawBloom(p, easeOutCirc(smoothstep(-.3, .8, td)), .05, density, thickness, pointy, width);
         blooms = opU(blooms, bloom);
+        p = pp;
+
+        p -= vec3(.28,.18,.18)*.98;
+        p *= orientMatrix(vec3(1,.4,-.4), vec3(1,1,0));
+        addCrack(p, skull, fCracks3(p, td));
+        // skull.d = min(skull.d, max(length(p) - .1, p.y+.005));
         p = pp;
 
         p -= vec3(.28,.1,.15);
