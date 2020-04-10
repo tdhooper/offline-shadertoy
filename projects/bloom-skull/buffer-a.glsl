@@ -508,7 +508,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 // https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
-    return 1.;
+    // return 1.;
     float res = 1.0;
     float t = mint;
     float ph = 1e10;
@@ -527,7 +527,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 // https://www.shadertoy.com/view/Xds3zN
 float calcAO( in vec3 pos, in vec3 nor )
 {
-    return 1.;
+    // return 1.;
     float occ = 0.0;
     float sca = 1.0;
     for( int i=0; i<5; i++ )
@@ -559,8 +559,8 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
 
 			vec3 nor = calcNormal(pos);
             float occ = calcAO( pos, nor );
-            vec3  lig = normalize( worldToCam(vec3(-.5, 1, .5)) );
-            vec3  lba = normalize( worldToCam(vec3(.5, -1., -.5)) );
+            vec3  lig = normalize( worldToCam(vec3(.5, 1, .2)) );
+            vec3  lba = normalize( worldToCam(vec3(-.5, -1., .2)) );
             vec3  hal = normalize( lig - rd );
             float amb = sqrt(clamp( 0.5+0.5*worldToCam(nor).y, 0.0, 1.0 ));
             float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
@@ -569,7 +569,8 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
 
             occ = mix(1., occ, .8);
             
-            dif *= softshadow( pos, lig, 0.001, .9 );
+            float sha = softshadow( pos, lig, 0.001, .9 );
+            dif *= sha;
 
             float spe = pow( clamp( dot( nor, hal ), 0.0, 1.0 ),16.0)*
                         dif *
@@ -587,7 +588,7 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
         lin += 3.80*dif*vec3(1.30,1.00,0.70);
         lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
         lin += 0.55*bac*vec3(0.25,0.25,0.25)*occ;
-        lin += 0.25*fre*vec3(1.00,1.00,1.00)*occ;
+        lin += 0.15*fre*vec3(1.00,1.00,1.00)*occ;
 		col = col*lin;
 		col += 7.00*spe*vec3(1.10,0.90,0.70);
 
@@ -603,7 +604,7 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
     return col;
 }
 
-// #define AA 3
+// #define AA 2
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
