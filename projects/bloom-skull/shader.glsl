@@ -35,7 +35,7 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale) {
     float centerDepth = centerTex.a * uFar;
     float centerSize = getBlurSize(centerDepth, focusPoint, focusScale);
     vec3 color = centerTex.rgb;
-    return color;
+    // return color;
     float tot = 1.0;
 
     float radius = RAD_SCALE;
@@ -73,19 +73,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // uv.x = 1.- uv.x;
     uPixelSize = vec2(.002) / (iResolution.xy / iResolution.y);
 
-    float scaleA = .04;
-    float focusA = .04;
-    float focusAStart = -.1;
-    float focusAEnd = .2;
+    float scaleA = .05;
+    float focusA = .03;
+    float focusAStart = .0;
+    float focusAEnd = .5;
 
-    float scaleB = .08;
-    float focusB = .05;
+    float scaleB = .05;
+    float focusB = .045;
     float focusBStart = .5;
-    float focusBEnd = .8;
+    float focusBEnd = .7;
 
     float blend = smoothstep(focusAStart, focusAEnd, mTime) - smoothstep(focusBStart, focusBEnd, mTime) + smoothstep(focusAStart, focusAEnd, mTime - 1.);
     float focus = mix(focusB, focusA, blend);
     float scale = mix(scaleB, scaleA, blend);
+
+    // focus = .045;
+    // scale = .06;
 
     vec3 col = depthOfField(uv, focus * uFar, scale);
 
@@ -107,5 +110,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col = pow( col, vec3(0.4545) );
     col = aces(col);
 
+    // col += vec3(blend/2.,0,0);
+
     fragColor = vec4(col, 1);
+    
 }
