@@ -255,7 +255,7 @@ float drawSkull(vec3 p) {
     return d;
 }
 
-#define DEBUG_BLOOMS
+// #define DEBUG_BLOOMS
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
@@ -325,7 +325,7 @@ void stepTransform(inout vec3 p, inout float scale, inout float t) {
     t -= delay;
 }
 
-const float CUTOFF = 3.2; // remove old itrerations when they're out of view
+const float CUTOFF = 3.4; // remove old itrerations when they're out of view
 
 float fCracks(vec3 p, float d, float t) {
     p.z += .02;
@@ -508,7 +508,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 // https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
-    // return 1.;
+    return 1.;
     float res = 1.0;
     float t = mint;
     float ph = 1e10;
@@ -527,7 +527,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 // https://www.shadertoy.com/view/Xds3zN
 float calcAO( in vec3 pos, in vec3 nor )
 {
-    // return 1.;
+    return 1.;
     float occ = 0.0;
     float sca = 1.0;
     for( int i=0; i<5; i++ )
