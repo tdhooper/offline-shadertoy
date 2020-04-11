@@ -268,7 +268,7 @@ float drawSkull(vec3 p) {
 }
 
 // #define DEBUG_BLOOMS
-// #define DISABLE_SHADING
+#define DISABLE_SHADING
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
@@ -428,25 +428,33 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         width = .39;
         pointy = .4;
         bloomsize = .11;
-        // density = vec2(guiDensityStart, guiDensityEnd);
-        // thickness = guiThickness;
-        // width = guiWidth;
-        // pointy = guiPointy;
-        // bloomsize = guiSize;
-        // pR(p.xz, -1.5);
         bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
         skull.d = max(skull.d, -bloom.neg);
         blooms = opU(blooms, bloom);
         p = pp;
 
-        p -= vec3(.22,.23,.2) * 1.05;
-        p *= orientMatrix(vec3(.5,.3,-.2), vec3(1,1,0));
-        density = vec2(.03, .5);
-        thickness = .1;
+        bt = smoothstep(.0, 1.5, td);
+        p -= vec3(.22,.23,.2) * mix(1., 1.05, bt);
+        p *= orientMatrix(vec3(.4,.3,-.3), vec3(1,1,0));
+
+        density = vec2(.45, 2.35);
+        thickness = .09;
+        width = .16;
         pointy = 0.;
-        width = .5;
-        bloomsize = .05;
-        bloom = drawBloom(p, easeOutCirc(smoothstep(-.3, .8, td)), bloomsize, density, thickness, pointy, width);
+        bloomsize = .08;
+
+        // density = vec2(.38, 1.95);
+        // thickness = .17;
+        // width = .49;
+        // pointy = 0.;
+        // bloomsize = .08;
+
+        // density = vec2(guiDensityStart, guiDensityEnd);
+        // thickness = guiThickness;
+        // width = guiWidth;
+        // pointy = guiPointy;
+        // bloomsize = guiSize;
+        bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
         blooms = opU(blooms, bloom);
         p = pp;
 
@@ -481,11 +489,6 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         width = .31;
         pointy = 0.;
         bloomsize = .05;
-        // density = vec2(guiDensityStart, guiDensityEnd);
-        // thickness = guiThickness;
-        // width = guiWidth;
-        // pointy = guiPointy;
-        // bloomsize = guiSize;
         bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
         blooms = opU(blooms, bloom);
         p = pp;
