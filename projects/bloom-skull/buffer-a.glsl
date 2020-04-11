@@ -452,11 +452,11 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         pointy = 0.;
         bloomsize = .08;
 
-        // density = vec2(.38, 1.95);
-        // thickness = .17;
-        // width = .49;
-        // pointy = 0.;
-        // bloomsize = .08;
+        density = vec2(.12, 1.45);
+        thickness = .04;
+        width = .13;
+        pointy = 0.;
+        bloomsize = .155;
 
         // density = vec2(guiDensityStart, guiDensityEnd);
         // thickness = guiThickness;
@@ -490,17 +490,17 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         blooms = opU(blooms, bloom);
         p = pp;
 
-        bt = (smoothstep(-.0, 1.2, td));
-        p -= vec3(.24,.15,.17) * mix(1.1, 1.1, bt);
-        p *= orientMatrix(vec3(.5,.2,-.4), vec3(1,1,0));
-        density = vec2(.03, .6);
-        thickness = .22;
-        width = .31;
-        pointy = 0.;
-        bloomsize = .05;
-        bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
-        blooms = opU(blooms, bloom);
-        p = pp;
+        // bt = (smoothstep(-.0, 1.2, td));
+        // p -= vec3(.24,.15,.17) * mix(1.1, 1.1, bt);
+        // p *= orientMatrix(vec3(.5,.2,-.4), vec3(1,1,0));
+        // density = vec2(.03, .6);
+        // thickness = .22;
+        // width = .31;
+        // pointy = 0.;
+        // bloomsize = .05;
+        // bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
+        // blooms = opU(blooms, bloom);
+        // p = pp;
 
         p -= vec3(.3,.29,-.03);
         p *= orientMatrix(vec3(.5,.3,-.05), vec3(1,0,1));
