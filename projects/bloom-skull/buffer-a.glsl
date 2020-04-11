@@ -386,14 +386,14 @@ vec3 fCracks4(vec3 p,  float t) {
     return vec3(crack, weight, blend);
 }
 
-void addCrack(vec3 p, inout Model skull, vec3 cd) {
+void addCrack(vec3 p, float d, inout Model skull, vec3 cd) {
     float crack = cd.x;
     float weight = cd.y;
     float blend = cd.z;
     crack += (1.-blend) * weight/2.;
     crack -= min(skull.d * mix(1.5, .2, blend), 0.);
     crack = max(crack, -(p.y + .25));
-    crack = max(crack, -(skull.d + .06));
+    crack = max(crack, -(d + .06));
     skull.d = cmax(skull.d, -crack, .003);
 }
 
@@ -421,6 +421,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         // skull with sub blooms
         float d = drawSkullWithBlooms(p, t);
         skull.d = d;
+        float skulld = d;
         skull.crackdepth = max(-skull.d, 0.);
         float td = t - delay;
 
@@ -436,7 +437,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         bt = easeOutCirc(smoothstep(-.5, 1., td));
         p -= vec3(-.2,.2,.25) * mix(1., 1.02, bt);
         p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
-        addCrack(p, skull, fCracks(p, td));
+        addCrack(p, skulld, skull, fCracks(p, td));
         density = vec2(.08, 1.);
         thickness = .11;
         width = .39;
@@ -494,12 +495,12 @@ Model skullWithBloom(vec3 p, float scale, float t) {
 
         p -= vec3(.28,.18,.18)*.98;
         p *= orientMatrix(vec3(1,.4,-.4), vec3(1,1,0));
-        addCrack(p, skull, fCracks3(p, td));
+        addCrack(p, skulld, skull, fCracks3(p, td));
         p = pp;
 
         p -= vec3(.28,.1,.15);
         p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
-        addCrack(p, skull, fCracks2(p, td));
+        addCrack(p, skulld, skull, fCracks2(p, td));
         p = pp;
 
         // BOTTOM
@@ -531,7 +532,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
 
         p -= vec3(.3,.29,-.03);
         p *= orientMatrix(vec3(.5,.3,-.05), vec3(1,0,1));
-        addCrack(p, skull, fCracks4(p, td));
+        addCrack(p, skulld, skull, fCracks4(p, td));
         // skull.d = min(skull.d, max(p.y, length(p) - .1));
         p = pp;
 
