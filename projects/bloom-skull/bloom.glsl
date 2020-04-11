@@ -65,11 +65,10 @@ Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width) {
         d2 = abs(slice) - thickness;
         d2 = max(d2, top);
         
-        float d3 = smax(d2, wedge, thickness);
-        float d4 = smax(d2, wedge2, thickness);
-        wedges = smin(wedge, wedge2, .01);
-        d3 = smin(d3, d4, .01);
-        d = mix(d4, d3, pointy);
+        float wedgeT = smax(d2, wedge, thickness);
+        float wedgeT2 = smax(d2, wedge2, thickness);
+        d = mix(wedgeT2, smin(wedgeT, wedgeT2, .01), pointy);
+        wedges = mix(wedge2, smin(wedge, wedge2, .01), pointy);
         
         p = pp;
         len = llen;
