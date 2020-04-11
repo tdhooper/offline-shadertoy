@@ -306,7 +306,7 @@ void tweenSkull(inout vec3 p, inout float scale, float t) {
 
 Model drawFinalBloom(vec3 p, float t, float scale) {
 
-    vec2 density = vec2(.25, 2);
+    vec2 density = vec2(.15, 2);
     float thickness = .05;
     float pointy = 1.;
     float width = .4;
@@ -314,7 +314,8 @@ Model drawFinalBloom(vec3 p, float t, float scale) {
     float bt = smoothstep(0., 2., t);
     bt = easeOutCirc(bt);
     float bs = 1.4;
-    pR(p.xz, .45 * PI * 2.);
+    //pR(p.xz, .45 * PI * 2.);
+    pR(p.xz, .7 * PI * 2.);
     Model blm = drawBloom(p / bs, bt, density, thickness, pointy, width, true);
     blm.d *= bs * scale;
     blm.neg *= bs * scale;
@@ -380,9 +381,9 @@ vec3 fCracks3(vec3 p,  float t) {
 vec3 fCracks4(vec3 p,  float t) {
     float crack = 1e12;
     float blend = smoothstep(-.7, .8, t);
-    float weight = mix(.001, .1, blend);
+    float weight = mix(.001, .12, blend);
     pR(p.xz, 3.5);
-    crack = min(crack, fCrack(p.xz - vec2(-.05,.03), vec2(.16,.06), 12., 17., weight));
+    crack = min(crack, fCrack(p.xz - vec2(-.05,.03), vec2(.18,.06), 18., 17., weight));
     return vec3(crack, weight, blend);
 }
 

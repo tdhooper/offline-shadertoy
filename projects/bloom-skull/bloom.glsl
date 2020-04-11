@@ -1,6 +1,6 @@
 
 
-Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width) {
+Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width, bool shrinkOuter) {
     //cellData = vec3(0,0,.1);
     
     vec2 cell = cellData.xy;
@@ -26,7 +26,13 @@ Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width) {
     float core = length(p) - .1;
 
     float len = max(cellTime*3. - .2, 0.);
+
+    if (shrinkOuter) {
+        len *= mix(.2, 1., rangec(-.5, .0, cell.y));
+    }
+
     len = pow(len, .33);
+
     float llen = len;
 
     Model model = newModel();
@@ -68,7 +74,7 @@ Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width) {
         float wedgeT = smax(d2, wedge, thickness);
         float wedgeT2 = smax(d2, wedge2, thickness);
         d = mix(wedgeT2, smin(wedgeT, wedgeT2, .01), pointy);
-        wedges = mix(wedge2, smin(wedge, wedge2, .01), pointy);
+        wedges = mix(wedge2, wedge2, pointy);
         
         p = pp;
         len = llen;
@@ -215,6 +221,7 @@ Model drawBloom(
     mat2 mStretch = mat2(1,0,0,stretch);
     mat2 transform = phyllotaxis * mStretch;
     mat2 transformI = inverse(transform);
+    bool shrinkOuter = hideInside;
 
     // compile speed optim from IQ
     for( int m=0; m<3; m++ )
@@ -225,7 +232,8 @@ Model drawBloom(
             calcCellData(cell, vec2(m, n) - 1., maxBloomOffset, transform, transformI, stretch, stretchStart, stretchEnd, t, hideInside),
             thickness,
             pointy,
-            width
+            width,
+            shrinkOuter
         ));
     }
 
