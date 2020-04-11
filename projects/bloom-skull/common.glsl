@@ -1,7 +1,7 @@
 precision highp float;
 
 uniform float iTime;
-float mTime = mod(iTime / 6., 1.);
+float mTime = mod(iTime / 1., 1.);
 
 #define MIRROR
 

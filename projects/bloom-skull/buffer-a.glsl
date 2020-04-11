@@ -212,6 +212,7 @@ Model opU(Model a, Model b) {
 
 
 float sdSkull(vec3 p) {
+    // return length(p - .2);
     #ifdef MIRROR
         p.x = -abs(p.x);
     #endif
@@ -270,7 +271,7 @@ float drawSkull(vec3 p) {
 }
 
 // #define DEBUG_BLOOMS
-#define DISABLE_SHADING
+// #define DISABLE_SHADING
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
@@ -712,21 +713,29 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
         col = vec3(.04,.09,.09);
         //col += vec3(.06,.0,.03) * max(1. - 1. / 2., 0.);
         //col = mix(col, col * .2, 0.);
+        // col = mix(col, vec3(.0,.1,.1), smoothstep(.0, 2., model.cell.y));
+        col = mix(vec3(.07,.025,.06), col, smoothstep(-.2, .0, model.wedges) * model.uv.y);
         if (model.id == 1) {
             col = vec3(.1,.06,.1);
-             col = vec3(.11,.06,.09);
+            col = vec3(.1,.06,.1);
+            col = mix(col, vec3(.095,.02,.055), smoothstep(-.1, .0, model.wedges) * smoothstep(.5, 1., model.uv.y));
         }
         if (model.id == 2) {
             col = vec3(.06,.08,.08);
             col = vec3(.04,.07,.09);
+            col = mix(col, vec3(.005,.015,.02), smoothstep(.5, 1.3, model.cell.y));
         }
         if (model.id == 3) {
             col = vec3(.05,.11,.07);
             col = vec3(.04,.07,.09);
+            col = mix(col, vec3(.2), smoothstep(.4, 1., model.uv.y));
         }
         if (model.id == 4) {
             col = vec3(.11,.06,.09);
             col = vec3(.1,.06,.1);
+            col = vec3(.11,.05,.1);
+            // col = mix(col, vec3(1), smoothstep(1., 0., model.uv.y));
+            col = mix(col, vec3(.5), smoothstep(.5, 2., model.cell.y));
         }
     }
 
@@ -762,7 +771,7 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
 
         lin += 3.80*dif*vec3(1.30,1.00,0.70);
         lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
-        lin += 0.55*bac*vec3(0.35,0.25,0.35)*occ;
+        lin += 0.55*bac*vec3(0.4,0.25,0.3)*occ;
         // lin += 0.55*bac*vec3(0.25,0.35,0.35)*occ;
         lin += 0.15*fre*vec3(1.00,1.00,1.00)*occ;
 		col = col*lin;
@@ -867,7 +876,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         }
 
         vec3 bgCol = vec3(.02,.0,.0);
-        bgCol = vec3(.005,0,.007);
+        bgCol = vec3(.007,0,.007);
         col = bgCol;
 
         

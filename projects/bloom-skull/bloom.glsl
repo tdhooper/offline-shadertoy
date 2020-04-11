@@ -85,7 +85,7 @@ Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width, bo
         model.isBloom = true;
         model.uv = uv;
         model.cell = cell;
-        model.wedges = wedges;
+        model.wedges = mix(wedge2, smin(wedge, wedge2, .01), pointy);
         model.slice = slice;
         model.len = len;
         model.neg = smax(max(slice, top), wedges, .01);
