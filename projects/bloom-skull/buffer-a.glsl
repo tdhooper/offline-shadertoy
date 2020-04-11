@@ -13,8 +13,6 @@ uniform float guiPointy;
 uniform float guiWidth;
 uniform float guiSize;
 
-// uniform sampler2D iChannel2; // buffer-b.glsl filter: linear wrap: mirror
-
 varying vec3 eye;
 varying vec3 dir;
 
