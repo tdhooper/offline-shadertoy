@@ -343,6 +343,18 @@ void stepTransform(inout vec3 p, inout float scale, inout float t) {
 
 const float CUTOFF = 3.4; // remove old itrerations when they're out of view
 
+float fTri(vec2 p, float radius) {
+    radius /= 2.;
+    vec2 a = normalize(vec2(1.6,1.));
+    return max(
+        dot(p, vec2(0,-1)) - radius,
+        max(
+        	dot(p, a) - radius,
+        	dot(p, a * vec2(-1,1)) - radius
+        )
+    );
+}
+
 vec3 fCracks(vec3 p, float t) {
     p.z += .02;
     p /= 1.2;
@@ -380,10 +392,14 @@ vec3 fCracks3(vec3 p,  float t) {
 
 vec3 fCracks4(vec3 p,  float t) {
     float crack = 1e12;
-    float blend = smoothstep(-.7, .8, t);
-    float weight = mix(.001, .12, blend);
-    pR(p.xz, 3.5);
-    crack = min(crack, fCrack(p.xz - vec2(-.05,.03), vec2(.18,.06), 18., 17., weight));
+    float blend = smoothstep(-.7, .6, t);
+    float weight = mix(.001, .1, blend);
+    vec3 pp = p;
+    // pR(p.xz, .3);
+    crack = max(fTri(p.xz, .45), fTri(p.xz * vec2(1,-1), .3));
+    p = pp;
+    pR(p.xz, 3.2);
+    crack = min(crack, fCrack(p.xz, vec2(.18,.06), 15., 17., weight));
     return vec3(crack, weight, blend);
 }
 
