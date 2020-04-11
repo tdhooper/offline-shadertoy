@@ -313,7 +313,7 @@ Model drawFinalBloom(vec3 p, float t, float scale) {
     float bt = smoothstep(0., 2., t);
     bt = easeOutCirc(bt);
     float bs = 1.4;
-    pR(p.xz, -.15);
+    pR(p.xz, .45 * PI * 2.);
     Model blm = drawBloom(p / bs, bt, density, thickness, pointy, width, true);
     blm.d *= bs * scale;
     blm.neg *= bs * scale;
@@ -460,7 +460,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         p = pp;
 
         // TOP
-        bt = smoothstep(.0, 1.5, td);
+        bt = smoothstep(-.1, 1.5, td);
         p -= vec3(.22,.23,.2) * mix(1., 1.05, bt);
         p *= orientMatrix(vec3(.5,.3,-.2), vec3(1,1,0));
 
@@ -471,8 +471,8 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         bloomsize = .08;
 
         density = vec2(.12, 1.45);
-        thickness = .06;
-        width = .15;
+        thickness = .07;
+        width = .17;
         pointy = 0.;
         bloomsize = .14;
 
@@ -751,7 +751,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     bloomPosition = vec3(.8,.8,-.1) * skullRadius * 1.1;
     // bloomPosition += vec3(0,0,.1);
-    bloomRotate = basisMatrix(vec3(-.5,1,0), vec3(1,0,0));
+    bloomRotate = basisMatrix(vec3(-.3,1,0), vec3(1,0,0));
     //  bloomPosition -= vec3(0,0,.1);
 
     stepPosition = vec3(0,skullOffset,0) + skullRotate * bloomPosition;
