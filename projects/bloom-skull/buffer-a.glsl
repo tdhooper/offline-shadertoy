@@ -401,6 +401,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         // thickness = guiThickness;
         // pointy = guiPointy;
         // width = guiWidth;
+        // bloomsize = guisize;
 
 
     if (t < CUTOFF) {
@@ -423,11 +424,17 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
         addCrack(p, skull, fCracks(p, td));
         density = vec2(.08, 1.);
-        thickness = .05;
-        pointy = 0.;
-        width = .4;
+        thickness = .11;
+        width = .39;
+        pointy = .4;
+        bloomsize = .11;
+        // density = vec2(guiDensityStart, guiDensityEnd);
+        // thickness = guiThickness;
+        // width = guiWidth;
+        // pointy = guiPointy;
+        // bloomsize = guiSize;
         // pR(p.xz, -1.5);
-        bloom = drawBloom(p, bt, .08, density, thickness, pointy, width);
+        bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
         skull.d = max(skull.d, -bloom.neg);
         blooms = opU(blooms, bloom);
         p = pp;
@@ -438,7 +445,8 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         thickness = .1;
         pointy = 0.;
         width = .5;
-        bloom = drawBloom(p, easeOutCirc(smoothstep(-.3, .8, td)), .05, density, thickness, pointy, width);
+        bloomsize = .05;
+        bloom = drawBloom(p, easeOutCirc(smoothstep(-.3, .8, td)), bloomsize, density, thickness, pointy, width);
         blooms = opU(blooms, bloom);
         p = pp;
 
@@ -453,7 +461,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         addCrack(p, skull, fCracks2(p, td));
         p = pp;
 
-        bt = (smoothstep(-.2, 1.5, td));
+        bt = (smoothstep(-.5, 1.5, td));
         p -= vec3(.28,.07,.18) * mix(.85, .95, bt);
         p *= orientMatrix(vec3(1,-.3,-.5), vec3(1,1,0));
         density = vec2(.34, 2.1);
