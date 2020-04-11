@@ -270,7 +270,7 @@ float drawSkull(vec3 p) {
 }
 
 // #define DEBUG_BLOOMS
-// #define DISABLE_SHADING
+#define DISABLE_SHADING
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;

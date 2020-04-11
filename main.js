@@ -13,8 +13,8 @@ const regl = require('regl')({
     'oes_texture_float_linear',
     'ext_shader_texture_lod',
   ],
-  pixelRatio: .333,
-  // pixelRatio: 1,
+  // pixelRatio: .333,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
