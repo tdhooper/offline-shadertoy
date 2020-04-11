@@ -181,6 +181,7 @@ struct Model {
     float d;
     vec3 p;
     bool isBound;
+    int id;
     bool isBloom;
     vec2 uv;
     vec2 cell;
@@ -192,7 +193,7 @@ struct Model {
 };
 
 Model newModel() {
-    return Model(1e12, vec3(0), false, false, vec2(0), vec2(0), 0., 0., 0., 1e12, 0.);
+    return Model(1e12, vec3(0), false, 0, false, vec2(0), vec2(0), 0., 0., 0., 1e12, 0.);
 }
 
 Model opU(Model a, Model b) {
@@ -269,7 +270,7 @@ float drawSkull(vec3 p) {
 }
 
 // #define DEBUG_BLOOMS
-#define DISABLE_SHADING
+// #define DISABLE_SHADING
 
 float drawSkullWithBlooms(vec3 p, float t) {
     float scale = skullRadius;
@@ -317,6 +318,7 @@ Model drawFinalBloom(vec3 p, float t, float scale) {
     Model blm = drawBloom(p / bs, bt, density, thickness, pointy, width, true);
     blm.d *= bs * scale;
     blm.neg *= bs * scale;
+    blm.id = 5;
     return blm;
 }
 
@@ -441,6 +443,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         pointy = .4;
         bloomsize = .11;
         bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
+        bloom.id = 1;
         skull.d = max(skull.d, -bloom.neg);
         blooms = opU(blooms, bloom);
         p = pp;
@@ -455,6 +458,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         pointy = .0;
         bloomsize = .07;
         bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
+        bloom.id = 2;
         skull.d = max(skull.d, -bloom.neg);
         blooms = opU(blooms, bloom);
         p = pp;
@@ -483,6 +487,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         // bloomsize = guiSize;
         pR(p.xz, .3);
         bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
+        bloom.id = 3;
         // skull.d = max(skull.d, -bloom.neg);
         blooms = opU(blooms, bloom);
         p = pp;
@@ -507,6 +512,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         pointy = 0.;
         bloomsize = .085;
         bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
+        bloom.id = 4;
         blooms = opU(blooms, bloom);
         p = pp;
 
@@ -685,9 +691,25 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
 
     if (model.isBloom) {
         col = vec3(.3,.05,.05);
-        col = vec3(.5,1,.8) * .1;
+        col = vec3(.04,.09,.09);
         //col += vec3(.06,.0,.03) * max(1. - 1. / 2., 0.);
         //col = mix(col, col * .2, 0.);
+        if (model.id == 1) {
+            col = vec3(.1,.06,.1);
+             col = vec3(.11,.06,.09);
+        }
+        if (model.id == 2) {
+            col = vec3(.06,.08,.08);
+            col = vec3(.04,.07,.09);
+        }
+        if (model.id == 3) {
+            col = vec3(.05,.11,.07);
+            col = vec3(.04,.07,.09);
+        }
+        if (model.id == 4) {
+            col = vec3(.11,.06,.09);
+            col = vec3(.1,.06,.1);
+        }
     }
 
             lightingPass = true;
@@ -722,7 +744,8 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
 
         lin += 3.80*dif*vec3(1.30,1.00,0.70);
         lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
-        lin += 0.55*bac*vec3(0.25,0.5,0.5)*occ;
+        lin += 0.55*bac*vec3(0.35,0.25,0.35)*occ;
+        // lin += 0.55*bac*vec3(0.25,0.35,0.35)*occ;
         lin += 0.15*fre*vec3(1.00,1.00,1.00)*occ;
 		col = col*lin;
 		col += 7.00*spe*vec3(1.10,0.90,0.70);
