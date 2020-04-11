@@ -358,7 +358,7 @@ module.exports = (project) => {
   const captureTeardown = () => {
     console.log('captureTeardown');
     screenQuad = undefined;
-    tick = regl.frame(draw);
+    // tick = regl.frame(draw);
   };
 
   const captureRender = (milliseconds, quad, done) => {
@@ -376,8 +376,8 @@ module.exports = (project) => {
   let captureConfig = {
     fps: 45,
     seconds: 1, // (duration)
-    width: 640,
-    height: 360,
+    width: 640*1.5,
+    height: 360*1.5,
     // quads: true,
     prefix: 'bloomskull-',
   };
