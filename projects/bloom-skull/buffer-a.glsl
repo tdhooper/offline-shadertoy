@@ -410,7 +410,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         // thickness = guiThickness;
         // pointy = guiPointy;
         // width = guiWidth;
-        // bloomsize = guisize;
+        // bloomsize = guiSize;
 
 
     if (t < CUTOFF) {
@@ -428,6 +428,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         float width;
         float bloomsize;
 
+        // FIRST
         bt = easeOutCirc(smoothstep(-.5, 1., td));
         p -= vec3(-.2,.2,.25) * mix(1., 1.02, bt);
         p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
@@ -437,6 +438,20 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         width = .39;
         pointy = .4;
         bloomsize = .11;
+        bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
+        skull.d = max(skull.d, -bloom.neg);
+        blooms = opU(blooms, bloom);
+        p = pp;
+
+        // BELOW FIRST
+        bt = smoothstep(-1.1, .8, td);
+        p -= vec3(-.135,.105,.35) * .98;
+        p *= orientMatrix(vec3(-.7,.2,-.9), vec3(0,1,0));
+        density = vec2(.48, 1.8);
+        thickness = .08;
+        width = .45;
+        pointy = .0;
+        bloomsize = .07;
         bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
         skull.d = max(skull.d, -bloom.neg);
         blooms = opU(blooms, bloom);

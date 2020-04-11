@@ -13,7 +13,7 @@ const regl = require('regl')({
     'oes_texture_float_linear',
     'ext_shader_texture_lod',
   ],
-  pixelRatio: .5,
+  pixelRatio: .25,
   // pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
@@ -295,6 +295,14 @@ module.exports = (project) => {
     }
     debugPlane = state.debugPlane;
   };
+
+  window.resetCamera = function() {
+    if (defaultState.camera) {
+      camera.fromState(defaultState.camera);
+    } else if (state.cameraMatrix) {
+      camera.fromState(defaultState.cameraMatrix);
+    }
+  }
 
   const stateStore = new StateStore(toState, fromState, defaultState);
 
