@@ -180,6 +180,7 @@ bool lightingPass;
 struct Model {
     float d;
     vec3 p;
+    bool isBound;
     bool isBloom;
     vec2 uv;
     vec2 cell;
@@ -191,7 +192,7 @@ struct Model {
 };
 
 Model newModel() {
-    return Model(1e12, vec3(0), false, vec2(0), vec2(0), 0., 0., 0., 1e12, 0.);
+    return Model(1e12, vec3(0), false, false, vec2(0), vec2(0), 0., 0., 0., 1e12, 0.);
 }
 
 Model opU(Model a, Model b) {
@@ -312,6 +313,7 @@ Model drawFinalBloom(vec3 p, float t, float scale) {
     float bt = smoothstep(0., 2., t);
     bt = easeOutCirc(bt);
     float bs = 1.4;
+    pR(p.xz, -.15);
     Model blm = drawBloom(p / bs, bt, density, thickness, pointy, width, true);
     blm.d *= bs * scale;
     blm.neg *= bs * scale;
@@ -460,7 +462,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         // TOP
         bt = smoothstep(.0, 1.5, td);
         p -= vec3(.22,.23,.2) * mix(1., 1.05, bt);
-        p *= orientMatrix(vec3(.4,.3,-.3), vec3(1,1,0));
+        p *= orientMatrix(vec3(.5,.3,-.2), vec3(1,1,0));
 
         density = vec2(.45, 2.35);
         thickness = .09;
@@ -479,9 +481,9 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         // width = guiWidth;
         // pointy = guiPointy;
         // bloomsize = guiSize;
-        pR(p.xz, -.15);
+        pR(p.xz, .3);
         bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
-        skull.d = max(skull.d, -bloom.neg);
+        // skull.d = max(skull.d, -bloom.neg);
         blooms = opU(blooms, bloom);
         p = pp;
 
@@ -536,7 +538,9 @@ Model skullWithBloom(vec3 p, float scale, float t) {
     stepTransform(p, scale, t);
 
     bloom = drawFinalBloom(p, t, scale);
-    model.d = max(model.d, -bloom.neg);
+    if ( ! bloom.isBound) {
+        model.d = smax(model.d, -bloom.neg, .04*scale);
+    }
     model = opU(model, bloom);
 
     return model;
@@ -549,7 +553,11 @@ Model map(vec3 p) {
     float t = time;
 
     #ifdef DEBUG_BLOOMS
-        t = iTime/1.5 + .001;
+        t += 1.;
+        t *= delay;
+        t += 1.;
+        t = mod(t, delay); t += delay;
+        // t -= delay;
         scale = 3.;
         p /= scale;
         pR(p.yz, -1.9);
@@ -760,9 +768,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
     vec3 tot = vec3(0.0);
 
-    #ifdef DEBUG_BLOOMS
-        mTime = iTime/6.;
-    #endif
+    // #ifdef DEBUG_BLOOMS
+    //     mTime = iTime/6.;
+    // #endif
 
     time = mTime;
     // time = 1.;
