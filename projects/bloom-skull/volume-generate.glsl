@@ -1,7 +1,6 @@
-// framebuffer size: 2048x2048
+// framebuffer size: 2048x2048 firstpassonly
 
 uniform vec2 iResolution;
-uniform sampler2D iChannel0; // volume-generate.glsl filter: linear wrap: clamp
 uniform vec2 iChannel0Size;
 uniform bool firstPass;
 
@@ -20,12 +19,7 @@ void main() {
     vec2 coord = gl_FragCoord.xy;
     vec2 size = iResolution;
     vec2 uv = coord / size;
-    
-    if ( ! firstPass) {
-        gl_FragColor = texture2D(iChannel0, uv);
-        return;
-    }
-    
+
     mat4 space = texToSpace(coord, size);
 
     vec3 p0 = space[0].xyz;

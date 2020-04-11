@@ -13,7 +13,7 @@ const regl = require('regl')({
     'oes_texture_float_linear',
     'ext_shader_texture_lod',
   ],
-  pixelRatio: .5,
+  pixelRatio: .25,
   // pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
@@ -98,6 +98,9 @@ module.exports = (project) => {
       framebuffer: regl.prop('framebuffer'),
     });
     node.draw = (state) => {
+      if (node.firstPassOnly && ! firstPass) {
+        return;
+      }
       node.dependencies.forEach((dep) => {
         const texture = dep.node.buffer.color[0]._texture;
         gl.activeTexture(gl.TEXTURE0);
@@ -365,16 +368,16 @@ module.exports = (project) => {
       screenQuad = quad;
       draw();
       done();
-    //   setTimeout(done, 10);
-    // }, 10);
+    //   setTimeout(done, 500);
+    // }, 500);
   };
 
   // Default config used by the UI
   let captureConfig = {
     fps: 45,
     seconds: 1, // (duration)
-    width: 640*2,
-    height: 360*2,
+    width: 640,
+    height: 360,
     // quads: true,
     prefix: 'bloomskull-',
   };
