@@ -50,7 +50,7 @@ Model leaf(vec3 p, vec3 cellData, float thickness, float pointy, float width) {
         p.z += ins;
         n = normalize(vec3(1,0,width));
         float wedge2 = -dot(p, n);
-        wedge2 = max(wedge2, dot(p, n * vec3(1,1,-1)));
+        wedge2 = smax(wedge2, dot(p, n * vec3(1,1,-1)), .1);
         wedge2 = smax(wedge2, p.z - len*.95 - ins, len*.6);
         p.z -= ins;
 

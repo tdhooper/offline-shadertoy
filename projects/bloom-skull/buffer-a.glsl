@@ -11,6 +11,7 @@ uniform float guiDensityEnd;
 uniform float guiThickness;
 uniform float guiPointy;
 uniform float guiWidth;
+uniform float guiSize;
 
 // uniform sampler2D iChannel2; // buffer-b.glsl filter: linear wrap: mirror
 
@@ -415,6 +416,7 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         float thickness;
         float pointy;
         float width;
+        float bloomsize;
 
         bt = easeOutCirc(smoothstep(-.5, 1., td));
         p -= vec3(-.2,.2,.25) * mix(1., 1.02, bt);
@@ -449,11 +451,17 @@ Model skullWithBloom(vec3 p, float scale, float t) {
         p -= vec3(.28,.1,.15);
         p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
         addCrack(p, skull, fCracks2(p, td));
-        density = vec2(.3, 2.5);
-        thickness = .1;
+        p = pp;
+
+        bt = (smoothstep(-.2, 1.5, td));
+        p -= vec3(.28,.07,.18) * mix(.85, .95, bt);
+        p *= orientMatrix(vec3(1,-.3,-.5), vec3(1,1,0));
+        density = vec2(.34, 2.1);
+        thickness = .05;
         pointy = 0.;
-        width = .2;
-        bloom = drawBloom(p, (smoothstep(0., 1.5, td)), .1, density, thickness, pointy, width);
+        width = .19;
+        bloomsize = .15;
+        bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
         blooms = opU(blooms, bloom);
         p = pp;
 

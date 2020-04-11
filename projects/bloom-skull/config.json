@@ -1,5 +1,5 @@
 {
-  "id": "bloom-skull-10",
+  "id": "bloom-skull-11",
   "camera2": {
     "rotation": [
       0.3263933062553406,
@@ -81,6 +81,14 @@
       "step": 0.1,
       "min": 0,
       "max": 1,
+      "value": 1
+    },
+    "size": {
+      "type": "range",
+      "controller": 16,
+      "step": 0.005,
+      "min": 0.01,
+      "max": 0.5,
       "value": 1
     }
   }
