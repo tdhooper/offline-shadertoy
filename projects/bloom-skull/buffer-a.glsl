@@ -1,4 +1,4 @@
-// framebuffer drawcount: 4
+// framebuffer drawcount: 9
 
 precision highp float;
 
@@ -20,6 +20,10 @@ uniform float drawIndex;
 
 varying vec3 eye;
 varying vec3 dir;
+varying float fov;
+varying float aspect;
+varying mat4 vView;
+
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -829,18 +833,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 o = vec2(0);
     float depth;
 
-    int m = int(floor(drawIndex / 2.));
-    int n = int(mod(drawIndex, 2.));
-    int AA = 2;
+    int AA = 3;
+    int m = int(floor(drawIndex / float(AA)));
+    int n = int(mod(drawIndex, float(AA)));
 
     // fragColor = vec4(float(m)/2., float(n)/2., 0, 1); return;
 
     // pixel coordinates
     o = vec2(float(m),float(n)) / float(AA) - 0.5;
-    o *= 5.;
     // time coordinate (motion blurred, shutter=0.5)
-    float d = 0.5*sin(fragCoord.x*147.0)*sin(fragCoord.y*131.0);
-    time = mTime - 0.1*(1.0/24.0)*(float(m*AA+n)+d)/float(AA*AA-1);
+    //float d = 0.5*sin(fragCoord.x*147.0)*sin(fragCoord.y*131.0);
+    //time = mTime - 0.1*(1.0/24.0)*(float(m*AA+n)+d)/float(AA*AA-1);
+    time = mTime;
 
     vec2 p = (-iResolution.xy + 2.0*(fragCoord+o))/iResolution.y;
     //float crack = fCrack(p.xy, vec2(.05,.01)*10., 20., 0., .02);
@@ -848,8 +852,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     //fragColor = texture2D(iChannel2, fragCoord.xy/iResolution.xy); return;
 
+    vec3 dir2 = vec3(p.x * fov, p.y * fov,-1.0) * mat3(vView);
     vec3 camPos = eye;
-    vec3 rayDirection = normalize(dir);
+    vec3 rayDirection = normalize(dir2);
 
     // mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
     // rayDirection = normalize( camMat * vec3(p.xy,2.8) );
@@ -895,7 +900,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     if (drawIndex > 0.) {
         vec4 lastCola = texture2D(previousSample, fragCoord.xy/iResolution.xy);
-        cola = mix(cola, lastCola, .5);
+        cola = mix(lastCola, cola, 1./(drawIndex+1.));
     }
 
     fragColor = cola;

@@ -423,6 +423,8 @@ module.exports = (project) => {
     // }, 500);
   };
 
+  // captureSetup(640, 360, () => {captureRender(0, 0, () => {});});
+
   // Default config used by the UI
   let captureConfig = {
     fps: 45,
