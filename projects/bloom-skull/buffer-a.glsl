@@ -1,3 +1,5 @@
+// framebuffer drawcount: 4
+
 precision highp float;
 
 uniform vec2 iResolution;
@@ -12,6 +14,9 @@ uniform float guiThickness;
 uniform float guiPointy;
 uniform float guiWidth;
 uniform float guiSize;
+
+uniform sampler2D previousSample; // buffer-a.glsl filter: linear count: 4
+uniform float drawIndex;
 
 varying vec3 eye;
 varying vec3 dir;
@@ -788,8 +793,6 @@ vec3 doShading(vec3 pos, vec3 rd, Model model) {
     return col;
 }
 
-// #define AA 2
-
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     skullOffset = 1.8;
@@ -826,72 +829,74 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 o = vec2(0);
     float depth;
 
-    #ifdef AA
-    for( int m=0; m<AA; m++ )
-    for( int n=0; n<AA; n++ )
-    {
+    int m = int(floor(drawIndex / 2.));
+    int n = int(mod(drawIndex, 2.));
+    int AA = 2;
+
+    // fragColor = vec4(float(m)/2., float(n)/2., 0, 1); return;
+
     // pixel coordinates
     o = vec2(float(m),float(n)) / float(AA) - 0.5;
+    o *= 5.;
     // time coordinate (motion blurred, shutter=0.5)
     float d = 0.5*sin(fragCoord.x*147.0)*sin(fragCoord.y*131.0);
     time = mTime - 0.1*(1.0/24.0)*(float(m*AA+n)+d)/float(AA*AA-1);
-    #endif
 
-        vec2 p = (-iResolution.xy + 2.0*(fragCoord+o))/iResolution.y;
-        //float crack = fCrack(p.xy, vec2(.05,.01)*10., 20., 0., .02);
-        //fragColor = vec4(step(crack, .0)); return;
+    vec2 p = (-iResolution.xy + 2.0*(fragCoord+o))/iResolution.y;
+    //float crack = fCrack(p.xy, vec2(.05,.01)*10., 20., 0., .02);
+    //fragColor = vec4(step(crack, .0)); return;
 
-        //fragColor = texture2D(iChannel2, fragCoord.xy/iResolution.xy); return;
+    //fragColor = texture2D(iChannel2, fragCoord.xy/iResolution.xy); return;
 
-        vec3 camPos = eye;
-        vec3 rayDirection = normalize(dir);
+    vec3 camPos = eye;
+    vec3 rayDirection = normalize(dir);
 
-        // mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
-        // rayDirection = normalize( camMat * vec3(p.xy,2.8) );
+    // mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
+    // rayDirection = normalize( camMat * vec3(p.xy,2.8) );
 
-        vec3 rayPosition = camPos;
-        float rayLength = 0.;
-        float dist = 0.;
-        bool bg = false;
-        lightingPass = false;
-        Model model;
-        const float MAX_DIST = 100.;
+    vec3 rayPosition = camPos;
+    float rayLength = 0.;
+    float dist = 0.;
+    bool bg = false;
+    lightingPass = false;
+    Model model;
+    const float MAX_DIST = 100.;
 
-        for (int i = 0; i < 300; i++) {
-            rayLength += dist;
-            rayPosition = camPos + rayDirection * rayLength;
-            model = map(rayPosition);
-            dist = model.d;
+    for (int i = 0; i < 300; i++) {
+        rayLength += dist;
+        rayPosition = camPos + rayDirection * rayLength;
+        model = map(rayPosition);
+        dist = model.d;
 
-            if (abs(dist) < .00001) {
-                break;
-            }
-            
-            if (rayLength > MAX_DIST) {
-                bg = true;
-                break;
-            }
+        if (abs(dist) < .00001) {
+            break;
         }
-
-        vec3 bgCol = vec3(.02,.0,.0);
-        bgCol = vec3(.007,0,.007);
-        col = bgCol;
-
         
-        if ( ! bg) {
-            col = doShading(rayPosition, rayDirection, model);
-            float fog = 1. - exp((rayLength - 3.) * -.5);
-            col = mix(col, bgCol, clamp(fog, 0., 1.)); 
+        if (rayLength > MAX_DIST) {
+            bg = true;
+            break;
         }
-
-        tot += col;
-        depth += rayLength / MAX_DIST;
-    #ifdef AA
     }
-    tot /= float(AA*AA);
-    depth /= float(AA*AA);
-    #endif
 
-    col = tot;
-    fragColor = vec4(col, depth);
+    vec3 bgCol = vec3(.02,.0,.0);
+    bgCol = vec3(.007,0,.007);
+    col = bgCol;
+
+    
+    if ( ! bg) {
+        col = doShading(rayPosition, rayDirection, model);
+        float fog = 1. - exp((rayLength - 3.) * -.5);
+        col = mix(col, bgCol, clamp(fog, 0., 1.)); 
+    }
+
+    depth = rayLength / MAX_DIST;
+
+    vec4 cola = vec4(col, depth);
+
+    if (drawIndex > 0.) {
+        vec4 lastCola = texture2D(previousSample, fragCoord.xy/iResolution.xy);
+        cola = mix(cola, lastCola, .5);
+    }
+
+    fragColor = cola;
 }

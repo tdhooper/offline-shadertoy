@@ -13,8 +13,8 @@ const regl = require('regl')({
     'oes_texture_float_linear',
     'ext_shader_texture_lod',
   ],
-  pixelRatio: .5,
-  // pixelRatio: 1,
+  // pixelRatio: .25,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -48,7 +48,7 @@ module.exports = (project) => {
 
   const events = new EventEmitter();
   function triggerDraw() {
-    events.emit('draw');
+    // events.emit('draw');
   }
 
   const frag = shaders.main;
@@ -82,6 +82,7 @@ module.exports = (project) => {
         const resolution = [context.framebufferWidth, context.framebufferHeight];
         return props.resolution || resolution;
       },
+      drawIndex: (context, props) => props.drawIndex,
     };
     node.dependencies.reduce((acc, dep) => {
       acc[dep.uniform] = regl.prop(dep.uniform);
@@ -101,30 +102,33 @@ module.exports = (project) => {
       if (node.firstPassOnly && ! firstPass) {
         return;
       }
+      console.log(node.name, (new Date()).toTimeString());
       node.dependencies.forEach((dep) => {
-        const texture = dep.node.buffer.color[0]._texture;
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(texture.target, texture.texture);
-        if (dep.filter === 'nearest') {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        } else if (dep.filter === 'mipmap') {
-          gl.generateMipmap(gl.TEXTURE_2D);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        } else {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        }
-        if (dep.wrap === 'repeat') {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-        } else if (dep.wrap === 'mirror') {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-        } else {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+        if (state.drawIndex == 0) {
+          const texture = dep.node.buffer.color[0]._texture;
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(texture.target, texture.texture);
+          if (dep.filter === 'nearest') {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+          } else if (dep.filter === 'mipmap') {
+            gl.generateMipmap(gl.TEXTURE_2D);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          } else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          }
+          if (dep.wrap === 'repeat') {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+          } else if (dep.wrap === 'mirror') {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+          } else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          }
         }
         const s = {};
         s[dep.uniform] = dep.node.buffer;
@@ -306,7 +310,27 @@ module.exports = (project) => {
 
   const stateStore = new StateStore(toState, fromState, defaultState);
 
+  const resizeTargets = (context) => {
+    renderNodes.forEach((node) => {
+      if ( ! node.buffer) return;
+      let width = context.viewportWidth;
+      let height = context.viewportHeight;
+      if (node.size) {
+        [width, height] = node.size;
+      }
+      if (node.buffer.width !== width || node.buffer.height !== height) {
+        console.log(`Resizing ${node.name} to ${width} x ${height}`);
+        node.buffer.resize(width, height);
+        if (node.lastBuffer) {
+          node.lastBuffer.resize(width, height);
+        }
+      }
+    });
+  };
+
   const draw = (force) => {
+    return new Promise(function(resolve, reject) {
+
     stats.begin();
     camera.tick();
     scrubber.update();
@@ -315,52 +339,71 @@ module.exports = (project) => {
         color: [0, 0, 0, 1],
         depth: 1,
       });
-      setup(stateStore.state, (context) => {
-        renderNodes.forEach((node) => {
-          if ( ! node.buffer) return;
-          let width = context.viewportWidth;
-          let height = context.viewportHeight;
-          if (node.size) {
-            [width, height] = node.size;
-          }
-          if (node.buffer.width !== width || node.buffer.height !== height) {
-            node.buffer.resize(width, height);
-            if (node.lastBuffer) {
-              node.lastBuffer.resize(width, height);
-            }
-          }
-        });
-        if (projectDraw) {
-          projectDraw(stateStore.state, context);
-        } else {
-          drawRaymarch(stateStore.state, () => {
-            renderNodes.forEach((node) => {
-              node.draw(stateStore.state);
+
+      var commandBatch = [];
+      renderNodes.map((node) => {
+        for (var i = 0; i < node.drawCount; i++) {
+          const commandState = Object.assign(
+            {
+              drawIndex: i
+            },
+            stateStore.state
+          );
+          var command = function() {
+            setup(commandState, (context) => {
+              resizeTargets(context);
+              drawRaymarch(commandState, () => {
+                node.draw(commandState);      
+              });
             });
-          });
+          }
+          commandBatch.push(command);
         }
       });
-      firstPass = false;
+
+      var nextCommand = function() {
+        var command = commandBatch.shift();
+        command();
+        gl.finish();
+        if (commandBatch.length > 0) {
+          setTimeout(nextCommand, 100);
+        } else {
+          firstPass = false;
+          resolve();
+        }
+      }
+      nextCommand();
     }
     stats.end();
     if (dbt !== undefined) {
       console.log(performance.now() - dbt);
       dbt = undefined;
     }
+    });
   };
 
-  let tick = regl.frame(() => draw());
+  //let tick = regl.frame(() => draw());
+  let tick;
   events.on('draw', () => draw(true));
 
   const captureSetup = (width, height, done) => {
-    console.log('captureSetup', width, height);
-    tick.cancel();
+    console.log('captureSetup', width, height, (new Date()).toTimeString());
+    tick && tick.cancel();
     timer.pause();
-    canvas.width = width;
-    canvas.height = height;
-    canvas.style.width = width + 'px';
-    canvas.style.height = height + 'px';
-    setTimeout(done, 1000);
+    // canvas.width = 10;
+    // canvas.height = 10;
+    // canvas.style.width = 10 + 'px';
+    // canvas.style.height = 10 + 'px';
+    // regl.poll();
+    // draw().then(() => {
+      canvas.width = width;
+      canvas.height = height;
+      canvas.style.width = width + 'px';
+      canvas.style.height = height + 'px';
+      regl.poll();
+      done();
+    // });
+    // setTimeout(done, 5000);
   };
 
   const captureTeardown = () => {
@@ -370,13 +413,13 @@ module.exports = (project) => {
   };
 
   const captureRender = (milliseconds, quad, done) => {
-    console.log('captureRender', milliseconds, quad);
+    console.log('captureRender', milliseconds, quad, (new Date()).toTimeString());
     // setTimeout(function() {
       timer.set(milliseconds);
       screenQuad = quad;
-      draw();
-      done();
-    //   setTimeout(done, 500);
+      draw().then(done);
+    //  done();
+       //setTimeout(done, 5000);
     // }, 500);
   };
 
@@ -384,8 +427,8 @@ module.exports = (project) => {
   let captureConfig = {
     fps: 45,
     seconds: 1, // (duration)
-    width: 640*1.5,
-    height: 360*1.5,
+    width: 640,
+    height: 360,
     // quads: true,
     prefix: 'bloomskull-',
   };
