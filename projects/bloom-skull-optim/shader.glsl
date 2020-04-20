@@ -1,7 +1,9 @@
 precision highp float;
 
 uniform vec2 iResolution;
-uniform sampler2D uTexture; // buffer-a.glsl filter: linear wrap: clamp
+uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
+uniform sampler2D iChannel1; // images/blue-noise.png filter: linear wrap: clamp
+uniform vec2 iChannel1Size;
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -13,13 +15,52 @@ void main() {
 precision mediump float;
 #endif
 
-
 /* SHADERTOY FROM HERE */
+
+/*
+
+    Bloom
+    -----
+
+	Created for the Revision 2020 animated gif competition, achieving 1st place.
+	As this gets rendered to a gif, image quality is given much more importance
+	than rendering speed and code size; so yes, this is a lot of code, it takes
+	a long time to compile, and it runs slow.
+
+	I’ve disabled shadows and the depth of field pass so this has a chance of
+	running, if you have a powerful GPU, you can enable them with the defines
+	in common.
+
+	Makes use of a few things I’ve worked on recently:
+
+		* Uses a pseudo-3d texture to cache the skull distance function
+		  https://www.shadertoy.com/view/WljSWz
+
+		* Smooth fractal zoom to an arbitrary point and rotation
+		  https://www.shadertoy.com/view/wslyzH
+
+		* Parametric succulent model
+		  https://www.shadertoy.com/view/WtGXWm
+
+	The skull was modelled on this https://sketchfab.com/3d-models/visible-interactive-human-exploding-skull-252887e2e755427c90d9e3d0c6d3025f,
+	using a method of overlaying my sdf model on the polygon model, and
+	adjusting positions/sizes until the surfaces were close enough. It’s a slow
+	and tedious process, I wouldn’t recommend it! I actually ran out of time to
+	model the zygomatic arch.
+
+	This photo by Scott Webb was my colour reference:
+	https://www.pexels.com/photo/photo-of-succulent-plants-1903969/
+
+	Special thanks to yx for giving me some serious competition with her entry:
+    http://moonbase.lgbt/misc/yx-hexahedral-recurrence.gif
+
+*/
+
 
 // http://tuxedolabs.blogspot.com/2018/05/bokeh-depth-of-field-in-single-pass.html
 
 vec2 uPixelSize; //The size of a pixel: vec2(1.0/width, 1.0/height)
-float uFar = 2.; // Far plane
+float uFar = .32; // Far plane
 
 const float GOLDEN_ANGLE = 2.39996323;
 const float MAX_BLUR_SIZE = 30.;
@@ -30,24 +71,31 @@ float getBlurSize(float depth, float focusPoint, float focusScale) {
     return abs(coc) * MAX_BLUR_SIZE;
 }
 
+float dbg;
+
 vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale) {
-    vec4 centerTex = texture2D(uTexture, texCoord);
+    vec4 centerTex = texture2D(iChannel0, texCoord);
     float centerDepth = centerTex.a * uFar;
     float centerSize = getBlurSize(centerDepth, focusPoint, focusScale);
     vec3 color = centerTex.rgb;
-    return color;
+    
+    #ifdef DISABLE_DOF
+    	return color;
+    #endif
+
     float tot = 1.0;
 
     float radius = RAD_SCALE;
-    for (float ang = 0.; ang < 2000.; ang += GOLDEN_ANGLE) {
-        if (radius >= MAX_BLUR_SIZE) {
-            break;
-        }
+    for (float ang = 0.; ang < 1000.; ang += GOLDEN_ANGLE) {
+        if (radius >= MAX_BLUR_SIZE) break;
+
+        dbg += 1.;
         vec2 tc = texCoord + vec2(cos(ang), sin(ang)) * uPixelSize * radius;
-        vec4 sampleTex = texture2D(uTexture, tc);
+        vec4 sampleTex = texture2D(iChannel0, tc);
         vec3 sampleColor = sampleTex.rgb;
         float sampleDepth = sampleTex.a * uFar;
         float sampleSize = getBlurSize(sampleDepth, focusPoint, focusScale);
+        //if (sampleSize < centerSize) break;
         if (sampleDepth > centerDepth) {
             sampleSize = clamp(sampleSize, 0.0, centerSize*2.0);
         }
@@ -55,63 +103,47 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale) {
         color += mix(color/tot, sampleColor, m);
         tot += 1.0;
         radius += RAD_SCALE/radius;
+        
+        // modification: exit early when we're in focus
+        if (centerDepth < uFar / 3. && m == 0.) break;
     }
     return color /= tot;
 }
 
-#pragma glslify: aces = require(glsl-tone-map/aces)
-#pragma glslify: range = require(glsl-range)
-
-float calcLum(vec3 color) {
- 	float fmin = min(min(color.r, color.g), color.b); //Min. value of RGB
- 	float fmax = max(max(color.r, color.g), color.b); //Max. value of RGB
- 	return (fmax + fmin) / 2.0; // Luminance
+vec3 aces(vec3 x) {
+  const float a = 2.51;
+  const float b = 0.03;
+  const float c = 2.43;
+  const float d = 0.59;
+  const float e = 0.14;
+  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
  
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
-    // uv.x = 1.- uv.x;
     uPixelSize = vec2(.002) / (iResolution.xy / iResolution.y);
 
-    float scaleA = .05;
-    float focusA = .03;
-    float focusAStart = .0;
-    float focusAEnd = .5;
+    float focusA = .03 * 2.;
+    float focusAStart = .25;
+    float focusAEnd = .65;
 
-    float scaleB = .05;
-    float focusB = .045;
-    float focusBStart = .5;
-    float focusBEnd = .7;
+    float focusB = .045 * 2.;
+    float focusBStart = .65;
+    float focusBEnd = 1.;
 
-    float blend = smoothstep(focusAStart, focusAEnd, mTime) - smoothstep(focusBStart, focusBEnd, mTime) + smoothstep(focusAStart, focusAEnd, mTime - 1.);
+    float time = loopTime(iTime);
+    float blend = smoothstep(focusAStart, focusAEnd, time) - smoothstep(focusBStart, focusBEnd, time);
     float focus = mix(focusB, focusA, blend);
-    float scale = mix(scaleB, scaleA, blend);
 
-    // focus = .045;
-    // scale = .06;
+    dbg = 0.;
+    vec3 col = depthOfField(uv, focus, .05);
 
-    vec3 col = depthOfField(uv, focus * uFar, scale);
-
-    // col = max(col, vec3(.1));
-    // float l = calcLum(col);
-    // col = mix(col, col * 1.6, l);
-    // col *= mix(vec3(1), vec3(1., 1., 3.), pow(1.-l, 2.) * .3);
-    // col *= mix(vec3(1), vec3(.6, .6, 1.2), pow(l, 2.) * .3);
-    // col = aces(col);
-
-    // col = max(col, vec3(.05));
-    // float l = calcLum(col);
-    // col = mix(col, col * 1.3, l);
-    // col *= mix(vec3(1), vec3(1., 1., 3.), pow(1.-l, 2.) * .3);
-    // col *= mix(vec3(1), vec3(.6, .6, 1.2), pow(l, 2.) * .3);
+    // fix banding
+    vec4 grain = texture2D(iChannel1, fragCoord.xy / iChannel1Size.x);
+	col += (grain.x * 2. - 1.) * .002;
     
-
-    //col *= 1.3;    
-    col = pow( col, vec3(0.4545) );
+    col = pow( col, vec3(0.4545) ) * sign(col);
     col = aces(col);
 
-    // col += vec3(blend/2.,0,0);
-
-    fragColor = vec4(col, 1);
-    
+    fragColor = vec4(col, 1);    
 }
