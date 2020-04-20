@@ -1,5 +1,7 @@
 precision highp float;
 
+#extension GL_OES_standard_derivatives : enable
+
 uniform vec2 iResolution;
 
 uniform sampler2D volumeData; // volume-generate.glsl filter: linear wrap: clamp
@@ -22,9 +24,11 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 
-vec3 stepPosition;
-float stepScale;
-mat3 stepRotate;
+/* SHADERTOY FROM HERE */
+
+#define ZERO 0
+#define PI 3.1415926
+#define HALF_PI 1.5707963267948966
 
 mat3 basisMatrix(vec3 forward, vec3 up) {
     vec3 ww = normalize(forward);
@@ -34,25 +38,40 @@ mat3 basisMatrix(vec3 forward, vec3 up) {
 }
 
 mat3 orientMatrix(vec3 up, vec3 forward) {
-    up.z *= -1.;
-    vec3 uu = normalize(up);
-    vec3 ww = normalize(cross(forward,uu));
-    vec3 vv = normalize(cross(ww,uu));
-    return mat3(ww, uu, vv);
+    mat3 m = basisMatrix(up, forward);
+    return mat3(m[0], m[2], -m[1]);
 }
+
+
+
+//========================================================
+// Fractal camera loop
+// https://www.shadertoy.com/view/wslyzH
+//========================================================
+
+vec3 stepPosition;
+float stepScale;
+mat3 stepRotate;
 
 #pragma glslify: inverse = require(glsl-inverse)
 #pragma glslify: import('./quat.glsl')
 #pragma glslify: import('./camera.glsl')
-#pragma glslify: easeOutSine = require(glsl-easings/sine-out)
-#pragma glslify: easeOutCirc = require(glsl-easings/circular-out)
 
-float skullOffset;
-float skullRadius;
-mat3 skullRotate;
-vec3 bloomPosition;
-mat3 bloomRotate;
-float delay;
+//========================================================
+// Modelling
+//========================================================
+
+// Utils
+// HG_SDF, stack.gl
+//--------------------------------------------------------
+
+float easeOutSine(float t) {
+  return sin(t * HALF_PI);
+}
+
+float easeOutCirc(float t) {
+  return sqrt((2.0 - t) * t);
+}
 
 const float PHI = 1.61803398875;
 
@@ -73,10 +92,6 @@ float smax(float a, float b, float k) {
     return -smin(-a, -b, k);
 }
 
-float cmin(float a, float b, float r) {
-    return min(min(a, b), (a - r + b)*sqrt(0.5));
-}
-
 float cmax(float a, float b, float r) {
     return max(max(a, b), (a + r + b)*sqrt(0.5));
 }
@@ -89,91 +104,37 @@ float rangec(float a, float b, float t) {
     return clamp(range(a, b, t), 0., 1.);
 }
 
-float almostIdentity(float x) {
-    return x*x*(2.0-x);
+mat3 rotX(float a) {
+	return mat3(
+    	1, 0, 0,
+        0, cos(a), -sin(a),
+        0, sin(a), cos(a)
+    );
 }
 
-float almostIdentityInv(float x) {
-    x = 1. - x;
-    return 1. - almostIdentity(x);
+mat3 rotY(float a) {
+	return mat3(
+    	cos(a), 0, sin(a),
+        0, 1, 0,
+        -sin(a), 0, cos(a)
+    );
 }
 
-vec2 cmul (vec2 a, vec2 b) {
-  return vec2(
-    a.x * b.x - a.y * b.y,
-    a.y * b.x + a.x * b.y
-  );
+mat3 rotZ(float a) {
+	return mat3(
+    	cos(a), -sin(a), 0,
+        sin(a), cos(a), 0,
+        0, 0, 1
+    );
 }
-
-vec2 cdiv (vec2 a, vec2 b) {
-  float e, f;
-  float g = 1.0;
-  float h = 1.0;
-
-  if( abs(b.x) >= abs(b.y) ) {
-    e = b.y / b.x;
-    f = b.x + b.y * e;
-    h = e;
-  } else {
-    e = b.x / b.y;
-    f = b.x * e + b.y;
-    g = e;
-  }
-
-  return (a * g + h * vec2(a.y, -a.x)) / f;
-} 
-
-float circleFlat(vec2 p, float o) {
-    p.x -= o;
-    vec2 a = vec2(-o, 0);
-    vec2 b = vec2(o, 0);
-    // Complex function from rreusser https://www.shadertoy.com/view/tlcGzf
-    vec2 p2 = cdiv(cmul(p - a, b), cmul(p - b, a));
-    float d = length(p2);
-    d = ((1. - d) * o) / (-1. - d);
-    d += o;
-    return d;
-}
-
-float circleFlatRadius(float x, float o) {
-    x = o - x;
-    float left = abs(x);
-    float right = (o * o) / left;
-    float d = max(0., right - left) * sign(x);
-    return d / 2.;
-}
-
-#define Smooth
-
-//Tri-linear Texturing Function
-vec3 t3(sampler2D tex, vec3 p, vec3 n)
-{
-    p -= .5;
-   // p -= .5;
-    //mat3 R = mat3(vec3(cos(T),sin(T),0),vec3(-sin(T),cos(T),0),vec3(0,0,-1));
-    //p *= R/8.0;
-    //n *= R;
-    #ifdef Smooth
- 	return  (texture2D(tex,p.xy).rgb*n.z*n.z
-            +texture2D(tex,p.zy).rgb*n.x*n.x
-            +texture2D(tex,p.xz).rgb*n.y*n.y);
-    #else
-    return (texture2D(tex,p.xy).rgb
-           +texture2D(tex,p.zy).rgb
-           +texture2D(tex,p.xz).rgb)/3.0;
-    #endif
-}
-
-
-float time;
-
 
 vec2 round(vec2 a) {
     return floor(a + .5);
 }
 
 
-bool lightingPass;
+// Types
+//--------------------------------------------------------
 
 struct Model {
     float d;
@@ -203,144 +164,329 @@ Model opU(Model a, Model b) {
     return m;
 }
 
+
+// Config
+//--------------------------------------------------------
+
+float skullOffset;
+float skullRadius;
+mat3 skullRotate;
+vec3 bloomPosition;
+mat3 bloomRotate;
+float delay;
+
+float time;
+bool lightingPass;
+
+float boundEps;
+float globalScale;
+
+const float CUTOFF = 3.6; // remove old itrerations when they're out of view
+
+struct BloomSpec {
+    vec2 density;
+    float thickness;
+    float width;
+    float pointy;
+    float size;
+    bool hideInside;
+};
+
+struct BloomInstance {
+	vec3 pos;
+    mat3 rot;
+    float offset;
+    float start;
+    float stop;
+    BloomSpec spec;
+};
+
+BloomInstance bloomInstances[4];
+
+void precalcBloomInstances() {
+
+    bloomInstances[0] = BloomInstance(
+        vec3(-.2,.2,.25), //pos
+        orientMatrix(vec3(-1,.7,.9), vec3(0,1,0)), //rot
+        .02, //offset
+        -.8, //start
+        1., //stop
+        BloomSpec(
+            vec2(.08, 1.), //density
+            .11, //thickness
+            .39, //width
+            .4, //pointy
+            .11, //size
+            false //hideInside
+        )
+    );
+    
+	bloomInstances[1] = BloomInstance(
+        vec3(-.135,.105,.35) * .98, //pos
+        orientMatrix(vec3(-.7,.2,.9), vec3(0,1,0)), //rot
+        .0, //offset
+        -1.1, //start
+        .8, //stop
+        BloomSpec(
+            vec2(.48, 1.8), //density
+            .08, //thickness
+            .45, //width
+            .0, //pointy
+            .07, //size
+            false //hideInside
+        )
+    );
+    
+	bloomInstances[2] = BloomInstance(
+        vec3(.22,.23,.2), //pos
+        orientMatrix(vec3(.5,.3,.2), vec3(1,1,0)) * rotY(.3), //rot
+        .05, //offset
+        -.1, //start
+        1.5, //stop
+        BloomSpec(
+            vec2(.12, 1.45), //density
+            .07, //thickness
+            .17, //width
+            .0, //pointy
+            .14, //size
+            false //hideInside
+        )
+    );
+    
+	bloomInstances[3] = BloomInstance(
+        vec3(.28,.07,.18) * .85, //pos
+        orientMatrix(vec3(1,-.3,.5), vec3(1,1,0)), //rot
+        .1176, //offset
+        -.5, //start
+        1.5, //stop
+        BloomSpec(
+            vec2(.15, 1.45), //density
+            .15, //thickness
+            .41, //width
+            .0, //pointy
+            .085, //size
+            false //hideInside
+        )
+    );   
+}
+
+
+struct CrackInstance {
+    vec3 pos;
+    mat3 rot;
+    float start;
+    float stop;
+    vec2 weight;
+
+	float angle;
+    vec2 offset;
+    vec2 size;
+    float lines;
+    float seed;
+};
+
+CrackInstance crackInstances[7];
+
+void precalcCrackInstances() {
+
+    crackInstances[0] = CrackInstance(
+    	vec3(.28,.1,.15), //pos
+    	orientMatrix(vec3(1,-.1,.2), vec3(1,1,0)) * rotY(2.2) * rotZ(.9), //rot
+    	-.3, //start
+    	.7, //stop
+    	vec2(.001, .03), //weight
+		0., //angle
+    	vec2(.015,-.02), //offset
+    	vec2(.15,.03), //size
+    	18., //lines
+    	11. //seed
+    );
+
+    crackInstances[1] = CrackInstance(
+    	vec3(.28,.18,.18)*.98, //pos
+    	orientMatrix(vec3(1,.4,.4), vec3(1,1,0)), //rot
+    	-.7, //start
+    	.3, //stop
+    	vec2(.001, .03), //weight
+		1., //angle
+    	vec2(0), //offset
+    	vec2(.12,.03), //size
+    	13., //lines
+    	14. //seed
+    );
+    
+    crackInstances[2] = CrackInstance(
+    	vec3(.28,.18,.18)*.98, //pos
+    	orientMatrix(vec3(1,.4,.4), vec3(1,1,0)), //rot
+    	-.7, //start
+    	.3, //stop
+    	vec2(.001, .03), //weight
+		3.6, //angle
+    	vec2(0), //offset
+    	vec2(.12,.03), //size
+    	16., //lines
+    	16. //seed
+    );
+    
+    crackInstances[3] = CrackInstance(
+        bloomInstances[0].pos - bloomInstances[0].rot * vec3(0,0,.02), //pos
+        bloomInstances[0].rot, //rot
+    	-1., //start
+    	.0, //stop
+    	vec2(.001, .03)*1.2, //weight
+		1., //angle
+    	vec2(.015,-.02)*1.2, //offset
+    	vec2(.12,.05)*1.2, //size
+    	10., //lines
+    	1. //seed
+    );
+    
+    crackInstances[4] = CrackInstance(
+        bloomInstances[0].pos - bloomInstances[0].rot * vec3(0,0,.02), //pos
+        bloomInstances[0].rot, //rot
+    	-1., //start
+    	.0, //stop
+    	vec2(.001, .03)*1.2, //weight
+		3., //angle
+    	vec2(0), //offset
+    	vec2(.12,.05)*1.2, //size
+    	10., //lines
+    	4. //seed
+    );
+    
+    crackInstances[5] = CrackInstance(
+        bloomInstances[0].pos - bloomInstances[0].rot * vec3(0,0,.02), //pos
+        bloomInstances[0].rot, //rot
+    	-1., //start
+    	.0, //stop
+    	vec2(.001, .03)*1.2, //weight
+		5.5, //angle
+    	vec2(-.01,.02)*1.2, //offset
+    	vec2(.08,.02)*1.2, //size
+    	12., //lines
+    	3. //seed
+    );
+    
+
+    crackInstances[6] = CrackInstance(
+        vec3(.3,.29,-.03), //pos
+        orientMatrix(vec3(.5,.3,.05), vec3(1,0,1)), //rot
+    	-.7, //start
+    	.6, //stop
+    	vec2(.001, .1), //weight
+		3.2, //angle
+    	vec2(0), //offset
+    	vec2(.18,.06), //size
+    	15., //lines
+    	17. //seed
+    );
+}
+
+
+// Bloom model
+// https://www.shadertoy.com/view/WtGXWm
+//--------------------------------------------------------
+
 #pragma glslify: import('./bloom.glsl')
-//#pragma glslify: sdSkull = require(../skull/skull.glsl)
-#pragma glslify: mapTex = require(./volume-read.glsl)
+
+Model drawBloom(vec3 p, float t, BloomSpec spec) {
+    p /= spec.size;
+    globalScale *= spec.size;
+    Model model;
+    float bound = length(p) - mix(.7, mix(.8, 2.4, spec.width), t);
+    if ( ! lightingPass && bound > boundEps / globalScale) {
+		model = newModel();
+        model.d = bound;
+        model.neg = bound;
+        model.isBound = true;
+    } else {
+        model = drawBloom(
+            p,
+            t,
+            spec.density,
+            spec.thickness,
+            spec.pointy,
+            spec.width,
+            spec.hideInside
+        );
+    }
+    model.d *= spec.size;
+    model.neg *= spec.size;
+    globalScale /= spec.size;
+	return model;
+}
+
+
+// Crack model
+//--------------------------------------------------------
+
 #pragma glslify: fCrack = require(./crack.glsl)
 
 
-float sdSkull(vec3 p) {
-    // return length(p - .2);
-    #ifdef MIRROR
-        p.x = -abs(p.x);
-    #endif
+
+// Skull model
+//--------------------------------------------------------
+
+#pragma glslify: mapTex = require(./volume-read.glsl)
+
+Model sdSkull(vec3 p) {
+    Model model = newModel();
+    float rad = .3;
+    float bound = fBox(p - vec3(0,-.13,-.02), vec3(.45,.43,.54) - rad) - rad;
+    bound = smin(bound, fBox(p - vec3(0,.29,-.4), vec3(.25,.2,.18)), .2);
+    if ( ! lightingPass && bound > boundEps / globalScale) {
+        model.d = bound;
+        model.isBound = true;
+        return model;
+    }
+
+    p.x = -abs(p.x);
     p += OFFSET / SCALE;
-    float bound = fBox(p, 1./SCALE);
-    if ( ! lightingPass && bound > .01) {
-        return bound;
-    }
-    // bound = max(bound, vmax(abs(mod(p + .0125, .025) - .0125)) - .003);
     p *= SCALE;
-    float d = mapTex(volumeData, p, volumeDataSize);
+    model.d = mapTex(volumeData, p, volumeDataSize);
+
     if (lightingPass && bound > .01) {
-        return d + bound;
+        model.d += bound;
+        model.isBound = true;
+        return model;
     }
-    return d;
+
+    return model;
 }
 
-
-float drawSkull(vec3 p) {
-    float s = 2.5;
-    float d;
-
-    // pR(p.xz, .8);
-    //pR(p.xz, -.8);
-    // pR(p.yz, -.3);
-
-    float bound = length(p - vec3(0,-.2,0)) - .8 * s;
-    if ( ! lightingPass && bound > .001) {
-        return bound;
-    }
-    d = sdSkull((p.xyz * vec3(1,-1,-1)) / s) * s;
-    // if (d < .1) {
-    //     vec3 e = vec3(.01,0,0);
-    //     // vec3 nor = normalize(vec3(
-    //     //     sdSkull(((p.xyz + e.xyy) * vec3(1,-1,-1)) / s) * s,
-    //     //     sdSkull(((p.xyz + e.yxy) * vec3(1,-1,-1)) / s) * s,
-    //     //     sdSkull(((p.xyz + e.yyx) * vec3(1,-1,-1)) / s) * s
-    //     // ));
-    //     vec3 tex = t3(iChannel2, p/1.5, normalize(p));
-    //     float disp = tex.r;
-    //     disp = disp * 3. - 1.3;
-    //     disp = smoothstep(-.5, 5., disp) * 10.;
-    //     disp *= .3;
-    //     disp = abs(disp - .1) - .1;
-    //     d += disp * .03;
-    // }
-    return d;
-
-    d = length(p) - 1.;
-    d = abs(d) - .1;
-    p.x = abs(p.x);
-    d = smax(d, -(length(p - normalize(vec3(.3,.1,.6))) - .3), .1);
-    d = smax(d, -(length(p - normalize(vec3(0,-.2,.8))) - .1), .1);
-    d = smax(d, -(length(p - normalize(vec3(0,-1,0))) - .7), .1);
-    return d;
-}
-
-// #define DEBUG_BLOOMS
-// #define DISABLE_SHADING
-
-float drawSkullWithBlooms(vec3 p, float t) {
-    float scale = skullRadius;
+Model drawSkull(vec3 p, float t) {
+    float scale = 2.5 * skullRadius;
     p /= scale;
-    float d = drawSkull(p);
-    // d = max(d, -(d + .1));
-
-    #ifdef DEBUG_BLOOMS
-        if (t > .8) { // when is it realistic to start showing blooms
-            d = min(d, length(p.xz) - .1);
-        }
-    #endif
-
-    return d * scale;
-}
-
-void applyMat4(inout vec3 p, mat4 m) {
-    p = (vec4(p, 1) * m).xyz;
-}
-
-void tweenSkull(inout vec3 p, inout float scale, float t) {
-    float skullHeight = mix(.2, skullOffset, easeOutSine(rangec(.55, 1.5, t)));
-    float skullScale = mix(.0, 1., easeOutSine(rangec(.45, 1., t)));
-    p.y -= skullHeight;
-    p *= skullRotate;
-
-    float rt = 1. - easeOutCirc(rangec(.0, 3., t));
-    pR(p.yz, rt * 5.);
-
-    p /= skullScale;
-    scale *= skullScale;
-}
-
-Model drawFinalBloom(vec3 p, float t, float scale) {
-
-    vec2 density = vec2(.15, 2);
-    float thickness = .05;
-    float pointy = 1.;
-    float width = .4;
-
-    float bt = smoothstep(0., 2., t);
-    bt = easeOutCirc(bt);
-    float bs = 1.4;
-    //pR(p.xz, .45 * PI * 2.);
-    pR(p.xz, .7 * PI * 2.);
-    Model blm = drawBloom(p / bs, bt, density, thickness, pointy, width, true);
-    blm.d *= bs * scale;
-    blm.neg *= bs * scale;
-    blm.id = 5;
-    return blm;
-}
-
-Model drawBloom(vec3 p, float t, float scale, vec2 density, float thickness, float pointy, float width) {
-    p /= scale;
-    Model model = drawBloom(p, t, density, thickness, pointy, width, false);
+    globalScale *= scale;
+    Model model = sdSkull((p.xyz * vec3(1,-1,-1)));
     model.d *= scale;
+    globalScale /= scale;
     return model;
 }
 
 
-void stepTransform(inout vec3 p, inout float scale, inout float t) {
-    // set location for next bloomWithSkull
-    // this is the camera
-    p -= bloomPosition;
-    p /= stepScale;
-    p *= bloomRotate;
-    scale *= stepScale;
-    t -= delay;
-}
+// Composition
+//--------------------------------------------------------
 
-const float CUTOFF = 3.4; // remove old itrerations when they're out of view
+Model drawFinalBloom(vec3 p, float t) {
+    float bt = smoothstep(0., 2., t);
+    bt = easeOutCirc(bt);
+    pR(p.xz, .7 * PI * 2.);
+    Model bloom = drawBloom(
+        p,
+        bt,
+        BloomSpec(
+        	vec2(.15, 2), //density
+            .05, //thickness
+            .4, //width
+            1., //pointy
+            1.4, //size
+            true //hideInside
+        )
+   	);
+    bloom.id = 5;
+    return bloom;
+}
 
 float fTri(vec2 p, float radius) {
     radius /= 2.;
@@ -354,275 +500,155 @@ float fTri(vec2 p, float radius) {
     );
 }
 
-vec3 fCracks(vec3 p, float t) {
-    p.z += .02;
-    p /= 1.2;
-    float crack = 1e12;
-    float blend = smoothstep(-1., 0., t);
-    float weight = mix(.001, .03, blend);
-    pR(p.xz, .5);
-    crack = min(crack, fCrack(pR2d(p.xz, 0.5) - vec2(.015,-.02), vec2(.12,.05), 10., 1., weight));
-    crack = min(crack, fCrack(pR2d(p.xz, 2.5) - vec2(.0,-.0), vec2(.12,.05), 10., 4., weight));
-    crack = min(crack, fCrack(pR2d(p.xz, 5.) - vec2(-.01,.02), vec2(.08,.02), 12., 3., weight));
-    crack*= 1.2;
-    return vec3(crack, weight, blend);
-}
-
-vec3 fCracks2(vec3 p,  float t) {
-    float crack = 1e12;
-    float blend = smoothstep(-.3, .7, t);
-    float weight = mix(.001, .03, blend);
-    pR(p.xz, 2.2);
-    pR(p.xy, -.9);
-    crack = min(crack, fCrack(p.xz - vec2(.015,-.02), vec2(.15,.03), 18., 11., weight));
-    return vec3(crack, weight, blend);
-}
-
-vec3 fCracks3(vec3 p,  float t) {
-    float crack = 1e12;
-    float blend = smoothstep(-.7, .3, t);
-    float weight = mix(.001, .03, blend);
-    pR(p.xz, 1.);
-    crack = min(crack, fCrack(p.xz - vec2(0,0), vec2(.12,.03), 13., 14., weight));
-    pR(p.xz, 2.6);
-    crack = min(crack, fCrack(p.xz - vec2(0,0), vec2(.12,.03), 16., 16., weight));
-    return vec3(crack, weight, blend);
-}
-
-vec3 fCracks4(vec3 p,  float t) {
-    float crack = 1e12;
-    float blend = smoothstep(-.7, .6, t);
-    float weight = mix(.001, .1, blend);
-    vec3 pp = p;
-    // pR(p.xz, .3);
-    crack = max(fTri(p.xz, .45), fTri(p.xz * vec2(1,-1), .3));
-    p = pp;
-    pR(p.xz, 3.2);
-    crack = min(crack, fCrack(p.xz, vec2(.18,.06), 15., 17., weight));
-    return vec3(crack, weight, blend);
-}
-
-void addCrack(vec3 p, float d, inout Model skull, vec3 cd) {
-    float crack = cd.x;
-    float weight = cd.y;
-    float blend = cd.z;
-    crack += (1.-blend) * weight/2.;
-    crack -= min(skull.d * mix(1.5, .2, blend), 0.);
-    crack = max(crack, -(p.y + .25));
-    crack = max(crack, -(d + .06));
-    skull.d = cmax(skull.d, -crack, .003);
-}
-
-Model skullWithBloom(vec3 p, float scale, float t) {
+Model skullWithBlooms(vec3 p, float t) {
     
-    if (t <= .0 || scale <= 0.) {
+    if (t <= .0 || globalScale <= 0.) {
         return newModel();
     }
-
-    Model model = newModel();
-    Model skull = newModel();
-    Model blooms = newModel();
+    
+    Model model = newModel();    
     Model bloom;
-    float crack;
-    float bt;
-
-        // density = vec2(guiDensityStart, guiDensityEnd);
-        // thickness = guiThickness;
-        // pointy = guiPointy;
-        // width = guiWidth;
-        // bloomsize = guiSize;
-
 
     if (t < CUTOFF) {
         // skull with sub blooms
-        float d = drawSkullWithBlooms(p, t);
-        skull.d = d;
-        float skulld = d;
+        Model skull = drawSkull(p, t);
+        float skulld = skull.d;
         skull.crackdepth = max(-skull.d, 0.);
         float td = t - delay;
-
+        model = skull;
+        //return skull;
+        
         vec3 pp = p;
-
-        vec2 density;
-        float thickness;
-        float pointy;
-        float width;
-        float bloomsize;
-
-        // FIRST
-        bt = easeOutCirc(smoothstep(-.5, 1., td));
-        p -= vec3(-.2,.2,.25) * mix(1., 1.02, bt);
-        p *= orientMatrix(vec3(-1,.7,-.9), vec3(0,1,0));
-        addCrack(p, skulld, skull, fCracks(p, td));
-        density = vec2(.08, 1.);
-        thickness = .11;
-        width = .39;
-        pointy = .4;
-        bloomsize = .11;
-        bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
-        bloom.id = 1;
-        skull.d = max(skull.d, -bloom.neg);
-        blooms = opU(blooms, bloom);
-        p = pp;
-
-        // BELOW FIRST
-        bt = smoothstep(-1.1, .8, td);
-        p -= vec3(-.135,.105,.35) * .98;
-        p *= orientMatrix(vec3(-.7,.2,-.9), vec3(0,1,0));
-        density = vec2(.48, 1.8);
-        thickness = .08;
-        width = .45;
-        pointy = .0;
-        bloomsize = .07;
-        bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
-        bloom.id = 2;
-        skull.d = max(skull.d, -bloom.neg);
-        blooms = opU(blooms, bloom);
-        p = pp;
-
-        // TOP
-        bt = smoothstep(-.1, 1.5, td);
-        p -= vec3(.22,.23,.2) * mix(1., 1.05, bt);
-        p *= orientMatrix(vec3(.5,.3,-.2), vec3(1,1,0));
-
-        density = vec2(.45, 2.35);
-        thickness = .09;
-        width = .16;
-        pointy = 0.;
-        bloomsize = .08;
-
-        density = vec2(.12, 1.45);
-        thickness = .07;
-        width = .17;
-        pointy = 0.;
-        bloomsize = .14;
-
-        // density = vec2(guiDensityStart, guiDensityEnd);
-        // thickness = guiThickness;
-        // width = guiWidth;
-        // pointy = guiPointy;
-        // bloomsize = guiSize;
-        pR(p.xz, .3);
-        bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
-        bloom.id = 3;
-        // skull.d = max(skull.d, -bloom.neg);
-        blooms = opU(blooms, bloom);
-        p = pp;
-
-        p -= vec3(.28,.18,.18)*.98;
-        p *= orientMatrix(vec3(1,.4,-.4), vec3(1,1,0));
-        addCrack(p, skulld, skull, fCracks3(p, td));
-        p = pp;
-
-        p -= vec3(.28,.1,.15);
-        p *= orientMatrix(vec3(1,-.1,-.2), vec3(1,1,0));
-        addCrack(p, skulld, skull, fCracks2(p, td));
-        p = pp;
-
-        // BOTTOM
-        bt = (smoothstep(-.5, 1.5, td));
-        p -= vec3(.28,.07,.18) * mix(.85, .95, bt);
-        p *= orientMatrix(vec3(1,-.3,-.5), vec3(1,1,0));
-        density = vec2(.15, 1.45);
-        thickness = .15;
-        width = .41;
-        pointy = 0.;
-        bloomsize = .085;
-        bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
-        bloom.id = 4;
-        blooms = opU(blooms, bloom);
-        p = pp;
-
-        // BETWEEN
-        // bt = (smoothstep(-.0, 1.2, td));
-        // p -= vec3(.24,.15,.17) * mix(1.1, 1.1, bt);
-        // p *= orientMatrix(vec3(.5,.2,-.4), vec3(1,1,0));
-        // density = vec2(.03, .6);
-        // thickness = .22;
-        // width = .31;
-        // pointy = 0.;
-        // bloomsize = .05;
-        // bloom = drawBloom(p, bt, bloomsize, density, thickness, pointy, width);
-        // blooms = opU(blooms, bloom);
-        // p = pp;
-
-        p -= vec3(.3,.29,-.03);
-        p *= orientMatrix(vec3(.5,.3,-.05), vec3(1,0,1));
-        addCrack(p, skulld, skull, fCracks4(p, td));
-        // skull.d = min(skull.d, max(p.y, length(p) - .1));
-        p = pp;
+        
+        // cracks
+        if (skull.d < boundEps / globalScale) {
+	        CrackInstance ci;
+	        float cracks = 1e12;
+            float crack;
+            for (int i = ZERO; i < 7; i++) {
+                ci = crackInstances[i];
+                p -= ci.pos;
+                p *= ci.rot;
+                if (i == 6) {
+                	crack = min(crack, max(fTri(p.xz, .45), fTri(p.xz * vec2(1,-1), .3)));
+                } else {
+                    crack = 1e12;
+                }
+                pR(p.xz, ci.angle);
+                float blend = smoothstep(ci.start, ci.stop, td);
+                float weight = mix(ci.weight.x, ci.weight.y, blend);
+                float crack = min(crack, fCrack(p.xz - ci.offset, ci.size, ci.lines, ci.seed, weight));
+                crack += (1.-blend) * weight/2.;
+                crack -= min(skull.d * mix(1.5, .2, blend), 0.);
+                crack = max(crack, -(p.y + .25)); // stop it poking through the other side
+                cracks = min(crack, cracks);
+                p = pp;
+            }
+            cracks = max(cracks, -(skulld + .06)); // limit depth
+            skull.d = cmax(skull.d, -cracks, .003);
+      	}
+        
+        // blooms
+	    Model blooms = newModel();
+        BloomInstance bi;
+        for (int i = ZERO; i < 4; i++) {
+            bi = bloomInstances[i];
+            float bt = smoothstep(bi.start, bi.stop, td);
+            p -= bi.pos * (1. + bi.offset * bt);
+            p *= bi.rot;
+            bloom = drawBloom(p, bt, bi.spec);
+            bloom.id = i + 1;
+            skull.d = max(skull.d, -bloom.neg);
+            blooms = opU(blooms, bloom);
+            p = pp;
+        }
 
         model = opU(skull, blooms);
     }
 
-
-    model.d *= scale;
-
-    stepTransform(p, scale, t);
-
-    bloom = drawFinalBloom(p, t, scale);
-    if ( ! bloom.isBound) {
-        model.d = smax(model.d, -bloom.neg, .04*scale);
-    }
-    model = opU(model, bloom);
-
     return model;
 }
 
-// C:\Program Files (x86)\Google\Chrome\Application\chrome.exe --use-angle=gl
+void tweenSkull(inout vec3 p, float t) {
+    float skullHeight = mix(.2, skullOffset, easeOutSine(rangec(.55, 1.5, t)));
+    float skullScale = mix(.0, 1., easeOutSine(rangec(.45, 1., t)));
+    p.y -= skullHeight;
+    p *= skullRotate;
+
+    float rt = 1. - easeOutCirc(rangec(.0, 3., t));
+    pR(p.yz, rt * 5.);
+
+    p /= skullScale;
+    globalScale *= skullScale;
+}
+
+void stepTransform(inout vec3 p, inout float t) {
+    p -= bloomPosition;
+    p /= stepScale;
+    globalScale *= stepScale;
+    p *= bloomRotate;
+    t -= delay;
+}
+
 Model map(vec3 p) {
 
-    float scale = 1.;
+    globalScale = 1.;
     float t = time;
 
-    #ifdef DEBUG_BLOOMS
-        t += 1.;
-        t *= delay;
-        t += 1.;
-        t = mod(t, delay); t += delay;
-        // t -= delay;
-        scale = 3.;
-        p /= scale;
-        pR(p.yz, -1.9);
-        pR(p.xy, -2.3);
-        //pR(p.xz, -.4 + t/2.);
-        return skullWithBloom(p, scale, t);
-    #endif
-
+    float off = .73;
+    
     t += 1.;
-    float camScale = tweenCamera(p, t);
-
-    float w = mapCameraDebug(p);
+    float camScale = tweenCamera(p, t - (1.-off)/delay);
+    globalScale *= camScale;
 
     Model model = newModel();
     Model model2;
 
     t *= delay;
-    t += 1.;
+    t += off;
 
-    // 4 iterations
-    // t += delay;
-    // scale /= stepScale;
-    // p *= inverse(bloomRotate);
-    // p *= stepScale;
-    // p += bloomPosition;
-
-    // 3 iterations
-    if (t < CUTOFF) {
-        model = drawFinalBloom(p, t, scale);
+    if (t < 2.6) {
+    	model = drawFinalBloom(p, t);
+      	model.d *= globalScale;
     }
 
     for (float i = 0.; i < 3.; i++) {
-        tweenSkull(p, scale, t);
-        model2 = skullWithBloom(p, scale, t);
-        model = opU(model, model2);
-        stepTransform(p, scale, t);
-    }
 
-    model.d /= camScale;
+        // scale
+        tweenSkull(p, t);
+
+        if (globalScale <= 0.) {
+			break;
+        }
+
+        // skull
+        model2 = skullWithBlooms(p, t);
+        model2.d *= globalScale;
+        model = opU(model, model2);
+
+        // translate
+        stepTransform(p, t);
+        
+        // bloom
+        model2 = drawFinalBloom(p, t);
+        model2.d *= globalScale;
+        model2.neg *= globalScale;
+        if ( ! model2.isBound) {
+            model.d = smax(model.d, -model2.neg, .04 * globalScale);
+        }
+        model = opU(model, model2);
+    }
 
     return model;
 }
+
+
+//========================================================
+// Rendering
+//========================================================
+
+// Shading
+//--------------------------------------------------------
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){
@@ -639,36 +665,17 @@ vec3 calcNormal(vec3 pos){
     return normalize(nor);
 }
 
-// normal function, call de() in a for loop for faster compile times.
-// vec3 calcNormal(vec3 p) {
-//     vec4 n = vec4(0);
-//     for (int i = 0 ; i < 4 ; i++) {
-//         vec4 s = vec4(p, 0);
-//         s[i] += 0.001;
-//         n[i] = map(s.xyz).x;
-//     }
-//     return normalize(n.xyz-n.w);
-// }
-
-mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
-{
-    vec3 ww = normalize( ta - ro );
-    vec3 uu = normalize( cross(ww,vec3(sin(roll),cos(roll),0.0) ) );
-    vec3 vv = normalize( cross(uu,ww));
-    return mat3( uu, vv, ww );
-}
-
 // https://www.shadertoy.com/view/lsKcDD
 float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 {
-    #ifdef DISABLE_SHADING
+    #ifdef DISABLE_SHADOWS
         return 1.;
     #endif
     float res = 1.0;
     float t = mint;
     float ph = 1e10;
     
-    for( int i=0; i<256; i++ )
+    for( int i=ZERO; i<256; i++ )
     {
         float h = map( ro + rd*t ).d;
         res = min( res, 10.0*h/t );
@@ -682,12 +689,12 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
 // https://www.shadertoy.com/view/Xds3zN
 float calcAO( in vec3 pos, in vec3 nor )
 {
-    #ifdef DISABLE_SHADING
+    #ifdef DISABLE_SHADOWS
         return 1.;
     #endif
     float occ = 0.0;
     float sca = 1.0;
-    for( int i=0; i<5; i++ )
+    for( int i=ZERO; i<5; i++ )
     {
         float hr = 0.01 + 0.12*float(i)/4.0;
         vec3 aopos =  nor * hr + pos;
@@ -704,194 +711,194 @@ vec3 worldToCam(vec3 v) {
 
 vec3 doShading(vec3 pos, vec3 rd, Model model) {
     vec3 col = vec3(.3);
-    col *= mix(1., .1, rangec(0., .05, model.crackdepth));
+    float cracksha = rangec(.001, .0, model.crackdepth);
+	float crackocc = rangec(.05, .0, model.crackdepth);
 
     if (model.isBloom) {
-        col = vec3(.3,.05,.05);
+		crackocc = 1.;
+        cracksha = 1.;
         col = vec3(.04,.09,.09);
-        //col += vec3(.06,.0,.03) * max(1. - 1. / 2., 0.);
-        //col = mix(col, col * .2, 0.);
-        // col = mix(col, vec3(.0,.1,.1), smoothstep(.0, 2., model.cell.y));
         col = mix(vec3(.07,.025,.06), col, smoothstep(-.2, .0, model.wedges) * model.uv.y);
         if (model.id == 1) {
-            col = vec3(.1,.06,.1);
             col = vec3(.1,.06,.1);
             col = mix(col, vec3(.095,.02,.055), smoothstep(-.1, .0, model.wedges) * smoothstep(.5, 1., model.uv.y));
         }
         if (model.id == 2) {
-            col = vec3(.06,.08,.08);
             col = vec3(.04,.07,.09);
             col = mix(col, vec3(.005,.015,.02), smoothstep(.5, 1.3, model.cell.y));
         }
         if (model.id == 3) {
-            col = vec3(.05,.11,.07);
             col = vec3(.04,.07,.09);
             col = mix(col, vec3(.2), smoothstep(.4, 1., model.uv.y));
         }
         if (model.id == 4) {
-            col = vec3(.11,.06,.09);
-            col = vec3(.1,.06,.1);
             col = vec3(.11,.05,.1);
-            // col = mix(col, vec3(1), smoothstep(1., 0., model.uv.y));
             col = mix(col, vec3(.5), smoothstep(.5, 2., model.cell.y));
         }
     }
 
-            lightingPass = true;
+    vec3 nor = calcNormal(pos);
+    lightingPass = true;
 
-			vec3 nor = calcNormal(pos);
-            float occ = calcAO( pos, nor );
-            vec3  lig = normalize( worldToCam(vec3(.5, 1, .2)) );
-            vec3  lba = normalize( worldToCam(vec3(-.5, -.8, .1)) );
-            vec3  hal = normalize( lig - rd );
-            float amb = sqrt(clamp( 0.5+0.5*worldToCam(nor).y, 0.0, 1.0 ));
-            float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
-            float bac = clamp( dot( nor, lba ), 0.0, 1.0 )*clamp( 1.0-worldToCam(nor).y,0.0,1.0);
-            float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
+    // IQ's shading, I always find this so nice to work with
+    // https://www.shadertoy.com/view/Xds3zN
+    float occ = calcAO( pos, nor );
+    vec3  lig = normalize( worldToCam(vec3(.5, 1, .2)) );
+    vec3  lba = normalize( worldToCam(vec3(-.5, -.8, .1)) );
+    vec3  hal = normalize( lig - rd );
+    float amb = sqrt(clamp( 0.5+0.5*worldToCam(nor).y, 0.0, 1.0 ));
+    float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
+    float bac = clamp( dot( nor, lba ), 0.0, 1.0 )*clamp( 1.0-worldToCam(nor).y,0.0,1.0);
+    float fre = pow( clamp(1.0+dot(nor,rd),0.0,1.0), 2.0 );
 
-            occ = mix(1., occ, .8);
-            
-            float sha = softshadow( pos, lig, 0.001, .9 );
-            dif *= sha;
+    occ = mix(1., occ, .8) * mix(1., crackocc, .9);
 
-            float spe = pow( clamp( dot( nor, hal ), 0.0, 1.0 ),16.0)*
-                        dif *
-                        (0.04 + 0.96*pow( clamp(1.0+dot(hal,rd),0.0,1.0), 5.0 ));
+    float sha = softshadow( pos, lig, 0.001, .9 ) * cracksha;
+    dif *= sha;
 
-            vec3 lin = vec3(0.0);
-            
-            // lin += 2.80*dif*vec3(1.30,1.00,0.70);
-            // lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
-            // lin += 1.55*bac*vec3(0.25,0.25,0.25)*occ*vec3(2,0,1);
-            // lin += 0.25*fre*vec3(1.00,1.00,1.00)*occ;
-        	// col = col*lin;
-			// col += 5.00*spe*vec3(1.10,0.90,0.70);
+    float spe = pow( clamp( dot( nor, hal ), 0.0, 1.0 ),16.0)*
+        dif *
+        (0.04 + 0.96*pow( clamp(1.0+dot(hal,rd),0.0,1.0), 5.0 ));
 
-        lin += 3.80*dif*vec3(1.30,1.00,0.70);
-        lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
-        lin += 0.55*bac*vec3(0.4,0.25,0.3)*occ;
-        // lin += 0.55*bac*vec3(0.25,0.35,0.35)*occ;
-        lin += 0.15*fre*vec3(1.00,1.00,1.00)*occ;
-		col = col*lin;
-		col += 7.00*spe*vec3(1.10,0.90,0.70);
+    vec3 lin = vec3(0.0);
+    lin += 3.80*dif*vec3(1.30,1.00,0.70);
+    lin += 0.55*amb*vec3(0.40,0.60,1.15)*occ;
+    lin += 0.55*bac*vec3(0.4,0.25,0.3)*occ;
+    lin += 0.15*fre*vec3(1.00,1.00,1.00)*occ;
+    col = col*lin;
+    col += 7.00*spe*vec3(1.10,0.90,0.70);
 
-    //nor = (cameraMatrix * vec4(nor,1)).rgb;
-    // return vec3(clamp(dot(nor, (vec4(vec3(1,0,0),1) * cameraMatrix).rgb), 0., 1.));
-
-
-    // return (vec4(nor,1) * cameraMatrix).rgb * .5 + .5;
-
-    //float lig = clamp(dot(nor, vec3(0,1,0)), .01, 1.);
-    //col *= lig;
-
-    // col = nor * .5 + .5;
     return col;
 }
 
-// #define AA 2
+
+// Debug
+//--------------------------------------------------------
+
+// https://www.shadertoy.com/view/ll2GD3
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+
+// Main
+//--------------------------------------------------------
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
+    // Config
+
     skullOffset = 1.8;
     skullRadius = .3;
-    skullRotate = basisMatrix(vec3(.5,1,-.4), vec3(-.9,1.,0));
     skullRotate = basisMatrix(vec3(.9,1,.9), vec3(1,0,1));
 
     bloomPosition = vec3(.8,.8,-.1) * skullRadius * 1.1;
-    // bloomPosition += vec3(0,0,.1);
     bloomRotate = basisMatrix(vec3(-.3,1,0), vec3(1,0,0));
-    //  bloomPosition -= vec3(0,0,.1);
 
     stepPosition = vec3(0,skullOffset,0) + skullRotate * bloomPosition;
     stepScale = .15;
     stepRotate = skullRotate * bloomRotate;
 
-    // position 2  =  position  +  rotation * position
-
     delay = 1.5;
 
     cameraPrecalc();
     calcPhyllotaxis();
+    precalcBloomInstances();
+    precalcCrackInstances();
+
+    time = loopTime(iTime);
 
     vec3 col;
-    vec3 tot = vec3(0.0);
-
-    // #ifdef DEBUG_BLOOMS
-    //     mTime = iTime/6.;
-    // #endif
-
-    time = mTime;
-    // time = 1.;
-
-    vec2 o = vec2(0);
     float depth;
+    
+    // Raymarch (enhanced sphere tracing)
+    // https://erleuchtet.org/~cupe/permanent/enhanced_sphere_tracing.pdf
 
-    #ifdef AA
-    for( int m=0; m<AA; m++ )
-    for( int n=0; n<AA; n++ )
-    {
-    // pixel coordinates
-    o = vec2(float(m),float(n)) / float(AA) - 0.5;
-    // time coordinate (motion blurred, shutter=0.5)
-    float d = 0.5*sin(fragCoord.x*147.0)*sin(fragCoord.y*131.0);
-    time = mTime - 0.1*(1.0/24.0)*(float(m*AA+n)+d)/float(AA*AA-1);
-    #endif
+    vec3 camPos = eye;
+    vec3 rayPosition = camPos;
+    vec3 rayDirection = normalize(dir);
+    float rayLength = 0.;
+    float stepLength = 0.;
 
-        vec2 p = (-iResolution.xy + 2.0*(fragCoord+o))/iResolution.y;
-        //float crack = fCrack(p.xy, vec2(.05,.01)*10., 20., 0., .02);
-        //fragColor = vec4(step(crack, .0)); return;
+    bool bg = false;
+    lightingPass = false;
 
-        //fragColor = texture2D(iChannel2, fragCoord.xy/iResolution.xy); return;
-
-        vec3 camPos = eye;
-        vec3 rayDirection = normalize(dir);
-
-        // mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
-        // rayDirection = normalize( camMat * vec3(p.xy,2.8) );
-
-        vec3 rayPosition = camPos;
-        float rayLength = 0.;
-        float dist = 0.;
-        bool bg = false;
-        lightingPass = false;
-        Model model;
-        const float MAX_DIST = 100.;
-
-        for (int i = 0; i < 300; i++) {
-            rayLength += dist;
-            rayPosition = camPos + rayDirection * rayLength;
-            model = map(rayPosition);
-            dist = model.d;
-
-            if (abs(dist) < .00001) {
-                break;
-            }
-            
-            if (rayLength > MAX_DIST) {
-                bg = true;
-                break;
-            }
-        }
-
-        vec3 bgCol = vec3(.02,.0,.0);
-        bgCol = vec3(.007,0,.007);
-        col = bgCol;
-
+    Model model;
+    Model candidateModel;
+    float error;
+    float candidateError = 1e12;
+    float canidateRayLength;
+    
+    const float MAX_DIST = 16.;
+    const int MAX_STEPS = 100;
+    float debugSteps = 0.;
+    
+    float pixelRadius = fwidth((camPos + rayDirection).x);
+	float overstep = 1.1;
+    float radius;
+    float signedRadius;
+    float previousRadius;
+    
+    for (int i = 0; i < MAX_STEPS; i++) {
+        debugSteps = float(i);
         
-        if ( ! bg) {
-            col = doShading(rayPosition, rayDirection, model);
-            float fog = 1. - exp((rayLength - 3.) * -.5);
-            col = mix(col, bgCol, clamp(fog, 0., 1.)); 
+        rayPosition = camPos + rayDirection * rayLength;
+        boundEps = pixelRadius * rayLength * 2.;
+        model = map(rayPosition);
+        
+        signedRadius = model.d;
+        radius = abs(signedRadius);
+
+        bool overshot = overstep > 1. && ! model.isBound && (radius + previousRadius) < stepLength;
+        if (overshot) {
+            stepLength -= overstep * stepLength;
+            overstep = 1.;
+        } else {
+            stepLength = signedRadius * overstep;
         }
 
-        tot += col;
-        depth += rayLength / MAX_DIST;
-    #ifdef AA
-    }
-    tot /= float(AA*AA);
-    depth /= float(AA*AA);
-    #endif
+        previousRadius = radius;
 
-    col = tot;
+        float error = radius / rayLength;
+        if ( ! model.isBound && ! overshot && error < candidateError) {
+            candidateModel = model;
+            candidateError = error;
+            canidateRayLength = rayLength;
+        }
+
+        if ( ! model.isBound && ! overshot && error < pixelRadius) {
+            break;
+        }
+        
+    	if (rayLength > MAX_DIST) {
+            bg = true;
+            canidateRayLength = rayLength;
+            break;
+        }
+
+        rayLength += stepLength;
+    }
+    
+    model = candidateModel;
+    rayLength = canidateRayLength;
+
+    vec3 bgCol = vec3(.007,0,.007);
+    col = bgCol;
+
+    if ( ! bg) {
+        col = doShading(rayPosition, rayDirection, model);
+        float fog = 1. - exp((rayLength - 3.) * -.5);
+        col = mix(col, bgCol, clamp(fog, 0., 1.)); 
+    }
+    
+    depth = rayLength / MAX_DIST;
+    depth = smin(depth, .8, .1); // stop the DOF 'pop' when background objects are removed
+
+    //col = spectrum(debugSteps / float(MAX_STEPS));
+	//col = spectrum(depth);
+
     fragColor = vec4(col, depth);
 }

@@ -169,12 +169,12 @@ void cameraPrecalc() {
 }
 
 float tweenCamera(inout vec3 p, float t) {
-    float scale = pow(stepScale, t);
+    float scale = 1. / pow(stepScale, t);
     float angle = abs(cameraAngle) * t;
     vec4 rot = rotate_angle_axis(angle, cameraAxis);
     p -= cameraApex;
     p = rotate_vector(p, rot);
-    p *= scale;    
+    p /= scale;    
     p += cameraApex;
     return scale;
 }
