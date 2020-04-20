@@ -1,0 +1,95 @@
+{
+  "id": "bloom-skull-11",
+  "camera2": {
+    "rotation": [
+      0.3263933062553406,
+      0.7093720436096191,
+      0.5939574241638184,
+      0.19289030134677887
+    ],
+    "position": [
+      1.135612430491733,
+      5.814688710471955,
+      -1.8242414485103495
+    ]
+  },
+  "camera": {
+    "rotation": [
+      0.4005354642868042,
+      0.8268868923187256,
+      0.3907836675643921,
+      -0.05331781134009361
+    ],
+    "position": [
+      2.4006311777817473,
+      3.43116363580134,
+      -3.4705115261859305
+    ]
+  },
+  "timer": {
+    "running": false,
+    "elapsed": 2570
+  },
+  "mouse": [
+    420,
+    260,
+    false,
+    0
+  ],
+  "r": [
+    184,
+    114
+  ],
+  "debugPlane": {},
+  "controls": {
+    "closed": true,
+    "densityStart": {
+      "type": "range",
+      "controller": 11,
+      "step": 0.01,
+      "min": 0,
+      "max": 1,
+      "value": 0.25
+    },
+    "densityEnd": {
+      "type": "range",
+      "controller": 12,
+      "step": 0.05,
+      "min": 0,
+      "max": 4,
+      "value": 2
+    },
+    "thickness": {
+      "type": "range",
+      "controller": 13,
+      "step": 0.01,
+      "min": 0,
+      "max": 0.5,
+      "value": 0.05
+    },
+    "width": {
+      "type": "range",
+      "controller": 14,
+      "step": 0.01,
+      "min": 0,
+      "max": 1,
+      "value": 0.4
+    },
+    "pointy": {
+      "type": "range",
+      "controller": 15,
+      "step": 0.1,
+      "min": 0,
+      "max": 1,
+      "value": 1
+    },
+    "size": {
+      "type": "range",
+      "controller": 16,
+      "step": 0.005,
+      "min": 0.01,
+      "max": 0.5,
+      "value": 1
+    }
+  }
+}
