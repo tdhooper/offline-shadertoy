@@ -1,3 +1,5 @@
+// framebuffer tile: 3
+
 precision highp float;
 
 #extension GL_OES_standard_derivatives : enable

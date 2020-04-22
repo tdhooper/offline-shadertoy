@@ -92,11 +92,32 @@ module.exports = (project) => {
       return acc;
     }, nodeUniforms);
     Object.assign(nodeUniforms, textureUniforms(regl, node.shader, triggerDraw));
+
     const nodeCommand = regl({
       frag: node.shader,
       uniforms: nodeUniforms,
       framebuffer: regl.prop('framebuffer'),
+      scissor: {
+        enable: Boolean(node.tile),
+        box: (context, props) => {
+          if ( ! node.tile) {
+            return {};
+          }
+          const i = props.tileIndex;
+          const w = Math.ceil(context.viewportWidth / node.tile);
+          const h = Math.ceil(context.viewportHeight / node.tile);
+          const x = i % node.tile;
+          const y = Math.floor(i / node.tile);
+          return {
+            x: x * w,
+            y: y * h,
+            width: w,
+            height: h
+          };
+        },
+      },
     });
+
     node.draw = (state) => {
       if (node.firstPassOnly && ! firstPass) {
         return;
@@ -145,7 +166,13 @@ module.exports = (project) => {
           framebuffer: node.buffer,
         }, state);
       }
-      nodeCommand(state);
+      if (node.tile) {
+        for(let i = 0; i < node.tile * node.tile; i++) {
+          nodeCommand(Object.assign({tileIndex: i}, state));
+        }
+      } else {
+        nodeCommand(state);
+      }
     };
   });
 
