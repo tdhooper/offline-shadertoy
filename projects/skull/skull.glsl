@@ -122,14 +122,20 @@ float fCorner(vec2 p, float r) {
     return length(max(d, vec2(0))) + vmax(min(d, vec2(0))) - r;
 }
 
-
-
-
-
+// https://www.shadertoy.com/view/4sS3zz
+float sdEllipseApprox( in vec2 p, in vec2 r ) 
+{
+    float k0 = length(p/r);
+    float k1 = length(p/(r*r));
+    return k0*(k0-1.0)/k1;
+}
 
 // iq https://www.shadertoy.com/view/MldfWn
+// modified to fix glitches
 float sdEllipse( vec2 p, in vec2 ab )
 {
+    float approx = sdEllipseApprox(p, ab);
+
     p = abs( p ); if( p.x > p.y ){ p=p.yx; ab=ab.yx; }
 
     float l = ab.y*ab.y - ab.x*ab.x;
@@ -172,7 +178,13 @@ float sdEllipse( vec2 p, in vec2 ab )
  
     vec2 r = ab * vec2(co,si);
     
-    return length(r-p) * sign(p.y-r.y);
+    float accurate = length(r-p) * sign(p.y-r.y);
+    
+    // bound the quartic solution by the approximation to stop floating point errors getting out of hand
+    accurate = clamp(abs(accurate), abs(approx) - .5, abs(approx) + .5) * sign(approx);
+
+    // use the approximation near the surface so normal calculation looks smooth
+    return mix(approx, accurate, smoothstep(.0, .01, abs(approx)));
 }
 
 // generic ellipsoid - approximated distance: https://www.shadertoy.com/view/tdS3DG
@@ -585,7 +597,7 @@ float sdSkull(vec3 p) {
 
     // Nose
     float nos = fNose(p);
-    d = smin(d, nos-.01, .02);
+    d = p.z > -.3 ? d : smin(d, nos-.01, .02);
     p = pp;
 
     float nosecut = smin(fNoseCut(p), fNoseCut(p * vec3(-1,1,1)), .04);
