@@ -435,7 +435,8 @@ Model sdSkull(vec3 p) {
     Model model = newModel();
     float rad = .3;
     float bound = fBox(p - vec3(0,-.13,-.02), vec3(.45,.43,.54) - rad) - rad;
-    bound = smin(bound, fBox(p - vec3(0,.29,-.4), vec3(.25,.2,.18)), .2);
+    bound = smin(bound, fBox(p - vec3(0,.29,-.39), vec3(.25,.2,.18)), .2);
+    bound = max(bound, dot(p.zy - vec2(0,.36), normalize(vec2(.27,1))));
     if ( ! lightingPass && bound > boundEps / globalScale) {
         model.d = bound;
         model.isBound = true;
