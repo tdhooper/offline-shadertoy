@@ -139,7 +139,7 @@ Hit raymarch(vec3 rayOrigin, vec3 rayDirection){
             break;
         }
         //mapDebug
-        currentDist = map(rayOrigin + rayDirection * rayLength);
+        currentDist = mapDebug(rayOrigin + rayDirection * rayLength);
         rayLength += currentDist;
         steps += 1.;
     }

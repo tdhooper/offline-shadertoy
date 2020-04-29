@@ -37,6 +37,6 @@ const main = require('./main.js');
 // log-camera
 // skull
 
-const project = LOADPROJECT('bloom-skull-optim');
+const project = LOADPROJECT('skull');
 
 main(project);
