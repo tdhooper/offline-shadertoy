@@ -376,18 +376,19 @@ module.exports = (project) => {
     }
   };
 
-  let tick = regl.frame(() => draw());
-  events.on('draw', () => draw(true));
+  //let tick = regl.frame(() => draw());
+  //events.on('draw', () => draw(true));
 
   const captureSetup = (width, height, done) => {
     console.log('captureSetup', width, height);
-    tick.cancel();
+    //tick.cancel();
     timer.pause();
     canvas.width = width;
     canvas.height = height;
     canvas.style.width = width + 'px';
     canvas.style.height = height + 'px';
-    setTimeout(done, 1000);
+    regl.poll();
+    setTimeout(done, 100);
   };
 
   const captureTeardown = () => {
@@ -409,10 +410,10 @@ module.exports = (project) => {
 
   // Default config used by the UI
   let captureConfig = {
-    fps: 45,
+    fps: 30 * 3.6,
     seconds: 1, // (duration)
-    width: 640*1.5,
-    height: 360*1.5,
+    width: 4096,
+    height: 2160,
     // quads: true,
     prefix: 'bloomskull-',
   };
