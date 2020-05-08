@@ -2,7 +2,7 @@ precision highp float;
 
 uniform vec2 iResolution;
 uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
-uniform sampler2D iChannel1; // images/blue-noise.png filter: linear wrap: repeat
+uniform sampler2D iChannel1; // images/blue-noise.png filter: linear wrap: clamp
 uniform vec2 iChannel1Size;
 
 void mainImage(out vec4 a, in vec2 b);
@@ -105,7 +105,7 @@ vec3 depthOfField(vec2 texCoord, float focusPoint, float focusScale) {
         radius += RAD_SCALE/radius;
         
         // modification: exit early when we're in focus
-       // if (centerDepth < uFar / 3. && m == 0.) break;
+        if (centerDepth < uFar / 3. && m == 0.) break;
     }
     return color /= tot;
 }

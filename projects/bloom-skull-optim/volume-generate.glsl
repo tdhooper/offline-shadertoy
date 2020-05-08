@@ -1,4 +1,4 @@
-// framebuffer size: 4096x4096 firstpassonly
+// framebuffer size: 2048x2048 firstpassonly
 
 uniform vec2 iResolution;
 uniform vec2 iChannel0Size;

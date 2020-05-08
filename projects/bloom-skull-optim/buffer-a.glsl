@@ -1,4 +1,4 @@
-// framebuffer tile: 5
+// framebuffer tile: 3
 
 precision highp float;
 
@@ -678,7 +678,7 @@ float softshadow( in vec3 ro, in vec3 rd, in float mint, in float tmax )
     float t = mint;
     float ph = 1e10;
     
-    for( int i=ZERO; i<512; i++ )
+    for( int i=ZERO; i<256; i++ )
     {
         float h = map( ro + rd*t ).d;
         res = min( res, 10.0*h/t );
@@ -836,11 +836,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float canidateRayLength;
     
     const float MAX_DIST = 16.;
-    const int MAX_STEPS = 600;
+    const int MAX_STEPS = 100;
     float debugSteps = 0.;
     
     float pixelRadius = fwidth((camPos + rayDirection).x);
-	float overstep = 1.;
+	float overstep = 1.1;
     float radius;
     float signedRadius;
     float previousRadius;
@@ -855,15 +855,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         signedRadius = model.d;
         radius = abs(signedRadius);
 
-        bool overshot = false;
-        stepLength = signedRadius * .7;
-        // bool overshot = overstep > 1. && ! model.isBound && (radius + previousRadius) < stepLength;
-        // if (overshot) {
-        //     stepLength -= overstep * stepLength;
-        //     overstep = 1.;
-        // } else {
-        //     stepLength = signedRadius * overstep;
-        // }
+        bool overshot = overstep > 1. && ! model.isBound && (radius + previousRadius) < stepLength;
+        if (overshot) {
+            stepLength -= overstep * stepLength;
+            overstep = 1.;
+        } else {
+            stepLength = signedRadius * overstep;
+        }
 
         previousRadius = radius;
 

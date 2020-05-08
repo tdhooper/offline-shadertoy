@@ -1,10 +1,10 @@
 precision highp float;
 
-//#define DISABLE_DOF
-//#define DISABLE_SHADOWS
+#define DISABLE_DOF
+#define DISABLE_SHADOWS
 
 float loopTime(float iTime) {
-	return mod(iTime + .35, 1.);
+	return mod(iTime / 3. + .35, 1.);
 }
 
 uniform float iTime;
