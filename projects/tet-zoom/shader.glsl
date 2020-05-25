@@ -2,6 +2,7 @@ precision highp float;
 
 uniform vec2 iResolution;
 uniform float iTime;
+uniform vec4 iMouse;
 
 varying vec3 eye;
 varying vec3 dir;
@@ -65,6 +66,38 @@ float smax3(float a, float b, float k){
         smax(a, b, k),
         smax2(a, b, k)
     );
+}
+
+
+
+float vmax(vec2 v) {
+	return max(v.x, v.y);
+}
+
+float vmax(vec3 v) {
+	return max(v.x, max(v.y, v.z));
+}
+
+float fBox(vec2 p, vec2 b) {
+	vec2 d = abs(p) - b;
+	return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
+}
+
+
+float fBox(vec3 p, vec3 b) {
+	vec3 d = abs(p) - b;
+	return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
+
+
+// IQ Spectrum
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
 }
 
 
@@ -198,7 +231,7 @@ float tet4(vec3 p) {
     return d;
 }
 
-float map(vec3 p) {
+float tetLoop(vec3 p) {
     float scale = pow(STEP_SCALE, time);
     p *= scale;
     pR(p.xy, PI/2. * time);
@@ -206,91 +239,231 @@ float map(vec3 p) {
     return d / scale;
 }
 
+vec2 map(vec3 p) {
+    float back = -p.z + 10.;
+    float d = tetLoop(p);
+
+    if (iMouse.x > 0.) {
+    //	pR(p.yz, ((iMouse.y / iResolution.y) * 2. - 1.) * 2.);
+   // 	pR(p.xz, ((iMouse.x / iResolution.x) * 2. - 1.) * 3.);
+    }
+
+    //d = fBox(p, vec3(.2)) - .05;
+    return back < d ? vec2(back, 0.) : vec2(d, 1.);
+}
+
+
+
 float hitDebugPlane = 0.;
 
-float mapDebug(vec3 p) {
-    float d = map(p);
+vec2 mapDebug(vec3 p) {
+    vec2 res = map(p);
 
     p = (debugPlaneMatrix * vec4(p, 1)).xyz;
     float plane = abs(p.y);
 
-    hitDebugPlane = plane < abs(d) ? 1. : 0.;
-    d = min(d, plane);
+    hitDebugPlane = plane < abs(res.x) ? 1. : 0.;
+    res.x = min(res.x, plane);
 
-    return d;
+    return res;
 }
 
-const int NORMAL_STEPS = 6;
-vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3(.0005,0,0);
-    vec3 nor = vec3(0);
-    float invert = 1.;
-    vec3 npos;
-    for (int i = 0; i < NORMAL_STEPS; i++){
-        npos = pos + eps * invert;
-        nor += map(npos) * eps * invert;
-        eps = eps.zxy;
-        invert *= -1.;
-    }
-    return normalize(nor);
+
+
+//========================================================
+// Lighting
+//========================================================
+
+float intersectPlane(vec3 rOrigin, vec3 rayDir, vec3 origin, vec3 normal, vec3 up, out vec2 uv) {
+    float d = dot(normal, (origin - rOrigin)) / dot(rayDir, normal);
+  	vec3 point = rOrigin + d * rayDir;
+	vec3 tangent = cross(normal, up);
+	vec3 bitangent = cross(normal, tangent);
+    point -= origin;
+    uv = vec2(dot(tangent, point), dot(bitangent, point));
+    return max(sign(d), 0.);
 }
 
-mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
-{
-    vec3 ww = normalize( ta - ro );
-    vec3 uu = normalize( cross(ww,vec3(sin(roll),cos(roll),0.0) ) );
-    vec3 vv = normalize( cross(uu,ww));
-    return mat3( uu, vv, ww );
+vec3 light(vec3 origin, vec3 rayDir) {
+    vec2 uv;
+    float hit = intersectPlane(origin, rayDir, vec3(5,-2,-8), normalize(vec3(1,-.5,-.1)), normalize(vec3(0,1,0)), uv);
+    float l = smoothstep(.75, .0, fBox(uv, vec2(.4,1.2) * 2.));
+	return vec3(l) * hit;
+}
+
+vec3 env(vec3 origin, vec3 rayDir) {
+    float l = smoothstep(.0, 1.7, dot(rayDir, vec3(.5,-.3,1))) * .4;
+   	return vec3(l) * vec3(1,1,1);
+}
+
+
+
+//========================================================
+// Marching
+//========================================================
+
+const float MAX_DISPERSE = 5.;
+const float MAX_BOUNCE = 10.;
+
+vec3 normal(in vec3 p){
+  vec3 v = vec3(.001, 0, 0);
+  vec3 n = vec3(
+      map(p + v.xyy).x,
+      map(p + v.yxy).x,
+      map(p + v.yyx).x
+  ) - map(p).x;
+  return normalize(n);
+}
+
+struct Hit {
+    vec2 res;
+    vec3 p;
+    float len;
+};
+
+Hit march(vec3 origin, vec3 rayDir, float invert, float maxDist) {
+    vec3 p;
+    float len = 0.;
+    float dist = 0.;
+    vec2 res = vec2(0.);
+
+    for (float i = 0.; i < 200.; i++) {
+        len += dist;// * .2;
+        p = origin + len * rayDir;
+        res = map(p);
+        dist = res.x * invert;
+        if (dist < .0000001) {
+            break;
+        }
+        if (len > maxDist) {
+            res.y = 0.;
+            break;
+        }
+    }   
+
+    return Hit(res, p, len);
 }
 
 #pragma glslify: distanceMeter = require(../clifford-torus/distance-meter.glsl)
 
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+// http://filmicworlds.com/blog/filmic-tonemapping-operators/
+vec3 tonemap2(vec3 texColor) {
+    texColor /= 2.;
+   	texColor *= 16.;  // Hardcoded Exposure Adjustment
+   	vec3 x = max(vec3(0),texColor-0.004);
+   	return (x*(6.2*x+.5))/(x*(6.2*x+1.7)+0.06);
+}
+
+void mainImage( out vec4 fragColor, in vec2 fragCoord )
+{
     initPoly();
 
     time = mod(iTime / 2., 1.);
+    
+    vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;
 
-    vec2 p = (-iResolution.xy + 2.0*(fragCoord))/iResolution.y;
+    Hit hit;
+    vec2 res;
+    vec3 p, rayDir, origin, sam, ref, raf, nor;
+    float invert, ior, offset, extinctionDist, maxDist, firstLen, bounceCount, wavelength;
+    
+    vec3 col = vec3(0);
+    float focal = 3.8;
+    bool refracted;
+    
+    for (float disperse = 0.; disperse < MAX_DISPERSE; disperse++) {
+        invert = 1.;
+    	sam = vec3(0);
 
-    vec3 camPos = eye;
-    vec3 rayDirection = normalize(dir);
+        origin = eye;
+        rayDir = normalize(dir);
 
-    // mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
-    // rayDirection = normalize( camMat * vec3(p.xy,2.8) );
+	    //origin = vec3(0, 0, -focal * .7);
+    	//rayDir = normalize(vec3(uv, focal));
 
-    vec3 rayPosition = camPos;
-    float rayLength = 0.;
-    float dist = 0.;
-    bool bg = false;
-    vec3 res;
+        extinctionDist = 0.;
+        wavelength = disperse / MAX_DISPERSE;
+		//float rand = texture(iChannel0, iTime + fragCoord / iChannelResolution[0].xy).r;
+        //wavelength += (rand * 2. - 1.) * (.5 / MAX_DISPERSE);
+        
+		bounceCount = 0.;
 
-    for (int i = 0; i < 300; i++) {
-        rayLength += dist;
-        rayPosition = camPos + rayDirection * rayLength;
-        dist = map(rayPosition) * .5;
+        for (float bounce = 0.; bounce < MAX_BOUNCE; bounce++) {
+        //while (bounce < MAX_BOUNCE) {
+            maxDist = bounce == 0. ? 30. : 5.; 
+            hit = march(origin, rayDir, invert, maxDist);
+            res = hit.res;
+            p = hit.p;
+			
+            if (bounce == 0. && disperse == 0.) {
+            	firstLen = hit.len;
+            }
+            
+            if (invert < 0.) {
+	            extinctionDist += hit.len;
+            }
 
-        if (abs(dist) < .0001) {
-            break;
+            if ( res.y == 0. || bounce == MAX_BOUNCE - 1.) {
+                if (bounce == 0.) {
+                	sam += vec3(.22); break;	
+                }
+                sam += env(origin, rayDir);
+                break;
+            } else {
+                vec3 nor = normal(p) * invert;
+                
+                
+                //sam += (nor * .5 + .5) / 3.; break;
+
+                // if (hitDebugPlane == 1.) {
+                //     float d = map(rayPosition).x;
+                //     sam += distanceMeter(d * 2., rayLength, rayDirection, camPos);
+                //     break;
+                // }
+                
+                
+                ref = reflect(rayDir, nor);
+                
+                float ior = mix(1.3, 1.6, wavelength); // vs 1.6 with first bounce reflective (or 1.8 wihout)
+                ior = invert < 0. ? ior : 1. / ior;
+                raf = refract(rayDir, nor, ior);
+                sam += light(origin, ref) * .2;
+                sam += pow(1. - abs(dot(rayDir, nor)), 5.) * .1;
+                sam *= vec3(.85,.85,.98);
+
+                // Refract
+                rayDir = raf == vec3(0) ? ref : raf;
+                if (bounce == 1.) {
+                    // make first inside bounce reflective
+                    //rayDir = ref;
+                }
+                offset = .01 / abs(dot(rayDir, nor));
+                origin = p + offset * rayDir;
+                invert *= -1.;
+            }
+            
+            bounceCount = bounce;
         }
         
-        if (rayLength > 30.) {
-            bg = true;
+        if (bounceCount == 0.) {
+            // didn't bounce, so don't bother calculating dispersion
+            col += sam * MAX_DISPERSE / 2.;
             break;
+        } else {
+            vec3 extinction = vec3(.3,.3,1.) * .78;
+            extinction = 1. / (1. + (extinction * extinctionDist));	
+            col += sam * extinction * spectrum(-wavelength+.2);
         }
-    }
-
-    vec3 col =  vec3(.19,.19,.22) * .2;
+	}
     
-    if ( ! bg) {
-        vec3 nor = calcNormal(rayPosition);
-        col = nor * .5 + .5;
-    }
-
-    if (hitDebugPlane == 1.) {
-        float d = map(rayPosition);
-        col = distanceMeter(d * 2., rayLength, rayDirection, camPos);
-    }
-
-    col = pow( col, vec3(0.4545) );
-    fragColor = vec4(col,1.0);
+    col /= MAX_DISPERSE;
+    
+    col = pow(col, vec3(1.25)) * 2.5;
+    //col = pow(col, vec3(1.125)) * 1.5;
+    
+    
+    //col = pow( col, vec3(0.4545) );
+    col = tonemap2(col);
+    
+    fragColor = vec4(col, 1.);
 }
