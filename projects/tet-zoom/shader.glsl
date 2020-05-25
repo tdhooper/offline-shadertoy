@@ -28,6 +28,11 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+vec3 pMirror(vec3 p, vec3 n) {
+    return p - (2. * dot(p, n)) * n;    
+}
+
+
 
 float smin(float a, float b, float r) {
     vec2 u = max(vec2(r - a,r - b), vec2(0));
@@ -91,48 +96,6 @@ vec3 fold(vec3 pos) {
 
 // Modelling
 
-struct MoveData {
-    vec3 axis;
-    float shift;
-    float moveSide;
-    float dist;
-
-    float side;
-    float bound;
-};
-
-MoveData separate(vec3 p, vec3 axis, float shift, float moveSide, float dist, inout vec3 offset) {
-    vec3 o = -axis * dist * moveSide;
-    p -= o;
-    p += axis * shift;
-    float bound = max(dist * 2., .01);
-    float d = dot(p - offset, axis);
-    float side = sign(d);
-    o += axis * dist * sign(d);
-    offset += o;
-    return MoveData(axis, shift, moveSide, dist, side, bound);
-}
-
-void postSeparate(vec3 p, MoveData m, inout float d) {
-    d = smax(d, dot(p + m.axis * m.shift, m.axis) * -m.side, .01);
-}
-
-void postSeparateB(vec3 p, MoveData m, inout float d) {
-    float bound = dot(p + m.axis * m.shift, m.axis) * m.side + m.bound;
-    if (bound > .001) d = min(d, bound);
-}
-
-
-float tet(vec3 p, float s, float r) {
-    float d = dot(p, normalize(vec3(1))) - s;
-    d = smax(d, dot(p, normalize(vec3(-1,-1,1))) - s, r);
-    d = smax(d, dot(p, normalize(vec3(-1,1,-1))) - s, r);
-    d = smax(d, dot(p, normalize(vec3(1,-1,-1))) - s, r);
-    //d = max(d, length(p) - .1);
-    //d = max(d, -abs(p.x));
-    return d;
-}
-
 float range(float vmin, float vmax, float value) {
   return clamp((value - vmin) / (vmax - vmin), 0., 1.);
 }
@@ -144,11 +107,6 @@ float tween(float t, float start, float duration) {
     return smoothstep(0., 1., smoothstep(0., 1., t));
 }
 
-vec3 pMirror(vec3 p, vec3 n) {
-    return p - (2. * dot(p, n)) * n;    
-}
-
-bool ddbg = false;
 
 float tetBase(vec3 p, float sz, float r) {
     vec3 n1 = pca;
@@ -162,7 +120,7 @@ float tetBase(vec3 p, float sz, float r) {
 
 float tet4(vec3 p) {
     
-   p = fold(p);
+    p = fold(p);
 
 
     float t = time * 4.;
@@ -210,136 +168,6 @@ float tet4(vec3 p) {
     return d;
 }
 
-float tet3(vec3 p) {
-    p = fold(p);
-    float d = dot(p, pca) - .3;
-    return d;
-}
-
-
-float tet2(vec3 p) {
-    
-    //p = fold(p);
-
-    //return length(p) - .5;
-    //return dot(p, pca) - .5;
-
-    float sz = .3;
-
-    //pR(p.yz, max(time - .4, 0.) * 10.);
-
-    float t = time * 4.;
-    float o1 = tween(t, .25, 1.) * .3;
-    float o2 = tween(t, .5, 1.) * .3;
-    
-    float bound = tet(p, sz + (o1 + o2) * 2./3., .0);
-
-    if (bound > .1) {
-    //    return bound;
-    }
-    
-
-
-    vec3 mirror = normalize(cross(pca, pab));
-    vec3 pbc2 = pbc - (2. * dot(pbc, mirror)) * mirror;    
-
-    vec3 offset = vec3(0);
-        
-    MoveData m2 = separate(p, pbc2, -.1, -1., o2, offset);
-    MoveData m3 = separate(p, pbc, -.1, -1., o2, offset);
-    MoveData m1 = separate(p, pbc, -.5, -1., o1, offset);
-
-    p -= offset;
-    float d = dot(p, pca) - sz;
-
-
-
-    //d = smax(d, -abs(dot(p, pbc) - .1) + .01, .03);
-    //d = smax(d, -abs(dot(p, pbc2) - .1) + .01, .03);
-    //d = smax(d, -abs(dot(p, pbc) - .5) + .01, .03);
-            
-    //d = min(d, length(p - pab * .5) - .05);
-    //d = min(d, length(p - pbc * 1.) - .1);
-    //d = min(d, length(p - pca * .3) - .025);
-
-        
-    postSeparate(p, m2, d);
-    postSeparate(p, m3, d);
-    postSeparate(p, m1, d);
-    
-    postSeparateB(p, m2, d);
-    postSeparateB(p, m3, d);
-    postSeparateB(p, m1, d);
-
-    
-
-    return d;
-}
-
-float tet2_old(vec3 p) {
-
-    // TODO: use knighty poly mirroring so we can cut down on some work and
-    // maybe focus on the side that doesn't get glitches!
-
-    float sz = .3;
-
-    pR(p.yz, max(time - .4, 0.) * 10.);
-
-    float t = time * 4.;
-    float o1 = tween(t, .25, 1.) * .3;
-    float o2 = tween(t, .5, 1.) * .3;
-    
-    float bound = tet(p, sz + (o1 + o2) * 2./3., .0);
-
-    if (bound > .1) {
-        return bound;
-    }
-    
-    vec3 n1 = normalize(vec3(1,1,1));
-    vec3 n2 = normalize(vec3(-1,-1,1));
-    vec3 n3 = normalize(vec3(-1,1,-1));
-    vec3 n4 = normalize(vec3(1,-1,-1));
-
-    vec3 offset = vec3(0);
-    
-    MoveData m5 = separate(p, n1, .1, 0., o2, offset);
-    MoveData m6 = separate(p, n2, .1, 0., o2, offset);
-    MoveData m7 = separate(p, n3, .1, 0., o2, offset);
-    MoveData m8 = separate(p, n4, .1, 0., o2, offset);
-    
-    MoveData m1 = separate(p, n1, .5, 0., o1, offset);
-    MoveData m2 = separate(p, n2, .5, 0., o1, offset);
-    MoveData m3 = separate(p, n3, .5, 0., o1, offset);
-    MoveData m4 = separate(p, n4, .5, 0., o1, offset);
-
-    p -= offset;
-    float d = tet(p, sz, .01);
-
-    postSeparate(p, m5, d);
-    postSeparate(p, m6, d);
-    postSeparate(p, m7, d);
-    postSeparate(p, m8, d);
-    
-    postSeparate(p, m1, d);
-    postSeparate(p, m2, d);
-    postSeparate(p, m3, d);
-    postSeparate(p, m4, d);
-    
-    
-    postSeparateB(p, m5, d);
-    postSeparateB(p, m6, d);
-    postSeparateB(p, m7, d);
-    postSeparateB(p, m8, d);
-    
-    postSeparateB(p, m1, d);
-    postSeparateB(p, m2, d);
-    postSeparateB(p, m3, d);
-    postSeparateB(p, m4, d);
-
-    return d;
-}
-
-
 float map(vec3 p) {
     float d = length(p) - .5;
     d = tet4(p);
@@ -351,16 +179,11 @@ float hitDebugPlane = 0.;
 float mapDebug(vec3 p) {
     float d = map(p);
 
-    float t = tet3(p);
-
     p = (debugPlaneMatrix * vec4(p, 1)).xyz;
     float plane = abs(p.y);
-    //plane = min(plane, t);
 
     hitDebugPlane = plane < abs(d) ? 1. : 0.;
     d = min(d, plane);
-
-    
 
     return d;
 }
@@ -396,8 +219,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     time = mod(iTime / 5., 1.);
 
     vec2 p = (-iResolution.xy + 2.0*(fragCoord))/iResolution.y;
-
-    ddbg = p.x > 0.;
 
     vec3 camPos = eye;
     vec3 rayDirection = normalize(dir);
