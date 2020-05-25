@@ -108,6 +108,12 @@ float tween(float t, float start, float duration) {
 }
 
 
+float tweenBlend(float t, float start, float duration) {
+    t = range(start, start + duration, t);
+    return t;
+}
+
+
 float tetBase(vec3 p, float sz, float r) {
     vec3 n1 = pca;
     vec3 n2 = normalize(pca * vec3(-1,-1,1));
@@ -118,14 +124,25 @@ float tetBase(vec3 p, float sz, float r) {
     return d;
 }
 
+const float STEP_SCALE = 1./3.;
+
 float tet4(vec3 p) {
     
     p = fold(p);
 
 
-    float t = time * 4.;
-    float o1 = tween(t, .25, 1.) * .3;
-    float o2 = tween(t, .5, 1.) * .3;
+
+    float bt = .5;
+    float ot = 1.;
+    float step2Start = .0;
+
+    float t = time * (step2Start + bt + ot);
+
+    float b1 = tweenBlend(t, .0, bt);
+    float b2 = tweenBlend(t, step2Start, bt);
+
+    float o1 = tween(t, bt, ot) * .6;
+    float o2 = tween(t, step2Start + bt, ot) * .6;
 
     vec3 n1 = pca;
     vec3 n2 = normalize(pca * vec3(-1,-1,1));
@@ -136,43 +153,57 @@ float tet4(vec3 p) {
 
     vec3 pp = p;
 
-    float r = .02;
     float rbase = .1;
+    float r1 = rbase * STEP_SCALE * b1;
+    float r2 = rbase * STEP_SCALE * b2;
+
+    // base tet
+    float base = tetBase(p, sz, rbase);
 
     // inner tet
     float inner = -(dot(p, n4) + .1);
-    inner = smax(inner, -(dot(p, n3) + .1), r);
-    inner = smax(inner, -(dot(p, n2) + .1), r);
+    inner = smax(inner, -(dot(p, n3) + .1), r2);
+    inner = smax(inner, -(dot(p, n2) + .1), r2);
 
     // octahedrons
     p = pp + n4 * o2;
     float oct = tetBase(p, sz, rbase);
-    oct = smax(oct, -(dot(p, n4) + .5), r);
-    oct = smax(oct, -(dot(p, n3) + .1), r);
-    oct = smax(oct, (dot(p, n4) + .1), r);
-    oct = smax(oct, -(dot(p, n2) + .1), r);
+    oct = smax(oct, -(dot(p, n4) + .5), r2);
+    oct = smax(oct, -(dot(p, n3) + .1), r2);
+    oct = smax(oct, (dot(p, n4) + .1), r2);
+    oct = smax(oct, -(dot(p, n2) + .1), r2);
     
     // edge tets
     p = pp + (n4 + n3) * o2;
     float edge = tetBase(p, sz, rbase);
-    edge = smax(edge, (dot(p, n3) + .1), r);
-    edge = smax(edge, (dot(p, n4) + .1), r);
+    edge = smax(edge, (dot(p, n3) + .1), r2);
+    edge = smax(edge, (dot(p, n4) + .1), r2);
     
     // vertex tets
     p = pp + n4 * (o1 + o2);
     float vert = tetBase(p, sz, rbase);
-    vert = smax(vert, (dot(p, n4) + .5), r);
-    
+    vert = smax(vert, (dot(p, n4) + .5), r1);
 
-    float d = min(min(min(inner, oct), edge), vert);
+    // base minus vertex tets
+    p = pp;
+    float base2 = tetBase(p, sz, rbase);
+    base2 = smax(base2, -(dot(p, n4) + .5), r1);
+ 
+    float stage1 = base;
+    float stage2 = min(vert, base2);
+    float stage3 = min(min(min(inner, oct), edge), vert);
+
+    float d = mix(mix(stage1, stage2, b1), stage3, b2);
 
     return d;
 }
 
 float map(vec3 p) {
-    float d = length(p) - .5;
-    d = tet4(p);
-    return d;
+    float scale = pow(STEP_SCALE, time);
+    p *= scale;
+    pR(p.xy, PI/2. * time);
+    float d = tet4(p);
+    return d / scale;
 }
 
 float hitDebugPlane = 0.;
@@ -217,7 +248,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     initPoly();
 
-    time = mod(iTime / 5., 1.);
+    time = mod(iTime / 2., 1.);
 
     vec2 p = (-iResolution.xy + 2.0*(fragCoord))/iResolution.y;
 
