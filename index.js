@@ -36,7 +36,8 @@ const main = require('./main.js');
 // bloom-skull-optim
 // log-camera
 // skull
+// tet-zoom
 
-const project = LOADPROJECT('bloom-skull-optim');
+const project = LOADPROJECT('tet-zoom');
 
 main(project);
