@@ -139,31 +139,32 @@ float tet4(vec3 p) {
     float r = .02;
     float rbase = .1;
 
-    float d4 = -(dot(p, n4) + .1);
-    d4 = smax(d4, -(dot(p, n3) + .1), r);
-    d4 = smax(d4, -(dot(p, n2) + .1), r);
+    // inner tet
+    float inner = -(dot(p, n4) + .1);
+    inner = smax(inner, -(dot(p, n3) + .1), r);
+    inner = smax(inner, -(dot(p, n2) + .1), r);
 
+    // octahedrons
     p = pp + n4 * o2;
-
-    float d2 = tetBase(p, sz, rbase);
-    d2 = smax(d2, -(dot(p, n4) + .5), r);
-    d2 = smax(d2, -(dot(p, n3) + .1), r);
-    d2 = smax(d2, (dot(p, n4) + .1), r);
-    d2 = smax(d2, -(dot(p, n2) + .1), r);
+    float oct = tetBase(p, sz, rbase);
+    oct = smax(oct, -(dot(p, n4) + .5), r);
+    oct = smax(oct, -(dot(p, n3) + .1), r);
+    oct = smax(oct, (dot(p, n4) + .1), r);
+    oct = smax(oct, -(dot(p, n2) + .1), r);
     
+    // edge tets
     p = pp + (n4 + n3) * o2;
-
-    float d3 = tetBase(p, sz, rbase);
-    d3 = smax(d3, (dot(p, n3) + .1), r);
-    d3 = smax(d3, (dot(p, n4) + .1), r);
+    float edge = tetBase(p, sz, rbase);
+    edge = smax(edge, (dot(p, n3) + .1), r);
+    edge = smax(edge, (dot(p, n4) + .1), r);
     
+    // vertex tets
     p = pp + n4 * (o1 + o2);
+    float vert = tetBase(p, sz, rbase);
+    vert = smax(vert, (dot(p, n4) + .5), r);
+    
 
-    float d1 = tetBase(p, sz, rbase);
-    d1 = smax(d1, (dot(p, n4) + .5), r);
-
-
-    float d = min(min(min(d1, d2), d3), d4);
+    float d = min(min(min(inner, oct), edge), vert);
 
     return d;
 }
