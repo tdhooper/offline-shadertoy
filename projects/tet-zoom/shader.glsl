@@ -4,6 +4,8 @@ uniform vec2 iResolution;
 uniform float iTime;
 uniform vec4 iMouse;
 
+uniform mat4 cameraMatrix;
+
 varying vec3 eye;
 varying vec3 dir;
 
@@ -167,15 +169,18 @@ float tet4(vec3 p) {
 
     float bt = .5;
     float ot = 1.;
-    float step2Start = .0;
+    float step2Start = .1;
 
     float t = time * (step2Start + bt + ot);
 
+    // animation
+    float rtween = tweenBlend(t, .0, .5);
     float b1 = tweenBlend(t, .0, bt);
-    float b2 = tweenBlend(t, step2Start, bt);
+    float o1 = tween(t, bt, ot) * 1.6;
+    float o2 = tween(t, step2Start + bt, ot) * 1.6;
 
-    float o1 = tween(t, bt, ot) * .6;
-    float o2 = tween(t, step2Start + bt, ot) * .6;
+    //o1 = 0.;
+    //o2 = 0.;
 
     vec3 n1 = pca;
     vec3 n2 = normalize(pca * vec3(-1,-1,1));
@@ -187,46 +192,48 @@ float tet4(vec3 p) {
     vec3 pp = p;
 
     float rbase = .1;
-    float r1 = rbase * STEP_SCALE * b1;
-    float r2 = rbase * STEP_SCALE * b2;
+    float r1 = rbase * STEP_SCALE * rtween;
+    float r2 = rbase * STEP_SCALE * rtween;
+    float sep = .001 * (1. - o2);
 
     // base tet
     float base = tetBase(p, sz, rbase);
 
     // inner tet
-    float inner = -(dot(p, n4) + .1);
-    inner = smax(inner, -(dot(p, n3) + .1), r2);
-    inner = smax(inner, -(dot(p, n2) + .1), r2);
+    float inner = -(dot(p, n4) + .1 - sep);
+    inner = smax(inner, -(dot(p, n3) + .1 - sep), r2);
+    inner = smax(inner, -(dot(p, n2) + .1 - sep), r2);
 
     // octahedrons
     p = pp + n4 * o2;
     float oct = tetBase(p, sz, rbase);
-    oct = smax(oct, -(dot(p, n4) + .5), r2);
-    oct = smax(oct, -(dot(p, n3) + .1), r2);
-    oct = smax(oct, (dot(p, n4) + .1), r2);
-    oct = smax(oct, -(dot(p, n2) + .1), r2);
+    oct = smax(oct, -(dot(p, n4) + .5 - sep), r2);
+    oct = smax(oct, -(dot(p, n3) + .1 - sep), r2);
+    oct = smax(oct, (dot(p, n4) + .1 + sep), r2);
+    oct = smax(oct, -(dot(p, n2) + .1 - sep), r2);
     
     // edge tets
     p = pp + (n4 + n3) * o2;
     float edge = tetBase(p, sz, rbase);
-    edge = smax(edge, (dot(p, n3) + .1), r2);
-    edge = smax(edge, (dot(p, n4) + .1), r2);
+    edge = smax(edge, (dot(p, n3) + .1 + sep), r2);
+    edge = smax(edge, (dot(p, n4) + .1 + sep), r2);
     
     // vertex tets
     p = pp + n4 * (o1 + o2);
     float vert = tetBase(p, sz, rbase);
-    vert = smax(vert, (dot(p, n4) + .5), r1);
+    vert = smax(vert, (dot(p, n4) + .5 + sep), r1);
 
-    // base minus vertex tets
-    p = pp;
-    float base2 = tetBase(p, sz, rbase);
-    base2 = smax(base2, -(dot(p, n4) + .5), r1);
- 
-    float stage1 = base;
-    float stage2 = min(vert, base2);
-    float stage3 = min(min(min(inner, oct), edge), vert);
+    float fractured = min(min(min(inner, oct), edge), vert);
 
-    float d = mix(mix(stage1, stage2, b1), stage3, b2);
+    // surface: 0 - .5 -  1 - 1
+    // center:  0 -  0 - .5 - 1
+
+
+
+    float surface = saturate(-base / sz); // 0 at surface, 1 at center
+    float bl = saturate(b1 * 2.);
+    bl = saturate(b1 * 1.5 - surface / 2.);
+    float d = mix(base, fractured, bl);
 
     return d;
 }
@@ -243,12 +250,14 @@ vec2 map(vec3 p) {
     float back = -p.z + 10.;
     float d = tetLoop(p);
 
+    //d = fBox(p, vec3(.2)) - .05;
+    return vec2(d, 1.);
+
     if (iMouse.x > 0.) {
     //	pR(p.yz, ((iMouse.y / iResolution.y) * 2. - 1.) * 2.);
    // 	pR(p.xz, ((iMouse.x / iResolution.x) * 2. - 1.) * 3.);
     }
 
-    //d = fBox(p, vec3(.2)) - .05;
     return back < d ? vec2(back, 0.) : vec2(d, 1.);
 }
 
@@ -274,6 +283,7 @@ vec2 mapDebug(vec3 p) {
 // Lighting
 //========================================================
 
+
 float intersectPlane(vec3 rOrigin, vec3 rayDir, vec3 origin, vec3 normal, vec3 up, out vec2 uv) {
     float d = dot(normal, (origin - rOrigin)) / dot(rayDir, normal);
   	vec3 point = rOrigin + d * rayDir;
@@ -285,6 +295,9 @@ float intersectPlane(vec3 rOrigin, vec3 rayDir, vec3 origin, vec3 normal, vec3 u
 }
 
 vec3 light(vec3 origin, vec3 rayDir) {
+    origin = -(cameraMatrix * vec4(origin, 1)).xyz;
+    rayDir = -(cameraMatrix * vec4(rayDir, 0)).xyz;
+
     vec2 uv;
     float hit = intersectPlane(origin, rayDir, vec3(5,-2,-8), normalize(vec3(1,-.5,-.1)), normalize(vec3(0,1,0)), uv);
     float l = smoothstep(.75, .0, fBox(uv, vec2(.4,1.2) * 2.));
@@ -292,6 +305,9 @@ vec3 light(vec3 origin, vec3 rayDir) {
 }
 
 vec3 env(vec3 origin, vec3 rayDir) {
+    origin = -(cameraMatrix * vec4(origin, 1)).xyz;
+    rayDir = -(cameraMatrix * vec4(rayDir, 0)).xyz;
+
     float l = smoothstep(.0, 1.7, dot(rayDir, vec3(.5,-.3,1))) * .4;
    	return vec3(l) * vec3(1,1,1);
 }
@@ -302,8 +318,8 @@ vec3 env(vec3 origin, vec3 rayDir) {
 // Marching
 //========================================================
 
-const float MAX_DISPERSE = 5.;
-const float MAX_BOUNCE = 10.;
+const float MAX_DISPERSE = 10.;
+const float MAX_BOUNCE = 20.;
 
 vec3 normal(in vec3 p){
   vec3 v = vec3(.001, 0, 0);
@@ -370,6 +386,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 col = vec3(0);
     float focal = 3.8;
     bool refracted;
+
+    vec3 bgCol = vec3(.22);
     
     for (float disperse = 0.; disperse < MAX_DISPERSE; disperse++) {
         invert = 1.;
@@ -405,7 +423,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
             if ( res.y == 0. || bounce == MAX_BOUNCE - 1.) {
                 if (bounce == 0.) {
-                	sam += vec3(.22); break;	
+                	sam += bgCol; break;	
                 }
                 sam += env(origin, rayDir);
                 break;
@@ -435,7 +453,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                 rayDir = raf == vec3(0) ? ref : raf;
                 if (bounce == 1.) {
                     // make first inside bounce reflective
-                    //rayDir = ref;
+                    rayDir = ref;
                 }
                 offset = .01 / abs(dot(rayDir, nor));
                 origin = p + offset * rayDir;
@@ -458,6 +476,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     col /= MAX_DISPERSE;
     
+    float fog = 1. - exp((firstLen - 4.) * -.3);
+    col = mix(col, bgCol, clamp(fog, 0., 1.));
+
     col = pow(col, vec3(1.25)) * 2.5;
     //col = pow(col, vec3(1.125)) * 1.5;
     
