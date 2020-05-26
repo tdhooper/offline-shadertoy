@@ -169,19 +169,19 @@ float tet4(vec3 p) {
 
 
 
-    float bt = .5;
-    float ot = 1.;
+    float blendDuration = .5;
+    float offsetDuration = 1.;
     float step2Start = .025;
 
-    float t = time * (step2Start + bt + ot);
+    float t = time * (step2Start + blendDuration + offsetDuration);
 
     float offsetDistance = 1.5;
 
     // animation
     float rtween = tweenBlend(t, .0, .5);
-    float b1 = tweenBlend(t, .0, bt);
-    float o1 = tween(t, bt, ot) * offsetDistance;
-    float o2 = tween(t, step2Start + bt, ot) * offsetDistance;
+    float b1 = tweenBlend(t, .0, blendDuration);
+    float o1 = tween(t, blendDuration, offsetDuration) * offsetDistance;
+    float o2 = tween(t, step2Start + blendDuration, offsetDuration) * offsetDistance;
 
     //o1 = 0.;
     //o2 = 0.;
