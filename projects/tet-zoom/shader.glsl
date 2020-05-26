@@ -191,7 +191,7 @@ float tet4(vec3 p) {
 
     vec3 pp = p;
 
-    float rbase = .1;
+    float rbase = .04;
     float r1 = rbase * STEP_SCALE * rtween;
     float r2 = rbase * STEP_SCALE * rtween;
     float sep = .001 * (1. - o2);
@@ -318,8 +318,8 @@ vec3 env(vec3 origin, vec3 rayDir) {
 // Marching
 //========================================================
 
-const float MAX_DISPERSE = 10.;
-const float MAX_BOUNCE = 20.;
+const float MAX_DISPERSE = 5.;
+const float MAX_BOUNCE = 10.;
 
 vec3 normal(in vec3 p){
   vec3 v = vec3(.001, 0, 0);
@@ -476,7 +476,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     col /= MAX_DISPERSE;
     
-    float fog = 1. - exp((firstLen - 4.) * -.3);
+    float fog = 1. - exp((firstLen - 6.) * -.3);
     col = mix(col, bgCol, clamp(fog, 0., 1.));
 
     col = pow(col, vec3(1.25)) * 2.5;

@@ -13,8 +13,8 @@ const regl = require('regl')({
     'oes_texture_float_linear',
     'ext_shader_texture_lod',
   ],
-  pixelRatio: .25,
-  //pixelRatio: 1,
+  //pixelRatio: .5,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -176,11 +176,13 @@ module.exports = (project) => {
     };
   });
 
+  const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
+
   const setup = regl({
     uniforms: {
       projection: ({ viewportWidth, viewportHeight }) => mat4.perspective(
         [],
-        Math.PI / 5,
+        1 / fov,
         viewportWidth / viewportHeight,
         0.01,
         1000
