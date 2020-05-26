@@ -163,19 +163,22 @@ float tetBase(vec3 p, float sz, float r) {
 
 const float STEP_SCALE = 1./3.;
 
-float tet4(vec3 p) {
+float tetAnim(vec3 p, float time) {
     
     p = fold(p);
 
 
 
-    float blendDuration = .5;
+    float blendDuration = .75;
     float offsetDuration = 1.;
     float step2Start = .025;
 
     float t = time * (step2Start + blendDuration + offsetDuration);
+    //t *= .75;
 
-    float offsetDistance = 1.5;
+    offsetDuration *= 1.5;
+
+    float offsetDistance = .5;
 
     // animation
     float rtween = tweenBlend(t, .0, .5);
@@ -227,7 +230,11 @@ float tet4(vec3 p) {
     float vert = tetBase(p, sz, rbase);
     vert = smax(vert, (dot(p, n4) + .5 + sep), r1);
 
-    float fractured = min(min(min(inner, oct), edge), vert);
+    float fractured = min(min(oct, edge), vert);
+
+    if (time < 1.) {
+        fractured = min(fractured, inner);
+    }
 
     // surface: 0 - .5 -  1 - 1
     // center:  0 -  0 - .5 - 1
@@ -245,11 +252,13 @@ float tet4(vec3 p) {
 
 float tetLoop(vec3 p) {
     float scale = pow(STEP_SCALE, time);
-    p *= scale;
     pR(p.xy, PI/2. * -time);
-    float d = tet4(p);
-    //d = min(d, length(p.xy) - .05 * scale);
-    return d / scale;
+    float d = tetAnim(p * scale, time) / scale;
+    //d = min(d, length(p.xy) - .05);
+    scale *= STEP_SCALE;
+    pR(p.xy, PI/2. * -1.);
+    d = min(d, tetAnim(p * scale, time + 1.) / scale);
+    return d;
 }
 
 vec2 map(vec3 p) {
@@ -482,7 +491,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     col /= MAX_DISPERSE;
     
-    float fog = 1. - exp((firstLen - 6.) * -.3);
+    float fog = 1. - exp((firstLen - 6.) * -.5);
     col = mix(col, bgCol, clamp(fog, 0., 1.));
 
     col = pow(col, vec3(1.25)) * 2.5;
