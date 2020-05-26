@@ -141,7 +141,7 @@ float range(float vmin, float vmax, float value) {
 float tween(float t, float start, float duration) {
     t = range(start, start + duration, t);
 //    t = pow(t, 3.);
-    return smoothstep(0., 1., smoothstep(0., 1., t));
+    return smoothstep(0., 1., t);
 }
 
 
@@ -171,15 +171,17 @@ float tet4(vec3 p) {
 
     float bt = .5;
     float ot = 1.;
-    float step2Start = .1;
+    float step2Start = .025;
 
     float t = time * (step2Start + bt + ot);
+
+    float offsetDistance = 1.5;
 
     // animation
     float rtween = tweenBlend(t, .0, .5);
     float b1 = tweenBlend(t, .0, bt);
-    float o1 = tween(t, bt, ot) * 1.6;
-    float o2 = tween(t, step2Start + bt, ot) * 1.6;
+    float o1 = tween(t, bt, ot) * offsetDistance;
+    float o2 = tween(t, step2Start + bt, ot) * offsetDistance;
 
     //o1 = 0.;
     //o2 = 0.;
@@ -194,8 +196,8 @@ float tet4(vec3 p) {
     vec3 pp = p;
 
     float rbase = .04;
-    float r1 = rbase * STEP_SCALE * rtween;
-    float r2 = rbase * STEP_SCALE * rtween;
+    float r1 = rbase * STEP_SCALE;
+    float r2 = rbase * STEP_SCALE;
     float sep = .001 * (1. - o2);
 
     // base tet
@@ -232,9 +234,10 @@ float tet4(vec3 p) {
 
 
 
-    float surface = saturate(-base / sz); // 0 at surface, 1 at center
-    float bl = saturate(b1 * 2.);
-    bl = saturate(b1 * 1.5 - surface / 2.);
+    float surface = 1. - saturate(-base / sz); // 1 at surface, 0 at center
+    //float bl = saturate(b1 * 2.);
+    float ss = 2.;
+    float bl = saturate(b1 * (1. + ss) - surface * ss);
     float d = mix(base, fractured, bl);
 
     return d;
@@ -243,8 +246,9 @@ float tet4(vec3 p) {
 float tetLoop(vec3 p) {
     float scale = pow(STEP_SCALE, time);
     p *= scale;
-    pR(p.xy, PI/2. * time);
+    pR(p.xy, PI/2. * -time);
     float d = tet4(p);
+    //d = min(d, length(p.xy) - .05 * scale);
     return d / scale;
 }
 
@@ -321,7 +325,7 @@ vec3 env(vec3 origin, vec3 rayDir) {
 //========================================================
 
 const float MAX_DISPERSE = 5.;
-const float MAX_BOUNCE = 10.;
+const float MAX_BOUNCE = 20.;
 
 vec3 normal(in vec3 p){
   vec3 v = vec3(.001, 0, 0);
