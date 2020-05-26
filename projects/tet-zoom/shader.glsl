@@ -141,6 +141,7 @@ float range(float vmin, float vmax, float value) {
 float tween(float t, float start, float duration) {
     t = range(start, start + duration, t);
 //    t = pow(t, 3.);
+
     return smoothstep(0., 1., t);
 }
 
@@ -169,16 +170,16 @@ float tetAnim(vec3 p, float time) {
 
 
 
-    float blendDuration = .75;
+    float blendDuration = .5;
     float offsetDuration = 1.;
     float step2Start = .025;
 
     float t = time * (step2Start + blendDuration + offsetDuration);
     //t *= .75;
 
-    offsetDuration *= 1.5;
+    offsetDuration *= 2.5;
 
-    float offsetDistance = .5;
+    float offsetDistance = .7;
 
     // animation
     float rtween = tweenBlend(t, .0, .5);
