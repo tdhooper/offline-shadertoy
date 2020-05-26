@@ -12,6 +12,8 @@ varying vec3 dir;
 uniform vec3 debugPlanePosition;
 uniform mat4 debugPlaneMatrix;
 
+uniform sampler2D iChannel0; // images/blue-noise.png filter: linear wrap: repeat
+uniform vec2 iChannel0Size;
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -401,8 +403,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         extinctionDist = 0.;
         wavelength = disperse / MAX_DISPERSE;
-		//float rand = texture(iChannel0, iTime + fragCoord / iChannelResolution[0].xy).r;
-        //wavelength += (rand * 2. - 1.) * (.5 / MAX_DISPERSE);
+		float rand = texture2D(iChannel0, iTime + fragCoord / iChannel0Size.xy).r;
+        wavelength += (rand * 2. - 1.) * (.5 / MAX_DISPERSE);
         
 		bounceCount = 0.;
 
@@ -453,7 +455,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                 rayDir = raf == vec3(0) ? ref : raf;
                 if (bounce == 1.) {
                     // make first inside bounce reflective
-                    rayDir = ref;
+                    //rayDir = ref;
                 }
                 offset = .01 / abs(dot(rayDir, nor));
                 origin = p + offset * rayDir;
