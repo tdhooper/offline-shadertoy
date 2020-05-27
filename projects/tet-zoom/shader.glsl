@@ -179,7 +179,7 @@ float tetAnim(vec3 p, float time) {
 
     offsetDuration *= 2.;
 
-    float offsetDistance = .3;
+    float offsetDistance = .4;
 
     // animation
     float rtween = tweenBlend(t, .0, .5);
@@ -512,6 +512,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     //col = pow( col, vec3(0.4545) );
     col = tonemap2(col);
-    
+
     fragColor = vec4(col, 1.);
 }
