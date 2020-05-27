@@ -271,6 +271,8 @@ module.exports = (project) => {
     position: [0, 0, 5],
   });
 
+  window.camera = camera;
+
   let debugPlane = {};
 
   window.dropDebugPlane = () => {
