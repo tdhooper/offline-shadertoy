@@ -38,6 +38,6 @@ const main = require('./main.js');
 // skull
 // tet-zoom
 
-const project = LOADPROJECT('tet-zoom');
+const project = LOADPROJECT('rays-and-polygons');
 
 main(project);
