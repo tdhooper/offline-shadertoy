@@ -177,15 +177,17 @@ float tetAnim(vec3 p, float time) {
     float t = time * (step2Start + blendDuration + offsetDuration);
     //t *= .75;
 
-    offsetDuration *= 2.5;
+    offsetDuration *= 2.;
 
-    float offsetDistance = .7;
+    float offsetDistance = .3;
 
     // animation
     float rtween = tweenBlend(t, .0, .5);
     float b1 = tweenBlend(t, .0, blendDuration);
-    float o1 = tween(t, blendDuration, offsetDuration) * offsetDistance;
-    float o2 = tween(t, step2Start + blendDuration, offsetDuration) * offsetDistance;
+    float ot1 = tween(t, blendDuration, offsetDuration);
+    float ot2 = tween(t, step2Start + blendDuration, offsetDuration);
+    float o1 = ot1 * offsetDistance;
+    float o2 = ot2 * offsetDistance;
 
     //o1 = 0.;
     //o2 = 0.;
@@ -200,36 +202,45 @@ float tetAnim(vec3 p, float time) {
     vec3 pp = p;
 
     float rbase = .04;
-    float r1 = rbase * STEP_SCALE;
-    float r2 = rbase * STEP_SCALE;
+    float rInner = rbase * STEP_SCALE;
+    float rOuter = rbase * STEP_SCALE * (1. + ot1 * 5.);
     float sep = .001 * (1. - o2);
+
+    float scale1 = 1. - ot1;
+    float scale2 = 1. - ot2;
 
     // base tet
     float base = tetBase(p, sz, rbase);
 
     // inner tet
     float inner = -(dot(p, n4) + .1 - sep);
-    inner = smax(inner, -(dot(p, n3) + .1 - sep), r2);
-    inner = smax(inner, -(dot(p, n2) + .1 - sep), r2);
+    inner = smax(inner, -(dot(p, n3) + .1 - sep), rInner);
+    inner = smax(inner, -(dot(p, n2) + .1 - sep), rInner);
 
     // octahedrons
     p = pp + n4 * o2;
+    p /= scale2;
     float oct = tetBase(p, sz, rbase);
-    oct = smax(oct, -(dot(p, n4) + .5 - sep), r2);
-    oct = smax(oct, -(dot(p, n3) + .1 - sep), r2);
-    oct = smax(oct, (dot(p, n4) + .1 + sep), r2);
-    oct = smax(oct, -(dot(p, n2) + .1 - sep), r2);
-    
+    oct = smax(oct, -(dot(p, n4) + .5 - sep), rOuter);
+    oct = smax(oct, -(dot(p, n3) + .1 - sep), rOuter);
+    oct = smax(oct, (dot(p, n4) + .1 + sep), rOuter);
+    oct = smax(oct, -(dot(p, n2) + .1 - sep), rOuter);
+    oct *= scale2;
+
     // edge tets
     p = pp + (n4 + n3) * o2;
+    p /= scale2;
     float edge = tetBase(p, sz, rbase);
-    edge = smax(edge, (dot(p, n3) + .1 + sep), r2);
-    edge = smax(edge, (dot(p, n4) + .1 + sep), r2);
-    
+    edge = smax(edge, (dot(p, n3) + .1 + sep), rOuter);
+    edge = smax(edge, (dot(p, n4) + .1 + sep), rOuter);
+    edge *= scale2;
+
     // vertex tets
     p = pp + n4 * (o1 + o2);
+    p /= scale1;
     float vert = tetBase(p, sz, rbase);
-    vert = smax(vert, (dot(p, n4) + .5 + sep), r1);
+    vert = smax(vert, (dot(p, n4) + .5 + sep), rOuter);
+    vert *= scale1;
 
     float fractured = min(min(oct, edge), vert);
 
@@ -493,7 +504,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     col /= MAX_DISPERSE;
     
     float fog = 1. - exp((firstLen - 6.) * -.5);
-    col = mix(col, bgCol, clamp(fog, 0., 1.));
+   // col = mix(col, bgCol, clamp(fog, 0., 1.));
 
     col = pow(col, vec3(1.25)) * 2.5;
     //col = pow(col, vec3(1.125)) * 1.5;
