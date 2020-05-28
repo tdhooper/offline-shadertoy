@@ -177,9 +177,9 @@ float tetAnim(vec3 p, float time) {
     float t = time * (step2Start + blendDuration + offsetDuration);
     //t *= .75;
 
-    offsetDuration *= 2.;
+    offsetDuration *= 1.5;
 
-    float offsetDistance = .4;
+    float offsetDistance = .3;
 
     // animation
     float rtween = tweenBlend(t, .0, .5);
@@ -188,6 +188,10 @@ float tetAnim(vec3 p, float time) {
     float ot2 = tween(t, step2Start + blendDuration, offsetDuration);
     float o1 = ot1 * offsetDistance;
     float o2 = ot2 * offsetDistance;
+
+    if (ot2 > 1.) {
+        return 1e12;
+    }
 
     //o1 = 0.;
     //o2 = 0.;
@@ -203,7 +207,7 @@ float tetAnim(vec3 p, float time) {
 
     float rbase = .04;
     float rInner = rbase * STEP_SCALE;
-    float rOuter = rbase * STEP_SCALE * (1. + ot1 * 5.);
+    float rOuter = rbase * STEP_SCALE;// * (1. + ot1 * 5.);
     float sep = .001 * (1. - o2);
 
     float scale1 = 1. - ot1;
@@ -263,8 +267,11 @@ float tetAnim(vec3 p, float time) {
 }
 
 float tetLoop(vec3 p) {
-    float scale = pow(STEP_SCALE, time);
-    pR(p.xy, PI/2. * -time);
+    float t = time;
+    //t = smoothstep(.9, 1., t);
+    float scale = pow(STEP_SCALE, t);
+    //scale = 1.;
+    pR(p.xy, PI/2. * time);
     float d = tetAnim(p * scale, time) / scale;
     //d = min(d, length(p.xy) - .05);
     scale *= STEP_SCALE;
