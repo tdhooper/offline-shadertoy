@@ -177,7 +177,7 @@ float tetAnim(vec3 p, float time) {
     float t = time * (step2Start + blendDuration + offsetDuration);
     //t *= .75;
 
-    offsetDuration *= 1.5;
+    offsetDuration *= 1.7;
 
     float offsetDistance = .3;
 
@@ -393,7 +393,7 @@ Hit march(vec3 origin, vec3 rayDir, float invert, float maxDist) {
         len += dist;// * .2;
         p = origin + len * rayDir;
         res = map(p);
-        dist = res.x * invert;
+        dist = res.x * invert * .9;
         if (dist < .0000001) {
             break;
         }
