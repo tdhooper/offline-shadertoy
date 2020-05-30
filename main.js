@@ -415,8 +415,8 @@ module.exports = (project) => {
   let captureConfig = {
     fps: 45,
     seconds: 1, // (duration)
-    width: 640*1.5,
-    height: 360*1.5,
+    width: 800,
+    height: 800,
     // quads: true,
     prefix: 'bloomskull-',
   };

@@ -267,17 +267,13 @@ float tetAnim(vec3 p, float time) {
     //blend = blend2;
 
     //blend = saturate(step(length(pp), .6 * b1));
-    float d = mix(base, fractured, blend);
+    //float d = mix(base, fractured, blend);
 
-    //base = mix(base, fractured, blend2);
+    base = mix(base, fractured, blend2);
     //float fracturedS = min(fractured, -(length(p) - .6 * b1));
     float fracturedS = min(fractured, -base - (.3 - .3 * b1));
-    //float d = max(base, fracturedS);
-
-    if (b1 > .999) {
-        d = fractured;
-    }
-
+    float d = max(base, fracturedS);
+    d = mix(d, fractured, smoothstep(.9, 1., b1));
 
     return d;
 }
@@ -292,7 +288,7 @@ float tetLoop(vec3 p) {
     //d = min(d, length(p.xy) - .05);
     scale *= STEP_SCALE;
     pR(p.xy, PI/2. * -1.);
-    //d = min(d, tetAnim(p * scale, time + 1.) / scale);
+    d = min(d, tetAnim(p * scale, time + 1.) / scale);
     return d;
 }
 
@@ -419,6 +415,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     initPoly();
 
     time = mod(iTime / 2., 1.);
+    time = fract(iTime);
     
     vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;
 
@@ -445,7 +442,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         extinctionDist = 0.;
         wavelength = disperse / MAX_DISPERSE;
-		float rand = texture2D(iChannel0, iTime + fragCoord / iChannel0Size.xy).r;
+		float rand = texture2D(iChannel0, fragCoord / iChannel0Size.xy).r;
         wavelength += (rand * 2. - 1.) * (.5 / MAX_DISPERSE);
         
 		bounceCount = 0.;

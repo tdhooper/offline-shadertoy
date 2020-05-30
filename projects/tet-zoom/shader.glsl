@@ -87,7 +87,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     uPixelSize = vec2(.002) / (iResolution.xy / iResolution.y);
 
     dbg = 0.;
-    vec3 col = depthOfField(uv, .4, .35);
+    vec3 col = depthOfField(uv, .45, .35);
 
     // fix banding
     vec4 grain = texture2D(iChannel1, fragCoord.xy / iChannel1Size.x);
