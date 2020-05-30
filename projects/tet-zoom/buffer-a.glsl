@@ -342,6 +342,23 @@ float intersectPlane(vec3 rOrigin, vec3 rayDir, vec3 origin, vec3 normal, vec3 u
     return max(sign(d), 0.);
 }
 
+mat3 sphericalMatrix(vec2 tp) {
+    float theta = tp.x;
+    float phi = tp.y;
+    float cx = cos(theta);
+    float cy = cos(phi);
+    float sx = sin(theta);
+    float sy = sin(phi);
+    return mat3(
+        cy, -sy * -sx, -sy * cx,
+        0, cx, sx,
+        sy, cy * -sx, cy * cx
+    );
+}
+
+mat3 mouseMatrix;
+
+
 vec3 light(vec3 origin, vec3 rayDir) {
     //origin.z *= -1.;
     //rayDir.z *= -1.;
@@ -352,7 +369,10 @@ vec3 light(vec3 origin, vec3 rayDir) {
     //pR(rayDir.yz, .2);
     //pR(rayDir.zx, .2);
 
-    pR(rayDir.yz, -.25);
+    //pR(rayDir.yz, -.25);
+
+    origin *= mouseMatrix;
+    rayDir *= mouseMatrix;
 
     vec2 uv;
     float hit = intersectPlane(origin, rayDir, vec3(5,-2,-8), normalize(vec3(1,-.5,-.1)), normalize(vec3(0,1,0)), uv);
@@ -377,8 +397,11 @@ vec3 env(vec3 origin, vec3 rayDir) {
     //pR(rayDir.zx, .2);
     
     //pR(rayDir.xy, 1.5);
-    pR(rayDir.yz, -.25);
 
+    //pR(rayDir.yz, -.25);
+
+    origin *= mouseMatrix;
+    rayDir *= mouseMatrix;
 
     float l = smoothstep(.0, 1.7, dot(rayDir, vec3(.5,-.3,1))) * .4;
     //l = smoothstep(-.5, 2.2, dot(rayDir, vec3(.5,-.3,1))) * .4;
@@ -393,8 +416,8 @@ vec3 env(vec3 origin, vec3 rayDir) {
 // Marching
 //========================================================
 
-const float MAX_DISPERSE = 5.;
-const float MAX_BOUNCE = 15.;
+const float MAX_DISPERSE = 50.;
+const float MAX_BOUNCE = 50.;
 
 vec3 normal(in vec3 p){
   vec3 v = vec3(.001, 0, 0);
@@ -535,8 +558,12 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     time = mod(iTime / 2., 1.);
     time = fract(iTime);
-    time = fract(time + .36);
+    time = fract(time + .4);
     
+    //mouseMatrix = sphericalMatrix(((iMouse.xy / iResolution.xy) * 2. - 1.) * 2.);
+    mouseMatrix = sphericalMatrix(((vec2(81.5, 119) / vec2(187)) * 2. - 1.) * 2.);
+    //mouseMatrix = sphericalMatrix(((vec2(85, 114.75) / vec2(187)) * 2. - 1.) * 2.);
+
     vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;
 
     Hit hit;
@@ -629,7 +656,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             col += sam * MAX_DISPERSE / 2.;
             break;
         } else {
-            vec3 extinction = vec3(.3,.3,1.) * .78;
+            vec3 extinction = vec3(.3,.3,1.) * .5;
             extinction = 1. / (1. + (extinction * extinctionDist));	
             col += sam * extinction * spectrum(-wavelength+.2);
         }
