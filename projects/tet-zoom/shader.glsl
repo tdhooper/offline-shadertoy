@@ -15,7 +15,7 @@ void main() {
 precision mediump float;
 #endif
 
-//#define DISABLE_DOF;
+#define DISABLE_DOF;
 
 /* SHADERTOY FROM HERE */
 

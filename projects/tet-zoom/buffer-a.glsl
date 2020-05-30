@@ -209,6 +209,7 @@ float tetAnim(vec3 p, float time) {
     float rInner = rbase * STEP_SCALE;
     float rOuter = rbase * STEP_SCALE * (1. + ot1 * 2.);
     float sep = .001 * (1. - o2);
+    //sep = 0.;
 
     float scale1 = 1. - ot1;
     float scale2 = 1. - ot2;
@@ -260,8 +261,23 @@ float tetAnim(vec3 p, float time) {
     float surface = 1. - saturate(-base / sz); // 1 at surface, 0 at center
     //float bl = saturate(b1 * 2.);
     float ss = 2.;
-    float bl = saturate(b1 * (1. + ss) - surface * ss);
-    float d = mix(base, fractured, bl);
+    float blend = saturate(b1 * (1. + ss) - surface * ss);
+    float blend2 = saturate(b1 * .66 * range(.9, 1., surface));
+    
+    //blend = blend2;
+
+    //blend = saturate(step(length(pp), .6 * b1));
+    float d = mix(base, fractured, blend);
+
+    //base = mix(base, fractured, blend2);
+    //float fracturedS = min(fractured, -(length(p) - .6 * b1));
+    float fracturedS = min(fractured, -base - (.3 - .3 * b1));
+    //float d = max(base, fracturedS);
+
+    if (b1 > .999) {
+        d = fractured;
+    }
+
 
     return d;
 }
@@ -276,7 +292,7 @@ float tetLoop(vec3 p) {
     //d = min(d, length(p.xy) - .05);
     scale *= STEP_SCALE;
     pR(p.xy, PI/2. * -1.);
-    d = min(d, tetAnim(p * scale, time + 1.) / scale);
+    //d = min(d, tetAnim(p * scale, time + 1.) / scale);
     return d;
 }
 
@@ -507,6 +523,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     float fog = 1. - exp((firstLen - 6.) * -.5);
    // col = mix(col, bgCol, clamp(fog, 0., 1.));
     //fragColor = vec4(range(3., 8., firstLen)); return;
+
+    
 
     fragColor = vec4(col, range(3., 8., firstLen));
 }
