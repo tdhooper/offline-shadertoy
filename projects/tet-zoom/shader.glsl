@@ -89,7 +89,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
    // fragColor = vec4(texture2D(iChannel0, uv).rgb, 1.); return;
 
     dbg = 0.;
-    vec3 col = depthOfField(uv, .6, 1.);
+    vec3 col = depthOfField(uv, .65, 1.);
 
     // fix banding
     vec4 grain = texture2D(iChannel1, fragCoord.xy / iChannel1Size.x);

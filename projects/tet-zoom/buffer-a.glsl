@@ -179,7 +179,7 @@ float tetAnim(vec3 p, float time) {
     float t = time * (step2Start + blendDuration + offsetDuration);
     //t *= .75;
 
-    offsetDuration *= 1.7;
+    offsetDuration *= 2.;
 
     float offsetDistance = .6;
 
@@ -285,7 +285,7 @@ float tetLoop(vec3 p) {
     //t = smoothstep(.9, 1., t);
     float scale = pow(STEP_SCALE, t);
     //scale = 1.;
-    pR(p.xy, PI/2. * time);
+    pR(p.xy, PI/2. * -time + PI/2.);
     float d = tetAnim(p * scale, time) / scale;
     //d = min(d, length(p.xy) - .05);
     scale *= STEP_SCALE;
@@ -348,11 +348,15 @@ vec3 light(vec3 origin, vec3 rayDir) {
     origin = -(cameraMatrix * vec4(origin, 1)).xyz;
     rayDir = -(cameraMatrix * vec4(rayDir, 0)).xyz;
 
-    pR(rayDir.yz, 1.5);    
+    //pR(rayDir.xy, -.3);
+    //pR(rayDir.yz, .2);
+    //pR(rayDir.zx, .2);
+
+    pR(rayDir.yz, -.25);
 
     vec2 uv;
     float hit = intersectPlane(origin, rayDir, vec3(5,-2,-8), normalize(vec3(1,-.5,-.1)), normalize(vec3(0,1,0)), uv);
-    float l = smoothstep(.75, .0, fBox(uv, vec2(.4,1.2) * 2.));
+    float l = smoothstep(.75, .0, fBox(uv, vec2(.4,1.2) * 6.));
 	return vec3(l) * hit;
 }
 
@@ -366,12 +370,20 @@ vec3 env(vec3 origin, vec3 rayDir) {
     //pR(rayDir.xy, -1.);
     //pR(rayDir.yz, 1.5);    
 
-    pR(rayDir.yz, 1.5);    
+    //pR(rayDir.yz, time * PI * 2.);
+    
+    //pR(rayDir.xy, -.3);
+    //pR(rayDir.yz, .2);
+    //pR(rayDir.zx, .2);
+    
+    //pR(rayDir.xy, 1.5);
+    pR(rayDir.yz, -.25);
 
 
     float l = smoothstep(.0, 1.7, dot(rayDir, vec3(.5,-.3,1))) * .4;
     //l = smoothstep(-.5, 2.2, dot(rayDir, vec3(.5,-.3,1))) * .4;
     //l = smoothstep(.2, .5, dot(rayDir, vec3(.5,-.3,1))) * .4;
+    //l = smoothstep(-1., 2., dot(rayDir, vec3(.5,-.3,1))) * .4;
    	return vec3(l) * vec3(1,1,1);
 }
 
@@ -484,7 +496,7 @@ vec3 screenToWorld(vec2 myPos, vec2 sphereCenter, float r)
     return myVec;
 }
 
-void XmainImage(out vec4 fragColor, vec2 fragCoord)
+void xmainImage(out vec4 fragColor, vec2 fragCoord)
 {
     vec2 mouse = iMouse.xy;
   	phi = .5;
@@ -504,7 +516,7 @@ void XmainImage(out vec4 fragColor, vec2 fragCoord)
     mat3 rotationMatrix = makeRotationMatrix(vec3(phi, psi, theta));
     vec3 rotatedWorldSphCoord = normalize(rotationMatrix * worldSphCoord);
 
-    fragColor = vec4(env(vec3(0), rotatedWorldSphCoord), 1.);
+    fragColor = vec4(light(vec3(0), rotatedWorldSphCoord), 1.);
 
     //vec2 rotatedSphericalCoord = worldToSpherical(rotatedWorldSphCoord, 1.0);
 
@@ -572,7 +584,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
             if ( res.y == 0. || bounce == MAX_BOUNCE - 1.) {
                 if (bounce == 0.) {
-                //	sam += bgCol; break;	
+                	sam += bgCol; break;	
                 }
                 sam += env(origin, rayDir);
                 break;
@@ -594,7 +606,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
                 float ior = mix(1.3, 1.6, wavelength); // vs 1.6 with first bounce reflective (or 1.8 wihout)
                 ior = invert < 0. ? ior : 1. / ior;
                 raf = refract(rayDir, nor, ior);
-                sam += light(origin, ref) * .2;
+                sam += light(origin, ref) * .5;
                 sam += pow(1. - abs(dot(rayDir, nor)), 5.) * .1;
                 sam *= vec3(.85,.85,.98);
 
