@@ -169,6 +169,7 @@ module.exports = (project) => {
       if (node.tile) {
         for(let i = 0; i < node.tile * node.tile; i++) {
           nodeCommand(Object.assign({tileIndex: i}, state));
+          gl.finish();
         }
       } else {
         nodeCommand(state);
@@ -412,8 +413,8 @@ module.exports = (project) => {
   let captureConfig = {
     fps: 45,
     seconds: 1, // (duration)
-    width: 800,
-    height: 800,
+    width: 800*2,
+    height: 800*2,
     // quads: true,
     prefix: 'bloomskull-',
   };
