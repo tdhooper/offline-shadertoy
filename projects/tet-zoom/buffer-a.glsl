@@ -561,8 +561,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     time = fract(time + .4);
     
     //mouseMatrix = sphericalMatrix(((iMouse.xy / iResolution.xy) * 2. - 1.) * 2.);
-    mouseMatrix = sphericalMatrix(((vec2(81.5, 119) / vec2(187)) * 2. - 1.) * 2.);
-    //mouseMatrix = sphericalMatrix(((vec2(85, 114.75) / vec2(187)) * 2. - 1.) * 2.);
+    //mouseMatrix = sphericalMatrix(((vec2(81.5, 119) / vec2(187)) * 2. - 1.) * 2.);
+    mouseMatrix = sphericalMatrix((vec2(0.7299465240641712,0.3048128342245989) * 2. - 1.) * 2.);
+    
 
     vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;
 
@@ -611,9 +612,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
             if ( res.y == 0. || bounce == MAX_BOUNCE - 1.) {
                 if (bounce == 0.) {
-                	sam += bgCol; break;	
+                //	sam += bgCol; break;	
                 }
-                sam += env(origin, rayDir);
+                //sam += env(origin, rayDir);
                 break;
             } else {
                 vec3 nor = normal(p) * invert;

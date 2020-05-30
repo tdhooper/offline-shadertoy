@@ -207,10 +207,7 @@ module.exports = (project) => {
 
       const mouseProp = props.mouse.map(value => value * context.pixelRatio);
       mouseProp[1] = context.viewportHeight - mouseProp[1];
-      // console.log(
-      //   mouseProp[0] / context.viewportWidth,
-      //   mouseProp[1] / context.viewportHeight
-      // );
+       console.log(mouseProp[0] / context.viewportWidth, mouseProp[1] / context.viewportHeight);
       return mouseProp;
     },
   };
