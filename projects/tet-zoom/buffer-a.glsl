@@ -140,14 +140,16 @@ float range(float vmin, float vmax, float value) {
 
 float tween(float t, float start, float duration) {
     t = range(start, start + duration, t);
-//    t = pow(t, 3.);
-
-    return smoothstep(0., 1., t);
+    t = pow(t, 2.);
+    //t = smoothstep(0., 1., t);
+    return t;
 }
 
 
 float tweenBlend(float t, float start, float duration) {
     t = range(start, start + duration, t);
+    t = pow(t, .5);
+    t = smoothstep(0., 1., t);
     return t;
 }
 
@@ -170,16 +172,16 @@ float tetAnim(vec3 p, float time) {
 
 
 
-    float blendDuration = .5;
-    float offsetDuration = 1.;
-    float step2Start = .025;
+    float blendDuration = .75;
+    float offsetDuration = .75;
+    float step2Start = .0;
 
     float t = time * (step2Start + blendDuration + offsetDuration);
     //t *= .75;
 
     offsetDuration *= 1.7;
 
-    float offsetDistance = .3;
+    float offsetDistance = .6;
 
     // animation
     float rtween = tweenBlend(t, .0, .5);
@@ -207,7 +209,7 @@ float tetAnim(vec3 p, float time) {
 
     float rbase = .04;
     float rInner = rbase * STEP_SCALE;
-    float rOuter = rbase * STEP_SCALE * (1. + ot1 * 2.);
+    float rOuter = rbase * STEP_SCALE;// * (1. + ot1 * 2.);
     float sep = .001 * (1. - o2);
     //sep = 0.;
 
@@ -415,7 +417,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     initPoly();
 
     time = mod(iTime / 2., 1.);
-    time = fract(iTime);
+    //time = fract(iTime);
+    time = fract(time + .36);
     
     vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;
 
@@ -449,7 +452,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         for (float bounce = 0.; bounce < MAX_BOUNCE; bounce++) {
         //while (bounce < MAX_BOUNCE) {
-            maxDist = bounce == 0. ? 8. : 4.; 
+            maxDist = bounce == 0. ? 12. : 6.; 
             hit = march(origin, rayDir, invert, maxDist);
             res = hit.res;
             p = hit.p;
@@ -519,9 +522,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     float fog = 1. - exp((firstLen - 6.) * -.5);
    // col = mix(col, bgCol, clamp(fog, 0., 1.));
-    //fragColor = vec4(range(3., 8., firstLen)); return;
+    //fragColor = vec4(range(4., 12., firstLen)); return;
 
     
 
-    fragColor = vec4(col, range(3., 8., firstLen));
+    fragColor = vec4(col, range(4., 12., firstLen));
 }

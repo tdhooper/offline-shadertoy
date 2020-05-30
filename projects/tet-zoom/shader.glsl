@@ -15,7 +15,7 @@ void main() {
 precision mediump float;
 #endif
 
-#define DISABLE_DOF;
+//#define DISABLE_DOF;
 
 /* SHADERTOY FROM HERE */
 
@@ -27,7 +27,7 @@ float uFar = 1.; // Far plane
 
 const float GOLDEN_ANGLE = 2.39996323;
 const float MAX_BLUR_SIZE = 10.;
-const float RAD_SCALE = 1.; // Smaller = nicer blur, larger = faster
+const float RAD_SCALE = .1; // Smaller = nicer blur, larger = faster
 
 float getBlurSize(float depth, float focusPoint, float focusScale) {
     float coc = clamp((1.0 / focusPoint - 1.0 / depth)*focusScale, -1.0, 1.0);
@@ -86,8 +86,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
     uPixelSize = vec2(.002) / (iResolution.xy / iResolution.y);
 
+   // fragColor = vec4(texture2D(iChannel0, uv).rgb, 1.); return;
+
     dbg = 0.;
-    vec3 col = depthOfField(uv, .45, .35);
+    vec3 col = depthOfField(uv, .6, 1.);
 
     // fix banding
     vec4 grain = texture2D(iChannel1, fragCoord.xy / iChannel1Size.x);
