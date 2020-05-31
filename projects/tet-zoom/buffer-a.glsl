@@ -349,8 +349,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     initPoly();
 
     time = iTime / 2.;
+    //time= 0.;
     time = fract(time + .4);
-    //time= 0.1;
     
     #ifdef LIGHT_MODE
         envOrientation = sphericalMatrix(((vec2(81.5, 119) / vec2(187)) * 2. - 1.) * 2.);
@@ -376,7 +376,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     origin = eye;
     rayDir = normalize(dir);
     firstHit = march(origin, rayDir, invert, maxDist);
-    firstLen = hit.len;
+    firstLen = firstHit.len;
     
     for (float disperse = 0.; disperse < MAX_DISPERSE; disperse++) {
         invert = 1.;

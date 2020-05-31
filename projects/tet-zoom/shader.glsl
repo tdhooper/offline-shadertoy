@@ -15,7 +15,7 @@ void main() {
 precision mediump float;
 #endif
 
-#define DISABLE_DOF;
+//#define DISABLE_DOF;
 
 /* SHADERTOY FROM HERE */
 
@@ -86,21 +86,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
     uPixelSize = vec2(.002) / (iResolution.xy / iResolution.y);
 
-   // fragColor = vec4(texture2D(iChannel0, uv).rgb, 1.); return;
-
-    dbg = 0.;
+    //fragColor = vec4(texture2D(iChannel0, uv).rgb, 1.); return;
+    
     vec3 col = depthOfField(uv, .65, 1.);
 
-    // fix banding
-    vec4 grain = texture2D(iChannel1, fragCoord.xy / iChannel1Size.x);
-	//col += (grain.x * 2. - 1.) * .002;
-
-
     col = pow(col, vec3(1.25)) * 2.5;
-    
-    ////col = pow(col, vec3(1.125)) * 1.5;    
-    ////col = pow( col, vec3(0.4545) );
-
     col = tonemap2(col);
 
     fragColor = vec4(col, 1);    
