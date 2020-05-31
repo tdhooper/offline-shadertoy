@@ -570,7 +570,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     time = iTime / 2.;
     time = fract(time + .4);
-    //time= 0.1;
+    time= 0.1;
     
     //mouseMatrix = sphericalMatrix(((iMouse.xy / iResolution.xy) * 2. - 1.) * 2.);
     //mouseMatrix = sphericalMatrix(((vec2(81.5, 119) / vec2(187)) * 2. - 1.) * 2.);
