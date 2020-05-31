@@ -428,8 +428,8 @@ vec3 env(vec3 origin, vec3 rayDir) {
 // Marching
 //========================================================
 
-const float MAX_DISPERSE = 50.;
-const float MAX_BOUNCE = 50.;
+const float MAX_DISPERSE = 5.;
+const float MAX_BOUNCE = 15.;
 
 vec3 normal(in vec3 p){
   vec3 v = vec3(.001, 0, 0);
