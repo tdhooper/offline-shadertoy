@@ -621,56 +621,43 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             
             res = hit.res;
             p = hit.p;
-			
-            if (bounce == 0. && disperse == 0.) {
-            	firstLen = hit.len;
-            }
             
             if (invert < 0.) {
 	            extinctionDist += hit.len;
             }
 
-            if ( res.y == 0. || bounce == MAX_BOUNCE - 1.) {
-                if (bounce == 0.) {
-                //	sam += bgCol; break;	
-                }
-                //sam += env(origin, rayDir);
+            // hit background
+            if ( res.y == 0.) {
                 break;
-            } else {
-                vec3 nor = normal(p) * invert;
-                
-                
-                //sam += (nor * .5 + .5) / 3.; break;
-
-                // if (hitDebugPlane == 1.) {
-                //     float d = map(rayPosition).x;
-                //     sam += distanceMeter(d * 2., rayLength, rayDirection, camPos);
-                //     break;
-                // }
-                
-                
-                ref = reflect(rayDir, nor);
-                
-                float ior = mix(1.3, 1.6, wavelength); // vs 1.6 with first bounce reflective (or 1.8 wihout)
-                ior = invert < 0. ? ior : 1. / ior;
-                raf = refract(rayDir, nor, ior);
-                sam += light(origin, ref) * .5;
-                sam += pow(1. - abs(dot(rayDir, nor)), 5.) * .1;
-                sam *= vec3(.85,.85,.98);
-
-                // Refract
-                rayDir = raf == vec3(0) ? ref : raf;
-                if (bounce == 1.) {
-                    // make first inside bounce reflective
-                    //rayDir = ref;
-                }
-                offset = .01 / abs(dot(rayDir, nor));
-                origin = p + offset * rayDir;
-                invert *= -1.;
             }
+
+            //sam += shade(p, origin, rayDir, wavelength, invert)
+
+            vec3 nor = normal(p) * invert;
             
+            ref = reflect(rayDir, nor);
+            
+            float ior = mix(1.3, 1.6, wavelength);
+            ior = invert < 0. ? ior : 1. / ior;
+            raf = refract(rayDir, nor, ior);
+            sam += light(p, ref) * .5;
+            sam += pow(1. - abs(dot(rayDir, nor)), 5.) * .1;
+            sam *= vec3(.85,.85,.98);
+
+            // Refract
+            bool tif = raf == vec3(0); // total internal reflection
+            rayDir = tif ? ref : raf;
+            offset = .01 / abs(dot(rayDir, nor));
+            origin = p + offset * rayDir;
+            //invert = tif ? invert : invert * -1.;
+            invert *= -1.; // not correct but gives more interesting results
+
+
             bounceCount = bounce;
         }
+
+        //sam += bounceCount == 0. ? bgCol : env(p, rayDir);	
+
         
         if (bounceCount == 0.) {
             // didn't bounce, so don't bother calculating dispersion
