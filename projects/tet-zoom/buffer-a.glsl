@@ -171,7 +171,6 @@ float tetAnim(vec3 p, float time) {
     p = fold(p);
 
 
-
     float blendDuration = .75;
     float offsetDuration = .75;
     float step2Start = .0;
@@ -191,7 +190,9 @@ float tetAnim(vec3 p, float time) {
     float o1 = ot1 * offsetDistance;
     float o2 = ot2 * offsetDistance;
 
-    if (ot2 > 1.) {
+
+
+    if (t < 0. || ot1 >= 1.) {
         return 1e12;
     }
 
@@ -203,9 +204,8 @@ float tetAnim(vec3 p, float time) {
     vec3 n3 = normalize(pbc * vec3(1,-1,-1));
     vec3 n4 = normalize(pbc * vec3(-1,-1,-1));
 
-    float sz = .3;
-
     vec3 pp = p;
+    float sz = .3;
 
     float rbase = .04;
     float rInner = rbase * STEP_SCALE;
@@ -215,6 +215,12 @@ float tetAnim(vec3 p, float time) {
 
     float scale1 = 1. - ot1;
     float scale2 = 1. - ot2;
+
+    float bound = (dot((p + (n4 + n3) * o1) / scale1, n1) - sz) * scale1;
+    
+    if (bound > .002) {
+        return bound;
+    }
 
     // base tet
     float base = tetBase(p, sz, rbase);
@@ -255,6 +261,10 @@ float tetAnim(vec3 p, float time) {
         fractured = min(fractured, inner);
     }
 
+    if (b1 >= 1.) {
+        return fractured;
+    }
+
     // surface: 0 - .5 -  1 - 1
     // center:  0 -  0 - .5 - 1
 
@@ -276,6 +286,8 @@ float tetAnim(vec3 p, float time) {
     float fracturedS = min(fractured, -base - (.3 - .3 * b1));
     float d = max(base, fracturedS);
     d = mix(d, fractured, smoothstep(.9, 1., b1));
+
+    //d = min(d, abs(bound) - .001);
 
     return d;
 }
@@ -442,10 +454,10 @@ Hit march(vec3 origin, vec3 rayDir, float invert, float maxDist) {
     vec2 res = vec2(0.);
 
     for (float i = 0.; i < 200.; i++) {
-        len += dist;// * .2;
+        len += dist * .9;
         p = origin + len * rayDir;
         res = map(p);
-        dist = res.x * invert * .9;
+        dist = res.x * invert;
         if (dist < .0000001) {
             break;
         }
@@ -556,9 +568,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
     initPoly();
 
-    time = mod(iTime / 2., 1.);
-    time = fract(iTime);
+    time = iTime / 2.;
     time = fract(time + .4);
+    //time= 0.1;
     
     //mouseMatrix = sphericalMatrix(((iMouse.xy / iResolution.xy) * 2. - 1.) * 2.);
     //mouseMatrix = sphericalMatrix(((vec2(81.5, 119) / vec2(187)) * 2. - 1.) * 2.);
