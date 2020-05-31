@@ -21,8 +21,10 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 
-float time;
 
+//#define LIGHT_MODE
+
+// HG_SDF
 
 #define PI 3.14159265359
 #define TAU 6.28318530718
@@ -33,66 +35,23 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
-vec3 pMirror(vec3 p, vec3 n) {
-    return p - (2. * dot(p, n)) * n;    
-}
-
-
-
-float smin(float a, float b, float r) {
-    vec2 u = max(vec2(r - a,r - b), vec2(0));
-    return max(r, min (a, b)) - length(u);
-}
-
 float smax(float a, float b, float r) {
     vec2 u = max(vec2(r + a,r + b), vec2(0));
     return min(-r, max (a, b)) + length(u);
 }
 
-float smin2(float a, float b, float k){
-    float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
-    return (1. - f) * a + f  * b - f * (1. - f) * k;
+float range(float vmin, float vmax, float value) {
+  return clamp((value - vmin) / (vmax - vmin), 0., 1.);
 }
-
-float smax2(float a, float b, float k) {
-    return -smin2(-a, -b, k);
-}
-
-float smin3(float a, float b, float k){
-    return min(
-        smin(a, b, k),
-        smin2(a, b, k)
-    );
-}
-
-float smax3(float a, float b, float k){
-    return max(
-        smax(a, b, k),
-        smax2(a, b, k)
-    );
-}
-
-
 
 float vmax(vec2 v) {
 	return max(v.x, v.y);
-}
-
-float vmax(vec3 v) {
-	return max(v.x, max(v.y, v.z));
 }
 
 float fBox(vec2 p, vec2 b) {
 	vec2 d = abs(p) - b;
 	return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
-
-
-float fBox(vec3 p, vec3 b) {
-	vec3 d = abs(p) - b;
-	return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
-}
-
 
 // IQ Spectrum
 
@@ -103,8 +62,6 @@ vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
 vec3 spectrum(float n) {
     return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
 }
-
-
 
 // Knighty polyhedra
 
@@ -128,23 +85,15 @@ vec3 fold(vec3 pos) {
 	return pos;
 }
 
-
-
-
 // Modelling
 
-float range(float vmin, float vmax, float value) {
-  return clamp((value - vmin) / (vmax - vmin), 0., 1.);
-}
+float time;
 
-
-float tween(float t, float start, float duration) {
+float tweenOffset(float t, float start, float duration) {
     t = range(start, start + duration, t);
     t = pow(t, 2.);
-    //t = smoothstep(0., 1., t);
     return t;
 }
-
 
 float tweenBlend(float t, float start, float duration) {
     t = range(start, start + duration, t);
@@ -152,7 +101,6 @@ float tweenBlend(float t, float start, float duration) {
     t = smoothstep(0., 1., t);
     return t;
 }
-
 
 float tetBase(vec3 p, float sz, float r) {
     vec3 n1 = pca;
@@ -170,60 +118,44 @@ float tetAnim(vec3 p, float time) {
     
     p = fold(p);
 
-
+    // config
+    float sz = .3;
+    float rBase = .04;
+    float rInner = rBase * STEP_SCALE;
     float blendDuration = .75;
     float offsetDuration = .75;
-    float step2Start = .0;
-
-    float t = time * (step2Start + blendDuration + offsetDuration);
-    //t *= .75;
-
-    offsetDuration *= 2.;
-
+    float t = time * (blendDuration + offsetDuration);
+    offsetDuration *= 2.; // extend animation beyond loop section
     float offsetDistance = .6;
 
     // animation
-    float rtween = tweenBlend(t, .0, .5);
-    float b1 = tweenBlend(t, .0, blendDuration);
-    float ot1 = tween(t, blendDuration, offsetDuration);
-    float ot2 = tween(t, step2Start + blendDuration, offsetDuration);
-    float o1 = ot1 * offsetDistance;
-    float o2 = ot2 * offsetDistance;
+    float blend = tweenBlend(t, .0, blendDuration);
+    float offsetT = tweenOffset(t, blendDuration, offsetDuration);
+    float offset = offsetT * offsetDistance;
 
-
-
-    if (t < 0. || ot1 >= 1.) {
+    // skip if animation hasn't started or is complete
+    if (t < 0. || offsetT >= 1.) {
         return 1e12;
     }
 
-    //o1 = 0.;
-    //o2 = 0.;
-
+    // tetrahedron planes
     vec3 n1 = pca;
     vec3 n2 = normalize(pca * vec3(-1,-1,1));
     vec3 n3 = normalize(pbc * vec3(1,-1,-1));
     vec3 n4 = normalize(pbc * vec3(-1,-1,-1));
 
-    vec3 pp = p;
-    float sz = .3;
+    float sep = .001 * (1. - offsetT);
+    float scale = 1. - offsetT;
 
-    float rbase = .04;
-    float rInner = rbase * STEP_SCALE;
-    float rOuter = rbase * STEP_SCALE;// * (1. + ot1 * 2.);
-    float sep = .001 * (1. - o2);
-    //sep = 0.;
-
-    float scale1 = 1. - ot1;
-    float scale2 = 1. - ot2;
-
-    float bound = (dot((p + (n4 + n3) * o1) / scale1, n1) - sz) * scale1;
-    
-    if (bound > .002) {
+    float bound = (dot((p + (n4 + n3) * offset) / scale, n1) - sz) * scale;
+    if (bound > .004) {
         return bound;
     }
 
+    vec3 pp = p;
+
     // base tet
-    float base = tetBase(p, sz, rbase);
+    float base = tetBase(p, sz, rBase);
 
     // inner tet
     float inner = -(dot(p, n4) + .1 - sep);
@@ -231,112 +163,77 @@ float tetAnim(vec3 p, float time) {
     inner = smax(inner, -(dot(p, n2) + .1 - sep), rInner);
 
     // octahedrons
-    p = pp + n4 * o2;
-    p /= scale2;
-    float oct = tetBase(p, sz, rbase);
-    oct = smax(oct, -(dot(p, n4) + .5 - sep), rOuter);
-    oct = smax(oct, -(dot(p, n3) + .1 - sep), rOuter);
-    oct = smax(oct, (dot(p, n4) + .1 + sep), rOuter);
-    oct = smax(oct, -(dot(p, n2) + .1 - sep), rOuter);
-    oct *= scale2;
+    p = pp + n4 * offset;
+    p /= scale;
+    float oct = tetBase(p, sz, rBase);
+    oct = smax(oct, -(dot(p, n4) + .5 - sep), rInner);
+    oct = smax(oct, -(dot(p, n3) + .1 - sep), rInner);
+    oct = smax(oct, (dot(p, n4) + .1 + sep), rInner);
+    oct = smax(oct, -(dot(p, n2) + .1 - sep), rInner);
+    oct *= scale;
 
     // edge tets
-    p = pp + (n4 + n3) * o2;
-    p /= scale2;
-    float edge = tetBase(p, sz, rbase);
-    edge = smax(edge, (dot(p, n3) + .1 + sep), rOuter);
-    edge = smax(edge, (dot(p, n4) + .1 + sep), rOuter);
-    edge *= scale2;
+    p = pp + (n4 + n3) * offset;
+    p /= scale;
+    float edge = tetBase(p, sz, rBase);
+    edge = smax(edge, (dot(p, n3) + .1 + sep), rInner);
+    edge = smax(edge, (dot(p, n4) + .1 + sep), rInner);
+    edge *= scale;
 
     // vertex tets
-    p = pp + n4 * (o1 + o2);
-    p /= scale1;
-    float vert = tetBase(p, sz, rbase);
-    vert = smax(vert, (dot(p, n4) + .5 + sep), rOuter);
-    vert *= scale1;
+    p = pp + n4 * (offset + offset);
+    p /= scale;
+    float vert = tetBase(p, sz, rBase);
+    vert = smax(vert, (dot(p, n4) + .5 + sep), rInner);
+    vert *= scale;
 
-    float fractured = min(min(oct, edge), vert);
+    float sliced = min(min(oct, edge), vert);
 
+    // inner tet gets replaced with the next iteration
     if (time < 1.) {
-        fractured = min(fractured, inner);
+        sliced = min(sliced, inner);
     }
 
-    if (b1 >= 1.) {
-        return fractured;
+    if (blend >= 1.) {
+        return sliced;
     }
-
-    // surface: 0 - .5 -  1 - 1
-    // center:  0 -  0 - .5 - 1
-
-
 
     float surface = 1. - saturate(-base / sz); // 1 at surface, 0 at center
-    //float bl = saturate(b1 * 2.);
-    float ss = 2.;
-    float blend = saturate(b1 * (1. + ss) - surface * ss);
-    float blend2 = saturate(b1 * .66 * range(.9, 1., surface));
     
-    //blend = blend2;
-
-    //blend = saturate(step(length(pp), .6 * b1));
-    //float d = mix(base, fractured, blend);
-
-    base = mix(base, fractured, blend2);
-    //float fracturedS = min(fractured, -(length(p) - .6 * b1));
-    float fracturedS = min(fractured, -base - (.3 - .3 * b1));
-    float d = max(base, fracturedS);
-    d = mix(d, fractured, smoothstep(.9, 1., b1));
-
-    //d = min(d, abs(bound) - .001);
+    // blend indentations into the surface
+    float surfaceBlend = saturate(blend * .66 * range(.9, 1., surface));
+    base = mix(base, sliced, surfaceBlend);
+    
+    // grow the sliced tet from the center of the unsliced tet
+    float slicedS = min(sliced, -base - (.3 - .3 * blend));
+    float d = max(base, slicedS);
+    d = mix(d, sliced, smoothstep(.9, 1., blend));
 
     return d;
 }
 
 float tetLoop(vec3 p) {
-    float t = time;
-    //t = smoothstep(.9, 1., t);
-    float scale = pow(STEP_SCALE, t);
-    //scale = 1.;
     pR(p.xy, PI/2. * -time + PI/2.);
+
+    float t = time;
+    float scale = pow(STEP_SCALE, t);
     float d = tetAnim(p * scale, time) / scale;
-    //d = min(d, length(p.xy) - .05);
+
     scale *= STEP_SCALE;
     pR(p.xy, PI/2. * -1.);
     d = min(d, tetAnim(p * scale, time + 1.) / scale);
+
     return d;
 }
 
 vec2 map(vec3 p) {
-    float back = -p.z + 10.;
-    float d = tetLoop(p);
-
-    //d = fBox(p, vec3(.2)) - .05;
-    return vec2(d, 1.);
-
     if (iMouse.x > 0.) {
     //	pR(p.yz, ((iMouse.y / iResolution.y) * 2. - 1.) * 2.);
    // 	pR(p.xz, ((iMouse.x / iResolution.x) * 2. - 1.) * 3.);
     }
-
-    return back < d ? vec2(back, 0.) : vec2(d, 1.);
+    float d = tetLoop(p);
+    return vec2(d, 1.);
 }
-
-
-
-float hitDebugPlane = 0.;
-
-vec2 mapDebug(vec3 p) {
-    vec2 res = map(p);
-
-    p = (debugPlaneMatrix * vec4(p, 1)).xyz;
-    float plane = abs(p.y);
-
-    hitDebugPlane = plane < abs(res.x) ? 1. : 0.;
-    res.x = min(res.x, plane);
-
-    return res;
-}
-
 
 
 //========================================================
@@ -354,37 +251,14 @@ float intersectPlane(vec3 rOrigin, vec3 rayDir, vec3 origin, vec3 normal, vec3 u
     return max(sign(d), 0.);
 }
 
-mat3 sphericalMatrix(vec2 tp) {
-    float theta = tp.x;
-    float phi = tp.y;
-    float cx = cos(theta);
-    float cy = cos(phi);
-    float sx = sin(theta);
-    float sy = sin(phi);
-    return mat3(
-        cy, -sy * -sx, -sy * cx,
-        0, cx, sx,
-        sy, cy * -sx, cy * cx
-    );
-}
-
-mat3 mouseMatrix;
-
+mat3 envOrientation;
 
 vec3 light(vec3 origin, vec3 rayDir) {
-    //origin.z *= -1.;
-    //rayDir.z *= -1.;
     origin = -(cameraMatrix * vec4(origin, 1)).xyz;
     rayDir = -(cameraMatrix * vec4(rayDir, 0)).xyz;
 
-    //pR(rayDir.xy, -.3);
-    //pR(rayDir.yz, .2);
-    //pR(rayDir.zx, .2);
-
-    //pR(rayDir.yz, -.25);
-
-    origin *= mouseMatrix;
-    rayDir *= mouseMatrix;
+    origin *= envOrientation;
+    rayDir *= envOrientation;
 
     vec2 uv;
     float hit = intersectPlane(origin, rayDir, vec3(5,-2,-8), normalize(vec3(1,-.5,-.1)), normalize(vec3(0,1,0)), uv);
@@ -393,27 +267,12 @@ vec3 light(vec3 origin, vec3 rayDir) {
 }
 
 vec3 env(vec3 origin, vec3 rayDir) {
-    //origin.xz *= -1.;
-    //rayDir.xz *= -1.;
     
     origin = -(cameraMatrix * vec4(origin, 1)).xyz;
     rayDir = -(cameraMatrix * vec4(rayDir, 0)).xyz;
 
-    //pR(rayDir.xy, -1.);
-    //pR(rayDir.yz, 1.5);    
-
-    //pR(rayDir.yz, time * PI * 2.);
-    
-    //pR(rayDir.xy, -.3);
-    //pR(rayDir.yz, .2);
-    //pR(rayDir.zx, .2);
-    
-    //pR(rayDir.xy, 1.5);
-
-    //pR(rayDir.yz, -.25);
-
-    origin *= mouseMatrix;
-    rayDir *= mouseMatrix;
+    origin *= envOrientation;
+    rayDir *= envOrientation;
 
     float l = smoothstep(.0, 1.7, dot(rayDir, vec3(.5,-.3,1))) * .4;
     //l = smoothstep(-.5, 2.2, dot(rayDir, vec3(.5,-.3,1))) * .4;
@@ -471,98 +330,19 @@ Hit march(vec3 origin, vec3 rayDir, float invert, float maxDist) {
     return Hit(res, p, len);
 }
 
-#pragma glslify: distanceMeter = require(../clifford-torus/distance-meter.glsl)
-
-
-
-
-
-
-
-#define M_PI 3.14159
-#define drawSphere true
-
-const float radius = 0.3;
-
-float angVelocity = -0.3,
-	  phi = 0.0,
-      psi = 0.0,
-      theta = 0.0;
-
-
-vec3 sphericalToWorld(vec2 sphCoord, float r)
-{
-    return vec3(
-    	r * sin(sphCoord.y) * cos(sphCoord.x),
-        r * sin(sphCoord.y) * sin(sphCoord.x),
-        r * cos(sphCoord.y)
-    );
-}
-
-vec2 worldToSpherical(vec3 flatCoord, float r)
-{
-    return vec2(
-        atan(flatCoord.x, flatCoord.y),
-        acos(flatCoord.z / r)
-    );   
-}
- 
-mat3 makeRotationMatrix(vec3 a)
-{
+mat3 sphericalMatrix(vec2 tp) {
+    float theta = tp.x;
+    float phi = tp.y;
+    float cx = cos(theta);
+    float cy = cos(phi);
+    float sx = sin(theta);
+    float sy = sin(phi);
     return mat3(
-    	cos(a.x) * cos(a.z) - sin(a.x) * cos(a.y) * sin(a.z),
-        -cos(a.x) * sin(a.z) - sin(a.x) * cos(a.y) * cos(a.z),
-        sin(a.x) * sin(a.y),
-        sin(a.x) * cos(a.z) + cos(a.x) * cos(a.y) * sin(a.z),
-        -sin(a.x) * sin(a.z) + cos(a.x) * cos(a.y) * cos(a.z),
-        -cos(a.x) * sin(a.y),
-        sin(a.y) * sin(a.z),
-        sin(a.y) * cos(a.z),
-        cos(a.y)
+        cy, -sy * -sx, -sy * cx,
+        0, cx, sx,
+        sy, cy * -sx, cy * cx
     );
 }
-
-vec3 screenToWorld(vec2 myPos, vec2 sphereCenter, float r)
-{
-    vec3 myVec;
-    myVec.y = myPos.x - sphereCenter.x;
-    myVec.z = -(myPos.y - sphereCenter.y);
-    myVec.x = sqrt(r * r - myVec.z * myVec.z - myVec.y * myVec.y);
-    return myVec;
-}
-
-void xmainImage(out vec4 fragColor, vec2 fragCoord)
-{
-    vec2 mouse = iMouse.xy;
-  	phi = .5;
-    psi = .5;
-    theta = iTime * angVelocity;
-    
-    vec2 sphCenter = .5*vec2(iResolution.x/iResolution.y, 1.);
-    vec2 p = fragCoord.xy / iResolution.xy;
- 
-    vec3 worldSphCoord = sphericalToWorld(p * vec2(2.0 * M_PI, M_PI), 1.0);
-    
-    p.x *= iResolution.x / iResolution.y;
-    
-    if (drawSphere && length(p - sphCenter) < radius)
-        worldSphCoord = screenToWorld(p, sphCenter, radius);
-    
-    mat3 rotationMatrix = makeRotationMatrix(vec3(phi, psi, theta));
-    vec3 rotatedWorldSphCoord = normalize(rotationMatrix * worldSphCoord);
-
-    fragColor = vec4(light(vec3(0), rotatedWorldSphCoord), 1.);
-
-    //vec2 rotatedSphericalCoord = worldToSpherical(rotatedWorldSphCoord, 1.0);
-
-    //fragColor = texture(iChannel0, rotatedSphericalCoord / vec2(2.*M_PI, M_PI), 0.0);
-}
-
-
-
-
-
-
 
 void mainImage( out vec4 fragColor, in vec2 fragCoord )
 {
@@ -572,10 +352,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     time = fract(time + .4);
     //time= 0.1;
     
-    //mouseMatrix = sphericalMatrix(((iMouse.xy / iResolution.xy) * 2. - 1.) * 2.);
-    //mouseMatrix = sphericalMatrix(((vec2(81.5, 119) / vec2(187)) * 2. - 1.) * 2.);
-    mouseMatrix = sphericalMatrix((vec2(0.7299465240641712,0.3048128342245989) * 2. - 1.) * 2.);
-    
+    #ifdef LIGHT_MODE
+        envOrientation = sphericalMatrix(((vec2(81.5, 119) / vec2(187)) * 2. - 1.) * 2.);
+    #else
+        envOrientation = sphericalMatrix((vec2(0.7299465240641712,0.3048128342245989) * 2. - 1.) * 2.);
+    #endif
 
     vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;
 
@@ -656,9 +437,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
             bounceCount = bounce;
         }
 
-        //sam += bounceCount == 0. ? bgCol : env(p, rayDir);	
+        #ifdef LIGHT_MODE
+            sam += bounceCount == 0. ? bgCol : env(p, rayDir);	
+        #endif
 
-        
         if (bounceCount == 0.) {
             // didn't bounce, so don't bother calculating dispersion
             col += sam * MAX_DISPERSE / 2.;
@@ -672,11 +454,5 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     col /= MAX_DISPERSE;
     
-    float fog = 1. - exp((firstLen - 6.) * -.5);
-   // col = mix(col, bgCol, clamp(fog, 0., 1.));
-    //fragColor = vec4(range(4., 12., firstLen)); return;
-
-    
-
     fragColor = vec4(col, range(4., 12., firstLen));
 }
