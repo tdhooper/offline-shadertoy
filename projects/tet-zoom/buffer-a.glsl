@@ -579,7 +579,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;
 
-    Hit hit;
+    Hit hit, firstHit;
     vec2 res;
     vec3 p, rayDir, origin, sam, ref, raf, nor;
     float invert, ior, offset, extinctionDist, maxDist, firstLen, bounceCount, wavelength;
@@ -589,6 +589,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     bool refracted;
 
     vec3 bgCol = vec3(.22);
+
+    invert = 1.;
+    maxDist = 12.; 
+    origin = eye;
+    rayDir = normalize(dir);
+    firstHit = march(origin, rayDir, invert, maxDist);
+    firstLen = hit.len;
     
     for (float disperse = 0.; disperse < MAX_DISPERSE; disperse++) {
         invert = 1.;
@@ -596,9 +603,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         origin = eye;
         rayDir = normalize(dir);
-
-	    //origin = vec3(0, 0, -focal * .7);
-    	//rayDir = normalize(vec3(uv, focal));
 
         extinctionDist = 0.;
         wavelength = disperse / MAX_DISPERSE;
@@ -608,9 +612,13 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 		bounceCount = 0.;
 
         for (float bounce = 0.; bounce < MAX_BOUNCE; bounce++) {
-        //while (bounce < MAX_BOUNCE) {
-            maxDist = bounce == 0. ? 12. : 6.; 
-            hit = march(origin, rayDir, invert, maxDist);
+
+            if (bounce == 0.) {
+                hit = firstHit;
+            } else {
+                hit = march(origin, rayDir, invert, maxDist / 2.);
+            }
+            
             res = hit.res;
             p = hit.p;
 			
