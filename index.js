@@ -38,6 +38,6 @@ const main = require('./main.js');
 // skull
 // tet-zoom
 
-const project = LOADPROJECT('tet-zoom');
+const project = LOADPROJECT('rhombille-triangle');
 
 main(project);
