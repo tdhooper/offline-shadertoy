@@ -1,14 +1,16 @@
+#version 300 es
+
 precision mediump float;
-attribute vec2 position;
+in vec2 position;
 uniform mat4 projection;
 uniform mat4 view;
-varying vec3 eye;
-varying vec3 dir;
-varying vec3 cameraForward;
-varying float fov;
-varying float aspect;
-varying mat4 vView;
-varying vec2 vVertex;
+out vec3 eye;
+out vec3 dir;
+out vec3 cameraForward;
+out float fov;
+out float aspect;
+out mat4 vView;
+out vec2 vVertex;
 
 void main() {
     vec2 vertex = 2.0 * position - 1.0;

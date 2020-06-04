@@ -4,14 +4,14 @@
 const EventEmitter = require('events');
 const Stats = require('stats.js');
 const glslify = require('glslify');
-const regl = require('regl')({
+const regl = require('./lib/regl-webgl2')({
   extensions: [
-    'webgl_depth_texture',
-    'ext_frag_depth',
-    'oes_standard_derivatives',
-    'oes_texture_float',
+    // 'webgl_depth_texture',
+    // 'ext_frag_depth',
+    // 'oes_standard_derivatives',
+    // 'oes_texture_float',
     'oes_texture_float_linear',
-    'ext_shader_texture_lod',
+    // 'ext_shader_texture_lod',
   ],
   //pixelRatio: .25,
   pixelRatio: 1,
