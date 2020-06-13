@@ -56,7 +56,7 @@ float time;
 Model leaf(vec3 p, vec3 cellData) {
     
     vec2 cell = cellData.xy;
-    float cellTime = cellData.z;
+    float t = cellData.z;
     
     float d = 1e12;
 
@@ -66,7 +66,6 @@ Model leaf(vec3 p, vec3 cellData) {
 
     vec3 pp = p;
 
-    cellTime = max(cellTime, 0.);
 
     //float len = max(cellTime*3. - .2, 0.);
 
@@ -80,7 +79,8 @@ Model leaf(vec3 p, vec3 cellData) {
 
     float bound = length(p) - 1.;
 
-    d = length(p.xy) - mix(.0, .5, .1);
+    d = length(p.xy) - mix(.01, .05, t);
+    d = max(d, -p.z);
 
     d = max(d, bound);
 
@@ -91,31 +91,22 @@ Model leaf(vec3 p, vec3 cellData) {
 vec3 calcCellData(
     vec2 cell,
     vec2 offset,
-    float maxBloomOffset,
-    mat2 transform,
-    mat2 transformI,
-    float stretch
+    mat2 worldToGrid,
+    mat2 gridToWorld,
+    float stretch,
+    vec2 minmax
 ) {
+    // Snap to cell center and move to neighbour
+    cell = gridToWorld * (round(worldToGrid * cell) + offset);
 
-    float sz = maxBloomOffset + PI / 2.;
+    // Clamp first and last cell
+    cell.y = clamp(cell.y, minmax.x, minmax.y);
+    cell = gridToWorld * round(worldToGrid * cell);
 
-    cell = transform * cell;
+    // Calc cell time
+    float t = 1. - (cell.y - minmax.x) / (minmax.y - minmax.x);
 
-    // Snap to cell center
-    cell = round(cell);
-    cell += offset;
-
-    // Snap after clamp
-    cell = round(cell);
-
-    cell = transformI * cell;
-
-    // calculate cell time
-    float y = cell.y * (stretch / sz);
-
-    cell.y -= maxBloomOffset;
-
-    return vec3(cell, y);
+    return vec3(cell, t);
 }
 
 mat2 phyllotaxis;
@@ -130,21 +121,22 @@ void calcPhyllotaxis() {
 
 Model drawBloom(
     vec3 p,
-    float density
+    float density,
+    vec2 minmax
 ) {
     Model model = newModel();
 
     float stretch = density;
-    float maxBloomOffset = PI / 5.;
-
     vec2 cell = vec2(
         atan(p.x, p.z),
-        atan(p.y, length(p.xz)) + maxBloomOffset
+        atan(p.y, length(p.xz))
     );
+    
+    minmax = (minmax - .5) * PI;
 
     mat2 mStretch = mat2(1,0,0,stretch);
-    mat2 transform = phyllotaxis * mStretch;
-    mat2 transformI = inverse(transform);
+    mat2 worldToGrid = phyllotaxis * mStretch;
+    mat2 gridToWorld = inverse(worldToGrid);
 
     vec3 cellData;
 
@@ -152,7 +144,7 @@ Model drawBloom(
     for( int m=0; m<3; m++ )
     for( int n=0; n<3; n++ )
     {
-        cellData = calcCellData(cell, vec2(m,n)-1., maxBloomOffset, transform, transformI, stretch);
+        cellData = calcCellData(cell, vec2(m,n)-1., worldToGrid, gridToWorld, stretch, minmax);
         model = opU(model, leaf(p, cellData));
     }
 
@@ -167,7 +159,7 @@ Model drawBloom(
 
 
 float map(vec3 p) {
-    Model m = drawBloom(p, 5.);
+    Model m = drawBloom(p, iTime * 5., vec2(.5, .7));
     float d = length(p) - .01;
     d = min(d, m.d);
     return d;
