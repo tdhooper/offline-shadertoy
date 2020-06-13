@@ -75,28 +75,6 @@ Model leaf(vec3 p, vec3 cellData) {
     return model;
 }
 
-vec3 calcCellData(
-    vec2 cell,
-    vec2 offset,
-    mat2 worldToGrid,
-    mat2 gridToWorld,
-    float stretch,
-    vec2 minmax
-) {
-    // Snap to cell center and move to neighbour
-    cell = gridToWorld * (round(worldToGrid * cell) + offset);
-
-    // Clamp first and last cell
-    float o = .5 / stretch;
-    cell.y = clamp(cell.y, minmax.x + o, minmax.y - o);
-    cell = gridToWorld * round(worldToGrid * cell);
-
-    // Calc cell time
-    float t = 1. - (cell.y - minmax.x) / (minmax.y - minmax.x);
-
-    return vec3(cell, t);
-}
-
 mat2 phyllotaxis;
 void calcPhyllotaxis() {
     vec2 cc = vec2(5., 8.);
@@ -107,91 +85,73 @@ void calcPhyllotaxis() {
     phyllotaxis = mRot * mScale;
 }
 
-Model drawBloom(
-    vec3 p,
-    float density,
+struct GridTransforms {
+    mat2 worldToGrid;
+    mat2 gridToWorld;
+};
+
+GridTransforms calcGridTransforms(float stretch) {
+    mat2 worldToGrid = phyllotaxis * mat2(1,0,0,stretch);
+    mat2 gridToWorld = inverse(worldToGrid);
+    return GridTransforms(worldToGrid, gridToWorld);
+}
+
+vec3 calcCellData(
+    vec2 cell,
+    vec2 offset,
+    GridTransforms m,
+    float stretch,
     vec2 minmax
 ) {
-    Model model = newModel();
+    // Snap to cell center and move to neighbour
+    cell = m.gridToWorld * (round(m.worldToGrid * cell) + offset);
 
-    float stretch = density;
+    // Clamp first and last cell
+    float o = .5 / stretch;
+    cell.y = clamp(cell.y, minmax.x + o, minmax.y - o);
+    cell = m.gridToWorld * round(m.worldToGrid * cell);
+
+    // Calc cell time
+    float t = 1. - (cell.y - minmax.x) / (minmax.y - minmax.x);
+
+    return vec3(cell, t);
+}
+
+Model mBloom(
+    vec3 p,
+    bool straight,
+    float stretch,
+    vec2 minmax
+) {
+    vec3 pp = p;
     vec2 cell = vec2(
         atan(p.x, p.z),
-        atan(p.y, length(p.xz))
+        straight ? p.y : atan(p.y, length(p.xz))
     );
-    
-    minmax = (minmax - .5) * PI;
-
-    mat2 mStretch = mat2(1,0,0,stretch);
-    mat2 worldToGrid = phyllotaxis * mStretch;
-    mat2 gridToWorld = inverse(worldToGrid);
-
-    vec3 cellData;
-    vec2 leafCell;
-    vec3 pp = p;
-
-    // compile speed optim from IQ
+    minmax = straight ? minmax : minmax * PI / 2.;
+    GridTransforms gridTransforms = calcGridTransforms(stretch);
+    Model model = newModel();
     for( int m=0; m<3; m++ )
     for( int n=0; n<3; n++ )
     {
-        cellData = calcCellData(cell, vec2(m,n)-1., worldToGrid, gridToWorld, stretch, minmax);
+        vec3 cellData = calcCellData(cell, vec2(m,n)-1., gridTransforms, stretch, minmax);
         p = pp;
         pR(p.xz, -cellData.x);
-        pR(p.zy, cellData.y);
+        if (straight) {
+            p.y -= cellData.y;
+        } else {
+            pR(p.zy, cellData.y);
+        }
         model = opU(model, leaf(p, cellData));
     }
-
     return model;
 }
-
-
-
-Model drawBloom2(
-    vec3 p,
-    float density,
-    vec2 minmax
-) {
-    Model model = newModel();
-
-    float stretch = density;
-    vec2 cell = vec2(
-        atan(p.x, p.z),
-        p.y
-    );
-    
-    //minmax = (minmax - .5) * PI;
-
-    mat2 mStretch = mat2(1,0,0,stretch);
-    mat2 worldToGrid = phyllotaxis * mStretch;
-    mat2 gridToWorld = inverse(worldToGrid);
-
-    vec3 cellData;
-    vec2 leafCell;
-    vec3 pp = p;
-
-    // compile speed optim from IQ
-    for( int m=0; m<3; m++ )
-    for( int n=0; n<3; n++ )
-    {
-        cellData = calcCellData(cell, vec2(m,n)-1., worldToGrid, gridToWorld, stretch, minmax);
-        p = pp;
-        pR(p.xz, -cellData.x);
-        p.y -= cellData.y;
-        //pR(p.zy, cellData.y);
-        model = opU(model, leaf(p, cellData));
-    }
-
-    return model;
-}
-
-
 
 
 
 
 float map(vec3 p) {
-    //Model m = drawBloom(p, iTime * 5., vec2(.5, .7));
-    Model m = drawBloom2(p, iTime * 5., vec2(.0, 2.));
+    Model m = mBloom(p, true, iTime * 5., vec2(.0, 1.));
     float d = length(p) - .01;
     d = min(d, m.d);
     return d;
