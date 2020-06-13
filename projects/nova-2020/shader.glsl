@@ -12,10 +12,164 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 
+#pragma glslify: inverse = require(glsl-inverse)
+
+#define PI 3.1415926
+
+
+
+
+vec2 round(vec2 a) {
+    return floor(a + .5);
+}
+
+
+void pR(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+
+
+
+struct Model {
+    float d;
+};
+
+Model newModel() {
+    return Model(1e12);
+}
+
+Model opU(Model a, Model b) {
+    Model m = a;
+    if (b.d < a.d) {
+        m = b;
+    }
+    return m;
+}
+
+
+
+
 float time;
 
+
+Model leaf(vec3 p, vec3 cellData) {
+    
+    vec2 cell = cellData.xy;
+    float cellTime = cellData.z;
+    
+    float d = 1e12;
+
+    // orient
+    pR(p.xz, -cell.x);
+    pR(p.zy, cell.y);
+
+    vec3 pp = p;
+
+    cellTime = max(cellTime, 0.);
+
+    //float len = max(cellTime*3. - .2, 0.);
+
+//    if (shrinkOuter) {
+//        len *= mix(.2, 1., rangec(-.5, .0, cell.y));
+//    }
+
+    //len = pow(len, .33);
+
+    Model model = newModel();
+
+    float bound = length(p) - 1.;
+
+    d = length(p.xy) - mix(.0, .5, .1);
+
+    d = max(d, bound);
+
+    model.d = d;
+    return model;
+}
+
+vec3 calcCellData(
+    vec2 cell,
+    vec2 offset,
+    float maxBloomOffset,
+    mat2 transform,
+    mat2 transformI,
+    float stretch
+) {
+
+    float sz = maxBloomOffset + PI / 2.;
+
+    cell = transform * cell;
+
+    // Snap to cell center
+    cell = round(cell);
+    cell += offset;
+
+    // Snap after clamp
+    cell = round(cell);
+
+    cell = transformI * cell;
+
+    // calculate cell time
+    float y = cell.y * (stretch / sz);
+
+    cell.y -= maxBloomOffset;
+
+    return vec3(cell, y);
+}
+
+mat2 phyllotaxis;
+void calcPhyllotaxis() {
+    vec2 cc = vec2(5., 8.);
+    float aa = atan(cc.x / cc.y);
+    float scale = (PI*2.) / sqrt(cc.x*cc.x + cc.y*cc.y);
+    mat2 mRot = mat2(cos(aa), -sin(aa), sin(aa), cos(aa));
+    mat2 mScale = mat2(1./scale,0,0,1./scale);
+    phyllotaxis = mRot * mScale;
+}
+
+Model drawBloom(
+    vec3 p,
+    float density
+) {
+    Model model = newModel();
+
+    float stretch = density;
+    float maxBloomOffset = PI / 5.;
+
+    vec2 cell = vec2(
+        atan(p.x, p.z),
+        atan(p.y, length(p.xz)) + maxBloomOffset
+    );
+
+    mat2 mStretch = mat2(1,0,0,stretch);
+    mat2 transform = phyllotaxis * mStretch;
+    mat2 transformI = inverse(transform);
+
+    vec3 cellData;
+
+    // compile speed optim from IQ
+    for( int m=0; m<3; m++ )
+    for( int n=0; n<3; n++ )
+    {
+        cellData = calcCellData(cell, vec2(m,n)-1., maxBloomOffset, transform, transformI, stretch);
+        model = opU(model, leaf(p, cellData));
+    }
+
+    return model;
+}
+
+
+
+
+
+
+
+
 float map(vec3 p) {
-    float d = length(p) - .5;
+    Model m = drawBloom(p, 5.);
+    float d = length(p) - .01;
+    d = min(d, m.d);
     return d;
 }
 
@@ -44,6 +198,7 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col;
+    calcPhyllotaxis();
 
     float mTime = mod(iTime / 1., 1.);
     time = mTime;
