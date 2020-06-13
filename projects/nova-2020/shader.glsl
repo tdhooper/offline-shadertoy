@@ -60,20 +60,7 @@ Model leaf(vec3 p, vec3 cellData) {
     
     float d = 1e12;
 
-    // orient
-    pR(p.xz, -cell.x);
-    pR(p.zy, cell.y);
-
     vec3 pp = p;
-
-
-    //float len = max(cellTime*3. - .2, 0.);
-
-//    if (shrinkOuter) {
-//        len *= mix(.2, 1., rangec(-.5, .0, cell.y));
-//    }
-
-    //len = pow(len, .33);
 
     Model model = newModel();
 
@@ -100,7 +87,8 @@ vec3 calcCellData(
     cell = gridToWorld * (round(worldToGrid * cell) + offset);
 
     // Clamp first and last cell
-    cell.y = clamp(cell.y, minmax.x, minmax.y);
+    float o = .5 / stretch;
+    cell.y = clamp(cell.y, minmax.x + o, minmax.y - o);
     cell = gridToWorld * round(worldToGrid * cell);
 
     // Calc cell time
@@ -139,12 +127,57 @@ Model drawBloom(
     mat2 gridToWorld = inverse(worldToGrid);
 
     vec3 cellData;
+    vec2 leafCell;
+    vec3 pp = p;
 
     // compile speed optim from IQ
     for( int m=0; m<3; m++ )
     for( int n=0; n<3; n++ )
     {
         cellData = calcCellData(cell, vec2(m,n)-1., worldToGrid, gridToWorld, stretch, minmax);
+        p = pp;
+        pR(p.xz, -cellData.x);
+        pR(p.zy, cellData.y);
+        model = opU(model, leaf(p, cellData));
+    }
+
+    return model;
+}
+
+
+
+Model drawBloom2(
+    vec3 p,
+    float density,
+    vec2 minmax
+) {
+    Model model = newModel();
+
+    float stretch = density;
+    vec2 cell = vec2(
+        atan(p.x, p.z),
+        p.y
+    );
+    
+    //minmax = (minmax - .5) * PI;
+
+    mat2 mStretch = mat2(1,0,0,stretch);
+    mat2 worldToGrid = phyllotaxis * mStretch;
+    mat2 gridToWorld = inverse(worldToGrid);
+
+    vec3 cellData;
+    vec2 leafCell;
+    vec3 pp = p;
+
+    // compile speed optim from IQ
+    for( int m=0; m<3; m++ )
+    for( int n=0; n<3; n++ )
+    {
+        cellData = calcCellData(cell, vec2(m,n)-1., worldToGrid, gridToWorld, stretch, minmax);
+        p = pp;
+        pR(p.xz, -cellData.x);
+        p.y -= cellData.y;
+        //pR(p.zy, cellData.y);
         model = opU(model, leaf(p, cellData));
     }
 
@@ -156,10 +189,9 @@ Model drawBloom(
 
 
 
-
-
 float map(vec3 p) {
-    Model m = drawBloom(p, iTime * 5., vec2(.5, .7));
+    //Model m = drawBloom(p, iTime * 5., vec2(.5, .7));
+    Model m = drawBloom2(p, iTime * 5., vec2(.0, 2.));
     float d = length(p) - .01;
     d = min(d, m.d);
     return d;
