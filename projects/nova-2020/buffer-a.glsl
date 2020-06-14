@@ -209,9 +209,9 @@ Model map(vec3 p) {
         vec2 cellId = hexPf + vec2(i, j);
         vec2 center = cellId * hex2cart * sci + (hash2(cellId) * 2. - 1.) * .2;
         p = pp - vec3(center.x,0,center.y);
-        float r1 = hash(cellId + 5.5);
+        float r1 = hash(cellId + 6.5);
         float r2 = hash(cellId + 8.8);
-        float sz = mix(.4, .7, r1);
+        float sz = mix(.4, .9, r1);
         float n = mix(2., 8., r2);
         // if (r2 < .5) {
         //     sz *= .5;
@@ -296,11 +296,10 @@ Hit march(vec3 origin, vec3 rayDir, float maxDist) {
     for (float i = 0.; i < 150.; i++) {
         len += dist;
         p = origin + len * rayDir;
-        hitEps = .0005 * len;
+        hitEps = .001;
         model = map(p);
         dist = model.d;
         if (dist < hitEps) {
-            sky = false;
             break;
         }
         if (len >= maxDist) {
@@ -312,6 +311,14 @@ Hit march(vec3 origin, vec3 rayDir, float maxDist) {
     return Hit(model, p, len, sky);
 }
 
+
+vec2 bokeh(vec2 seed){
+	vec2 a=seed;
+    if(a.y>a.x)
+        a=1.-a;
+    a.y*=PI*2./a.x;
+    return a.x*vec2(cos(a.y),sin(a.y));
+}
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     calcPhyllotaxis();
@@ -328,11 +335,30 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
 
-    vec3 camPos = eye;
-    vec3 rayDir = normalize(dir);
+    vec2 seed = hash2(p + iTime);
 
-    // mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
-    // rayDirection = normalize( camMat * vec3(p.xy,2.8) );
+    // jitter for antialiasing
+    p += 2. * (seed - .5) / iResolution.xy;
+
+    //vec3 camPos = eye;
+    //vec3 rayDir = normalize(dir);
+
+
+    vec3 camPos = vec3(1,2.,3.5);
+    vec3 camTar = vec3(0);
+
+    vec2 jitter = bokeh(seed) * .025;
+    vec3 cn = normalize(camTar - camPos);
+    vec3 cx = normalize(cross(cn, cross(cn, vec3(0,1,0))));
+    vec3 cy = normalize(cross(cn, cx));
+    camPos += cx * jitter.x;
+    camPos += cy * jitter.y;
+
+    mat3 camMat = calcLookAtMatrix(camPos, camTar, 0.);
+    vec3 rayDir = normalize(camMat * vec3(p.xy, 4.));
+
+    //camPos.xy += bokehJitter * apertureRadius;
+    //rayDir.xy -= bokehJitter * apertureRadius * rayDir.z / focusDistance;
 
 
     vec3 origin = camPos;
@@ -345,7 +371,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 accum = vec3(1);
     vec3 sunColor = vec3(1);
 
-    vec2 seed = hash2(p + iTime);
     
     for (float bounce = 0.; bounce < 3.; bounce++) {
         hit = march(origin, rayDir, 15.);
