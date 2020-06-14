@@ -335,7 +335,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
 
-    vec2 seed = hash2(p + iTime);
+    vec2 seed = hash2(uv * 200. + iTime * .01);
 
     // jitter for antialiasing
     p += 2. * (seed - .5) / iResolution.xy;
@@ -397,7 +397,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += accum * sunLight * sunColor;
         }
 
-        //seed = hash2(seed.x);
+        seed = hash2(seed.x);
 
     }
 
