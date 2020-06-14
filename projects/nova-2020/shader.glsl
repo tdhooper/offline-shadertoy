@@ -191,17 +191,23 @@ float map(vec3 p) {
     for (int j = -1; j <= 1; j++)
     for (int i = -1; i <= 1; i++) {
         vec2 cellId = hexPf + vec2(i, j);
-        bool show = hash(cellId) >= smoothstep(0., 6., length(cellId));
-        bool show2 = hash(cellId) >= smoothstep(3., 9., length(cellId));
-        if ( ! show2) continue;
-        vec2 center = cellId * hex2cart * sci;
+        vec2 center = cellId * hex2cart * sci + (hash2(cellId) * 2. - 1.) * .2;
         p = pp - vec3(center.x,0,center.y);
-        if (show) {
-            bloom = mBloom(p, BloomSpec(true, 10., vec2(.0, 1.), .2));
-        } else {
-            bloom = mBloom(p, BloomSpec(false, 5., vec2(.0, 1.), .5));
-        }
-        model = opU(model, bloom);
+        float r1 = hash(cellId + 5.5);
+        float r2 = hash(cellId + 8.8);
+        float sz = mix(.4, .7, r1);
+        float n = mix(2., 8., r2);
+        // if (r2 < .5) {
+        //     sz *= .5;
+        //     n *= .5;
+        //     model = opU(model, mBloom(p + vec3(.2,0,0), BloomSpec(false, n, vec2(.0, 1.), sz)));
+        //     model = opU(model, mBloom(p + vec3(-.2,0,-.23), BloomSpec(false, n, vec2(.0, 1.), sz)));
+        //     model = opU(model, mBloom(p + vec3(-.2,0,.23), BloomSpec(false, n, vec2(.0, 1.), sz)));
+        //     //model = opU(model, mBloom(p, BloomSpec(false, n, vec2(.0, 1.), sz)));
+        //     //model = opU(model, mBloom(p, BloomSpec(false, n, vec2(.0, 1.), sz)));
+        // } else {
+            model = opU(model, mBloom(p, BloomSpec(false, n, vec2(.0, 1.), sz)));
+        // }
     }
 
     return model.d;
