@@ -35,6 +35,8 @@ vec2 hash2( vec2 p ){
 	return fract(sin(q)*43758.5453);
 }
 
+float hash(vec2 p) { return fract(1e4 * sin(17.0 * p.x + p.y * 0.1) * (0.1 + abs(sin(p.y * 13.0 + p.x)))); }
+
 
 
 
@@ -59,8 +61,14 @@ Model opU(Model a, Model b) {
 
 float time;
 
+struct BloomSpec {
+    float stretch;
+    vec2 minmax;
+    float size;
+};
 
-Model leaf(vec3 p, vec3 cellData) {
+
+Model leaf(vec3 p, vec3 cellData, BloomSpec spec) {
     
     vec2 cell = cellData.xy;
     float t = cellData.z;
@@ -71,7 +79,7 @@ Model leaf(vec3 p, vec3 cellData) {
 
     Model model = newModel();
 
-    float bound = length(p) - .2;
+    float bound = length(p) - spec.size;
 
     d = length(p.xy) - mix(.01, .05, t);
     d = max(d, -p.z);
@@ -107,19 +115,18 @@ vec3 calcCellData(
     vec2 cell,
     vec2 offset,
     GridTransforms m,
-    float stretch,
-    vec2 minmax
+    BloomSpec spec
 ) {
     // Snap to cell center and move to neighbour
     cell = m.gridToWorld * (round(m.worldToGrid * cell) + offset);
 
     // Clamp first and last cell
-    float o = .5 / stretch;
-    cell.y = clamp(cell.y, minmax.x + o, minmax.y - o);
+    float o = .5 / spec.stretch;
+    cell.y = clamp(cell.y, spec.minmax.x + o, spec.minmax.y - o);
     cell = m.gridToWorld * round(m.worldToGrid * cell);
 
     // Calc cell time
-    float t = 1. - (cell.y - minmax.x) / (minmax.y - minmax.x);
+    float t = 1. - (cell.y - spec.minmax.x) / (spec.minmax.y - spec.minmax.x);
 
     return vec3(cell, t);
 }
@@ -127,22 +134,21 @@ vec3 calcCellData(
 Model mBloom(
     vec3 p,
     bool straight,
-    float stretch,
-    vec2 minmax
+    BloomSpec spec
 ) {
     vec3 pp = p;
     vec2 cell = vec2(
         atan(p.x, p.z),
         straight ? p.y : atan(p.y, length(p.xz))
     );
-    minmax = straight ? minmax : minmax * PI / 2.;
-    GridTransforms gridTransforms = calcGridTransforms(stretch);
+    spec.minmax = straight ? spec.minmax : spec.minmax * PI / 2.;
+    GridTransforms gridTransforms = calcGridTransforms(spec.stretch);
     Model model = newModel();
     //model.d = length(p) - .2; return model;
     for( int m=0; m<3; m++ )
     for( int n=0; n<3; n++ )
     {
-        vec3 cellData = calcCellData(cell, vec2(m,n)-1., gridTransforms, stretch, minmax);
+        vec3 cellData = calcCellData(cell, vec2(m,n)-1., gridTransforms, spec);
         p = pp;
         pR(p.xz, -cellData.x);
         if (straight) {
@@ -150,7 +156,7 @@ Model mBloom(
         } else {
             pR(p.zy, cellData.y);
         }
-        model = opU(model, leaf(p, cellData));
+        model = opU(model, leaf(p, cellData, spec));
     }
     return model;
 }
@@ -162,6 +168,8 @@ float map(vec3 p) {
 
     Model model = newModel();
     Model bloom;
+
+    model.d = p.y;
     
     vec2 pFloor = floor(p.xz);
     vec2 pFract = fract(p.xz);
@@ -171,10 +179,18 @@ float map(vec3 p) {
     {
         vec2 offset = vec2(i, j);
         vec2 cellId = pFloor + offset;
+        bool show = hash(cellId) >= smoothstep(0., 6., length(cellId));
+        bool show2 = hash(cellId) >= smoothstep(3., 9., length(cellId));
+        if ( ! show2) continue;
         p.xz = offset - (hash2(cellId) * 2. - 1.) * .25 - pFract;
-        bloom = mBloom(p, true, 10., vec2(.0, 1.));
+        if (show) {
+            bloom = mBloom(p, true, BloomSpec(10., vec2(.0, 1.), .2));
+        } else {
+            bloom = mBloom(p, false, BloomSpec(2., vec2(.0, 1.), .5));
+        }
         model = opU(model, bloom);
     }
+
 
     return model.d;
 }
@@ -222,7 +238,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float dist = 0.;
     bool bg = true;
 
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 300; i++) {
         rayLength += dist;
         rayPosition = camPos + rayDirection * rayLength;
         dist = map(rayPosition);
