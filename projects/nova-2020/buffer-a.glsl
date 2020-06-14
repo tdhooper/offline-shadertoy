@@ -54,6 +54,24 @@ float fBox(vec3 p, vec3 b) {
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
 
+// --------------------------------------------------------
+// Spectrum colour palette
+// IQ https://www.shadertoy.com/view/ll2GD3
+// --------------------------------------------------------
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+
+
+
+
+
 
 struct Model {
     float d;
@@ -83,6 +101,7 @@ struct BloomSpec {
     float stretch;
     vec2 minmax;
     float size;
+    vec3 color;
 };
 
 
@@ -105,6 +124,8 @@ Model leaf(vec3 p, vec3 cellData, BloomSpec spec) {
 
     d = max(d, bound);
 
+    model.albedo = spec.color;
+    
     //d = length(p) - .4;
 
     model.d = d;
@@ -157,6 +178,7 @@ Model mBloom(
     BloomSpec spec
 ) {
     Model model = newModel();
+    model.albedo = spec.color;
     float bound = length(p) - spec.size * 1.;
     //bound = fBox(p, vec3(spec.size * .4));
 
@@ -204,6 +226,7 @@ Model map(vec3 p) {
     Model bloom;
 
     model.d = p.y;
+    model.albedo = vec3(.5);
     
     vec2 pFloor = floor(p.xz);
     vec2 pFract = fract(p.xz);
@@ -214,16 +237,18 @@ Model map(vec3 p) {
     vec2 hexP = p.xz * sc * cart2hex;
     vec2 hexPf = floor(hexP);
     vec3 pp = p;
+    vec3 color;
 
     for (int j = -1; j <= 1; j++)
     for (int i = -1; i <= 1; i++) {
         vec2 cellId = hexPf + vec2(i, j);
-        vec2 center = cellId * hex2cart * sci + (hash2(cellId) * 2. - 1.) * .2;
+        vec2 center = cellId * hex2cart * sci + (hash2(cellId) * 2. - 1.) * .0;
         p = pp - vec3(center.x,0,center.y);
         float r1 = hash(cellId + 6.5);
         float r2 = hash(cellId + 8.8);
-        float sz = mix(.4, .9, r1);
+        float sz = mix(.4, .8, r1);
         float n = mix(2., 8., r2);
+        color = spectrum(hash(cellId + 2.2)) * .5;
         // if (r2 < .5) {
         //     sz *= .5;
         //     n *= .5;
@@ -233,7 +258,7 @@ Model map(vec3 p) {
         //     //model = opU(model, mBloom(p, BloomSpec(false, n, vec2(.0, 1.), sz)));
         //     //model = opU(model, mBloom(p, BloomSpec(false, n, vec2(.0, 1.), sz)));
         // } else {
-            model = opU(model, mBloom(p, BloomSpec(false, n, vec2(.0, 1.), sz)));
+            model = opU(model, mBloom(p, BloomSpec(false, n, vec2(.0, 1.), sz, color)));
         // }
     }
 
@@ -379,12 +404,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = vec3(0);
     vec3 nor, ref;
 
-    vec3 sunPos = vec3(-1);
+    vec3 sunPos = vec3(1);
     vec3 accum = vec3(1);
     vec3 sunColor = vec3(1);
 
     
-    for (float bounce = 0.; bounce < 3.; bounce++) {
+    for (float bounce = 0.; bounce < 6.; bounce++) {
         hit = march(origin, rayDir, 15.);
         
         if (hit.sky) {
@@ -392,12 +417,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             break;
         }
         
+        accum *= hit.model.albedo;
         nor = calcNormal(hit.p);
-
 
         // set camera and direction for dffuse bounce
         origin = hit.p + nor * .002;
+        ref = reflect(rayDir, nor);
         rayDir = getSampleBiased(nor, 1., seed);
+        //rayDir = normalize(mix(rayDir, ref, .5));
 
         // shoot biased bounce ray towards sun,
         // if it doesnt hit geo, add to result
