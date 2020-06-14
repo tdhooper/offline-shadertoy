@@ -49,6 +49,18 @@ float vmax(vec3 v) {
     return max(max(v.x, v.y), v.z);
 }
 
+
+float smin(float a, float b, float k){
+    float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
+    return (1. - f) * a + f  * b - f * (1. - f) * k;
+}
+
+float smax(float a, float b, float k) {
+    return -smin(-a, -b, k);
+}
+
+
+
 float fBox(vec3 p, vec3 b) {
     vec3 d = abs(p) - b;
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
@@ -119,10 +131,11 @@ Model leaf(vec3 p, vec3 cellData, BloomSpec spec) {
     float bs = spec.straight ? t : mix(.5, 1., smoothstep(.0, .666, t));
     float bound = length(p) - spec.size * bs;
 
-    d = length(p.xy) - mix(.01, .05, t);
+    float w = mix(.01, .05, t);
+    d = length(p.xy) - w;
     d = max(d, -p.z);
 
-    d = max(d, bound);
+    d = smax(d, bound, w);
 
     model.albedo = spec.color;
     
@@ -356,11 +369,17 @@ vec2 bokeh(vec2 seed){
     return a.x*vec2(cos(a.y),sin(a.y));
 }
 
+//#define PREVIEW;
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     calcPhyllotaxis();
 
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec4 sample = texture2D(iChannel0, uv);
+
+    #ifdef PREVIEW
+        sample = vec4(0);
+    #endif
 
     if (iMouse.z > 0.) {
         sample = vec4(0);
@@ -375,7 +394,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 seed2 = hash2(uv * 300. + iTime * .02);
 
     // jitter for antialiasing
-    p += 2. * (seed - .5) / iResolution.xy;
+    #ifndef PREVIEW
+        p += 2. * (seed - .5) / iResolution.xy;
+    #endif
 
     //vec3 camPos = eye;
     //vec3 rayDir = normalize(dir);
@@ -384,12 +405,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 camPos = vec3(1,2.,3.5);
     vec3 camTar = vec3(0);
 
-    vec2 jitter = bokeh(seed2) * .05;
-    vec3 cn = normalize(camTar - camPos);
-    vec3 cx = normalize(cross(cn, cross(cn, vec3(0,1,0))));
-    vec3 cy = normalize(cross(cn, cx));
-    camPos += cx * jitter.x;
-    camPos += cy * jitter.y;
+    #ifndef PREVIEW
+        vec2 jitter = bokeh(seed2) * .05;
+        vec3 cn = normalize(camTar - camPos);
+        vec3 cx = normalize(cross(cn, cross(cn, vec3(0,1,0))));
+        vec3 cy = normalize(cross(cn, cx));
+        camPos += cx * jitter.x;
+        camPos += cy * jitter.y;
+    #endif
 
     mat3 camMat = calcLookAtMatrix(camPos, camTar, 0.);
     vec3 rayDir = normalize(camMat * vec3(p.xy, 4.));
@@ -404,12 +427,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = vec3(0);
     vec3 nor, ref;
 
-    vec3 sunPos = vec3(1);
+    vec3 sunPos = vec3(-2,5,2);
     vec3 accum = vec3(1);
     vec3 sunColor = vec3(1);
 
-    
-    for (float bounce = 0.; bounce < 6.; bounce++) {
+    #ifdef PREVIEW
+        const int MAX_BOUNCE = 1;
+    #else
+        const int MAX_BOUNCE = 6;
+    #endif
+
+    for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
         hit = march(origin, rayDir, 15.);
         
         if (hit.sky) {
@@ -432,7 +460,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         vec3 sunSampleDir = getConeSample(sunDirection, .001, seed);
         float sunLight = dot(nor, sunSampleDir);
         vec3 shadowOrigin = hit.p + nor * .01;
-        if (sunLight > 0. && march(shadowOrigin, sunSampleDir, 5.).sky) {
+        bool hitSun = sunLight > 0. && march(shadowOrigin, sunSampleDir, 5.).sky;
+        
+        #ifdef PREVIEW
+            hitSun = true;
+        #endif
+
+        if (hitSun) {
             col += accum * sunLight * sunColor;
         }
 
