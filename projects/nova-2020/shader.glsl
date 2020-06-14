@@ -164,6 +164,12 @@ Model mBloom(
 
 
 
+const float sqrt3 = 1.7320508075688772;
+const float i3 = 0.5773502691896258;
+
+const mat2 cart2hex = mat2(1, 0, i3, 2. * i3);
+const mat2 hex2cart = mat2(1, 0, -.5, .5 * sqrt3);
+
 
 float map(vec3 p) {
 
@@ -175,15 +181,21 @@ float map(vec3 p) {
     vec2 pFloor = floor(p.xz);
     vec2 pFract = fract(p.xz);
 
-    for( int j=-1; j<=1; j++ )
-    for( int i=-1; i<=1; i++ )
-    {
-        vec2 offset = vec2(i, j);
-        vec2 cellId = pFloor + offset;
+    mat2 sc = mat2(1,0,0,.785);
+    mat2 sci = inverse(sc);
+
+    vec2 hexP = p.xz * sc * cart2hex;
+    vec2 hexPf = floor(hexP);
+    vec3 pp = p;
+
+    for (int j = -1; j <= 1; j++)
+    for (int i = -1; i <= 1; i++) {
+        vec2 cellId = hexPf + vec2(i, j);
         bool show = hash(cellId) >= smoothstep(0., 6., length(cellId));
         bool show2 = hash(cellId) >= smoothstep(3., 9., length(cellId));
         if ( ! show2) continue;
-        p.xz = offset - (hash2(cellId) * 2. - 1.) * .25 - pFract;
+        vec2 center = cellId * hex2cart * sci;
+        p = pp - vec3(center.x,0,center.y);
         if (show) {
             bloom = mBloom(p, BloomSpec(true, 10., vec2(.0, 1.), .2));
         } else {
@@ -191,7 +203,6 @@ float map(vec3 p) {
         }
         model = opU(model, bloom);
     }
-
 
     return model.d;
 }
