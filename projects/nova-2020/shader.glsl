@@ -29,6 +29,13 @@ void pR(inout vec2 p, float a) {
 }
 
 
+vec2 hash2( vec2 p ){
+    vec2 q = vec2( dot(p,vec2(127.1,311.7)), 
+				   dot(p,vec2(269.5,183.3)));
+	return fract(sin(q)*43758.5453);
+}
+
+
 
 
 struct Model {
@@ -64,7 +71,7 @@ Model leaf(vec3 p, vec3 cellData) {
 
     Model model = newModel();
 
-    float bound = length(p) - 1.;
+    float bound = length(p) - .2;
 
     d = length(p.xy) - mix(.01, .05, t);
     d = max(d, -p.z);
@@ -131,6 +138,7 @@ Model mBloom(
     minmax = straight ? minmax : minmax * PI / 2.;
     GridTransforms gridTransforms = calcGridTransforms(stretch);
     Model model = newModel();
+    //model.d = length(p) - .2; return model;
     for( int m=0; m<3; m++ )
     for( int n=0; n<3; n++ )
     {
@@ -151,10 +159,24 @@ Model mBloom(
 
 
 float map(vec3 p) {
-    Model m = mBloom(p, true, iTime * 5., vec2(.0, 1.));
-    float d = length(p) - .01;
-    d = min(d, m.d);
-    return d;
+
+    Model model = newModel();
+    Model bloom;
+    
+    vec2 pFloor = floor(p.xz);
+    vec2 pFract = fract(p.xz);
+
+    for( int j=-1; j<=1; j++ )
+    for( int i=-1; i<=1; i++ )
+    {
+        vec2 offset = vec2(i, j);
+        vec2 cellId = pFloor + offset;
+        p.xz = offset - (hash2(cellId) * 2. - 1.) * .25 - pFract;
+        bloom = mBloom(p, true, 10., vec2(.0, 1.));
+        model = opU(model, bloom);
+    }
+
+    return model.d;
 }
 
 const int NORMAL_STEPS = 6;
