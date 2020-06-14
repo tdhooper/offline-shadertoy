@@ -45,6 +45,15 @@ vec2 hash2(float n) {
 	return fract(sin(vec2(n,n+1.))*vec2(43758.5453123));
 }
 
+float vmax(vec3 v) {
+    return max(max(v.x, v.y), v.z);
+}
+
+float fBox(vec3 p, vec3 b) {
+    vec3 d = abs(p) - b;
+    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
+
 
 struct Model {
     float d;
@@ -149,6 +158,8 @@ Model mBloom(
 ) {
     Model model = newModel();
     float bound = length(p) - spec.size * 1.;
+    //bound = fBox(p, vec3(spec.size * .4));
+
     if (bound > hitEps * 2.) {
         model.d = bound;
         return model;
@@ -336,6 +347,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
 
     vec2 seed = hash2(uv * 200. + iTime * .01);
+    vec2 seed2 = hash2(uv * 300. + iTime * .02);
 
     // jitter for antialiasing
     p += 2. * (seed - .5) / iResolution.xy;
@@ -347,7 +359,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 camPos = vec3(1,2.,3.5);
     vec3 camTar = vec3(0);
 
-    vec2 jitter = bokeh(seed) * .025;
+    vec2 jitter = bokeh(seed2) * .05;
     vec3 cn = normalize(camTar - camPos);
     vec3 cx = normalize(cross(cn, cross(cn, vec3(0,1,0))));
     vec3 cy = normalize(cross(cn, cx));
