@@ -37,15 +37,18 @@ vec2 hash2( vec2 p ){
 
 float hash(vec2 p) { return fract(1e4 * sin(17.0 * p.x + p.y * 0.1) * (0.1 + abs(sin(p.y * 13.0 + p.x)))); }
 
-
+vec2 hash2(float n) {
+	return fract(sin(vec2(n,n+1.))*vec2(43758.5453123));
+}
 
 
 struct Model {
     float d;
+    vec3 albedo;
 };
 
 Model newModel() {
-    return Model(1e12);
+    return Model(1e12, vec3(.5));
 }
 
 Model opU(Model a, Model b) {
@@ -87,6 +90,8 @@ Model leaf(vec3 p, vec3 cellData, BloomSpec spec) {
     d = max(d, -p.z);
 
     d = max(d, bound);
+
+    //d = length(p) - .4;
 
     model.d = d;
     return model;
@@ -137,6 +142,12 @@ Model mBloom(
     vec3 p,
     BloomSpec spec
 ) {
+    Model model = newModel();
+    float bound = length(p) - spec.size * 1.;
+    if (bound > .002) {
+        model.d = bound;
+        return model;
+    }
     vec3 pp = p;
     vec2 cell = vec2(
         atan(p.x, p.z),
@@ -144,7 +155,6 @@ Model mBloom(
     );
     spec.minmax = spec.straight ? spec.minmax : spec.minmax * PI / 2.;
     GridTransforms gridTransforms = calcGridTransforms(spec.stretch);
-    Model model = newModel();
     //model.d = length(p) - .2; return model;
     for( int m=0; m<3; m++ )
     for( int n=0; n<3; n++ )
@@ -171,7 +181,7 @@ const mat2 cart2hex = mat2(1, 0, i3, 2. * i3);
 const mat2 hex2cart = mat2(1, 0, -.5, .5 * sqrt3);
 
 
-float map(vec3 p) {
+Model map(vec3 p) {
 
     Model model = newModel();
     Model bloom;
@@ -210,7 +220,7 @@ float map(vec3 p) {
         // }
     }
 
-    return model.d;
+    return model;
 }
 
 const int NORMAL_STEPS = 6;
@@ -221,11 +231,42 @@ vec3 calcNormal(vec3 pos){
     vec3 npos;
     for (int i = 0; i < NORMAL_STEPS; i++){
         npos = pos + eps * invert;
-        nor += map(npos) * eps * invert;
+        nor += map(npos).d * eps * invert;
         eps = eps.zxy;
         invert *= -1.;
     }
     return normalize(nor);
+}
+
+
+vec3 ortho(vec3 a){
+    vec3 b=cross(vec3(-1,-1,.5),a);
+    // assume b is nonzero
+    return (b);
+}
+
+// various bits of lighting code "borrowed" from 
+// http://blog.hvidtfeldts.net/index.php/2015/01/path-tracing-3d-fractals/
+vec3 getSampleBiased(vec3  dir, float power, vec2 seed) {
+	dir = normalize(dir);
+	vec3 o1 = normalize(ortho(dir));
+	vec3 o2 = normalize(cross(dir, o1));
+	vec2 r = seed;
+	r.x=r.x*2.*PI;
+	r.y=pow(r.y,1.0/(power+1.0));
+	float oneminus = sqrt(1.0-r.y*r.y);
+	return cos(r.x)*oneminus*o1+sin(r.x)*oneminus*o2+r.y*dir;
+}
+
+vec3 getConeSample(vec3 dir, float extent, vec2 seed) {
+	dir = normalize(dir);
+	vec3 o1 = normalize(ortho(dir));
+	vec3 o2 = normalize(cross(dir, o1));
+	vec2 r =  seed;
+	r.x=r.x*2.*PI;
+	r.y=1.0-r.y*extent;
+	float oneminus = sqrt(1.0-r.y*r.y);
+	return cos(r.x)*oneminus*o1+sin(r.x)*oneminus*o2+r.y*dir;
 }
 
 mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
@@ -236,8 +277,39 @@ mat3 calcLookAtMatrix( in vec3 ro, in vec3 ta, in float roll )
     return mat3( uu, vv, ww );
 }
 
+struct Hit {
+    Model model;
+    vec3 p;
+    float len;
+    bool sky;
+};
+
+Hit march(vec3 origin, vec3 rayDir, float maxDist) {
+    vec3 p;
+    float len = 0.;
+    float dist = 0.;
+    bool sky = true;
+    Model model;
+
+    for (float i = 0.; i < 100.; i++) {
+        len += dist;
+        p = origin + len * rayDir;
+        model = map(p);
+        dist = model.d;
+        if (dist < .001) {
+            sky = false;
+            break;
+        }
+        if (len >= maxDist) {
+            break;
+        }
+    }   
+
+    return Hit(model, p, len, sky);
+}
+
+
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    vec3 col;
     calcPhyllotaxis();
 
     float mTime = mod(iTime / 1., 1.);
@@ -246,36 +318,51 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
 
     vec3 camPos = eye;
-    vec3 rayDirection = normalize(dir);
+    vec3 rayDir = normalize(dir);
 
     // mat3 camMat = calcLookAtMatrix( camPos, vec3(0,.23,-.35), -1.68);
     // rayDirection = normalize( camMat * vec3(p.xy,2.8) );
 
-    vec3 rayPosition = camPos;
-    float rayLength = 0.;
-    float dist = 0.;
-    bool bg = true;
 
-    for (int i = 0; i < 300; i++) {
-        rayLength += dist;
-        rayPosition = camPos + rayDirection * rayLength;
-        dist = map(rayPosition);
+    vec3 origin = camPos;
 
-        if (abs(dist) < .001) {
-            bg = false;
+    Hit hit;
+    vec3 col = vec3(0);
+    vec3 nor, ref;
+
+    vec3 sunPos = vec3(-1);
+    vec3 accum = vec3(1);
+    vec3 sunColor = vec3(1);
+
+    vec2 seed = hash2(p + iTime);
+    
+    for (float bounce = 0.; bounce < 3.; bounce++) {
+        hit = march(origin, rayDir, 10.);
+        
+        if (hit.sky) {
+            col += max(rayDir.y, 0.) * accum;
             break;
         }
         
-        if (rayLength > 50.) {
-            break;
-        }
-    }
+        nor = calcNormal(hit.p);
 
-    col =  vec3(.19,.19,.22);
-    
-    if ( ! bg) {
-        vec3 nor = calcNormal(rayPosition);
-        col = nor * .5 + .5;
+
+        // set camera and direction for dffuse bounce
+        origin = hit.p + nor * .002;
+        rayDir = getSampleBiased(nor, 1., seed);
+
+        // shoot biased bounce ray towards sun,
+        // if it doesnt hit geo, add to result
+        vec3 sunDirection = sunPos - hit.p;
+        vec3 sunSampleDir = getConeSample(sunDirection, .001, seed);
+        float sunLight = dot(nor, sunSampleDir);
+        vec3 shadowOrigin = hit.p + nor * .01;
+        if (sunLight > 0. && march(shadowOrigin, sunSampleDir, 5.).sky) {
+            col += accum * sunLight * sunColor;
+        }
+
+        //seed = hash2(seed.x);
+
     }
 
     col = pow( col, vec3(0.4545) );
