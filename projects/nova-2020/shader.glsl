@@ -62,6 +62,7 @@ Model opU(Model a, Model b) {
 float time;
 
 struct BloomSpec {
+    bool straight;
     float stretch;
     vec2 minmax;
     float size;
@@ -79,7 +80,8 @@ Model leaf(vec3 p, vec3 cellData, BloomSpec spec) {
 
     Model model = newModel();
 
-    float bound = length(p) - spec.size;
+    float bs = spec.straight ? t : mix(.5, 1., smoothstep(.0, .666, t));
+    float bound = length(p) - spec.size * bs;
 
     d = length(p.xy) - mix(.01, .05, t);
     d = max(d, -p.z);
@@ -133,15 +135,14 @@ vec3 calcCellData(
 
 Model mBloom(
     vec3 p,
-    bool straight,
     BloomSpec spec
 ) {
     vec3 pp = p;
     vec2 cell = vec2(
         atan(p.x, p.z),
-        straight ? p.y : atan(p.y, length(p.xz))
+        spec.straight ? p.y : atan(p.y, length(p.xz))
     );
-    spec.minmax = straight ? spec.minmax : spec.minmax * PI / 2.;
+    spec.minmax = spec.straight ? spec.minmax : spec.minmax * PI / 2.;
     GridTransforms gridTransforms = calcGridTransforms(spec.stretch);
     Model model = newModel();
     //model.d = length(p) - .2; return model;
@@ -151,7 +152,7 @@ Model mBloom(
         vec3 cellData = calcCellData(cell, vec2(m,n)-1., gridTransforms, spec);
         p = pp;
         pR(p.xz, -cellData.x);
-        if (straight) {
+        if (spec.straight) {
             p.y -= cellData.y;
         } else {
             pR(p.zy, cellData.y);
@@ -184,9 +185,9 @@ float map(vec3 p) {
         if ( ! show2) continue;
         p.xz = offset - (hash2(cellId) * 2. - 1.) * .25 - pFract;
         if (show) {
-            bloom = mBloom(p, true, BloomSpec(10., vec2(.0, 1.), .2));
+            bloom = mBloom(p, BloomSpec(true, 10., vec2(.0, 1.), .2));
         } else {
-            bloom = mBloom(p, false, BloomSpec(2., vec2(.0, 1.), .5));
+            bloom = mBloom(p, BloomSpec(false, 5., vec2(.0, 1.), .5));
         }
         model = opU(model, bloom);
     }
