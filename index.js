@@ -27,6 +27,7 @@ const main = require('./main.js');
 // multipass
 // laptop
 // head-volume
+// head-volume-glitch
 // h157-phase
 // face-fract
 // bloom
@@ -37,7 +38,8 @@ const main = require('./main.js');
 // log-camera
 // skull
 // tet-zoom
+// nova-2020
 
-const project = LOADPROJECT('nova-2020');
+const project = LOADPROJECT('head-volume-glitch');
 
 main(project);
