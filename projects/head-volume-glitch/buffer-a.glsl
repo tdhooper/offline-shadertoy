@@ -1,3 +1,5 @@
+// framebuffer size: 1300x1300
+
 precision highp float;
 
 uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp

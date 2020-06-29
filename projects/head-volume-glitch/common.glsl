@@ -5,7 +5,9 @@ uniform float iTime;
 
 // #define MIRROR
 
-vec2 texSubdivisions = vec2(6,3);
+//vec2 texSubdivisions = vec2(5,5);
+//vec2 texSubdivisions = vec2(6,3);
+vec2 texSubdivisions = vec2(10,3);
 // voxel resolution is
 // vec3(
 //     iResolution / texSubdivisions,
@@ -13,9 +15,13 @@ vec2 texSubdivisions = vec2(6,3);
 // );
 //
 
-#define SCALE (vec3(4.1/2.,1.73,1.75) * 1.)
+// #define SCALE (vec3(4.1,1.73,1.75) * 1.)
+#define SCALE (vec3(4.1/2.,1.73,1.75) * .6)
+
 // #define OFFSET vec3(.95, .094, -.088)
 #define OFFSET vec3(0, .094, -.088)
+
+
 
 // #define SCALE vec3(1)
 // #define OFFSET vec3(0)
@@ -113,7 +119,7 @@ vec3 spaceToTex(vec3 p, vec2 size) {
 
 
     float f = 1000.;
-     uvc.xy = mix(uvc.xy, round(uvc.xy * vec2(f)) / vec2(f), .5);
+    uvc.xy = mix(uvc.xy, round(uvc.xy * vec2(f)) / vec2(f), .5);
     // pR2(uvc.xy, .015);
 
     return uvc;
