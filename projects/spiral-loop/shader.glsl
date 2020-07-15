@@ -445,7 +445,7 @@ float pattern(vec2 p, float t) {
 
 void addPipe(inout float d, vec3 p, float scale, float tt) {
 
-    float t = clamp(0., 1., tt);
+    float t = clamp(tt, 0., 1.);
 
     // t = sineIn(t);
     // t = pow(t, 2.);
