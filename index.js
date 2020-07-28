@@ -37,7 +37,9 @@ const main = require('./main.js');
 // log-camera
 // skull
 // tet-zoom
+// spiral-loop-refract
+// spiral-loop-dark
 
-const project = LOADPROJECT('spiral-loop');
+const project = LOADPROJECT('spiral-loop-dark');
 
 main(project);
