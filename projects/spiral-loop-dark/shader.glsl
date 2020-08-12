@@ -38,6 +38,9 @@ uniform float guiZipOffset;
 uniform float guiZipSize;
 uniform float guiZipSpeed;
 
+uniform float guiSpectrumOffset;
+uniform float guiSpectrumScale;
+
 uniform sampler2D iChannel0; // images/blue-noise.png filter: linear wrap: repeat
 uniform vec2 iChannel0Size;
 
@@ -63,10 +66,18 @@ float time;
 #define TAU 6.28318530718
 #define PHI 1.618033988749895
 
-//#define LIGHT_MODE
+#define LIGHT_MODE
 
 
 
+// Michel-Lévy interference in linear sRGB, given path difference F expressed in micrometers.
+// Note that for some F this function will return colours with some channels in the negative.
+// This is because some interference colours are outside the linear sRGB gamut, and therefore
+// must be represented with negative values for some channels.
+// Blackle https://www.shadertoy.com/view/wtS3Dy
+vec3 ML(float F) {
+    return mat3(1.5,-.2,-.1,-.6,1.1,.2,-.1,.1,1.5)*(.5-.5*cos(2.*F*vec3(5.2,5.7,7.2)));
+}
 
 
 
@@ -80,7 +91,9 @@ vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
 }
 
 vec3 spectrum(float n) {
-    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+    vec3 a =  max(ML(n / guiSpectrumScale + guiSpectrumOffset), vec3(0));
+    return a;
+    vec3 b = pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
 }
 
 
@@ -355,16 +368,31 @@ float unzip(vec3 p, float t, bool offset) {
     // t = pow(t, 1.25);
     // t = mix(sineIn(t), t, .5);
 
+    t = pow(t, 1.5) * 2.;
+
     t *= size * speed;
 
-    if (sign(p.y) != sign(p.x) && offset) {
-        float radius = mix(.25, .5, guiInnerRatio);
-        float scale = mix(.5, 0., guiInnerRatio);
-        float factor = radius / scale * PI * 2.;
-        t -= (factor - .5);
-    }
+    //if (sign(p.y) != sign(p.x) && offset) {
+    //    float radius = mix(.25, .5, guiInnerRatio);
+    //    float scale = mix(.5, 0., guiInnerRatio);
+    //    float factor = radius / scale * PI * 2.;
+    //    t -= (factor - .5);
+    //}
 
-    return range(size, 0., abs(p.x) + size - t);
+    float radius = mix(.25, .5, guiInnerRatio);
+    float lead = guiLead;
+
+    //(closest.x / lead) * radius * PI * 2.;
+
+    float off = (radius * PI * 2.) / lead * 2.;
+    //off = 8.;
+    float a = range(size, 0., abs(p.x - off) + size - t);
+    float c = range(size, 0., abs(p.x) + size - t);
+    //float b = range(size, 0., abs(p.x + off) + size - t);
+
+    return max(a, c);
+    //return c;
+    //return max(c, max(a, b));
 }
 
 
@@ -415,19 +443,23 @@ void addPipe(inout float d, vec3 p, float scale, float tt) {
 
     float t = clamp(tt, 0., 1.);
 
+    t -= .1;
+
     // t = sineIn(t);
     // t = pow(t, 2.);
     // t = pow(smoothstep(0., 1., t), 2.);
     float boundry = 1.;
     float part;
     float separate = (
-        rangec(0., boundry * .01, t) * .3 +
-        rangec(boundry * .01, boundry, t) * .7
+        rangec(0., boundry * .01, t) * .2 +
+        rangec(boundry * .01, boundry, t) * .8
     );
+    //separate = .5;
     // separate = pow(separate, .5);
-    float round = rangec(.0, 1., t);
+    //float round = rangec(.0, 1., t);
+    float round = rangec(.5, 1., t + .1);
     // separate = rangec(0., boundry, t);
-    // round = 0.;
+    //round = 0.;
 
     float side= 0.;
     part = fBox(side, p.yz, vec2(mix(guiLead * 2., .5, separate), .5));
@@ -435,6 +467,7 @@ void addPipe(inout float d, vec3 p, float scale, float tt) {
     part /= scale;
 
     d = mix(d, part, smoothstep(.0, .01, t));
+    //d = mix(d, part, step(0., tt));
 }
 
 void addColor(inout vec3 color, vec3 p, float tt, float tnext) {
@@ -450,7 +483,7 @@ void addColor(inout vec3 color, vec3 p, float tt, float tnext) {
 float sss;
 
 
-const int HELIX_ITERATIONS = 3;
+const int HELIX_ITERATIONS = 2;
 
 Model mapHelix(vec3 p) {
 
@@ -505,6 +538,8 @@ Model mapHelix(vec3 p) {
 
     d = 1e12;
 
+    float flipColor = mod(floor(time), 2.);
+
     float t = mod(time, 1.);
 
     float s = mix(.5, 0., innerRatio);
@@ -534,20 +569,33 @@ Model mapHelix(vec3 p) {
     // return Model(d, vec3(.8), 1);
 
     float offset = guiZipOffset / lead;
-    vec3 color = colA;
+    vec3 color = vec3(0);
 
-    float step = -1.;
+    float sstep = -1.;
     float reverse = 1.;
     float invert = 1.;
 
+
+    vec3 pUv;
+
     for (int i = 0; i <= HELIX_ITERATIONS; i++) {
+        pUv = p + vec3(lead / 2., 0, 0);
+        pModHelix(pUv, lead, innerRatio);
+
         scaleB *= pModHelix(p, lead, innerRatio);
         p.x *= -1.;
-        t1 = unzip(p + vec3(offset,0,0) * invert, anim(t, step), true);
+        //p.z *= -1.;
+        t1 = unzip(pUv, anim(t, sstep), true);
+        //t1 = unzip(p + vec3(offset,0,0) * invert, anim(t, sstep), false);
         // t2 = unzip((p * 13.7 + vec3(offset,0,0)), anim(t, 0.), false);
         addPipe(d, p, scaleB, t1);
-        addColor(color, p, t1, t1);
-        step += 1.;
+        //addColor(color, p, t1, t1);
+        color = mix(color, vec3(mod(sstep + 10. + flipColor, 2.)), clamp(t1 * 10., 0., 1.));
+        //if (i == 2) {
+            //color = mix(color, vec3(1.), clamp(abs(pUv.x) / 10., 0., 1.));
+        //    color = mix(color, vec3(1.), clamp(t1 * 10., 0., 1.));
+        //}
+        sstep += 1.;
         invert *= -1.;
     }
 
@@ -575,11 +623,8 @@ Model mapHelix(vec3 p) {
 
 
 
-vec2 map(vec3 p) {
-    float d = length(p) - .5;
-    d = mapHelix(p).dist;
-    
-    return vec2(d, 1.);
+Model map(vec3 p) {
+    return mapHelix(p);
 }
 
 
@@ -650,266 +695,42 @@ vec3 normal(vec3 p) {
     for (int i = 0 ; i < 4 ; i++) {
         vec4 s = vec4(p, 0);
         s[i] += 0.001;
-        n[i] = map(s.xyz).x;
+        n[i] = map(s.xyz).dist;
     }
     return normalize(n.xyz-n.w);
 }
 
 struct Hit {
-    vec2 res;
+    Model model;
     vec3 p;
     float len;
+    bool isBg;
 };
 
 Hit march(vec3 origin, vec3 rayDir, float maxDist) {
     vec3 p;
     float len = 0.;
     float dist = 0.;
-    vec2 res = vec2(0.);
+    bool isBg = false;
+    Model model;
 
     for (float i = 0.; i < 200.; i++) {
         len += dist * .9;
         p = origin + len * rayDir;
-        res = map(p);
-        dist = res.x;
+        model = map(p);
+        dist = model.dist;
         if (dist < .0001) {
             break;
         }
         if (len >= maxDist) {
-            res.y = 0.;
+            isBg = true;
             len = maxDist;
             break;
         }
     }   
 
-    return Hit(res, p, len);
+    return Hit(model, p, len, isBg);
 }
-
-
-const int c_numBounces = 3;
-const float c_rayPosNormalNudge = .01;
-const float c_superFar = 10000.;
-const float c_pi = 3.14159265359;
-const float c_twopi = 2. * c_pi;
-
-
-struct SMaterialInfo
-{
-    // Note: diffuse chance is 1.0f - (specularChance+refractionChance)
-    vec3  albedo;              // the color used for diffuse lighting
-    vec3  emissive;            // how much the surface glows
-    float specularChance;      // percentage chance of doing a specular reflection
-    float specularRoughness;   // how rough the specular reflections are
-    vec3  specularColor;       // the color tint of specular reflections
-    float IOR;                 // index of refraction. used by fresnel and refraction.
-    float refractionChance;    // percent chance of doing a refractive transmission
-    float refractionRoughness; // how rough the refractive transmissions are
-    vec3  refractionColor;     // absorption for beer's law    
-};
-
-SMaterialInfo GetZeroedMaterial()
-{
-    SMaterialInfo ret;
-    ret.albedo = vec3(0);
-    ret.emissive = vec3(0);
-    ret.specularChance = 0.;
-    ret.specularRoughness = 0.;
-    ret.specularColor = vec3(0);
-    ret.IOR = 1.;
-    ret.refractionChance = 0.;
-    ret.refractionRoughness = 0.;
-    ret.refractionColor = vec3(0);
-    return ret;
-}
-
-struct SRayHitInfo
-{
-    bool fromInside;
-    float dist;
-    vec3 normal;
-    SMaterialInfo material;
-};
-
-void TestSceneTrace(in vec3 rayPos, in vec3 rayDir, inout SRayHitInfo hitInfo)
-{
-    hitInfo.material = GetZeroedMaterial();     
-    Hit hit = march(rayPos, rayDir, 12.);
-    if (hit.res.y != 0.) {
-        hitInfo.material.albedo = vec3(.3);
-        hitInfo.material.specularChance = 0.;
-        hitInfo.dist = hit.len;
-        hitInfo.normal = normal(hit.p);
-    }
-}
-
-float hash(const in vec3 p) {
-    return fract(sin(dot(p,vec3(127.1,311.7,758.5453123)))*43758.5453123);
-}
-
-float RandomFloat01(inout float state)
-{
-    state = hash(vec3(state));
-    return state;
-}
-
-vec3 RandomUnitVector(inout float state)
-{
-    float z = RandomFloat01(state) * 2. - 1.;
-    float a = RandomFloat01(state) * c_twopi;
-    float r = sqrt(1. - z * z);
-    float x = r * cos(a);
-    float y = r * sin(a);
-    return vec3(x, y, z);
-}
-
-float FresnelReflectAmount(float n1, float n2, vec3 normal, vec3 incident, float f0, float f90)
-{
-        // Schlick aproximation
-        float r0 = (n1-n2) / (n1+n2);
-        r0 *= r0;
-        float cosX = -dot(normal, incident);
-        if (n1 > n2)
-        {
-            float n = n1/n2;
-            float sinT2 = n*n*(1.0-cosX*cosX);
-            // Total internal reflection
-            if (sinT2 > 1.0)
-                return f90;
-            cosX = sqrt(1.0-sinT2);
-        }
-        float x = 1.0-cosX;
-        float ret = r0+(1.0-r0)*x*x*x*x*x;
-
-        // adjust reflect multiplier for object reflectivity
-        return mix(f0, f90, ret);
-}
-
-vec3 GetColorForRay(in vec3 startRayPos, in vec3 startRayDir, inout float rngState)
-{
-    // initialize
-    vec3 ret = vec3(0);
-    vec3 throughput = vec3(1);
-    vec3 rayPos = startRayPos;
-    vec3 rayDir = startRayDir;
-    
-    for (int bounceIndex = 0; bounceIndex <= c_numBounces; ++bounceIndex)
-    {
-        // shoot a ray out into the world
-        SRayHitInfo hitInfo;
-        hitInfo.material = GetZeroedMaterial();
-        hitInfo.dist = c_superFar;
-        hitInfo.fromInside = false;
-        TestSceneTrace(rayPos, rayDir, hitInfo);
-        
-        // if the ray missed, we are done
-        if (hitInfo.dist == c_superFar)
-        {
-            ret += max(rayDir.y, 0.) * vec3(.3);
-            //ret += SRGBToLinear(texture(iChannel1, rayDir).rgb) * c_skyboxBrightnessMultiplier * throughput;
-            break;
-        }
-       
-        // get the pre-fresnel chances
-        float specularChance = hitInfo.material.specularChance;
-        float refractionChance = hitInfo.material.refractionChance;
-        //float diffuseChance = max(0.0f, 1.0f - (refractionChance + specularChance));
-        
-        // take fresnel into account for specularChance and adjust other chances.
-        // specular takes priority.
-        // chanceMultiplier makes sure we keep diffuse / refraction ratio the same.
-        float rayProbability = 1.;
-        if (specularChance > 0.)
-        {
-        	specularChance = FresnelReflectAmount(
-            	hitInfo.fromInside ? hitInfo.material.IOR : 1.,
-            	!hitInfo.fromInside ? hitInfo.material.IOR : 1.,
-            	rayDir, hitInfo.normal, hitInfo.material.specularChance, 1.);
-            
-            float chanceMultiplier = (1. - specularChance) / (1. - hitInfo.material.specularChance);
-            refractionChance *= chanceMultiplier;
-            //diffuseChance *= chanceMultiplier;
-        }
-        
-        // calculate whether we are going to do a diffuse, specular, or refractive ray
-        float doSpecular = 0.;
-        float doRefraction = 0.;
-        float raySelectRoll = RandomFloat01(rngState);
-		if (specularChance > 0. && raySelectRoll < specularChance)
-        {
-            doSpecular = 1.;
-            rayProbability = specularChance;
-        }
-        else if (refractionChance > 0. && raySelectRoll < specularChance + refractionChance)
-        {
-            doRefraction = 1.;
-            rayProbability = refractionChance;
-        }
-        else
-        {
-            rayProbability = 1. - (specularChance + refractionChance);
-        }
-        
-        // numerical problems can cause rayProbability to become small enough to cause a divide by zero.
-		rayProbability = max(rayProbability, .001);
-        
-        // update the ray position
-        if (doRefraction == 1.)
-        {
-            rayPos = (rayPos + rayDir * hitInfo.dist) - hitInfo.normal * c_rayPosNormalNudge;
-        }
-        else
-        {
-            rayPos = (rayPos + rayDir * hitInfo.dist) + hitInfo.normal * c_rayPosNormalNudge;
-        }
-         
-        // Calculate a new ray direction.
-        // Diffuse uses a normal oriented cosine weighted hemisphere sample.
-        // Perfectly smooth specular uses the reflection ray.
-        // Rough (glossy) specular lerps from the smooth specular to the rough diffuse by the material roughness squared
-        // Squaring the roughness is just a convention to make roughness feel more linear perceptually.
-        vec3 diffuseRayDir = normalize(hitInfo.normal + RandomUnitVector(rngState));
-        
-        vec3 specularRayDir = reflect(rayDir, hitInfo.normal);
-        specularRayDir = normalize(mix(specularRayDir, diffuseRayDir, hitInfo.material.specularRoughness*hitInfo.material.specularRoughness));
-
-        vec3 refractionRayDir = refract(rayDir, hitInfo.normal, hitInfo.fromInside ? hitInfo.material.IOR : 1. / hitInfo.material.IOR);
-        refractionRayDir = normalize(mix(refractionRayDir, normalize(-hitInfo.normal + RandomUnitVector(rngState)), hitInfo.material.refractionRoughness*hitInfo.material.refractionRoughness));
-                
-        rayDir = mix(diffuseRayDir, specularRayDir, doSpecular);
-        rayDir = mix(rayDir, refractionRayDir, doRefraction);
-        
-		// add in emissive lighting
-        ret += hitInfo.material.emissive * throughput;
-        
-        // update the colorMultiplier. refraction doesn't alter the color until we hit the next thing, so we can do light absorption over distance.
-        if (doRefraction == 0.)
-        	throughput *= mix(hitInfo.material.albedo, hitInfo.material.specularColor, doSpecular);
-        
-        // since we chose randomly between diffuse, specular, refract,
-        // we need to account for the times we didn't do one or the other.
-        throughput /= rayProbability;
-        
-        // Russian Roulette
-        // As the throughput gets smaller, the ray is more likely to get terminated early.
-        // Survivors have their value boosted to make up for fewer samples being in the average.
-        {
-        	float p = max(throughput.r, max(throughput.g, throughput.b));
-        	if (RandomFloat01(rngState) > p)
-            	break;
-
-        	// Add the energy we 'lose' by randomly terminating paths
-        	throughput *= 1. / p;            
-        }
-    }
- 
-    // return pixel color
-    return ret;
-}
-
-
-
-
-
 
 
 
@@ -945,7 +766,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     time = iTime / 2.;
     //time= 0.;
-    time = fract(time + .4);
+    //time = fract(time + .4);
     
     #ifdef LIGHT_MODE
         envOrientation = sphericalMatrix(((vec2(81.5, 119) / vec2(187)) * 2. - 1.) * 2.);
@@ -956,7 +777,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;
 
     Hit hit, firstHit;
-    vec2 res;
+    Model model;
     vec3 p, rayDir, origin, ref, raf, nor;
     float ior, offset, extinctionDist, maxDist, firstLen, bounceCount, wavelength;
     
@@ -964,61 +785,74 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
     vec3 bgCol = vec3(.22);
 
-    maxDist = 12.; 
+    maxDist = 15.; 
     origin = eye;
     rayDir = normalize(dir);
 
     vec3 col = vec3(0);
-    vec3 accum = vec3(1);
-    
-    float rngState = hash(vec3(uv, iTime));
 
-    const float passes = 10.;
-    for (float i = 0.; i < passes; i++) {
-        col += GetColorForRay(origin, rayDir, rngState);
-        rngState = RandomFloat01(rngState);
+    hit = march(origin, rayDir, maxDist);
+    model = hit.model;
+    p = hit.p;
+    
+    if ( ! hit.isBg) {
+
+        vec3 pos = p;
+        vec3 rd = rayDir;
+        vec3 nor = normal(p);
+        vec3 lin = vec3(0);
+        vec3 ref = reflect( rd, nor );
+        float ks = 1.0;
+        float occ = 1.;
+        col = hit.model.albedo;
+
+        wavelength = dot(rd, nor);
+        vec3 speccol = spectrum(wavelength*1.5 + 1.5);
+        //speccol = vec3(1);
+
+        // sun
+        {
+            vec3  lig = normalize( vec3(-0.5, 0.4, -0.6));
+            vec3  hal = normalize( lig-rd );
+            float dif = clamp( dot( nor, lig ), 0.0, 1.0 );
+        	      //dif *= calcSoftshadow( pos, lig, 0.02, 2.5 );
+			float spe = pow( clamp( dot( nor, hal ), 0.0, 1.0 ),6.0);
+                  spe *= dif;
+                  spe *= 0.04+0.96*pow(clamp(1.0-dot(hal,lig),0.0,1.0),5.0);
+            lin += col*2.20*dif*vec3(1)*speccol;
+            lin +=     5.00*spe*vec3(1)*ks*speccol;
+        }
+        // sky
+        {
+            float dif = sqrt(clamp( 0.5+0.5*nor.y, 0.0, 1.0 ));
+                  dif *= occ;
+            float spe = mix(ref.y * .5 + .5, smoothstep( -0.2, 0.2, ref.y ), .3);
+                  spe *= dif;
+                  //spe *= calcSoftshadow( pos, ref, 0.02, 2.5 );
+                  spe *= 0.04+0.96*pow(clamp(1.0+dot(nor,rd),0.0,1.0), 5.0 );
+            lin += col*0.60*dif*vec3(.2);
+            lin +=     2.00*spe*vec3(.2)*ks;
+        }
+        // back
+        {
+        	//float dif = clamp( dot( nor, normalize(vec3(0.5,0.0,0.6))), 0.0, 1.0 )*clamp( 1.0-pos.y,0.0,1.0);
+            //      dif *= occ;
+        	//lin += col*0.55*dif*vec3(0.25,0.25,0.25);
+        }
+
+        col = lin;
+        //col += light(p, nor);
+        //col += env(p, nor);
     }
 
-    col /= passes;
+    
 
-    // for (float bounce = 0.; bounce < MAX_BOUNCE; bounce++)
-    // {
+    float t = hit.len;
+    col = mix( col, vec3(0), 1.0-exp( -0.00001*t*t*t*t*t ) );
 
-    //     if (bounce == 0.) {
-    //         hit = march(origin, rayDir, maxDist);
-    //     } else {
-    //         hit = march(origin, rayDir, maxDist / 2.);
-    //     }
-        
-    //     res = hit.res;
-    //     p = hit.p;
-        
-    //     // hit background
-    //     if (res.y == 0. && bounce == 0.) {
-    //         break;
-    //     }
+    col = pow( col, vec3(0.4545) );
+    //col = tonemap2(col);
 
-    //     if (res.y == 0.) {
-    //         col += max(normalize(p).y, 0.) * accum * vec3(0,0,1);
-    //         col += light(p, rayDir) * accum * vec3(1,0,0);
-    //     }
-
-    //     accum *= vec3(.3);
-
-    //     nor = normal(p);
-    //     ref = reflect(rayDir, nor);   
-
-    //     rayDir = ref;
-    //     offset = .01 / abs(dot(rayDir, nor));
-    //     origin = p + offset * rayDir;
-    // }
-
-    //col /= MAX_BOUNCE;
-
-    col = pow(col, vec3(1.25)) * 2.5;
-    col = tonemap2(col);
-
-    //fragColor = vec4(col, range(4., 12., firstLen));
     fragColor = vec4(col, 1);
 }
 
