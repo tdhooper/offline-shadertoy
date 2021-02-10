@@ -55,11 +55,6 @@ vec3 pRz(vec3 p, float a) {
     pR(p.xy, a); return p;
 }
 
-float range(float vmin, float vmax, float value) {
-    return clamp((value - vmin) / (vmax - vmin), 0., 1.);
-}
-
-
 
 // sdUberprim with precomputed constants
 float sdUnterprim(vec3 p, vec4 s, vec3 r, vec2 ba, float sz2) {

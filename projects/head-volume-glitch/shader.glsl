@@ -48,12 +48,11 @@ void pR(inout vec2 p, float a) {
 
 float mHead(vec3 p) {
     vec3 pa = p;
-    float bound = fBox(p, vec3(.45,.65,.6));
     #ifdef MIRROR
         p.x = -abs(p.x);
     #endif
     p += OFFSET / SCALE;
-    bound = fBox(p, 1./SCALE);
+    float bound = fBox(p, 1./SCALE);
     //return bound;
     if (bound > .01) {
         // return bound;
@@ -68,11 +67,8 @@ float mHead(vec3 p) {
 }
 
 float map(vec3 p) {
-    // return length(p) - .5;
-    p.y -= .15;
-    //pR(p.yz, .2);
-    // pR(p.xz, iTime/2. + .4);
-    // pR(p.yz, iTime/2. + .4);
+    //pR(p.xz, iTime);
+    p = -p;
     float d = mHead(p);
    // d = mix(d, fBox(p, vec3(.7)), sin(iTime) * .5+ .5);
     return d;

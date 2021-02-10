@@ -15,11 +15,8 @@ vec2 texSubdivisions = vec2(10,3);
 // );
 //
 
-// #define SCALE (vec3(4.1,1.73,1.75) * 1.)
-#define SCALE (vec3(4.1/2.,1.73,1.75) * .6)
-
-// #define OFFSET vec3(.95, .094, -.088)
-#define OFFSET vec3(0, .094, -.088)
+#define SCALE (vec3(3.5,1.73,1.75) * .5)
+#define OFFSET vec3(0, 0, .05)
 
 
 
@@ -70,6 +67,45 @@ void pR2(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+
+vec2 gA(vec2 coord) {
+    return coord * mix(1., tan(coord.y*10./coord.x*5.-iTime * 3.), .04 / 100.);
+}
+
+vec2 gB(vec2 coord) {
+    return coord * mix(1., tan(coord.x*10./coord.y*5.-iTime * 3.), .02 / 100.);
+}
+
+vec2 gC(vec2 coord) {
+    return coord * mix(1., tan(coord.y/10.-iTime * 1.), .002);
+}
+
+vec2 gD(vec2 coord) {
+    return coord * mix(1., sin(coord.x/coord.y*50.-iTime * 3.), .001);
+}
+
+void gate(inout float t) {
+    t = smoothstep(.4, .5, t);
+}
+
+vec2 glitchCoords(vec2 coord) {
+   // return coord * mix(1., tan(coord.y*10./coord.x*5.+iTime * 3.), .04 / 100.);
+
+
+    float tm = iTime * 3.;
+    tm = 2.;
+    float t1 = sin(tm) * .5 + .5;
+    float t2 = cos(tm * 1.5) * .5 + .5;
+    float t3 = sin(tm * 2.) * .5 + .5;
+    float t4 = cos(tm * 2.5) * .5 + .5;
+    gate(t1); gate(t2); gate(t4);
+    coord = mix(coord, gA(coord), t1);
+    coord = mix(coord, gB(coord), t2);
+    coord = mix(coord, gC(coord), t3);
+    coord = mix(coord, gD(coord), t4);
+    return coord;
+}
+
 // Transform xyz coordinate in range -1,-1,-1 to 1,1,1
 // to texture uv and channel
 vec3 spaceToTex(vec3 p, vec2 size) {
@@ -107,13 +143,7 @@ vec3 spaceToTex(vec3 p, vec2 size) {
         mod(floor(i / sub.x), sub.y)
     ) * subSize;
 
-
-    //coord *= mix(1., tan(coord.y*10./coord.x*5.), .04 / 100.);
-    coord *= mix(1., tan(coord.x*10./coord.y*5.), .02 / 100.);
-    //coord *= mix(1., tan(coord.y/10.), .002);
-    coord *= mix(1., sin(coord.x/coord.y*50.), .001);
-
-
+    coord = glitchCoords(coord);
 
     float c = floor(i / (sub.x * sub.y));
     vec3 uvc = vec3(coord / size, c);
