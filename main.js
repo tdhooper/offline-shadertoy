@@ -26,6 +26,7 @@ const createCamera = require('./lib/camera');
 const StateStore = require('./lib/state-store');
 const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
+const AccumulateControl = require('./lib/accumulate');
 const createControls = require('./lib/uniform-controls');
 const buildRenderNodes = require('./lib/multipass');
 const textureUniforms = require('./lib/textures');
@@ -187,8 +188,8 @@ module.exports = (project) => {
       function repeatTile(state) {
         if (node.tile) {
           for(let i = 0; i < node.tile * node.tile; i++) {
-            let tileState = Object.assign({tileIndex: i}, state);
-            nodeCommand(tileState)
+            Object.assign(state, {tileIndex: i});
+            nodeCommand(state);
             gl.finish();
           }
         } else {
@@ -196,14 +197,14 @@ module.exports = (project) => {
         }  
       } 
 
-      if (node.drawCount) {
+      if (node.drawCount && ! state.isAccumulationDraw) {
         for(let i = 0; i < node.drawCount; i++) {
           attachDependencies();
           swapPingPong();
           clearTarget();
           setTarget();
-          let accState = Object.assign({drawIndex: i}, state);
-          repeatTile(accState)
+          Object.assign(state, {drawIndex: i});
+          repeatTile(state);
           gl.finish();
         }
       } else {
@@ -322,7 +323,14 @@ module.exports = (project) => {
   const mouse = createMouse(canvas);
 
   const timer = new Timer();
-  const scrubber = createScrubber(timer);
+
+  const controlsContainer = document.createElement('div');
+  controlsContainer.classList.add('controls');
+  document.body.appendChild(controlsContainer);
+
+  const scrubber = createScrubber(controlsContainer, timer);
+  const accumulateControl = new AccumulateControl(controlsContainer);
+
   let screenQuad = undefined;
 
   const toState = () => {
@@ -332,6 +340,7 @@ module.exports = (project) => {
       cameraMatrix: camera.view(),
       cameraPosition: camera.position,
       timer: timer.serialize(),
+      accumulateControl: accumulateControl.serialize(),
       mouse,
       screenQuad,
       r: [canvas.width, canvas.height],
@@ -361,6 +370,9 @@ module.exports = (project) => {
     if (state.controls) {
       controls.fromState(state.controls);
     }
+    if (state.accumulateControl) {
+      accumulateControl.fromObject(state.accumulateControl);
+    }
     debugPlane = state.debugPlane;
   };
 
@@ -378,12 +390,17 @@ module.exports = (project) => {
     stats.begin();
     camera.tick();
     scrubber.update();
-    if (stateStore.update() || force) {
+    let stateChanged = stateStore.update();
+
+    if (stateChanged || force || accumulateControl.accumulate) {
       regl.clear({
         color: [0, 0, 0, 1],
         depth: 1,
       });
-      setup(stateStore.state, (context) => {
+
+      let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
+
+      setup(state, (context) => {
         renderNodes.forEach((node) => {
           if ( ! node.buffer) return;
           let width = context.viewportWidth;
@@ -399,11 +416,11 @@ module.exports = (project) => {
           }
         });
         if (projectDraw) {
-          projectDraw(stateStore.state, context);
+          projectDraw(state, context);
         } else {
-          drawRaymarch(stateStore.state, () => {
+          drawRaymarch(state, () => {
             renderNodes.forEach((node) => {
-              node.draw(stateStore.state);
+              node.draw(state);
             });
           });
         }
