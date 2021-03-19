@@ -390,7 +390,7 @@ module.exports = (project) => {
     stats.begin();
     camera.tick();
     scrubber.update();
-    let stateChanged = stateStore.update();
+    let stateChanged = stateStore.update(['accumulateControl']);
 
     if (stateChanged || force || accumulateControl.accumulate) {
       regl.clear({
