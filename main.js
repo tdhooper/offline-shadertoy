@@ -84,6 +84,7 @@ module.exports = (project) => {
         return props.resolution || resolution;
       },
       drawIndex: (context, props) => props.drawIndex,
+      iFrame: regl.prop('frame'),
     };
     node.dependencies.reduce((acc, dep) => {
       acc[dep.uniform] = regl.prop(dep.uniform);
@@ -205,6 +206,7 @@ module.exports = (project) => {
           setTarget();
           Object.assign(state, {drawIndex: i});
           repeatTile(state);
+          state.frame += 1;
           gl.finish();
         }
       } else {
@@ -386,6 +388,8 @@ module.exports = (project) => {
 
   const stateStore = new StateStore(toState, fromState, defaultState);
 
+  let frame = 0;
+
   const draw = (force) => {
     stats.begin();
     camera.tick();
@@ -399,6 +403,7 @@ module.exports = (project) => {
       });
 
       let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
+      state.frame = frame++;
 
       setup(state, (context) => {
         renderNodes.forEach((node) => {
@@ -467,12 +472,12 @@ module.exports = (project) => {
 
   // Default config used by the UI
   let captureConfig = {
-    fps: 45,
-    seconds: 1, // (duration)
-    width: 800*2,
-    height: 800*2,
+    fps: 20,
+    seconds: 3, // (duration)
+    width: 640,
+    height: 640,
     // quads: true,
-    prefix: 'bloomskull-',
+    prefix: 'rtexample-',
   };
 
   if (defaultState && defaultState.capture) {

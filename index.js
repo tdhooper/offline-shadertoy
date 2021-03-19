@@ -41,6 +41,6 @@ const main = require('./main.js');
 // nova-2020
 // accumulation
 
-const project = LOADPROJECT('accumulation');
+const project = LOADPROJECT('raytracing');
 
 main(project);
