@@ -39,7 +39,8 @@ const main = require('./main.js');
 // skull
 // tet-zoom
 // nova-2020
+// accumulation
 
-const project = LOADPROJECT('head-volume-glitch');
+const project = LOADPROJECT('accumulation');
 
 main(project);

@@ -82,6 +82,7 @@ module.exports = (project) => {
         const resolution = [context.framebufferWidth, context.framebufferHeight];
         return props.resolution || resolution;
       },
+      drawIndex: (context, props) => props.drawIndex,
     };
     node.dependencies.reduce((acc, dep) => {
       acc[dep.uniform] = regl.prop(dep.uniform);
@@ -119,61 +120,99 @@ module.exports = (project) => {
     });
 
     node.draw = (state) => {
+
+      // Don't mutate the original state
+      state = Object.assign({}, state);
+
       if (node.firstPassOnly && ! firstPass) {
         return;
       }
-      node.dependencies.forEach((dep) => {
-        const texture = dep.node.buffer.color[0]._texture;
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(texture.target, texture.texture);
-        if (dep.filter === 'nearest') {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-        } else if (dep.filter === 'mipmap') {
-          gl.generateMipmap(gl.TEXTURE_2D);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        } else {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-        }
-        if (dep.wrap === 'repeat') {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-        } else if (dep.wrap === 'mirror') {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-        } else {
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-        }
-        const s = {};
-        s[dep.uniform] = dep.node.buffer;
-        state = Object.assign(s, state);
-      });
-      if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
-        const lastBuffer = node.buffer;
-        node.buffer = node.lastBuffer;
-        node.lastBuffer = lastBuffer;
+
+      function attachDependencies() {
+        node.dependencies.forEach((dep) => {
+          const texture = dep.node.buffer.color[0]._texture;
+          gl.activeTexture(gl.TEXTURE0);
+          gl.bindTexture(texture.target, texture.texture);
+          if (dep.filter === 'nearest') {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+          } else if (dep.filter === 'mipmap') {
+            gl.generateMipmap(gl.TEXTURE_2D);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          } else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          }
+          if (dep.wrap === 'repeat') {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
+          } else if (dep.wrap === 'mirror') {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
+          } else {
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          }
+          const s = {};
+          s[dep.uniform] = dep.node.buffer;
+          Object.assign(state, s);
+        });
       }
-      regl.clear({
-        color: [0, 0, 0, 1],
-        depth: 1,
-        framebuffer: node.buffer,
-      });
-      if (i !== renderNodes.length - 1) {
-        state = Object.assign({
+
+      function swapPingPong() {
+        if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
+          const lastBuffer = node.buffer;
+          node.buffer = node.lastBuffer;
+          node.lastBuffer = lastBuffer;
+        }
+      };
+
+      function clearTarget() {
+        regl.clear({
+          color: [0, 0, 0, 1],
+          depth: 1,
           framebuffer: node.buffer,
-        }, state);
+        });
       }
-      if (node.tile) {
-        for(let i = 0; i < node.tile * node.tile; i++) {
-          nodeCommand(Object.assign({tileIndex: i}, state));
+      
+      function setTarget() {
+        if (i !== renderNodes.length - 1) {
+          Object.assign(state, {
+            framebuffer: node.buffer,
+          });
+        }
+      }
+
+      function repeatTile(state) {
+        if (node.tile) {
+          for(let i = 0; i < node.tile * node.tile; i++) {
+            let tileState = Object.assign({tileIndex: i}, state);
+            nodeCommand(tileState)
+            gl.finish();
+          }
+        } else {
+          nodeCommand(state)
+        }  
+      } 
+
+      if (node.drawCount) {
+        for(let i = 0; i < node.drawCount; i++) {
+          attachDependencies();
+          swapPingPong();
+          clearTarget();
+          setTarget();
+          let accState = Object.assign({drawIndex: i}, state);
+          repeatTile(accState)
           gl.finish();
         }
       } else {
-        nodeCommand(state);
-      }
+        attachDependencies();
+        swapPingPong();
+        clearTarget();
+        setTarget();
+        repeatTile(state)
+      }  
     };
   });
 
