@@ -55,7 +55,7 @@ float mHead(vec3 p) {
     float bound = fBox(p, 1./SCALE);
     //return bound;
     if (bound > .01) {
-        // return bound;
+      //   return bound;
     }
     //p.x = -abs(p.x);
     //p += OFFSET / SCALE;
@@ -67,7 +67,7 @@ float mHead(vec3 p) {
 }
 
 float map(vec3 p) {
-    //pR(p.xz, iTime);
+    //pR(p.xz, -iTime/2.);
     p = -p;
     float d = mHead(p);
    // d = mix(d, fBox(p, vec3(.7)), sin(iTime) * .5+ .5);
@@ -189,10 +189,10 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
   //  col = vec3(spaceToTex(vec3(-1,-1,-.7)), 0.);
 
-    //vec2 uv = fragCoord.xy / iResolution.xy;
+    vec2 uv = fragCoord.xy / iResolution.xy;
     //vec3 ps = texToSpace(uv)[3].xyz;
     //col = abs(ps);
-    //col = vec3(texture2D(iChannel0, uv).a);
+    col = texture2D(iChannel0, uv).rgb;
     
     fragColor = vec4(col,1.0);
 }

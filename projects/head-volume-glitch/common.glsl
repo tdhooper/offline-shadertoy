@@ -15,7 +15,7 @@ vec2 texSubdivisions = vec2(10,3);
 // );
 //
 
-#define SCALE (vec3(3.5,1.73,1.75) * .5)
+#define SCALE (vec3(3.5,1.73,1.75) * .2)
 #define OFFSET vec3(0, 0, .05)
 
 
@@ -77,7 +77,7 @@ vec2 gB(vec2 coord) {
 }
 
 vec2 gC(vec2 coord) {
-    return coord * mix(1., tan(coord.y/10.-iTime * 1.), .002);
+    return coord * mix(1., tan(coord.y / mix(2., 15., sin(floor(sin(0.) * 5.)) *.5 + .5) + iTime * 3.), .002);
 }
 
 vec2 gD(vec2 coord) {
@@ -85,20 +85,21 @@ vec2 gD(vec2 coord) {
 }
 
 void gate(inout float t) {
+    //t = step(t, .5);
     t = smoothstep(.4, .5, t);
 }
 
 vec2 glitchCoords(vec2 coord) {
-   // return coord * mix(1., tan(coord.y*10./coord.x*5.+iTime * 3.), .04 / 100.);
+   // return  gD(gC(coord));
 
 
     float tm = iTime * 3.;
-    tm = 2.;
+    //tm = 2.;
     float t1 = sin(tm) * .5 + .5;
     float t2 = cos(tm * 1.5) * .5 + .5;
     float t3 = sin(tm * 2.) * .5 + .5;
     float t4 = cos(tm * 2.5) * .5 + .5;
-    gate(t1); gate(t2); gate(t4);
+    gate(t1); gate(t2); gate(t3), gate(t4);
     coord = mix(coord, gA(coord), t1);
     coord = mix(coord, gB(coord), t2);
     coord = mix(coord, gC(coord), t3);

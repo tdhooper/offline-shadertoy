@@ -15,8 +15,20 @@ void pR(inout vec2 p, float a) {
 float map(vec3 p) {
     p -= OFFSET;
     p /= SCALE;
-    pR(p.xz, iTime);
-    return sdSkull(p);
+    return length(p) - .4;
+    //pR(p.xy, .7);
+    //pR(p.yz, -.5);
+    //pR(p.xz, iTime*2.);
+    pR(p.yz, .2);
+    float d = sdSkull(p);
+
+//    d = max(d, -(d + .02));
+
+    p.x = (fract((p.x*2.) + .5)-.5)/2.;
+    p.x *= 3.;
+    d = min(d, length(p) - .2);
+
+    return d;
     // return fBox(p, vec3(.5));
     // return length(p) - .4;
 }
@@ -38,6 +50,8 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec3 p2 = texToSpace(coord, size)[2].xyz;
     vec3 p3 = texToSpace(coord, size)[3].xyz;
 
+    fragColor.rgb = p0;
+    return;
     fragColor = vec4(
         map(p0),
         map(p1),
