@@ -40,7 +40,9 @@ const main = require('./main.js');
 // tet-zoom
 // nova-2020
 // accumulation
+// raytracing
+// inout
 
-const project = LOADPROJECT('raytracing');
+const project = LOADPROJECT('inout');
 
 main(project);
