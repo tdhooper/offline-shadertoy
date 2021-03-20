@@ -12,7 +12,7 @@ module.exports = () => {
 
     const dir = `./projects/${name}`;
     const files = fs.readdirSync(dir);
-    const glsl = files.filter(f => /.glsl$/.test(f)).reduce((acc, _file) => {
+    const glsl = files.filter(f => /.(glsl|frag)$/.test(f)).reduce((acc, _file) => {
       const file = path.join(dir, _file);
       let filename = path.parse(file).name;
       if (['shader', 'frag'].indexOf(filename) !== -1) {
