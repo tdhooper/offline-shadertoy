@@ -100,6 +100,7 @@ vec3 stereographic(vec4 p4) {
 
 
 float time;
+bool isFirstRay;
 
 bool lightingPass;
 
@@ -120,22 +121,34 @@ void mincol(inout float a, inout vec3 cola, float b, vec3 colb) {
     a = b;
 }
 
+float mincol(float a, float b, inout vec3 cola, vec3 colb) {
+    if (a < b) return a;
+    cola = colb;
+    return b;
+}
+
 void pGr(inout vec2 p, vec2 a, vec2 b) {
     vec2 n = normalize(b - a);
     float g = atan(n.y / n.x);
     pR(p.xy, g);
 }
 
+vec3 sunColor = vec3(8.10,6.00,4.20)/10.;
+
 vec3 lightpurple = pow(vec3(0.890,0.851,0.831), vec3(2.2));
 vec3 purple = pow(vec3(0.749,0.800,0.812), vec3(2.2));
 vec3 darkpurple = pow(vec3(0.573,0.518,0.486), vec3(2.2));
 vec3 pink = pow(vec3(0.533,0.302,0.247), vec3(2.2));
 vec3 lightyellow = pow(vec3(1.000,0.925,0.722), vec3(2.2));
+vec3 lampshadeCol = vec3(1.5,.2,.0);
+vec3 bulbCol = mix(sunColor, vec3(1), .5);
 
 Model fRoom(vec3 p, vec3 s) {
     #if ANIM != 0
         p.z = -p.z;
     #endif
+
+    int id = 2;
 
     float d = 1e12;
     float d2;
@@ -220,18 +233,12 @@ Model fRoom(vec3 p, vec3 s) {
    
     p.x += .3 / 2.;
     d2 = length(p.xz) - .007 / 2.;
-    p.y -= .02 / 2.;
+    //p.y -= .01 / 2.;
     d2 = max(d2, p.y);
     
-    if ( ! lightingPass) {
-        d = min(d, d2);
- 
-        d2 = length(p.xz) - .03 / 2. + p.y * .2;
-        d2 = smax(d2, abs(p.y) - .03 / 2., 0.);
-        d = min(d, d2);
-    }
-    
-    p.y += .02 / 2.;
+    d = min(d, d2);
+
+    //p.y += .02 / 2.;
     p.y += s.y;
     d2 = length(p.xz) - .05 / 2.;
     d2 = max(d2, p.y - .01 / 2.);
@@ -247,7 +254,31 @@ Model fRoom(vec3 p, vec3 s) {
     vec3 bs = vec3(.02,.2,.1) / 2.;
     d = min(d, fBox(p - vec3(-bs.x, bs.y, 0), bs));
     
-    return Model(d, col, 2);
+    p = p3;
+    p.x += .3 / 2.;
+
+    // lampshade
+    d2 = length(p.xz) - .05 / 2. + p.y * .05;
+    bool lampshadeOuter = d2 > 0.;
+    d2 = abs(d2) - .0002;
+    d2 = smax(d2, abs(p.y) - .04 / 2., 0.);
+    if (d2 < d) {
+        d = d2;
+        col = lampshadeOuter ? (isFirstRay ? 1. : .5) * lampshadeCol : vec3(1);
+        id = 7;
+    } 
+
+    // lamp bulb
+    d2 = length(p) - .01;
+    if (d2 < d) {
+        d = d2;
+        col = bulbCol;
+        col *= isFirstRay ? 20. : 1.;// * vec3(8.10,6.00,4.20);
+        id = 8;
+    }       
+
+
+    return Model(d, col, id);
 }
 
 float rnd(ivec2 uv) {
@@ -276,7 +307,16 @@ vec2 face(vec2 p) {
      return step(a.yx, a.xy)*step(a.xy, a.xy)*sign(p);
 }
 
+//#define ROOM_ONLY
+
+vec3 lampPos = vec3(.3/2., 0, -.11) * 3.25;
+
+
+
 Model scene(vec3 p) {
+
+    //float ld = length(p - lampPos) - .1;
+
     #if ANIM != 0
         p.z = -p.z;
     #endif
@@ -296,6 +336,12 @@ Model scene(vec3 p) {
 
     float sc = 3.25;
     p /= sc;
+
+    #ifdef ROOM_ONLY
+        Model rm = fRoom(p, roomsz);
+        rm.d *= sc;
+        return rm;
+    #endif
     
     //p.x = -p.x;
 
@@ -410,7 +456,9 @@ Model scene(vec3 p) {
     
     m.d *= sc;
 
-    if (inside) m.id = 99;
+    //if (inside) m.id = 99;
+
+   // m.d = min(m.d, ld);
 
     return m;
 }
@@ -529,7 +577,6 @@ vec3 calcNormal(vec3 p) {
 
 
 vec3 sunPos = normalize(vec3(-5,5,7)) * 100.;
-vec3 sunColor = vec3(8.10,6.00,4.20)/5.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
 
 vec3 env(vec3 dir) {
@@ -592,6 +639,7 @@ Hit marchFirst(vec3 origin, vec3 rayDirection, float maxDist) {
         
         if (rayLength > maxDist) {
             bg = true;
+            candidateModel.id = 0;
             break;
         }
     }
@@ -636,6 +684,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist) {
         
         if (rayLength > maxDist) {
             bg = true;
+            candidateModel.id = 0;
             break;
         }
     }
@@ -677,16 +726,78 @@ vec3 getConeSample(vec3 dir, float extent, vec2 seed) {
 	return cos(r.x)*oneminus*o1+sin(r.x)*oneminus*o2+r.y*dir;
 }
 
+/*
+vec3 randomSphereDirection(vec2 seed) {
+    vec2 h = hash22(seed) * vec2(2.,6.28318530718)-vec2(1,0);
+    float phi = h.y;
+	return vec3(sqrt(1.-h.x*h.x)*vec2(sin(phi),cos(phi)),h.x);
+}
+
+vec3 randomHemisphereDirection(vec3 n, vec2 seed ) {
+	vec3 dr = randomSphereDirection(seed);
+	return dot(dr,n) * dr;
+}
+
+vec3 sampleLight2(Hit hit, vec3 nor, vec2 seed, vec3 light, vec3 lightCol, int id, float radius) {
+    vec3 offset = randomSphereDirection( seed ) * radius;
+    light += offset;
+    vec3 lightDir = (light - hit.pos);
+    float diffuse = dot(nor, normalize(lightDir)) / length(lightDir);
+    if (diffuse > 0.) {
+        vec3 shadowOrigin = hit.pos + nor * .01;
+        Hit sh = march(shadowOrigin, normalize(lightDir), 5.);
+        if (sh.model.id == id) {
+            return lightCol * diffuse;
+        }
+    }
+    return vec3(0);
+}
+*/
+vec3 sampleLight(Hit hit, vec3 nor, vec2 seed, vec3 light, vec3 lightCol, int id, float radius) {
+    // shoot randomly perturbed ray towards light,
+    // if it doesn't hit geo, add to result
+    vec3 lightDir = (light - hit.pos);
+    vec3 lightSampleDir = getConeSample(lightDir, radius, seed);
+    float diffuse = dot(nor, lightSampleDir);
+    vec3 shadowOrigin = hit.pos + nor * .01;
+    if (diffuse > 0.) {
+        Hit sh = march(shadowOrigin, lightSampleDir, 5.);
+        if (sh.model.id == id) {
+            return lightCol * diffuse;
+        }
+    }
+    return vec3(0);
+}
+
+vec3 sampleLight2(Hit hit, vec3 nor, vec2 seed, vec3 light, int id, float radius) {
+    // shoot randomly perturbed ray towards light,
+    // if it doesn't hit geo, add to result
+    vec3 lightDir = (light - hit.pos);
+    vec3 lightSampleDir = getConeSample(lightDir, radius, seed);
+    float diffuse = dot(nor, lightSampleDir) / length(lightDir);
+    vec3 shadowOrigin = hit.pos + nor * .01;
+    if (diffuse > 0.) {
+        Hit sh = march(shadowOrigin, lightSampleDir, 5.);
+        if (sh.model.id == id) {
+            return sh.model.col * diffuse * .1;
+        }
+    }
+    return vec3(0);
+}
+
+
 // main path tracing loop, based on yx's
 // https://www.shadertoy.com/view/ts2cWm
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-
+    
     time = fract(iTime / 3.);
  
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec4 sampl = vec4(0);
     
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
+
+    bool db = p.y > 0.;
 
     vec2 seed = hash22(fragCoord + float(iFrame) * 1.61803398875);
     
@@ -707,10 +818,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
     Hit firstHit;
 
-    const int MAX_BOUNCE = 4;
+    const int MAX_BOUNCE = 8;
 
+    isFirstRay = true;
     hit = marchFirst(origin, rayDir, 14.);
     firstHit = hit;
+    isFirstRay = false;
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
@@ -727,17 +840,26 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
        	accum *= hit.model.col;
         nor = calcNormal(hit.pos);
 
+        col += accum * sampleLight(hit, nor, seed, sunPos, sunColor, 0, .005);
+        col += accum * sampleLight(hit, nor, seed, lampPos, bulbCol * .25, 8, .001);
+        col += accum * sampleLight2(hit, nor, seed, lampPos, 7, .01);
+        /*
         // shoot randomly perturbed ray towards sun,
         // if it doesn't hit geo, add to result
-        vec3 sunDirection = sunPos - hit.pos;
+        vec3 sunDirection = lampPos - hit.pos;
         vec3 sunSampleDir = getConeSample(sunDirection, .005, seed);
         float sunLight = dot(nor, sunSampleDir);
         vec3 shadowOrigin = hit.pos + nor * .01;
-        bool hitSun = sunLight > 0. && march(shadowOrigin, sunSampleDir, 5.).sky;
-        
-        if (hitSun) {
-            col += accum * sunColor * sunLight;
+        if (sunLight > 0.) {
+            Hit sh = march(shadowOrigin, sunSampleDir, 5.);
+            if (sh.model.id == 8) {
+            //    col += accum * sunColor * sunLight/2.;
+            }
+            if (sh.model.id == 7) {
+            //    col += accum * sunColor * sunLight / 4.;
+            }
         }
+        */
 
         // set new origin and direction for dffuse bounce
         origin = hit.pos + nor * .002;
