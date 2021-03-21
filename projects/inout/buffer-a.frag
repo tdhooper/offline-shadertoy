@@ -1,5 +1,7 @@
 // framebuffer drawcount: 1
 
+#extension GL_OES_standard_derivatives : enable
+
 precision highp float;
 
 uniform vec2 iResolution;
@@ -561,15 +563,19 @@ float gain2(float x, float P, float S) {
 
 
 float _spin;
+float _axblend;
 
 void warpspin(float time, out float warp, inout vec3 p) {
     float tf = fract(time);
     warp = gain2(tf, 3., .5);
-    float spin = mix(fract(time), gain(unlerp(.025, .825, fract(time)), 1.75), 1.) * 2.;
-    vec3 ax = normalize(vec3(-1.,-sinbump(.15, 1., tf) * -2.,-.0));
-    //vec3 ax = normalize(mix(vec3(-1,0,0), normalize(vec3(0,-1,.5)), sinbump(.15, 1., tf)));
+//    float spin = mix(fract(time), gain(unlerp(.025, .825, fract(time)), 1.75), 1.) * 2.;
+    //vec3 ax = normalize(vec3(-1.,-sinbump(.15, 1., tf) * -2.,-.0));
+    float spin = mix(fract(time), gain(unlerp(.025, 1. - .05, fract(time)), 1.75), 1.) * 2.;
+    float axblend = sinbump(.1, 1., tf);
+    vec3 ax = normalize(mix(vec3(-1,0,0), normalize(vec3(0,1,-.5)), axblend));
     p = erot(p, ax, spin * PI * -2.);
     _spin = spin;
+    _axblend = axblend;
 }
 
 vec3 warpedP;
@@ -865,6 +871,27 @@ mat3 basisMatrix(vec3 forward, vec3 up) {
     return mat3(-uu, vv, ww);
 }
 
+float graph(float y, float t) {
+     float d = y - t;
+     d /= fwidth(d);
+     d = abs(d) - .1;
+     d = 1. - clamp(d, 0., 1.);
+     return d;
+}
+
+vec3 debugWarpspin(vec2 uv) {
+    float warp;
+    vec3 _ = vec3(0);
+    warpspin(uv.x, warp, _);
+    vec3 col = vec3(1,0,0) * graph(uv.y, warp);
+    col += vec3(0,1,0) * graph(uv.y, _spin/2.);
+    col += vec3(0,0,1) * graph(uv.y, _axblend);
+    col += vec3(1) * graph(uv.x, fract(time));
+    
+    //col *= .3;
+    return col;
+}
+
 
 // main path tracing loop, based on yx's
 // https://www.shadertoy.com/view/ts2cWm
@@ -964,7 +991,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         
         hit = march(origin, rayDir, 5.);        
     }
-  
+
+    vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
+    col = col + cold;
+      
     if (drawIndex > 0.) {
         vec3 lastCol = texture2D(previousSample, fragCoord.xy / iResolution.xy).rgb;
         col = mix(lastCol, col, 1. / (drawIndex + 1.));
