@@ -142,6 +142,9 @@ vec3 pink = pow(vec3(0.533,0.302,0.247), vec3(2.2));
 vec3 lightyellow = pow(vec3(1.000,0.925,0.722), vec3(2.2));
 vec3 lampshadeCol = vec3(1.,.1,.0) * .05;
 vec3 bulbCol = vec3(1,.75,.5) * .25;
+vec3 woodcol = vec3(0.714,0.451,0.184);
+vec3 whitecol = vec3(.5);
+vec3 wallcol = vec3(.54,.5,.45);
 
 Model fRoom(vec3 p, vec3 s) {
     #if ANIM != 0
@@ -151,7 +154,7 @@ Model fRoom(vec3 p, vec3 s) {
     int id = 2;
 
     float d = 1e12;
-    float d2;
+    float d2, d3, d4;
     p.x = -p.x;
     vec3 pp = p;    
     vec3 col = purple;
@@ -212,7 +215,7 @@ Model fRoom(vec3 p, vec3 s) {
     //p.z -= .15;
     d2 = length(p.yz) - .06 / 2.;
     d2 = max(d2, abs(p.x) - .01 / 2.);
-    float d3 = length(p.yz) - .04 / 2.;
+    d3 = length(p.yz) - .04 / 2.;
     d3 = max(d3, abs(p.x - .01 / 2.) - .005 / 2.);
     d2 = max(d2, -d3);    
     d = min(d, d2);
@@ -227,6 +230,14 @@ Model fRoom(vec3 p, vec3 s) {
         d = min(d, d2);
     }
 
+    // shelf
+    p = pp;
+    p.x -= s.x;
+    vec3 shelfsz = vec3(.03,.003,.1) / 2.;
+    p.x += shelfsz.x;
+    p.zy -= vec2(.1,-.05);
+    d2 = fBox(p, shelfsz);
+    d = mincol(d, d2, col, woodcol);
 
     // lamp
     p = p3;
@@ -247,12 +258,11 @@ Model fRoom(vec3 p, vec3 s) {
     p = p3;
     d = max(d, -p.y - s.y);
     
-    // bookshelf
-    p = p3;
-    p.x -= s.x;
-    p.y += s.y;
-    vec3 bs = vec3(.02,.2,.1) / 2.;
-    d = min(d, fBox(p - vec3(-bs.x, bs.y, 0), bs));
+    // door
+    vec3 doorsz = (vec3(35, 1981, 762) * .0001) / 2.;
+    vec3 doorpos = vec3(s.x, doorsz.y - s.y, -.11);
+    p = pp - doorpos;
+    d = mincol(d, fBox(p, doorsz), col, woodcol);
     
     p = p3;
     p.x += .3 / 2.;
@@ -278,6 +288,27 @@ Model fRoom(vec3 p, vec3 s) {
         id = 8;
     }       
 
+    // skirting
+    p = pp;
+    vec2 sksz = vec2(.002, .01) / 2.;
+    d2 = fBox(p.xz, s.xz);
+    d3 = fBox(p - doorpos + vec3(0,doorsz.y,0), doorsz * vec3(10,2,1) + sksz.y * 2.) + sksz.y * 2.;
+    d3 = min(d3, p.y + s.y);
+    d4 = fBox(vec2(-d2, d3) - sksz, sksz) - .0005;
+    d = mincol(d, d4, col, whitecol);
+
+    // cornice
+    p = pp;
+    vec2 corsz = (vec2(.0155, .0121)/2.) * 1.5;
+    d2 = fBox(p.xz, s.xz);
+    d3 = p.y - s.y;
+    vec2 pc = vec2(-d2, d3) / 1.5;
+    d4 = dot(pc, normalize(vec2(1,-1.3))) - .01;
+    d4 = smax(d4, -(length(pc - vec2(.011,-.01)) - .008), .0005);
+    //d4 = smin(d4, length((pc - vec2(.003,-.0025)) * vec2(.7,1)) - .005, .002);
+    d4 *= 1.5;
+    d4 = smax(d4, fBox(vec2(d2, d3) + corsz, corsz), .0002);
+    d = mincol(d, d4, col, whitecol);
 
     return Model(d, col, id);
 }
@@ -444,8 +475,9 @@ Model scene(vec3 p) {
     //d2 = max(d2, p.y + .15);
     if (d2 > d) {
         d = d2;
-        col = vec3(.8);
-        if (roomFace == vec3(0,-1,0)) col = vec3(0.714,0.451,0.184);
+        col = wallcol;
+        if (roomFace == vec3(0,-1,0)) col = woodcol;
+        if (roomFace == vec3(0,1,0)) col = whitecol;
         if (roomFace == vec3(-1,0,0)) col = vec3(0.000,0.278,0.302);
     }
 
@@ -665,14 +697,14 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist) {
     Model firstModel;
 
     for (int i = 0; i < 200; i++) {
-        rayLength += dist;// * .5;
+        rayLength += dist * .75;
         rayPosition = origin + rayDirection * rayLength;
         model = scene(rayPosition);
         dist = model.d;
 
         float error = dist / rayLength;
 
-        if (abs(dist) < .0001) {
+        if (abs(dist) < .00001 * rayLength) {
             candidateModel = model;
         	break;
         }
@@ -681,7 +713,6 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist) {
             candidateModel = model;
             candidateError = error;
         }
-        
         
         if (rayLength > maxDist) {
             bg = true;
@@ -819,20 +850,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 origin = eye;
     vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
 
-    float focalLength = 3.;
-    vec3 camPos = vec3(0, 0, focalLength * 2.2);
-    vec3 camTar = vec3(0);
-    vec2 im = .5 - vec2(.45,.36);
-    pR(camPos.yz, im.y * PI / 2.);
-    pR(camPos.xz, im.x * PI * 2.);   
-    camTar = mix(camTar, camPos, .25);
-    mat3 camMat = basisMatrix(camTar - camPos, vec3(0,1,0));
-    rayDir = normalize(camMat * vec3(p.xy, focalLength));
-    origin = camPos;
-
-
-
-
+    #if 1
+        float focalLength = 3.;
+        vec3 camPos = vec3(0, 0, focalLength * 2.2);
+        vec3 camTar = vec3(0);
+        vec2 im = .5 - vec2(.45,.36);
+        pR(camPos.yz, im.y * PI / 2.);
+        pR(camPos.xz, im.x * PI * 2.);   
+        camTar = mix(camTar, camPos, .25);
+        mat3 camMat = basisMatrix(camTar - camPos, vec3(0,1,0));
+        rayDir = normalize(camMat * vec3(p.xy, focalLength));
+        origin = camPos;
+    #endif
 
 
     Hit hit;
@@ -869,6 +898,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         col += accum * sampleLight(hit, nor, seed, sunPos, sunColor, 0, .005);
         col += accum * sampleLight(hit, nor, seed, lampPos, bulbCol * 2., 8, .001);
         col += accum * sampleLight2(hit, nor, seed, lampPos, 7, .01);
+        
         /*
         // shoot randomly perturbed ray towards sun,
         // if it doesn't hit geo, add to result
