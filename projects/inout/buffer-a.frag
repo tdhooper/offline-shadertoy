@@ -264,7 +264,8 @@ Model fRoom(vec3 p, vec3 s) {
     d2 = smax(d2, abs(p.y) - .04 / 2., 0.);
     if (d2 < d) {
         d = d2;
-        col = lampshadeOuter ? (isFirstRay ? 1. : .5) * lampshadeCol : vec3(1);
+        col = lampshadeOuter ? lampshadeCol : bulbCol * 5.;
+        col *= isFirstRay ? 2. : .1;
         id = 7;
     } 
 
@@ -779,7 +780,7 @@ vec3 sampleLight2(Hit hit, vec3 nor, vec2 seed, vec3 light, int id, float radius
     if (diffuse > 0.) {
         Hit sh = march(shadowOrigin, lightSampleDir, 5.);
         if (sh.model.id == id) {
-            return sh.model.col * diffuse * .1;
+            return sh.model.col * diffuse;
         }
     }
     return vec3(0);
@@ -841,7 +842,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         nor = calcNormal(hit.pos);
 
         col += accum * sampleLight(hit, nor, seed, sunPos, sunColor, 0, .005);
-        col += accum * sampleLight(hit, nor, seed, lampPos, bulbCol * .25, 8, .001);
+        col += accum * sampleLight(hit, nor, seed, lampPos, bulbCol * .5, 8, .001);
         col += accum * sampleLight2(hit, nor, seed, lampPos, 7, .01);
         /*
         // shoot randomly perturbed ray towards sun,
