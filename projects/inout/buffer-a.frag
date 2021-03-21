@@ -787,11 +787,20 @@ vec3 sampleLight2(Hit hit, vec3 nor, vec2 seed, vec3 light, int id, float radius
 }
 
 
+
+mat3 basisMatrix(vec3 forward, vec3 up) {
+    vec3 ww = normalize(forward);
+    vec3 uu = normalize(cross(up,ww));
+    vec3 vv = normalize(cross(ww,uu));
+    return mat3(-uu, vv, ww);
+}
+
+
 // main path tracing loop, based on yx's
 // https://www.shadertoy.com/view/ts2cWm
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
-    time = fract(iTime / 3.);
+    time = fract(iTime / 8.);
  
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec4 sampl = vec4(0);
@@ -809,6 +818,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
     vec3 origin = eye;
     vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
+
+    float focalLength = 3.;
+    vec3 camPos = vec3(0, 0, focalLength * 2.2);
+    vec3 camTar = vec3(0);
+    vec2 im = .5 - vec2(.45,.36);
+    pR(camPos.yz, im.y * PI / 2.);
+    pR(camPos.xz, im.x * PI * 2.);   
+    camTar = mix(camTar, camPos, .25);
+    mat3 camMat = basisMatrix(camTar - camPos, vec3(0,1,0));
+    rayDir = normalize(camMat * vec3(p.xy, focalLength));
+    origin = camPos;
+
+
+
+
+
 
     Hit hit;
     vec3 col = vec3(0);
@@ -831,7 +856,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         if (hit.sky) {
             if (bounce == 0) {
                 //col = env(rayDir);
-                col = bgCol;
+                col = bgCol * .01;
                 break;
             }
             col += env(rayDir) * accum;
