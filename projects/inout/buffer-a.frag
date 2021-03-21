@@ -185,6 +185,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p.x = -p.x;
     vec3 pp = p;    
     vec3 col = purple;
+    vec3 p4;
    
     vec3 p2 = pp - vec3(0,0,.1);
     vec3 p3 = pp + vec3(0,0,.11);
@@ -208,13 +209,14 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     d = min(d, fBox(p, tvsz));
     
     // table
-    p = p2;
+    p4 = pp - vec3(0,0,.05);
+    p = p4;
     p.y += s.y;
     vec3 tablesz = vec3(.08,.05,.08) / 2.;
     float ttop = .01 / 2.;
     p.y -= tablesz.y * 2. - ttop;
     d = min(d, fBox(p, vec3(tablesz.x, ttop, tablesz.z)));
-    p = p2;
+    p = p4;
     p.y += s.y;
     p.xz = abs(p.xz);
     float tleg = .01 / 2.;
@@ -413,7 +415,7 @@ Model scene(vec3 p) {
 
     d = 1e12;
 
-    float sc = 3.25;
+    float sc = 3.;
     p /= sc;
 
     #ifdef ROOM_ONLY
@@ -568,18 +570,35 @@ float gain2(float x, float P, float S) {
     return gain(x + .5 * s, P, S) - .5 * s;
 }
 
+float gainB(float x, float P, float g) {
+    x = clamp(unlerp(g/2., 1. - g/2., x), 0., 1.);
+    return gain(x, P);
+}
+
+float gain2B(float x, float P, float g) {
+    float s = sign(.5 - x);
+    return gainB(x + .5 * s, P, g) - .5 * s;
+}
+
 
 float _spin;
 float _axblend;
 
 void warpspin(float time, out float warp, inout vec3 p) {
     float tf = fract(time);
-    warp = gain2(tf, 3., .5);
-//    float spin = mix(fract(time), gain(unlerp(.025, .825, fract(time)), 1.75), 1.) * 2.;
-    //vec3 ax = normalize(vec3(-1.,-sinbump(.15, 1., tf) * -2.,-.0));
-    float spin = mix(fract(time), gain(unlerp(.025, 1. - .05, fract(time)), 1.75), 1.) * 2.;
-    float axblend = sinbump(.1, 1., tf);
-    vec3 ax = normalize(mix(vec3(-1,0,0), normalize(vec3(0,1,-.5)), axblend));
+    #if 0
+        warp = gain2(tf, 3., .5);
+        float spin = mix(fract(time), gain(unlerp(.025, .825, fract(time)), 1.75), 1.) * 2.;
+        float axblend = sinbump(.15, 1., tf);
+        vec3 ax = normalize(vec3(-1., axblend * 2., 0));
+    #else
+        //warp = gain2(tf, 2.5, .75);
+        warp = mix(tf, gain2B(tf, 3., .1), .5);
+        //float spin = mix(fract(time), gain(unlerp(.025, 1. - .05, fract(time)), 1.85), 1.) * 2.;
+        float spin = gain(tf, 1.75, 1.) * 2.;
+        float axblend = smoothstep(.2, .6, tf) - smoothstep(.6, 1., tf);
+        vec3 ax = normalize(mix(vec3(-1,0,0), normalize(vec3(0,1,-.5)), axblend));
+    #endif
     p = erot(p, ax, spin * PI * -2.);
     _spin = spin;
     _axblend = axblend;
@@ -922,8 +941,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
 
     #if 1
-        float focalLength = 3.;
-        vec3 camPos = vec3(0, 0, focalLength * 2.2);
+        float focalLength = 6.;
+        vec3 camPos = vec3(0, 0, focalLength * 1.8);
         vec3 camTar = vec3(0);
         vec2 im = .5 - vec2(.45,.36);
         pR(camPos.yz, im.y * PI / 2.);
