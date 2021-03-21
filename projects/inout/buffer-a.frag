@@ -140,8 +140,8 @@ vec3 purple = pow(vec3(0.749,0.800,0.812), vec3(2.2));
 vec3 darkpurple = pow(vec3(0.573,0.518,0.486), vec3(2.2));
 vec3 pink = pow(vec3(0.533,0.302,0.247), vec3(2.2));
 vec3 lightyellow = pow(vec3(1.000,0.925,0.722), vec3(2.2));
-vec3 lampshadeCol = vec3(1.5,.2,.0);
-vec3 bulbCol = mix(sunColor, vec3(1), .5);
+vec3 lampshadeCol = vec3(1.,.1,.0) * .05;
+vec3 bulbCol = vec3(1,.75,.5) * .25;
 
 Model fRoom(vec3 p, vec3 s) {
     #if ANIM != 0
@@ -264,8 +264,8 @@ Model fRoom(vec3 p, vec3 s) {
     d2 = smax(d2, abs(p.y) - .04 / 2., 0.);
     if (d2 < d) {
         d = d2;
-        col = lampshadeOuter ? lampshadeCol : bulbCol * 5.;
-        col *= isFirstRay ? 2. : .1;
+        col = lampshadeOuter ? lampshadeCol : bulbCol * .5;
+        col *= isFirstRay ? 80. : 1.;
         id = 7;
     } 
 
@@ -274,7 +274,7 @@ Model fRoom(vec3 p, vec3 s) {
     if (d2 < d) {
         d = d2;
         col = bulbCol;
-        col *= isFirstRay ? 20. : 1.;// * vec3(8.10,6.00,4.20);
+        col *= isFirstRay ? 80. : 1.;// * vec3(8.10,6.00,4.20);
         id = 8;
     }       
 
@@ -842,7 +842,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         nor = calcNormal(hit.pos);
 
         col += accum * sampleLight(hit, nor, seed, sunPos, sunColor, 0, .005);
-        col += accum * sampleLight(hit, nor, seed, lampPos, bulbCol * .5, 8, .001);
+        col += accum * sampleLight(hit, nor, seed, lampPos, bulbCol * 2., 8, .001);
         col += accum * sampleLight2(hit, nor, seed, lampPos, 7, .01);
         /*
         // shoot randomly perturbed ray towards sun,
