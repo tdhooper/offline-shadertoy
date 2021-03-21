@@ -87,6 +87,30 @@ float cmax(float a, float b, float r) {
 	}
 }
 
+float pMod1(inout float p, float size) {
+	float halfsize = size*0.5;
+	float c = floor((p + halfsize)/size);
+	p = mod(p + halfsize, size) - halfsize;
+	return c;
+}
+
+void pR45(inout vec2 p) {
+	p = (p + vec2(p.y, -p.x))*sqrt(0.5);
+}
+
+float stairmin(float a, float b, float r, float n) {
+	float d = min(a, b);
+	vec2 p = vec2(a, b);
+	pR45(p);
+	p = p.yx - vec2((r-r/n)*0.5*sqrt(2.));
+	p.x += 0.5*sqrt(2.)*r/n;
+	float x = r*sqrt(2.)/n;
+	pMod1(p.x, x);
+	d = min(d, p.y);
+	pR45(p);
+	return min(d, vmax(p -vec2(0.5*r/n)));
+}
+
 
 // mla https://www.shadertoy.com/view/lsGyzm
 vec4 inverseStereographic(vec3 p, out float k) {
@@ -144,9 +168,10 @@ vec3 lampshadeCol = vec3(1.,.1,.0) * .05;
 vec3 bulbCol = vec3(1,.75,.5) * .25;
 vec3 woodcol = vec3(0.714,0.451,0.184);
 vec3 whitecol = vec3(.5);
-vec3 wallcol = vec3(.54,.5,.45);
+vec3 wallcol = vec3(179,179,195)/255./2.;
+vec3 featurewallcol = vec3(.05,.26,.32);
 
-Model fRoom(vec3 p, vec3 s) {
+Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     #if ANIM != 0
         p.z = -p.z;
     #endif
@@ -310,6 +335,19 @@ Model fRoom(vec3 p, vec3 s) {
     d4 = smax(d4, fBox(vec2(d2, d3) + corsz, corsz), .0002);
     d = mincol(d, d4, col, whitecol);
 
+    // rail
+    p = pp;
+    vec2 railsz = vec2(.002,.002) / 2.;
+    d2 = fBox(p.xz, s.xz);
+    d3 = p.y - .1;
+    pc = vec2(-d2 + .001, d3);
+    pR(pc, -.1);
+    d4 = fBox(pc, railsz) - .001;
+    d4 = stairmin(d4, length(pc - railsz * vec2(1.75, 2.)) - .0014, .0014, 2.);
+    d4 = max(d4, -(length((pc - railsz * vec2(0,1) - vec2(.0008,.0022)) * vec2(1.,.9)) - .0004));
+    d4 = max(d4, -fBox(p - s * vec3(0,0,1), baysz) - .02);
+    d = mincol(d, d4, col, whitecol);
+ 
     return Model(d, col, id);
 }
 
@@ -362,7 +400,7 @@ Model scene(vec3 p) {
     float wall = .05;
     vec3 roomsz = vec3(.2,.2,.2);
     vec3 mainsz = roomsz + wall;
-    vec3 baysz = vec3(mainsz.xy * vec2(.7, .7), .08);    
+    vec3 baysz = vec3(mainsz.xy * vec2(.7, .7), .08) * vec3(1,.8,1);    
 
     d = 1e12;
 
@@ -370,7 +408,7 @@ Model scene(vec3 p) {
     p /= sc;
 
     #ifdef ROOM_ONLY
-        Model rm = fRoom(p, roomsz);
+        Model rm = fRoom(p, roomsz, baysz);
         rm.d *= sc;
         return rm;
     #endif
@@ -443,7 +481,7 @@ Model scene(vec3 p) {
     float main = fBox(p, mainsz);
     p = pp;
     p.z -= mainsz.z - baysz.z;
-    float bay = fBox(p, baysz * vec3(1,.8,2));
+    float bay = fBox(p, baysz * vec3(1,1,2));
     p.z -= baysz.z;
     p.x = abs(p.x);
     p.x -= baysz.x;
@@ -477,14 +515,14 @@ Model scene(vec3 p) {
         d = d2;
         col = wallcol;
         if (roomFace == vec3(0,-1,0)) col = woodcol;
-        if (roomFace == vec3(0,1,0)) col = whitecol;
-        if (roomFace == vec3(-1,0,0)) col = vec3(0.000,0.278,0.302);
+        if (roomFace == vec3(-1,0,0)) col = featurewallcol;
+        if (p.y > 0.1) col = whitecol;
     }
 
     Model m = Model(d, col, id);
     
     if (fBox(p, roomsz) < 0.) {
-        m = opU(m, fRoom(p, roomsz));
+        m = opU(m, fRoom(p, roomsz, baysz));
     }
     
     m.d *= sc;
@@ -528,7 +566,8 @@ void warpspin(float time, out float warp, inout vec3 p) {
     float tf = fract(time);
     warp = gain2(tf, 3., .5);
     float spin = mix(fract(time), gain(unlerp(.025, .825, fract(time)), 1.75), 1.) * 2.;
-    vec3 ax = normalize(vec3(-1.,-sinbump(0., 1., tf) * -2.,-.0));
+    vec3 ax = normalize(vec3(-1.,-sinbump(.15, 1., tf) * -2.,-.0));
+    //vec3 ax = normalize(mix(vec3(-1,0,0), normalize(vec3(0,-1,.5)), sinbump(.15, 1., tf)));
     p = erot(p, ax, spin * PI * -2.);
     _spin = spin;
 }
@@ -616,9 +655,9 @@ vec3 env(vec3 dir) {
     vec3 col = vec3(0);
     col += max(dir.y, 0.) * skyColor;
     #if 1
-        col += smoothstep(.5, 1., dot(dir, normalize(sunPos))) * sunColor;// * 5.;
+        //col += smoothstep(.5, 1., dot(dir, normalize(sunPos))) * sunColor;// * 5.;
     #else
-        col += smoothstep(.97, .99, dot(dir, normalize(sunPos))) * sunColor * 20.;
+        //col += smoothstep(.97, .99, dot(dir, normalize(sunPos))) * sunColor * 20.;
     #endif
     return col;
 }
@@ -918,7 +957,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         */
 
         // set new origin and direction for dffuse bounce
-        origin = hit.pos + nor * .002;
+        origin = hit.pos + nor * .0002;
         rayDir = getSampleBiased(nor, 1., seed);
 
         seed = hash22(seed);
