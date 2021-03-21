@@ -228,24 +228,6 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p.xy -= sofasz.xy;
     mincol(d, col, fBox(p, sofasz), pink);
     d = max(d, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
-    
-    // picture
-    p = p2;
-    p.x += s.x;
-    vec3 picsz = vec3(.005,.07,.09) / 2.;
-    d = min(d, fBox(p - picsz * vec3(1,0,0), picsz));
-    d = max(d, -fBox(p - picsz * vec3(1.75,0,0), picsz * .8));
-    
-    // picture2
-    p = pp;
-    p.x += s.x;
-    //p.z -= .15;
-    d2 = length(p.yz) - .06 / 2.;
-    d2 = max(d2, abs(p.x) - .01 / 2.);
-    d3 = length(p.yz) - .04 / 2.;
-    d3 = max(d3, abs(p.x - .01 / 2.) - .005 / 2.);
-    d2 = max(d2, -d3);    
-    d = min(d, d2);
         
     if ( ! lightingPass) {
         // light
@@ -289,31 +271,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec3 doorsz = (vec3(35, 1981, 762) * .0001) / 2.;
     vec3 doorpos = vec3(s.x, doorsz.y - s.y, -.11);
     p = pp - doorpos;
-    d = mincol(d, fBox(p, doorsz), col, woodcol);
-    
-    p = p3;
-    p.x += .3 / 2.;
-
-    // lampshade
-    d2 = length(p.xz) - .05 / 2. + p.y * .05;
-    bool lampshadeOuter = d2 > 0.;
-    d2 = abs(d2) - .0002;
-    d2 = smax(d2, abs(p.y) - .04 / 2., 0.);
-    if (d2 < d) {
-        d = d2;
-        col = lampshadeOuter ? lampshadeCol : bulbCol * .5;
-        col *= isFirstRay ? 80. : 1.;
-        id = 7;
-    } 
-
-    // lamp bulb
-    d2 = length(p) - .01;
-    if (d2 < d) {
-        d = d2;
-        col = bulbCol;
-        col *= isFirstRay ? 80. : 1.;// * vec3(8.10,6.00,4.20);
-        id = 8;
-    }       
+    d = mincol(d, fBox(p, doorsz), col, woodcol);  
 
     // skirting
     p = pp;
@@ -350,6 +308,55 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     d4 = max(d4, -fBox(p - s * vec3(0,0,1), baysz) - .02);
     d = mincol(d, d4, col, whitecol);
  
+    // picture
+    p = p2;
+    p.x += s.x;
+    vec3 picsz = vec3(.005,.07,.09) / 2.;
+    d2 = fBox(p - picsz * vec3(1,0,0), picsz);
+    d2 = max(d2, -fBox(p - picsz * vec3(1.75,0,0), picsz * .8));
+    d = mincol(d, d2, col, woodcol);
+
+    // mirror
+    p = pp;
+    p.x += s.x;
+    //p.z -= .15;
+    d2 = length(p.yz) - .06 / 2.;
+    d2 = max(d2, abs(p.x) - .01 / 2.);
+    d3 = length(p.yz) - .04 / 2.;
+    d2 = max(d2, -d3);    
+    d = mincol(d, d2, col, woodcol);
+    d3 = length(p - vec3(-.022,0,0)) - .033;
+    d3 = max(d3, -p.x);
+    if (d3 < d) {
+        d = d3;
+        col = vec3(1,.5,.3);
+        id = 5;
+    }
+
+    p = p3;
+    p.x += .3 / 2.;
+
+    // lampshade
+    d2 = length(p.xz) - .05 / 2. + p.y * .05;
+    bool lampshadeOuter = d2 > 0.;
+    d2 = abs(d2) - .0002;
+    d2 = smax(d2, abs(p.y) - .04 / 2., 0.);
+    if (d2 < d) {
+        d = d2;
+        col = lampshadeOuter ? lampshadeCol : bulbCol * .5;
+        col *= isFirstRay ? 80. : 1.;
+        id = 7;
+    } 
+
+    // lamp bulb
+    d2 = length(p) - .01;
+    if (d2 < d) {
+        d = d2;
+        col = bulbCol;
+        col *= isFirstRay ? 80. : 1.;// * vec3(8.10,6.00,4.20);
+        id = 8;
+    }
+
     return Model(d, col, id);
 }
 
@@ -678,7 +685,7 @@ struct Hit {
     bool sky;
 };
 
-Hit marchFirst(vec3 origin, vec3 rayDirection, float maxDist) {
+Hit marchFirst(vec3 origin, inout vec3 rayDirection, float maxDist) {
 
     vec3 rayPosition;
     float rayLength = 0.;
@@ -909,9 +916,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 seed = hash22(fragCoord + float(iFrame) * 1.61803398875);
     
     // jitter for antialiasing
-    #ifndef PREVIEW
-        p += 2. * (seed - .5) / iResolution.xy;
-    #endif
+    p += 2. * (seed - .5) / iResolution.xy;
     
     vec3 origin = eye;
     vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
@@ -944,12 +949,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     isFirstRay = true;
     hit = marchFirst(origin, rayDir, 14.);
     firstHit = hit;
-    isFirstRay = false;
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
         if (hit.sky) {
-            if (bounce == 0) {
+            if (isFirstRay) {
                 //col = env(rayDir);
                 col = bgCol * .01;
                 break;
@@ -957,43 +961,29 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += env(rayDir) * accum;
             break;
         }
-        
+
        	accum *= hit.model.col;
         nor = calcNormal(hit.pos);
 
-        col += accum * sampleLight(hit, nor, seed, sunPos, sunColor, 0, .005);
-        col += accum * sampleLight(hit, nor, seed, lampPos, bulbCol * 2., 8, .001);
-        col += accum * sampleLight2(hit, nor, seed, lampPos, 7, .01);
-        
-        /*
-        // shoot randomly perturbed ray towards sun,
-        // if it doesn't hit geo, add to result
-        vec3 sunDirection = lampPos - hit.pos;
-        vec3 sunSampleDir = getConeSample(sunDirection, .005, seed);
-        float sunLight = dot(nor, sunSampleDir);
-        vec3 shadowOrigin = hit.pos + nor * .01;
-        if (sunLight > 0.) {
-            Hit sh = march(shadowOrigin, sunSampleDir, 5.);
-            if (sh.model.id == 8) {
-            //    col += accum * sunColor * sunLight/2.;
-            }
-            if (sh.model.id == 7) {
-            //    col += accum * sunColor * sunLight / 4.;
-            }
+        if (hit.model.id == 5) {
+            origin = hit.pos + nor * .0002;
+            rayDir = reflect(rayDir, nor); 
+        } else {
+            isFirstRay = false;
+            col += accum * sampleLight(hit, nor, seed, sunPos, sunColor, 0, .005);
+            col += accum * sampleLight(hit, nor, seed, lampPos, bulbCol * 2., 8, .001);
+            col += accum * sampleLight2(hit, nor, seed, lampPos, 7, .01);
+            rayDir = getSampleBiased(nor, 1., seed);
         }
-        */
 
         // set new origin and direction for dffuse bounce
-        origin = hit.pos + nor * .0002;
-        rayDir = getSampleBiased(nor, 1., seed);
-
+        origin = hit.pos + nor * .0002;    
         seed = hash22(seed);
-        
         hit = march(origin, rayDir, 5.);        
     }
 
-    vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
-    col = col + cold;
+    //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
+    //col = col + cold;
       
     if (drawIndex > 0.) {
         vec3 lastCol = texture2D(previousSample, fragCoord.xy / iResolution.xy).rgb;
