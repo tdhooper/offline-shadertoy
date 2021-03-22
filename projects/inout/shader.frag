@@ -25,6 +25,7 @@ float Luma(vec3 color) { return dot(color, vec3(0.2126, 0.7152, 0.0722)); }
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec3 col = texture2D(iChannel0, uv).rgb;
+    //fragColor = vec4(col, 1); return;
     vec3 uGain = vec3(1.8);
     vec3 uLift = vec3(.002,-.003,.007);
     vec3 uOffset = vec3(.00,.00,.00);

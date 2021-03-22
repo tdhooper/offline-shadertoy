@@ -11,7 +11,7 @@ uniform float drawIndex;
 uniform int iFrame;
 uniform float iTime;
 
-uniform sampler2D iChannel0; // /images/blue-noise.png
+uniform sampler2D iChannel0; // /images/blue-noise.png filter: linear
 uniform vec2 iChannel0Size;
 
 varying vec3 eye;
@@ -363,7 +363,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
 }
 
 float rnd(ivec2 uv) {
-    return texture2D(iChannel0, vec2(uv) / iChannel0Size.xy).r;
+    return texture2D(iChannel0, vec2(uv) / iChannel0Size.xy, -10000.).r;
 }
 
 float fBricks(vec2 p, out vec2 c, out vec2 uv, out float hide) {
@@ -1003,6 +1003,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
     //col = col + cold;
+
+    //col = clamp(col, vec3(0), vec3(1));
       
     if (drawIndex > 0.) {
         vec3 lastCol = texture2D(previousSample, fragCoord.xy / iResolution.xy).rgb;
