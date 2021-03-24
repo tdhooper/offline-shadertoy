@@ -441,15 +441,17 @@ module.exports = (project) => {
 
   let tick = regl.frame(() => draw());
   events.on('draw', () => draw(true));
+  //let tick;
 
   const captureSetup = (width, height, done) => {
     console.log('captureSetup', width, height);
-    tick.cancel();
+    tick && tick.cancel();
     timer.pause();
     canvas.width = width;
     canvas.height = height;
     canvas.style.width = width + 'px';
     canvas.style.height = height + 'px';
+    regl.poll();
     setTimeout(done, 1000);
   };
 

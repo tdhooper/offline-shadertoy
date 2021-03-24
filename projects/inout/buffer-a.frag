@@ -10,6 +10,7 @@ uniform sampler2D previousSample; // buffer-a.frag filter: linear
 uniform float drawIndex;
 uniform int iFrame;
 uniform float iTime;
+uniform vec4 iMouse;
 
 uniform sampler2D iChannel0; // /images/blue-noise.png filter: linear
 uniform vec2 iChannel0Size;
@@ -586,25 +587,80 @@ float _axblend;
 
 void warpspin(float time, out float warp, inout vec3 p) {
     float tf = fract(time);
+    float tf1 = unlerp(0., .5, tf);
+    float tf2 = unlerp(.5, 1., tf);
+    float axblend;
     #if 0
         warp = gain2(tf, 3., .5);
         float spin = mix(fract(time), gain(unlerp(.025, .825, fract(time)), 1.75), 1.) * 2.;
-        float axblend = sinbump(.15, 1., tf);
+        axblend = sinbump(.15, 1., tf);
         vec3 ax = normalize(vec3(-1., axblend * 2., 0));
-    #else
+        p = erot(p, ax, -spin * PI * 2.);
+    #elif 0
+        warp = gain2(tf, 3., .5);
+        float spin = mix(fract(time), gain(unlerp(.025, .825, fract(time)), 1.75), 1.) * 2.;
+        vec3 ax = normalize(vec3(-1.,-sinbump(0., 1., tf) * -2.,-.0));
+        p = erot(p, ax, spin * PI * -2.);
+        _spin = spin;
+    #elif 1
+        warp = gain2(tf1, 2.3, 1.) + gain2(tf2, 2.3, 1.);
+        float spin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 1.75), .8);
+        axblend = sinbump(0., 1., tf);
+        vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-1,2,0), axblend));
+        //vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-1,2,-1.), axblend));
+        p = erot(p, ax, 5. * spin * PI * -2.);
+        _spin = spin;
+    #elif 0
         //warp = gain2(tf, 2.5, .75);
-        warp = mix(tf, gain2B(tf, 3., .1), .5);
+        warp = mix(tf1, gain2B(tf1, 3., .0), .9);
+        warp += mix(tf2, gain2B(tf2, 3., .0), .9);
         //float spin = mix(fract(time), gain(unlerp(.025, 1. - .05, fract(time)), 1.85), 1.) * 2.;
-        float spin = gain(tf, 1.75, 1.) * 2.;
-        float axblend = smoothstep(.2, .6, tf) - smoothstep(.6, 1., tf);
-        vec3 ax = normalize(mix(vec3(-1,0,0), normalize(vec3(0,1,-.5)), axblend));
+        float spin = gain(tf, 2., .5) * 4.;
+        //float axblend = smoothstep(.0, .5, tf) - smoothstep(.5, 1., tf);
+        axblend = sinbump(.0, 1., tf);
+        //vec3 ax = normalize(mix(vec3(-1,.25,0), normalize(vec3(-.0,1,0)), axblend));
+        //ax = normalize(mix(ax, vec3(1,0,0), smoothstep(.55, 1., tf)));
+
+
+
+        //p = erot(p, ax, spin * PI * -2.);
+
+        // p = erot(p, vec3(0,0,1), smoothstep(.0, 1., tf) * PI * -2.);
+        // p = erot(p, vec3(1,0,0), smoothstep(0., .5, tf) * PI * 2. * .5);
+        // p = erot(p, vec3(1,0,0), smoothstep(.5, 1., tf) * PI * 2. * .5);
+        // p = erot(p, normalize(vec3(-.0,1,0)), smoothstep(.0, 1., tf) * PI * 2.);
+
+        //p = erot(p, vec3(0,1,0), gain(tf, 2., 1.) * -2. * PI * 2.);
+        //p = erot(p, normalize(vec3(1,1,0)), gain(unlerp(.1, 1., tf), 2., 1.) * PI * 2.);
+        //p = erot(p, vec3(1,0,0), gain(unlerp(0., .3, tf), 2., 1.) * PI * 2.);
+
+        tf = fract(time + .1);
+
+        //spin = (gain(tf1, 1.5, .75) + gain(tf2, 1.5, .75)) / 2.;
+        spin = gain(unlerp(.0, 1., tf), 2., .5);
+        //axblend = gain(unlerp(.1, .4, tf), 2., 1.);// - gain(unlerp(.6, .9, tf), 2., 1.);
+        //axblend = gain(unlerp(.1, .8, tf), 2., 1.) - gain(unlerp(.9, 1., tf), 1., 1.);
+
+        axblend = gain(unlerp(.4, .6, tf), 2., 1.) - gain(unlerp(.8, 1., tf), 2., 1.);
+        axblend = 1.;
+        vec3 ax = mix(vec3(0,1,0), normalize(vec3(-.25,-1,-.5)), axblend);
+        
+        //p = erot(p, vec3(0,1,0), smoothstep(.15, 1., tf1) * PI * 2.);
+        p = erot(p, normalize(ax), spin * 3. * PI * 2.);
+
+        p = erot(p, vec3(1,0,0), gain(unlerp(0., .5, tf), 2., 1.) * 1. * PI * 2.);
+
+
     #endif
-    p = erot(p, ax, spin * PI * -2.);
+
+
+    
     _spin = spin;
     _axblend = axblend;
 }
 
 vec3 warpedP;
+vec3 camPos;
 
 Model sceneWarped(vec3 p) {
 
@@ -645,8 +701,11 @@ Model map(vec3 p) {
 
 Model mapWarped(vec3 p) {
     float _;
+    float camSphere = length(p - camPos) - 6.;
     warpspin(time, _, p);
-    return sceneWarped(p);
+    Model model = sceneWarped(p);
+    //model.d = max(model.d, -camSphere);
+    return model;
 }
 
 
@@ -909,8 +968,8 @@ vec3 debugWarpspin(vec2 uv) {
     float warp;
     vec3 _ = vec3(0);
     warpspin(uv.x, warp, _);
-    vec3 col = vec3(1,0,0) * graph(uv.y, warp);
-    col += vec3(0,1,0) * graph(uv.y, _spin/2.);
+    vec3 col = vec3(1,0,0) * graph(uv.y, warp/2.);
+    col += vec3(0,1,0) * graph(uv.y, _spin);
     col += vec3(0,0,1) * graph(uv.y, _axblend);
     col += vec3(1) * graph(uv.x, fract(time));
     
@@ -923,7 +982,7 @@ vec3 debugWarpspin(vec2 uv) {
 // https://www.shadertoy.com/view/ts2cWm
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
-    time = fract(iTime / 8.);
+    time = fract(iTime / 12.);
  
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec4 sampl = vec4(0);
@@ -942,9 +1001,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     #if 1
         float focalLength = 6.;
-        vec3 camPos = vec3(0, 0, focalLength * 1.8);
+        camPos = vec3(0, 0, focalLength * 1.8);
+        //camPos = vec3(0, 0, focalLength * mix(1.8, 2.2, sinbump(0., 1., fract(time))));
         vec3 camTar = vec3(0);
         vec2 im = .5 - vec2(.45,.36);
+        im = iMouse.xy / iResolution.xy; im = .5 - im; im.x *= 2.;
+
         pR(camPos.yz, im.y * PI / 2.);
         pR(camPos.xz, im.x * PI * 2.);   
         camTar = mix(camTar, camPos, .25);
@@ -975,6 +1037,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             if (isFirstRay) {
                 //col = env(rayDir);
                 col = bgCol * .01;
+                col = mix(vec3(.01), bgCol * .01, .5);
                 break;
             }
             col += env(rayDir) * accum;
@@ -1001,8 +1064,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         hit = march(origin, rayDir, 5.);        
     }
 
-    //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
-    //col = col + cold;
+    vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
+    col = col + cold;
 
     //col = clamp(col, vec3(0), vec3(1));
       

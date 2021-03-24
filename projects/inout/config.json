@@ -13,6 +13,12 @@
         5
         ]
     },
+    "capture": {
+        "fps": 20,
+        "seconds": 12,
+        "width": 640,
+        "height": 360
+    },
     "fov": 0.7,
     "view": {
         "0": 1,
