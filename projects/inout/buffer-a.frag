@@ -604,11 +604,11 @@ void warpspin(float time, out float warp, inout vec3 p) {
         _spin = spin;
     #elif 1
         warp = gain2(tf1, 2.3, 1.) + gain2(tf2, 2.3, 1.);
-        float spin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 1.75), .8);
-        axblend = sinbump(0., 1., tf);
-        vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-1,2,0), axblend));
+        float spin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 1.75), .7);
+        axblend = smoothstep(.0, .66, tf) - smoothstep(.66, 1., tf);
+        vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-.5,2,0), axblend));
         //vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-1,2,-1.), axblend));
-        p = erot(p, ax, 5. * spin * PI * -2.);
+        p = erot(p, ax, 4. * spin * PI * -2.);
         _spin = spin;
     #elif 0
         //warp = gain2(tf, 2.5, .75);
@@ -982,7 +982,7 @@ vec3 debugWarpspin(vec2 uv) {
 // https://www.shadertoy.com/view/ts2cWm
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
-    time = fract(iTime / 12.);
+    time = fract(iTime / 8.);
  
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec4 sampl = vec4(0);
@@ -1004,9 +1004,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         camPos = vec3(0, 0, focalLength * 1.8);
         //camPos = vec3(0, 0, focalLength * mix(1.8, 2.2, sinbump(0., 1., fract(time))));
         vec3 camTar = vec3(0);
-        vec2 im = .5 - vec2(.45,.36);
-        im = iMouse.xy / iResolution.xy; im = .5 - im; im.x *= 2.;
-
+        vec2 im = .5 - vec2(.45,.42);
+        //im = iMouse.xy / iResolution.xy; im = .5 - im; im.x *= 2.;
         pR(camPos.yz, im.y * PI / 2.);
         pR(camPos.xz, im.x * PI * 2.);   
         camTar = mix(camTar, camPos, .25);
@@ -1028,7 +1027,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     const int MAX_BOUNCE = 8;
 
     isFirstRay = true;
-    hit = marchFirst(origin, rayDir, 14.);
+    hit = marchFirst(origin, rayDir, 20.);
     firstHit = hit;
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
@@ -1064,8 +1063,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         hit = march(origin, rayDir, 5.);        
     }
 
-    vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
-    col = col + cold;
+    //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
+    //col = col + cold;
 
     //col = clamp(col, vec3(0), vec3(1));
       
