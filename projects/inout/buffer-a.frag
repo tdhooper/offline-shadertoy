@@ -16,11 +16,6 @@ uniform sampler2D iChannel0; // /images/blue-noise.png filter: linear
 uniform sampler2D lichenTex; // /images/lichen.png filter: linear wrap: repeat
 uniform vec2 iChannel0Size;
 
-uniform float guiRoseA;
-uniform float guiRoseB;
-uniform float guiRoseC;
-uniform float guiRoseD;
-
 varying vec3 eye;
 varying vec3 dir;
 varying float fov;
@@ -97,7 +92,7 @@ float fSin(vec2 p, vec2 scale) {
     float d2 = 1. / scale.y - p.y;
     float d3 = p.y + 1. / scale.y;
     float sm = 1. / sqrt(scale.x * scale.y);
-    return -smin(d2, -smin(d1, d3, sm), sm);
+    return -smin2(d2, -smin2(d1, d3, sm), sm);
 }
 
 float cmax(float a, float b, float r) {
@@ -258,24 +253,31 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p.y -= s.y;
     pc = vec2(length(p.xz), -p.y);
     pR(pc, -.2);
-    d2 = (pc.y - sin((sin((pc.x + guiRoseC) * guiRoseA) + guiRoseD) * guiRoseB) * .0015 - .01) * .5;
-    //d2 = (pc.y - sin((sin((pc.x + 2.8) * 156.) + 1.6) * 8.) * .0015 - .01) * .5;
-    d2 = (pc.y - sin((sin((pc.x + 4.9) * 157.8) + 2.5) * 5.2) * .0015 - .01) * .8;
-    
-    //d2 = pc.y - sin(pc.x * guiRoseA * guiRoseB) * .0005 - .001;
-    //d2 = fSin(pc, vec2(guiRoseA * guiRoseB));
+    float rx = sin((pc.x + 4.9) * 157.8) + 2.5;
+    d2 = (pc.y - sin(rx * 5.2) * .0015 - .01) * .8;
+    vec2 pc2 = vec2(rx, -pc.y + .008);
     d2 = smax(d2, pc.x - .042, .0005);
     d2 = max(d2, p.y);
-    //d2 = max(d2, fBox(p, vec3(.05)));
     d = mincol(d, d2, col, whitecol);
 
     // light
     p = pp;
     p.y -= s.y;
-    float lightsz = .04 / 2.;
-    p.y += lightsz + .04 / 2.;
-    d2 = length(p) - lightsz;
-    d = min(d, d2);
+    float lightoffset = .065;
+    float lightheight = .02;
+    p.y += lightoffset;
+    pc = vec2(length(p.xz) - .04, p.y);
+    d2 = fBox(pc, vec2(.0, lightheight)) - .0001;
+    pc.y = abs(pc.y) - lightheight;
+    d2 = min(d2, length(pc) - .0003);
+    vec3 mainlightcol = pc.x * step(pc.y, -.0003) < 0. ? whitecol : lampshadeCol * 20.;
+    d = mincol(d, d2, col, mainlightcol);
+
+    // cable and bulb
+    d2 = length(p) - .013;
+    p.y = max(max(p.y - lightoffset, -p.y), .0);
+    d2 = min(d2, length(p) - .0005);
+    d = mincol(d, d2, col, whitecol);
 
     // shelf
     p = pp;
