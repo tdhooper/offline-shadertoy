@@ -13,7 +13,13 @@ uniform float iTime;
 uniform vec4 iMouse;
 
 uniform sampler2D iChannel0; // /images/blue-noise.png filter: linear
+uniform sampler2D lichenTex; // /images/lichen.png filter: linear wrap: repeat
 uniform vec2 iChannel0Size;
+
+uniform float guiRoseA;
+uniform float guiRoseB;
+uniform float guiRoseC;
+uniform float guiRoseD;
 
 varying vec3 eye;
 varying vec3 dir;
@@ -75,9 +81,23 @@ float smin(float a, float b, float k){
     float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
     return (1. - f) * a + f  * b - f * (1. - f) * k;
 }
+float smin2(float a, float b, float k) {
+    float h = max(0., k-abs(b-a))/k;
+    return min(a,b)-h*h*h*k/6.;
+}
 // Rotate on axis, blackle
 vec3 erot(vec3 p, vec3 ax, float ro) {
   return mix(dot(ax,p)*ax, p, cos(ro))+sin(ro)*cross(ax,p);
+}
+
+// https://www.shadertoy.com/view/tdXBWX
+float fSin(vec2 p, vec2 scale) {
+    p.x = asin(sin(p.x * scale.x) * .9) / scale.x;
+    float d1 = dot(p, normalize(scale));
+    float d2 = 1. / scale.y - p.y;
+    float d3 = p.y + 1. / scale.y;
+    float sm = 1. / sqrt(scale.x * scale.y);
+    return -smin(d2, -smin(d1, d3, sm), sm);
 }
 
 float cmax(float a, float b, float r) {
@@ -187,6 +207,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec3 pp = p;    
     vec3 col = purple;
     vec3 p4;
+    vec2 pc;
    
     vec3 p2 = pp - vec3(0,0,.1);
     vec3 p3 = pp + vec3(0,0,.11);
@@ -231,16 +252,30 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p.xy -= sofasz.xy;
     mincol(d, col, fBox(p, sofasz), pink);
     d = max(d, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
-        
-    if ( ! lightingPass) {
-        // light
-        p = pp;
-        p.y -= s.y;
-        float lightsz = .04 / 2.;
-        p.y += lightsz + .04 / 2.;
-        d2 = length(p) - lightsz;
-        d = min(d, d2);
-    }
+
+    // ceiling rose
+    p = pp;
+    p.y -= s.y;
+    pc = vec2(length(p.xz), -p.y);
+    pR(pc, -.2);
+    d2 = (pc.y - sin((sin((pc.x + guiRoseC) * guiRoseA) + guiRoseD) * guiRoseB) * .0015 - .01) * .5;
+    //d2 = (pc.y - sin((sin((pc.x + 2.8) * 156.) + 1.6) * 8.) * .0015 - .01) * .5;
+    d2 = (pc.y - sin((sin((pc.x + 4.9) * 157.8) + 2.5) * 5.2) * .0015 - .01) * .8;
+    
+    //d2 = pc.y - sin(pc.x * guiRoseA * guiRoseB) * .0005 - .001;
+    //d2 = fSin(pc, vec2(guiRoseA * guiRoseB));
+    d2 = smax(d2, pc.x - .042, .0005);
+    d2 = max(d2, p.y);
+    //d2 = max(d2, fBox(p, vec3(.05)));
+    d = mincol(d, d2, col, whitecol);
+
+    // light
+    p = pp;
+    p.y -= s.y;
+    float lightsz = .04 / 2.;
+    p.y += lightsz + .04 / 2.;
+    d2 = length(p) - lightsz;
+    d = min(d, d2);
 
     // shelf
     p = pp;
@@ -290,7 +325,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec2 corsz = (vec2(.0155, .0121)/2.) * 1.5;
     d2 = fBox(p.xz, s.xz);
     d3 = p.y - s.y;
-    vec2 pc = vec2(-d2, d3) / 1.5;
+    pc = vec2(-d2, d3) / 1.5;
     d4 = dot(pc, normalize(vec2(1,-1.3))) - .01;
     d4 = smax(d4, -(length(pc - vec2(.011,-.01)) - .008), .0005);
     //d4 = smin(d4, length((pc - vec2(.003,-.0025)) * vec2(.7,1)) - .005, .002);
@@ -524,11 +559,19 @@ Model scene(vec3 p) {
     
     //d2 = max(d2, p.y + .15);
     if (d2 > d) {
-        d = d2;
         col = wallcol;
         if (roomFace == vec3(0,-1,0)) col = woodcol;
         if (roomFace == vec3(-1,0,0)) col = featurewallcol;
+        // if (roomFace == vec3(0,1,0)) {
+        //     if (d2 < .008) {
+        //         //d2 -= sin(p.x * 1000.) * sin(p.z * 1000.) * .0005;
+        //         float tx = texture2D(lichenTex, p.xz * 20.).r * .002;
+        //         d2 -= tx;
+        //         d2 *= .7;
+        //     }
+        // }
         if (p.y > 0.1) col = whitecol;
+        d = d2;
     }
 
     Model m = Model(d, col, id);
@@ -982,7 +1025,7 @@ vec3 debugWarpspin(vec2 uv) {
 // https://www.shadertoy.com/view/ts2cWm
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
-    time = fract(iTime / 8.);
+    time = fract(iTime / 10.);
  
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec4 sampl = vec4(0);
@@ -995,7 +1038,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
     // jitter for antialiasing
     p += 2. * (seed - .5) / iResolution.xy;
-    
+
+    vec3 col = vec3(0);
+
     vec3 origin = eye;
     vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
 
@@ -1016,7 +1061,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 
     Hit hit;
-    vec3 col = vec3(0);
     vec3 nor, ref;
 
     vec3 accum = vec3(1);

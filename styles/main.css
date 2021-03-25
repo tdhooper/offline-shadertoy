@@ -18,6 +18,10 @@ body {
     opacity: 0;
 }
 
+/* canvas {
+    image-rendering: pixelated;
+} */
+
 .playpause {
     margin-right: 10px;
     width: 5em;
