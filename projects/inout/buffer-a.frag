@@ -287,6 +287,28 @@ vec4 voronoiCenters(vec2 p, float t) {
     return vec4(closestPoint, cellId);
 }
 
+// return distance, and cell id
+vec2 voronoi( in vec2 x )
+{
+    vec2 n = floor( x );
+    vec2 f = fract( x );
+
+	vec3 m = vec3( 8.0 );
+    for( int j=-1; j<=1; j++ )
+    for( int i=-1; i<=1; i++ )
+    {
+        vec2  g = vec2( float(i), float(j) );
+        vec2  o = hash22( n + g );
+      //vec2  r = g - f + o;
+	    vec2  r = g - f + o;
+        float size = hash12( n + g );
+		float d = length(r) - mix(-.05, .05, size);
+        if( d<m.x )
+            m = vec3( d, o );
+    }
+
+    return vec2( m.x, m.y+m.z );
+}
 
 void scatterclouds(vec2 p, inout vec4 col) {
     float smallestDist = 1e12;
@@ -305,8 +327,10 @@ void scatterclouds(vec2 p, inout vec4 col) {
     }
 }
 
-vec3 skyTex(vec2 p)
+vec3 skyTex(vec2 p, bool dark)
 {   
+    vec2 v = voronoi(p + 14.3);
+
     p = warp(p, vec2(0));
     
     vec2 p2 = p;
@@ -327,6 +351,11 @@ vec3 skyTex(vec2 p)
     scatterclouds(p2, col);
     scatterclouds(p3, col);
 
+if (dark) {
+    float star = smoothstep(.01, -.01, v.x) * .5;
+    col += star * pow(1. - col.a, 5.);
+    col = min(col, vec4(1));
+}
     col.a = 1.;   
     //col.rgb = pow(col.rgb, vec3(1./2.2));
 
@@ -633,7 +662,9 @@ vec2 face(vec2 p) {
 
 vec3 lampPos = vec3(.3/2., 0, -.11) * 3.25;
 
-
+bool wasoutside;
+bool wasinside;
+bool inside;
 
 Model scene(vec3 p) {
 
@@ -760,7 +791,9 @@ Model scene(vec3 p) {
 
     d2 = -main - wall;
     d2 = max(d2, -bay - .02);
-    bool inside = d2 > 0.;
+    inside = d2 > 0.;
+    wasinside = wasinside || inside;
+    wasoutside = wasoutside || ! inside;
     
     //d2 = max(d2, p.y + .15);
     if (d2 > d) {
@@ -981,16 +1014,32 @@ vec3 calcNormal(vec3 p) {
 vec3 sunPos = normalize(vec3(-5,5,7)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
 
-vec3 env(vec3 dir) {
+vec3 env(vec3 dir, bool dark) {
 #if 1
+
+//dark = true;
 
     vec3 col = mix(vec3(.5,.7,1) * .05, vec3(.5,.7,1) * 1., smoothstep(-.5, .5, dir.y));
     col = mix(col, vec3(.596,.596,.68), .1);
 
+    if (dark) {
+        col = mix(vec3(0.002,0.008,.02) * 3., vec3(0.002,0.008,.02) * .2, smoothstep(-.4, .0, dir.y));
+        col = mix(vec3(0.03,0.07,.07), col, smoothstep(-.5, -.2, dir.y));
+    }
+
     vec2 pc = vec2(atan(dir.z, dir.x), dir.y) * 30.;
-    vec3 cl = skyTex(pc + vec2(119.3, 8.7));
+    pc += dark ? vec2( 51, -36.8) : vec2(119.3, 8.7);
+    // vec2(-10.8, 8.7)
+    // 51 -36.8
+    // -82.3, 54.2
+    //vec2( -83.3, 53.)
+    vec3 cl = skyTex(pc, dark);
     col *= cl;
-    col += pow(cl, vec3(10.)) * .5;
+    if (dark) {
+        col += pow(cl, vec3(15.)) * .5;
+    } else {
+        col += pow(cl, vec3(10.)) * .5;
+    }
     //col += .1;
 
 //    col += dir.y;
@@ -1286,9 +1335,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     const int MAX_BOUNCE = 8;
 
+    wasinside = false;
+    wasoutside = false;
+    inside = false;
     isFirstRay = true;
     vec3 rd = rayDir;
-    hit = marchFirst(origin, rayDir, 20.);
+    hit = marchFirst(origin, rayDir, 30.);
     firstHit = hit;
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
@@ -1302,7 +1354,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
                 //col = mix(vec3(.01), bgCol * .01, .5);
                 break;
             }
-            col += env(rayDir) * accum;
+            col += env(rayDir, false) * accum;
             break;
         }
 
@@ -1329,7 +1381,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     if (hit.sky && isFirstRay) {
         //float _ = 0.;
         //warpspin(time, _, rd);
-        col = env(rd);
+        //col = env(rd);
+        //col.r *= 2.;
+        //col = vec3(0.002,0.008,.02);
+        //if ( ! wasinside) {
+            //col = vec3(0,.1,.1);
+            col = env(rd, wasinside);
+        //}
     }
 
     //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
