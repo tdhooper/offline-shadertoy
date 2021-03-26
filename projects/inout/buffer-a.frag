@@ -883,13 +883,23 @@ void warpspin(float time, out float warp, inout vec3 p) {
         vec3 ax = normalize(vec3(-1.,-sinbump(0., 1., tf) * -2.,-.0));
         p = erot(p, ax, spin * PI * -2.);
         _spin = spin;
-    #elif 1
+    #elif 0
         warp = gain2(tf1, 2.3, 1.) + gain2(tf2, 2.3, 1.);
         float spin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 1.75), .7);
         axblend = smoothstep(.0, .66, tf) - smoothstep(.66, 1., tf);
         vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-.5,2,0), axblend));
         //vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-1,2,-1.), axblend));
         p = erot(p, ax, 4. * spin * PI * -2.);
+        _spin = spin;
+    #elif 1
+        warp = gain2(tf1, 2., .8) + gain2(tf2, 2., .8);
+        float spin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 2.), .3);
+        float spin2 = gain(tf, 8., 1.);
+        spin = mix(spin, spin2, .2);
+        axblend = smoothstep(.0, .66, tf) - smoothstep(.66, 1., tf);
+        vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-.5,2,0), axblend));
+        //vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-1,2,-1.), axblend));
+        p = erot(p, ax, 3. * spin * PI * -2.);
         _spin = spin;
     #elif 0
         //warp = gain2(tf, 2.5, .75);
@@ -1290,7 +1300,7 @@ vec3 debugWarpspin(vec2 uv) {
 // https://www.shadertoy.com/view/ts2cWm
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
-    time = fract(iTime / 10.);
+    time = fract(iTime / 8.);
  
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec4 sampl = vec4(0);
@@ -1311,7 +1321,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     #if 1
         float focalLength = 6.;
-        camPos = vec3(0, 0, focalLength * 1.8);
+        camPos = vec3(0, 0, focalLength * 1.8);// * (1. + sinbump(0., 1., time) * .45);
         //camPos = vec3(0, 0, focalLength * mix(1.8, 2.2, sinbump(0., 1., fract(time))));
         vec3 camTar = vec3(0);
         vec2 im = .5 - vec2(.45,.42);
