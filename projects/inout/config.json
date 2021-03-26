@@ -1,5 +1,5 @@
 {
-    "id": "inout-03",
+    "id": "inout-04",
     "camera": {
         "rotation": [
         0,
@@ -21,36 +21,20 @@
     },
     "fov": 0.7,
     "controls": {
-        "roseA": {
+        "skyX": {
             "type": "range",
             "controller": 11,
-            "min": 0,
-            "max": 200,
+            "min": -150,
+            "max": 150,
             "step": 0.1,
-            "value": 100
-        },
-        "roseB": {
-            "type": "range",
-            "controller": 11,
-            "min": 0,
-            "max": 20,
-            "step": 0.1,
-            "value": 10
-        },
-        "roseC": {
-            "type": "range",
-            "controller": 11,
-            "min": 0,
-            "max": 10,
-            "step": 0.01,
             "value": 0
         },
-        "roseD": {
+        "skyY": {
             "type": "range",
             "controller": 11,
-            "min": 0,
-            "max": 10,
-            "step": 0.01,
+            "min": -150,
+            "max": 150,
+            "step": 0.1,
             "value": 0
         }
     },

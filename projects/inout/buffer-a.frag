@@ -16,6 +16,9 @@ uniform sampler2D iChannel0; // /images/blue-noise.png filter: linear
 uniform sampler2D lichenTex; // /images/lichen.png filter: linear wrap: repeat
 uniform vec2 iChannel0Size;
 
+uniform float guiSkyX;
+uniform float guiSkyY;
+
 varying vec3 eye;
 varying vec3 dir;
 varying float fov;
@@ -31,15 +34,19 @@ void main() {
 
 #define PI 3.1415926
 
+#pragma glslify: inverse = require(glsl-inverse)
 
+float round(float v) {
+    return floor(v + .5);
+}
 
+vec2 round(vec2 v) {
+    return floor(v + .5);
+}
 
 //========================================================
-// Modelling
+// Tools
 //========================================================
-
-// 0 1 2 3 4
-#define ANIM 4
 
 #define PHI 1.618033988749895
 
@@ -48,6 +55,9 @@ void main() {
 // HG_SDF
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+void pR45(inout vec2 p) {
+	p = (p + vec2(p.y, -p.x))*sqrt(0.5);
 }
 float vmax(vec3 v) {
 	return max(max(v.x, v.y), v.z);
@@ -112,22 +122,20 @@ float pMod1(inout float p, float size) {
 	return c;
 }
 
-void pR45(inout vec2 p) {
-	p = (p + vec2(p.y, -p.x))*sqrt(0.5);
+float stairmin(float a, float b, float r, float n) {
+    float d = min(a, b);
+    vec2 p = vec2(a, b);
+    pR45(p);
+    p = p.yx - vec2((r-r/n)*0.5*sqrt(2.));
+    p.x += 0.5*sqrt(2.)*r/n;
+    float x = r*sqrt(2.)/n;
+    pMod1(p.x, x);
+    d = min(d, p.y);
+    pR45(p);
+    return min(d, vmax(p -vec2(0.5*r/n)));
 }
 
-float stairmin(float a, float b, float r, float n) {
-	float d = min(a, b);
-	vec2 p = vec2(a, b);
-	pR45(p);
-	p = p.yx - vec2((r-r/n)*0.5*sqrt(2.));
-	p.x += 0.5*sqrt(2.)*r/n;
-	float x = r*sqrt(2.)/n;
-	pMod1(p.x, x);
-	d = min(d, p.y);
-	pR45(p);
-	return min(d, vmax(p -vec2(0.5*r/n)));
-}
+
 
 
 // mla https://www.shadertoy.com/view/lsGyzm
@@ -135,11 +143,210 @@ vec4 inverseStereographic(vec3 p, out float k) {
   k = 2.0/(1.0+dot(p,p));
   return vec4(k*p,k-1.0);
 }
+
 vec3 stereographic(vec4 p4) {
   float k = 1.0/(1.0+p4.w);
   return k*p4.xyz;
 }
 
+
+//========================================================
+// Noise
+//========================================================
+
+// https://www.shadertoy.com/view/4djSRW
+vec2 hash22(vec2 p)
+{
+	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
+    p3 += dot(p3, p3.yzx+33.33);
+    return fract((p3.xx+p3.yz)*p3.zy);
+}
+
+// https://www.shadertoy.com/view/4djSRW
+float hash12(vec2 p)
+{
+	vec3 p3  = fract(vec3(p.xyx) * .1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+float rnd(ivec2 uv) {
+    return texture2D(iChannel0, vec2(uv) / iChannel0Size.xy, -10000.).r;
+}
+
+
+//========================================================
+// Background
+//========================================================
+
+const float sqrt3 = 1.7320508075688772;
+const float i3 = 0.5773502691896258;
+
+const mat2 cart2hex = mat2(1, 0, i3, 2. * i3);
+const mat2 hex2cart = mat2(1, 0, -.5, .5 * sqrt3);
+
+void swirl(inout vec2 p, float scale, float radius, float power, vec2 seed) {
+
+    p += seed;
+    
+    p *= scale;
+
+    mat2 sc = mat2(1,0,0,.785);
+    mat2 sci = inverse(sc);
+    
+    vec2 h = p * sc * cart2hex;
+    vec2 hf = floor(h);
+    float d = 1e12;
+    float c = 0.;
+    float dc;
+    
+    for (int j = -1; j <= 1; j++)
+    for (int i = -1; i <= 1; i++) {
+        vec2 cellId = hf + vec2(i,j);
+        float rnd = hash12(cellId);
+        vec2 hp = cellId * hex2cart * sci;
+    	dc = length(p - hp);
+        if (dc < d) {
+        	d = dc;
+            c = mix(.1, 1., rnd);            
+        }
+
+        p -= hp;
+        pR(p, smoothstep(radius, 0., length(p)) * power * (rnd * 2. - 1.));
+        p += hp;
+    }
+    
+    p /= scale;
+
+    p -= seed;
+}
+
+vec4 cloudDist(vec2 p, vec2 s, float r, float blur)
+{
+    p /= s;
+    blur = mix(0., blur, smoothstep(r*2., -r*2., p.y));
+    float d = (length(p) - r + blur / 2.) / blur;
+    d = smoothstep(1., 0., d);
+    r += blur / 2.;
+    p /= r;
+    vec3 n = vec3(p, max(0., sqrt(1. - dot(p, p))));
+    return vec4(n, d);
+}
+
+vec4 shadeCloud(vec4 res) {
+    vec3 ld = normalize(vec3(.5,1,.5));
+    float l = dot(res.xyz, ld);
+    l = l * .5 + .5;
+    l = clamp(l, 0., 1.);
+    vec3 col = vec3(l);
+    float a = res.w;
+    return vec4(col, a);
+}
+
+vec4 cloud(vec2 p, vec2 s, float r, float blur) {
+    vec4 res = cloudDist(p, s, r, blur);
+    vec4 col = shadeCloud(res);
+    return col;
+}
+
+vec2 warp(vec2 p, vec2 seed) {
+    p += seed;
+    swirl(p, 4., .75, 2., vec2(.5));
+    swirl(p, .66, .75, 2., vec2(1. / 4.));
+    swirl(p, 1.72, .75, 3., vec2(1. * .1));
+    //swirl(p, 4., .75, 6., vec2(.5 + 1. / 6.));
+    swirl(p, 5.7, .75, 10., vec2(.5 + 1. / 6.));
+    p -= seed;
+    return p;
+}
+
+vec4 opU(vec4 a, vec4 b) {
+    vec4 res = mix(a, b, b.w);
+    res.w = max(a.w, b.w);
+    return res;
+}
+
+vec4 voronoiCenters(vec2 p, float t) {
+    float smallestDist = 1e12;
+    vec2 closestPoint = vec2(0);
+    vec2 cellId;
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            vec2 cell = round(p) + vec2(x,y);
+            vec2 offset = hash22(cell) * 2. - 1.;
+            //offset = sin( iTime + 6.2831*offset );
+            vec2 point = cell + offset * t;
+            float dist = distance(p, point);
+            if (dist < smallestDist) {
+                smallestDist = dist;
+                closestPoint = point;
+                cellId = cell;
+            }
+		}
+    }
+    return vec4(closestPoint, cellId);
+}
+
+
+void scatterclouds(vec2 p, inout vec4 col) {
+    float smallestDist = 1e12;
+    vec2 closestPoint = vec2(0);
+    vec2 cellId;
+    for (int x = -1; x <= 1; x++) {
+        for (int y = -1; y <= 1; y++) {
+            vec2 cell = round(p) + vec2(x,y);
+            vec2 offset = hash22(cell) * 2. - 1.;
+            vec2 point = cell + offset * .5;
+            float r = hash12(cell);
+            vec4 cl = cloud(p - point, vec2(.2), mix(.5, 2., r), 5.);
+            col.rgb = mix(col.rgb, cl.rgb, cl.w);
+            col.a = max(col.a, cl.a);
+		}
+    }
+}
+
+vec3 skyTex(vec2 p)
+{   
+    p = warp(p, vec2(0));
+    
+    vec2 p2 = p;
+    vec2 p3 = p;
+    
+    swirl(p2, .2, .75, 3., vec2(0.));
+    swirl(p3, .2, .75, 3., vec2(10.));
+    
+    p2 /= 6.;
+    p2.x /= 3.;
+
+    p3 /= 6.;
+    p3.x /= 3.;
+
+    //vec4 col = vec4(.596,.596,.68,0.);
+    vec4 col = vec4(.5,.5,.5,0);
+
+    scatterclouds(p2, col);
+    scatterclouds(p3, col);
+
+    col.a = 1.;   
+    //col.rgb = pow(col.rgb, vec3(1./2.2));
+
+//    col += p.y * .02;
+//    col -= .1;
+//    col = clamp(col, vec4(.1), vec4(3));
+
+    return col.rgb;
+}
+
+
+
+
+
+//========================================================
+// Modelling
+//========================================================
+
+// 0 1 2 3 4
+#define ANIM 4
 
 float time;
 bool isFirstRay;
@@ -398,10 +605,6 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     }
 
     return Model(d, col, id);
-}
-
-float rnd(ivec2 uv) {
-    return texture2D(iChannel0, vec2(uv) / iChannel0Size.xy, -10000.).r;
 }
 
 float fBricks(vec2 p, out vec2 c, out vec2 uv, out float hide) {
@@ -764,15 +967,6 @@ Model mapWarped(vec3 p) {
 // Rendering
 //========================================================
 
-
-// https://www.shadertoy.com/view/4djSRW
-vec2 hash22(vec2 p)
-{
-	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
-    p3 += dot(p3, p3.yzx+33.33);
-    return fract((p3.xx+p3.yz)*p3.zy);
-}
-
 vec3 calcNormal(vec3 p) {
   vec3 eps = vec3(.00001,0,0);
   vec3 n = vec3(
@@ -788,14 +982,34 @@ vec3 sunPos = normalize(vec3(-5,5,7)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
 
 vec3 env(vec3 dir) {
+#if 1
+
+    vec3 col = mix(vec3(.5,.7,1) * .05, vec3(.5,.7,1) * 1., smoothstep(-.5, .5, dir.y));
+    col = mix(col, vec3(.596,.596,.68), .1);
+
+    vec2 pc = vec2(atan(dir.z, dir.x), dir.y) * 30.;
+    vec3 cl = skyTex(pc + vec2(119.3, 8.7));
+    col *= cl;
+    col += pow(cl, vec3(10.)) * .5;
+    //col += .1;
+
+//    col += dir.y;
+    
+  //  col = pow(col, vec3(2.));
+
+
+    return col;
+#else 
     vec3 col = vec3(0);
-    col += max(dir.y, 0.) * skyColor;
+    //col += max(dir.y, 0.) * skyColor;
+    col = mix(vec3(.5,.7,1) * .1, vec3(.5,.7,1) * .5, clamp(unlerp(-.4, .1, dir.y), 0., 1.));
     #if 1
         //col += smoothstep(.5, 1., dot(dir, normalize(sunPos))) * sunColor;// * 5.;
     #else
         //col += smoothstep(.97, .99, dot(dir, normalize(sunPos))) * sunColor * 20.;
     #endif
     return col;
+#endif
 }
 
 
@@ -1073,6 +1287,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     const int MAX_BOUNCE = 8;
 
     isFirstRay = true;
+    vec3 rd = rayDir;
     hit = marchFirst(origin, rayDir, 20.);
     firstHit = hit;
 
@@ -1080,9 +1295,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
    
         if (hit.sky) {
             if (isFirstRay) {
-                //col = env(rayDir);
-                col = bgCol * .01;
-                col = mix(vec3(.01), bgCol * .01, .5);
+                //float _ = 0.;
+                //warpspin(time, _, rd);
+                //col = env(rd);
+                //col = bgCol * .01;
+                //col = mix(vec3(.01), bgCol * .01, .5);
                 break;
             }
             col += env(rayDir) * accum;
@@ -1107,6 +1324,12 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         origin = hit.pos + nor * .0002;    
         seed = hash22(seed);
         hit = march(origin, rayDir, 5.);        
+    }
+
+    if (hit.sky && isFirstRay) {
+        //float _ = 0.;
+        //warpspin(time, _, rd);
+        col = env(rd);
     }
 
     //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
