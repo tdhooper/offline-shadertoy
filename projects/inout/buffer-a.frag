@@ -525,7 +525,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         p.x -= s.x;
         vec3 shelfsz = vec3(.03,.003,.1) / 2.;
         p.x += shelfsz.x;
-        p.zy -= vec2(.1,-.05);
+        p.zy -= vec2(.1,-.02);
         d2 = fBox(p, shelfsz);
         d = mincol(d, d2, col, woodcol);
 
@@ -535,19 +535,25 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     }
     
     // table
-    p4 = pp - vec3(0,0,.05);
-    p = p4;
+    p = pp - vec3(-.01,0,.1);
+    pR(p.xz, .1);
     p.y += s.y;
-    vec3 tablesz = vec3(.08,.05,.08) / 2.;
-    float ttop = .01 / 2.;
-    p.y -= tablesz.y * 2. - ttop;
-    d = min(d, fBox(p, vec3(tablesz.x, ttop, tablesz.z)));
-    p = p4;
-    p.y += s.y;
-    p.xz = abs(p.xz);
-    float tleg = .01 / 2.;
-    p -= tablesz - vec3(tleg, 0, tleg);
-    d = min(d, fBox(p, vec3(tleg, tablesz.y, tleg)));
+    vec3 tablesz = vec3(.066,.05,.1) / 2.;
+    p.y -= tablesz.y;
+    bound = fBox(p, tablesz + .001);
+    if (bound > .0004) {
+        d = min(d, bound);
+    } else {
+        float ttop = .0015;
+        d2 = fBox(p - vec3(0,tablesz.y - ttop,0), vec3(tablesz.x, ttop, tablesz.z) + .0002) - .0002;
+        d = mincol(d, d2, col, woodcol);
+        p.xz = abs(p.xz);
+        float tleg = .0035;
+        d2 = sdUberprim(p.xzy - vec3(0,0,tablesz.y-ttop-tleg*1.5), vec4(vec3(tablesz.xz - .003, tleg * 1.5), tleg/3.), vec3(.0002,.0002,0));
+        p.xz -= tablesz.xz - tleg - .002;
+        d2 = min(d2, fBox(p, vec3(tleg, tablesz.y, tleg) + .0002) - .0002);
+        d = mincol(d, d2, col, whitecol);
+    }
     
     // sofa
     p = p2;
