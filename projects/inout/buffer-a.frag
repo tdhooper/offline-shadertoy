@@ -38,6 +38,9 @@ void main() {
 //#define FREE_FLY
 
 
+float time;
+float timeRaw;
+
 #define PI 3.1415926
 
 #pragma glslify: inverse = require(glsl-inverse)
@@ -360,7 +363,7 @@ void scatterclouds(vec2 p, inout vec4 col) {
     }
 }
 
-vec3 skyTex(vec2 p, bool dark)
+vec3 skyTex(vec2 p, bool dark, float seed)
 {   
     vec2 v = voronoi(p + 14.3);
 
@@ -369,8 +372,8 @@ vec3 skyTex(vec2 p, bool dark)
     vec2 p2 = p;
     vec2 p3 = p;
     
-    swirl(p2, .2, .75, 3., vec2(0.));
-    swirl(p3, .2, .75, 3., vec2(10.));
+    swirl(p2, .2, .75, 3., vec2(0.) - seed);
+    swirl(p3, .2, .75, 3., vec2(10.) - seed);
     
     p2 /= 6.;
     p2.x /= 3.;
@@ -410,7 +413,6 @@ if (dark) {
 // 0 1 2 3 4
 #define ANIM 4
 
-float time;
 bool isFirstRay;
 
 bool lightingPass;
@@ -1153,6 +1155,8 @@ vec3 env(vec3 dir, bool dark) {
 
     vec2 pc = vec2(atan(dir.z, dir.x), dir.y) * 30.;
 
+    float seed = time - .2;
+
     if (dark) {
         float blend = dir.y;
         if (time > .5) {
@@ -1167,6 +1171,7 @@ vec3 env(vec3 dir, bool dark) {
         if (time > .2 && time < .7) {
             pc += vec2(-17);
         } else {
+            seed = fract(timeRaw + .1) - .1;
             pc += vec2(119.3, 8.7);
         }
     }
@@ -1175,7 +1180,7 @@ vec3 env(vec3 dir, bool dark) {
     // 51 -36.8
     // -82.3, 54.2
     //vec2( -83.3, 53.)
-    vec3 cl = skyTex(pc, dark);
+    vec3 cl = skyTex(pc, dark, seed * 10.);
     col *= cl;
     if (dark) {
         col += pow(cl, vec3(15.)) * .3;
@@ -1455,6 +1460,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         time += (hash12(seed) * 2. - 1.) * .001;
     #endif
 
+    timeRaw = time;
     time = fract(time);
 
     vec3 col = vec3(0);
