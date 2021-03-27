@@ -537,36 +537,45 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     mincol(d, col, fBox(p, sofasz), pink);
     d = max(d, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
 
-    // ceiling rose
+    float bound;
+
     p = pp;
     p.y -= s.y;
-    pc = vec2(length(p.xz), -p.y);
-    pR(pc, -.2);
-    float rx = sin((pc.x + 4.9) * 157.8) + 2.5;
-    d2 = (pc.y - sin(rx * 5.2) * .0015 - .01) * .8;
-    vec2 pc2 = vec2(rx, -pc.y + .008);
-    d2 = smax(d2, pc.x - .042, .0005);
-    d2 = max(d2, p.y);
-    d = mincol(d, d2, col, whitecol);
+    bound = max(-p.y - .09, length(p.xz) - .05);
+    if (bound > .0002) {
+        d = min(d, bound);
+    } else {
+        // ceiling rose
+        p = pp;
+        p.y -= s.y;
+        pc = vec2(length(p.xz), -p.y);
+        pR(pc, -.2);
+        float rx = sin((pc.x + 4.9) * 157.8) + 2.5;
+        d2 = (pc.y - sin(rx * 5.2) * .0015 - .01) * .8;
+        vec2 pc2 = vec2(rx, -pc.y + .008);
+        d2 = smax(d2, pc.x - .042, .0005);
+        d2 = max(d2, p.y);
+        d = mincol(d, d2, col, whitecol);
 
-    // light
-    p = pp;
-    p.y -= s.y;
-    float lightoffset = .065;
-    float lightheight = .02;
-    p.y += lightoffset;
-    pc = vec2(length(p.xz) - .04, p.y);
-    d2 = fBox(pc, vec2(.0, lightheight)) - .0001;
-    pc.y = abs(pc.y) - lightheight;
-    d2 = min(d2, length(pc) - .0003);
-    vec3 mainlightcol = pc.x * step(pc.y, -.0003) < 0. ? whitecol : lampshadeCol * 20.;
-    d = mincol(d, d2, col, mainlightcol);
+        // light
+        p = pp;
+        p.y -= s.y;
+        float lightoffset = .065;
+        float lightheight = .02;
+        p.y += lightoffset;
+        pc = vec2(length(p.xz) - .04, p.y);
+        d2 = fBox(pc, vec2(.0, lightheight)) - .0001;
+        pc.y = abs(pc.y) - lightheight;
+        d2 = min(d2, length(pc) - .0003);
+        vec3 mainlightcol = pc.x * step(pc.y, -.0003) < 0. ? whitecol : lampshadeCol * 20.;
+        d = mincol(d, d2, col, mainlightcol);
 
-    // cable and bulb
-    d2 = length(p) - .013;
-    p.y = max(max(p.y - lightoffset, -p.y), .0);
-    d2 = min(d2, length(p) - .0005);
-    d = mincol(d, d2, col, whitecol);
+        // cable and bulb
+        d2 = length(p) - .013;
+        p.y = max(max(p.y - lightoffset, -p.y), .0);
+        d2 = min(d2, length(p) - .0005);
+        d = mincol(d, d2, col, whitecol);
+    }
 
     // shelf
     p = pp;
