@@ -542,7 +542,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p = pp;
     p.y -= s.y;
     bound = max(-p.y - .09, length(p.xz) - .05);
-    if (bound > .0002) {
+    if (bound > .0004) {
         d = min(d, bound);
     } else {
         // ceiling rose
