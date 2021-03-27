@@ -662,9 +662,12 @@ vec2 face(vec2 p) {
 
 vec3 lampPos = vec3(.3/2., 0, -.11) * 3.25;
 
-bool wasoutside;
-bool wasinside;
 bool inside;
+bool lastinside;
+bool initialsample;
+bool startedinside;
+int passedwindow1;
+int passedwindow2;
 
 Model scene(vec3 p) {
 
@@ -791,9 +794,21 @@ Model scene(vec3 p) {
 
     d2 = -main - wall;
     d2 = max(d2, -bay - .02);
+
     inside = d2 > 0.;
-    wasinside = wasinside || inside;
-    wasoutside = wasoutside || ! inside;
+    if (initialsample) {
+        lastinside = inside;
+        startedinside = inside;
+    } else {
+        if (lastinside != inside) {
+            lastinside = inside;
+            if (p.z < 0.) {
+                passedwindow1 += 1;
+            } else {
+                passedwindow2 += 1;
+            }
+        }
+    }
     
     //d2 = max(d2, p.y + .15);
     if (d2 > d) {
@@ -863,14 +878,16 @@ float gain2B(float x, float P, float g) {
 }
 
 
-float _spin;
-float _axblend;
+float gWarp;
+float gSpin;
+float gSpinBg;
+float gAxblend;
+float gDaxblend;
 
-void warpspin(float time, out float warp, inout vec3 p) {
+void warpspin(float time, bool isDark, inout vec3 p, inout vec3 dir) {
     float tf = fract(time);
     float tf1 = unlerp(0., .5, tf);
     float tf2 = unlerp(.5, 1., tf);
-    float axblend;
     #if 0
         warp = gain2(tf, 3., .5);
         float spin = mix(fract(time), gain(unlerp(.025, .825, fract(time)), 1.75), 1.) * 2.;
@@ -884,13 +901,35 @@ void warpspin(float time, out float warp, inout vec3 p) {
         p = erot(p, ax, spin * PI * -2.);
         _spin = spin;
     #elif 1
-        warp = gain2(tf1, 2.3, 1.) + gain2(tf2, 2.3, 1.);
-        float spin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 1.75), .7);
-        axblend = smoothstep(.0, .66, tf) - smoothstep(.66, 1., tf);
-        vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-.5,2,0), axblend));
-        //vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-1,2,-1.), axblend));
-        p = erot(p, ax, 4. * spin * PI * -2.);
-        _spin = spin;
+        gWarp = gain2(tf1, 2.3, 1.) + gain2(tf2, 2.3, 1.);
+        gSpin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 1.75), .7);
+        gAxblend = smoothstep(.0, .66, tf) - smoothstep(.66, 1., tf);
+        vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-.5,2,0), gAxblend));
+        p = erot(p, ax, 4. * gSpin * PI * -2.);
+
+        gSpinBg = gSpin;
+
+        vec3 dax = vec3(-1,0,0);
+
+        if (isDark) {
+            if (tf < .5) {
+                gSpinBg -= .128;
+            } else {
+                gSpinBg -= .7;
+                dax = normalize(vec3(-1,1,0));
+            }
+        } else {
+            if (tf > .7) {
+                gSpinBg -= 1.;
+            } else if (tf > .3) {
+                gSpinBg -= .5;
+                dax = normalize(vec3(-.5,1,0));
+            } 
+        }
+
+        gSpinBg /= 2.;
+
+        dir = erot(dir, dax, gSpinBg * PI * -2.);
     #elif 0
         warp = gain2(tf1, 2., .8) + gain2(tf2, 2., .8);
         float spin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 2.), .3);
@@ -953,11 +992,6 @@ void warpspin(float time, out float warp, inout vec3 p) {
 
 
     #endif
-
-
-    
-    _spin = spin;
-    _axblend = axblend;
 }
 
 vec3 warpedP;
@@ -971,11 +1005,10 @@ Model sceneWarped(vec3 p) {
     float k;
     vec4 p4 = inverseStereographic(p, k);
     
-    float warp;
-    vec3 _ = vec3(0);
-    warpspin(time, warp, _);
+    vec3 _, _2;
+    warpspin(time, false, _, _2);
     
-    pR(p4.zw, -warp * PI * 2.);
+    pR(p4.zw, -gWarp * PI * 2.);
     p = stereographic(p4);
     warpedP = p;
 
@@ -1001,9 +1034,9 @@ Model map(vec3 p) {
 }
 
 Model mapWarped(vec3 p) {
-    float _;
+    vec3 _;
     float camSphere = length(p - camPos) - 6.;
-    warpspin(time, _, p);
+    warpspin(time, false, p, _);
     Model model = sceneWarped(p);
     //model.d = max(model.d, -camSphere);
     return model;
@@ -1042,13 +1075,26 @@ vec3 env(vec3 dir, bool dark) {
     vec3 col = mix(vec3(.5,.7,1) * .05, vec3(.5,.7,1) * 1., smoothstep(-.5, .5, dir.y));
     col = mix(col, vec3(.596,.596,.68), .1);
 
+    vec2 pc = vec2(atan(dir.z, dir.x), dir.y) * 30.;
+
     if (dark) {
-        col = mix(vec3(0.002,0.008,.02) * 3., vec3(0.002,0.008,.02) * .2, smoothstep(-.4, .0, dir.y));
-        col = mix(vec3(0.03,0.07,.07), col, smoothstep(-.5, -.2, dir.y));
+        float blend = dir.y;
+        if (time > .5) {
+            blend += .2;
+            pc -= vec2(20);
+        } else {
+            pc += vec2( 51, -36.8);
+        }
+        col = mix(vec3(0.002,0.008,.02) * 3., vec3(0.002,0.008,.02) * .2, smoothstep(-.4, .0, blend));
+        col = mix(vec3(0.03,0.07,.07), col, smoothstep(-.5, -.2, blend));
+    } else {
+        if (time > .2 && time < .7) {
+            pc += vec2(-17);
+        } else {
+            pc += vec2(119.3, 8.7);
+        }
     }
 
-    vec2 pc = vec2(atan(dir.z, dir.x), dir.y) * 30.;
-    pc += dark ? vec2( 51, -36.8) : vec2(119.3, 8.7);
     // vec2(-10.8, 8.7)
     // 51 -36.8
     // -82.3, 54.2
@@ -1056,9 +1102,9 @@ vec3 env(vec3 dir, bool dark) {
     vec3 cl = skyTex(pc, dark);
     col *= cl;
     if (dark) {
-        col += pow(cl, vec3(15.)) * .5;
+        col += pow(cl, vec3(15.)) * .3;
     } else {
-        col += pow(cl, vec3(10.)) * .5;
+        col += pow(cl, vec3(15.)) * 2.;
     }
     //col += .1;
 
@@ -1110,7 +1156,10 @@ Hit marchFirst(vec3 origin, inout vec3 rayDirection, float maxDist) {
         rayPosition = origin + rayDirection * rayLength;
         lastWarpedP = warpedP;
         model = mapWarped(rayPosition);
-        if (i == 0) firstModel = model;
+        if (i == 0) {
+            firstModel = model;
+            initialsample = false;
+        }
         dist = model.d;
 
         float error = dist / rayLength;
@@ -1293,13 +1342,13 @@ float graph(float y, float t) {
 }
 
 vec3 debugWarpspin(vec2 uv) {
-    float warp;
-    vec3 _ = vec3(0);
-    warpspin(uv.x, warp, _);
-    vec3 col = vec3(1,0,0) * graph(uv.y, warp/2.);
-    col += vec3(0,1,0) * graph(uv.y, _spin);
-    col += vec3(0,0,1) * graph(uv.y, _axblend);
+    vec3 _, _2;
+    warpspin(uv.x, false, _, _2);
+    vec3 col = vec3(1,0,0) * graph(uv.y, gWarp/2.);
+    col += vec3(0,1,0) * graph(uv.y, gSpin);
+    col += vec3(0,0,1) * graph(uv.y, gAxblend);
     col += vec3(1) * graph(uv.x, fract(time));
+    col += vec3(1) * graph(uv.y, gSpinBg);
     
     //col *= .3;
     return col;
@@ -1361,8 +1410,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     const int MAX_BOUNCE = 8;
 
-    wasinside = false;
-    wasoutside = false;
+    passedwindow1 = 0;
+    passedwindow2 = 0;
+    initialsample = true;
     inside = false;
     isFirstRay = true;
     vec3 rd = rayDir;
@@ -1373,11 +1423,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
    
         if (hit.sky) {
             if (isFirstRay) {
-                //float _ = 0.;
-                //warpspin(time, _, rd);
-                //col = env(rd);
-                //col = bgCol * .01;
-                //col = mix(vec3(.01), bgCol * .01, .5);
                 break;
             }
             col += env(rayDir, false) * accum;
@@ -1405,16 +1450,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
     if (hit.sky && isFirstRay) {
-        //float _ = 0.;
-        //warpspin(time, _, rd);
-        //col = env(rd);
-        //col.r *= 2.;
-        //col = vec3(0.002,0.008,.02);
-        //if ( ! wasinside) {
-            //col = vec3(0,.1,.1);
-            pR(rd.xz, time * .5);
-            col = env(rd, wasinside);
-        //}
+        // col = vec3(0);
+        // col.r = float(passedwindow1) / 2.;
+        // col.g = float(passedwindow2) / 2.;
+        // col.b = startedinside ? 1. : 0.;
+        bool isLight = (
+            false
+            || (time < .3 && ! startedinside && passedwindow1 < 2)
+            || (time < .3 && startedinside && passedwindow2 == 1 && passedwindow1 == 0)
+            || (time > .4 && time < .5 && startedinside && passedwindow1 == 1)
+            || ( ! startedinside && passedwindow1 == 0 && passedwindow2 == 0)
+            || ( ! startedinside && passedwindow1 == 1 && passedwindow2 == 1)
+            || (time < .15 && startedinside && passedwindow1 == 1 && passedwindow2 == 1)
+        );
+        vec3 _;
+        warpspin(time, ! isLight, _, rd);
+        col = env(rd, ! isLight);
     }
 
     //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
