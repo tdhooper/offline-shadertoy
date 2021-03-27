@@ -750,7 +750,7 @@ Model scene(vec3 p) {
 
     d = 1e12;
 
-    float sc = 3.;
+    float sc = 3.2;
     p /= sc;
 
     #ifdef ROOM_ONLY
@@ -1455,7 +1455,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     #ifndef FREE_FLY
         float focalLength = 6.;
-        camPos = vec3(0, 0, focalLength * 1.8);// * (1. + sinbump(0., 1., time) * .45);
+        camPos = vec3(0, 0, focalLength * 1.9);// * (1. + sinbump(0., 1., time) * .45);
         //camPos = vec3(0, 0, focalLength * mix(1.8, 2.2, sinbump(0., 1., fract(time))));
         vec3 camTar = vec3(0);
         vec2 im = .5 - vec2(.45,.42);
