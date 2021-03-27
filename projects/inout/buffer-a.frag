@@ -467,7 +467,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     int id = 2;
 
     float d = 1e12;
-    float d2, d3, d4;
+    float d2, d3, d4, bound;
     p.x = -p.x;
     vec3 pp = p;    
     vec3 col = purple;
@@ -477,42 +477,62 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec3 p2 = pp - vec3(0,0,.1);
     vec3 p3 = pp + vec3(0,0,.11);
    
-    // tv unit
-    p = p2;
-    p.x = -p.x;
-    p.xy += s.xy;
-    p.z = abs(p.z);
-    p.x -= .01;
-    vec3 tvusz = vec3(.06, .06, .13) / 2.;
-    float tvut = .004;
-    float tvur = .001;
-    p.xy -= tvusz.xy;
-    d2 = sdUberprim(p.zyx + vec3(0, tvusz.y, 0), vec4(tvusz.zyx * vec3(1,2,1), tvut), vec3(vec2(tvur), .0));
-    float drawt = .002;
-    vec3 tvuboxsz = vec3(tvusz.x - drawt, tvusz.y * .5, tvusz.z - tvut * 2.);
-    p.y -= tvut - tvusz.y + tvuboxsz.y;
-    d2 = min(d2, fBox(p, tvuboxsz - tvur) - tvur);
-    vec3 drawsz = vec3(drawt, tvuboxsz.y-tvut, tvusz.z*.5) - vec3(0, 0, tvut);
-    d2 = min(d2, fBox(p - vec3(tvuboxsz.z/2.,tvut,drawsz.z), drawsz - tvur) - tvur);
-    //d2 = fBox(p, tvusz);
-    d = mincol(d, d2, col, darkgrey);
-    
-    // tv
-    p = p2;
-    p.x = -p.x;
-    p.xy += s.xy;
-    vec3 tvsz = vec3(8.6, 71.1, 122.8) / 1000. / 2.;
-    p.xy -= tvsz.xy;
-    p.y -= tvusz.y * 2. + .005;
-    p.x -= tvusz.x;
-    d = mincol(d, fBox(p, tvsz), col, vec3(.01));
-    d2 = fBox(p - vec3(.0041,0,0), tvsz - .004);
-    if (d2 < d) {
-        float logo = texture2D(revisionTex, (p.zy / tvusz.z / 1.) + .5).r;
-        d = d2;
-        col = mix(vec3(1.4), vec3(.2,1.4,.8), logo);
+    vec3 doorsz = (vec3(35, 1981, 762) * .0001) / 2.;
+    vec3 doorpos = vec3(s.x, doorsz.y - s.y, -.11);
+
+    bound = -p.x + s.x * .55;
+    if (bound > .0004) {
+        d = min(d, bound);
+    } else {
+        // tv unit
+        p = p2;
+        p.x = -p.x;
+        p.xy += s.xy;
+        p.z = abs(p.z);
+        p.x -= .01;
+        vec3 tvusz = vec3(.06, .06, .13) / 2.;
+        float tvut = .004;
+        float tvur = .001;
+        p.xy -= tvusz.xy;
+        d2 = sdUberprim(p.zyx + vec3(0, tvusz.y, 0), vec4(tvusz.zyx * vec3(1,2,1), tvut), vec3(vec2(tvur), .0));
+        float drawt = .002;
+        vec3 tvuboxsz = vec3(tvusz.x - drawt, tvusz.y * .5, tvusz.z - tvut * 2.);
+        p.y -= tvut - tvusz.y + tvuboxsz.y;
+        d2 = min(d2, fBox(p, tvuboxsz - tvur) - tvur);
+        vec3 drawsz = vec3(drawt, tvuboxsz.y-tvut, tvusz.z*.5) - vec3(0, 0, tvut);
+        d2 = min(d2, fBox(p - vec3(tvuboxsz.z/2.,tvut,drawsz.z), drawsz - tvur) - tvur);
+        //d2 = fBox(p, tvusz);
+        d = mincol(d, d2, col, darkgrey);
+        
+        // tv
+        p = p2;
+        p.x = -p.x;
+        p.xy += s.xy;
+        vec3 tvsz = vec3(8.6, 71.1, 122.8) / 1000. / 2.;
+        p.xy -= tvsz.xy;
+        p.y -= tvusz.y * 2. + .005;
+        p.x -= tvusz.x;
+        d = mincol(d, fBox(p, tvsz), col, vec3(.01));
+        d2 = fBox(p - vec3(.0041,0,0), tvsz - .004);
+        if (d2 < d) {
+            float logo = texture2D(revisionTex, (p.zy / tvusz.z / 1.) + .5).r;
+            d = d2;
+            col = mix(vec3(1.4), vec3(.2,1.4,.8), logo);
+        }
+
+        // shelf
+        p = pp;
+        p.x -= s.x;
+        vec3 shelfsz = vec3(.03,.003,.1) / 2.;
+        p.x += shelfsz.x;
+        p.zy -= vec2(.1,-.05);
+        d2 = fBox(p, shelfsz);
+        d = mincol(d, d2, col, woodcol);
+
+        // door
+        p = pp - doorpos;
+        d = mincol(d, fBox(p, doorsz), col, woodcol);  
     }
-    
     
     // table
     p4 = pp - vec3(0,0,.05);
@@ -536,8 +556,6 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p.xy -= sofasz.xy;
     mincol(d, col, fBox(p, sofasz), pink);
     d = max(d, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
-
-    float bound;
 
     p = pp;
     p.y -= s.y;
@@ -577,15 +595,6 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         d = mincol(d, d2, col, whitecol);
     }
 
-    // shelf
-    p = pp;
-    p.x -= s.x;
-    vec3 shelfsz = vec3(.03,.003,.1) / 2.;
-    p.x += shelfsz.x;
-    p.zy -= vec2(.1,-.05);
-    d2 = fBox(p, shelfsz);
-    d = mincol(d, d2, col, woodcol);
-
     // lamp
     p = p3;
    
@@ -604,12 +613,6 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
 
     p = p3;
     d = max(d, -p.y - s.y);
-    
-    // door
-    vec3 doorsz = (vec3(35, 1981, 762) * .0001) / 2.;
-    vec3 doorpos = vec3(s.x, doorsz.y - s.y, -.11);
-    p = pp - doorpos;
-    d = mincol(d, fBox(p, doorsz), col, woodcol);  
 
     // skirting
     p = pp;
