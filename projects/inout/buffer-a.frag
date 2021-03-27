@@ -883,7 +883,7 @@ void warpspin(float time, out float warp, inout vec3 p) {
         vec3 ax = normalize(vec3(-1.,-sinbump(0., 1., tf) * -2.,-.0));
         p = erot(p, ax, spin * PI * -2.);
         _spin = spin;
-    #elif 0
+    #elif 1
         warp = gain2(tf1, 2.3, 1.) + gain2(tf2, 2.3, 1.);
         float spin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 1.75), .7);
         axblend = smoothstep(.0, .66, tf) - smoothstep(.66, 1., tf);
@@ -891,7 +891,7 @@ void warpspin(float time, out float warp, inout vec3 p) {
         //vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-1,2,-1.), axblend));
         p = erot(p, ax, 4. * spin * PI * -2.);
         _spin = spin;
-    #elif 1
+    #elif 0
         warp = gain2(tf1, 2., .8) + gain2(tf2, 2., .8);
         float spin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 2.), .3);
         float spin2 = gain(tf, 8., 1.);
@@ -900,6 +900,16 @@ void warpspin(float time, out float warp, inout vec3 p) {
         vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-.5,2,0), axblend));
         //vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-1,2,-1.), axblend));
         p = erot(p, ax, 3. * spin * PI * -2.);
+        _spin = spin;
+    #elif 0
+        warp = gain2(tf1, 2., .8) + gain2(tf2, 2., .8);
+        float spin = gain(tf, 2., .6);
+        float spin2 = gain(tf, 10., 1.);
+        spin = mix(spin, spin2, .05);
+        axblend = smoothstep(.0, .66, tf) - smoothstep(.66, 1., tf);
+        vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-.5,2,0), axblend));
+        //vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-1,2,-1.), axblend));
+        p = erot(p, ax, 4. * spin * PI * -2.);
         _spin = spin;
     #elif 0
         //warp = gain2(tf, 2.5, .75);
@@ -1300,7 +1310,6 @@ vec3 debugWarpspin(vec2 uv) {
 // https://www.shadertoy.com/view/ts2cWm
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
-    time = fract(iTime / 8.);
  
     vec2 uv = fragCoord.xy / iResolution.xy;
     vec4 sampl = vec4(0);
@@ -1309,10 +1318,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     bool db = p.y > 0.;
 
-    vec2 seed = hash22(fragCoord + float(iFrame) * 1.61803398875);
+    time = iTime / 8.;
+
+    vec2 seed = hash22(fragCoord + (float(iFrame) + time * 30.) * 1.61803398875);
     
     // jitter for antialiasing
     p += 2. * (seed - .5) / iResolution.xy;
+
+    // jitter for motion blur
+    time += (hash12(seed) * 2. - 1.) * .001;
+
+    time = fract(time);
 
     vec3 col = vec3(0);
 
@@ -1396,6 +1412,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         //col = vec3(0.002,0.008,.02);
         //if ( ! wasinside) {
             //col = vec3(0,.1,.1);
+            pR(rd.xz, time * .5);
             col = env(rd, wasinside);
         //}
     }
