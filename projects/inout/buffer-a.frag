@@ -1104,14 +1104,21 @@ Model mapWarped(vec3 p) {
 // Rendering
 //========================================================
 
-vec3 calcNormal(vec3 p) {
-  vec3 eps = vec3(.00001,0,0);
-  vec3 n = vec3(
-    map(p + eps.xyy).d - map(p - eps.xyy).d,
-    map(p + eps.yxy).d - map(p - eps.yxy).d,
-    map(p + eps.yyx).d - map(p - eps.yyx).d
-  );
-  return normalize(n);
+vec3 calcNormal(vec3 p )
+{
+    const float h = 0.00001;      // replace by an appropriate value
+    vec3 n = vec3(0.0);
+    for( int i=0; i<4; i++ )
+    {
+        vec3 v = vec3(
+            int(mod(float(i + 3), 4.)) / 2, // 1 0 0 1
+            i / 2, // 0 0 1 1
+            int(mod(float(i), 2.)) // 0 1 0 1
+        );
+        vec3 e = 0.5773 * (2. * v- 1.);
+        n += e * map(p + e * h).d;
+    }
+    return normalize(n);
 }
 
 
