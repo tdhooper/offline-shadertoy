@@ -14,7 +14,9 @@ uniform vec4 iMouse;
 
 uniform sampler2D iChannel0; // /images/blue-noise.png filter: linear
 uniform sampler2D lichenTex; // /images/lichen.png filter: linear wrap: repeat
+uniform sampler2D revisionTex; // /images/revision-logo.png filter: linear
 uniform vec2 iChannel0Size;
+uniform vec2 revisionTexSize;
 
 uniform float guiSkyX;
 uniform float guiSkyY;
@@ -31,6 +33,10 @@ void mainImage(out vec4 a, in vec2 b);
 void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
+
+//#define ROOM_ONLY
+//#define FREE_FLY
+
 
 #define PI 3.1415926
 
@@ -90,6 +96,33 @@ float smin2(float a, float b, float k) {
     float h = max(0., k-abs(b-a))/k;
     return min(a,b)-h*h*h*k/6.;
 }
+
+// https://www.shadertoy.com/view/MsVGWG
+float sdUnterprim(vec3 p, vec4 s, vec3 r, vec2 ba, float sz2) {
+    vec3 d = abs(p) - s.xyz;
+    float q = length(max(d.xy, 0.0)) + min(0.0,max(d.x,d.y)) - r.x;
+    // hole support: without this line, all results are convex
+    q = abs(q) - s.w;
+    vec2 pa = vec2(q, p.z - s.z);
+    vec2 diag = pa - vec2(r.z,sz2) * clamp(dot(pa,ba), 0.0, 1.0);
+    vec2 h0 = vec2(max(q - r.z,0.0),p.z + s.z);
+    vec2 h1 = vec2(max(q,0.0),p.z - s.z);   
+    return sqrt(min(dot(diag,diag),min(dot(h0,h0),dot(h1,h1))))
+        * sign(max(dot(pa,vec2(-ba.y, ba.x)), d.z)) - r.y;
+}
+
+// s: width, height, depth, thickness
+// r: xy corner radius, z corner radius, bottom radius offset
+float sdUberprim(vec3 p, vec4 s, vec3 r) {
+    // these operations can be precomputed
+    s.xy -= r.x;
+    r.x -= s.w;
+    s.w -= r.y;
+    s.z -= r.y;
+    vec2 ba = vec2(r.z, -2.0*s.z);
+    return sdUnterprim(p, s, r, ba/dot(ba,ba), ba.y);
+}
+
 // Rotate on axis, blackle
 vec3 erot(vec3 p, vec3 ax, float ro) {
   return mix(dot(ax,p)*ax, p, cos(ro))+sin(ro)*cross(ax,p);
@@ -423,6 +456,7 @@ vec3 bulbCol = vec3(1,.75,.5) * .25;
 vec3 woodcol = vec3(0.714,0.451,0.184);
 vec3 whitecol = vec3(.5);
 vec3 wallcol = vec3(179,179,195)/255./2.;
+vec3 darkgrey = vec3(.09,.105,.11)*.8;
 vec3 featurewallcol = vec3(.05,.26,.32);
 
 Model fRoom(vec3 p, vec3 s, vec3 baysz) {
@@ -447,19 +481,38 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p = p2;
     p.x = -p.x;
     p.xy += s.xy;
-    vec3 tvusz = vec3(.06, .04, .15) / 2.;
+    p.z = abs(p.z);
+    p.x -= .01;
+    vec3 tvusz = vec3(.06, .06, .13) / 2.;
+    float tvut = .004;
+    float tvur = .001;
     p.xy -= tvusz.xy;
-    d = min(d, fBox(p, tvusz));
+    d2 = sdUberprim(p.zyx + vec3(0, tvusz.y, 0), vec4(tvusz.zyx * vec3(1,2,1), tvut), vec3(vec2(tvur), .0));
+    float drawt = .002;
+    vec3 tvuboxsz = vec3(tvusz.x - drawt, tvusz.y * .5, tvusz.z - tvut * 2.);
+    p.y -= tvut - tvusz.y + tvuboxsz.y;
+    d2 = min(d2, fBox(p, tvuboxsz - tvur) - tvur);
+    vec3 drawsz = vec3(drawt, tvuboxsz.y-tvut, tvusz.z*.5) - vec3(0, 0, tvut);
+    d2 = min(d2, fBox(p - vec3(tvuboxsz.z/2.,tvut,drawsz.z), drawsz - tvur) - tvur);
+    //d2 = fBox(p, tvusz);
+    d = mincol(d, d2, col, darkgrey);
     
     // tv
     p = p2;
     p.x = -p.x;
     p.xy += s.xy;
-    vec3 tvsz = vec3(.01, .07, .1) / 2.;
+    vec3 tvsz = vec3(8.6, 71.1, 122.8) / 1000. / 2.;
     p.xy -= tvsz.xy;
-    p.y -= .08 / 2.;
-    p.x -= .05 / 2.;
-    d = min(d, fBox(p, tvsz));
+    p.y -= tvusz.y * 2. + .005;
+    p.x -= tvusz.x;
+    d = mincol(d, fBox(p, tvsz), col, vec3(.01));
+    d2 = fBox(p - vec3(.0041,0,0), tvsz - .004);
+    if (d2 < d) {
+        float logo = texture2D(revisionTex, (p.zy / tvusz.z / 1.) + .5).r;
+        d = d2;
+        col = mix(vec3(1.4), vec3(.2,1.4,.8), logo);
+    }
+    
     
     // table
     p4 = pp - vec3(0,0,.05);
@@ -657,8 +710,6 @@ vec2 face(vec2 p) {
      vec2 a = abs(p);
      return step(a.yx, a.xy)*step(a.xy, a.xy)*sign(p);
 }
-
-//#define ROOM_ONLY
 
 vec3 lampPos = vec3(.3/2., 0, -.11) * 3.25;
 
@@ -1374,8 +1425,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // jitter for antialiasing
     p += 2. * (seed - .5) / iResolution.xy;
 
-    // jitter for motion blur
-    time += (hash12(seed) * 2. - 1.) * .001;
+    #ifndef FREE_FLY
+        // jitter for motion blur
+        time += (hash12(seed) * 2. - 1.) * .001;
+    #endif
 
     time = fract(time);
 
@@ -1384,7 +1437,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 origin = eye;
     vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
 
-    #if 1
+    #ifndef FREE_FLY
         float focalLength = 6.;
         camPos = vec3(0, 0, focalLength * 1.8);// * (1. + sinbump(0., 1., time) * .45);
         //camPos = vec3(0, 0, focalLength * mix(1.8, 2.2, sinbump(0., 1., fract(time))));
