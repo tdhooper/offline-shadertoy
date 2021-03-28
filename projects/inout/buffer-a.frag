@@ -417,11 +417,21 @@ bool isFirstRay;
 
 bool lightingPass;
 
+struct Meta {
+    vec3 p;
+    vec3 albedo;
+    int id;
+};
+
+struct Material {
+    vec3 albedo;
+    float specular;
+    float roughness;
+};
+
 struct Model {
     float d;
-    vec3 col;
-    vec2 spec; // specular, roughness
-    int id;
+    Meta meta;
 };
 
 Model opU(Model a, Model b) {
@@ -429,15 +439,9 @@ Model opU(Model a, Model b) {
     return b;
 }
 
-void mincol(inout float a, inout vec3 cola, float b, vec3 colb) {
-    if (a < b) return;
-    cola = colb;
-    a = b;
-}
-
-float mincol(float a, float b, inout vec3 cola, vec3 colb) {
+float mincol(float a, float b, inout Meta metaa, Meta metab) {
     if (a < b) return a;
-    cola = colb;
+    metaa = metab;
     return b;
 }
 
@@ -462,12 +466,35 @@ vec3 wallcol = vec3(179,179,195)/255./2.;
 vec3 darkgrey = vec3(.09,.105,.11)*.8;
 vec3 featurewallcol = vec3(.05,.26,.32);
 
+Material shadeModel(Model model) {
+    int id = model.meta.id;
+    vec3 p = model.meta.p;
+
+    vec3 col = model.meta.albedo;
+    float spec = 0.;
+    float rough = 0.;
+
+    if (id == 101) {
+        float logo = texture2D(revisionTex, p.zy).r;
+        col = mix(vec3(1.4), vec3(.2,1.4,.8), logo);
+    }
+
+    if (id == 23) {
+        spec = 1.;
+    }
+
+    if (id == 204) {
+        spec = .5;
+        rough = .5;
+    }
+
+    return Material(col, spec, rough);
+}
+
 Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     #if ANIM != 0
         p.z = -p.z;
     #endif
-
-    int id = 2;
 
     float d = 1e12;
     float d2, d3, d4, bound;
@@ -477,6 +504,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec2 spec = vec2(0);
     vec3 p4;
     vec2 pc;
+    Meta meta = Meta(p, vec3(.5), 2);
    
     vec3 p2 = pp - vec3(0,0,.1);
     vec3 p3 = pp + vec3(0,0,.11);
@@ -506,7 +534,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         vec3 drawsz = vec3(drawt, tvuboxsz.y-tvut, tvusz.z*.5) - vec3(0, 0, tvut);
         d2 = min(d2, fBox(p - vec3(tvuboxsz.z/2.,tvut,drawsz.z), drawsz - tvur) - tvur);
         //d2 = fBox(p, tvusz);
-        d = mincol(d, d2, col, darkgrey);
+        d = mincol(d, d2, meta, Meta(p, darkgrey, 10));
         
         // tv
         p = p2;
@@ -516,12 +544,12 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         p.xy -= tvsz.xy;
         p.y -= tvusz.y * 2. + .005;
         p.x -= tvusz.x;
-        d = mincol(d, fBox(p, tvsz), col, vec3(.01));
+        d = mincol(d, fBox(p, tvsz), meta, Meta(p, vec3(.01), 11));
         d2 = fBox(p - vec3(.0041,0,0), tvsz - .004);
         if (d2 < d) {
-            float logo = texture2D(revisionTex, (p.zy / tvusz.z / 1.) + .5).r;
+            meta.p = (p / tvusz.z) + .5;
+            meta.id = 101;
             d = d2;
-            col = mix(vec3(1.4), vec3(.2,1.4,.8), logo);
         }
 
         // shelf
@@ -531,11 +559,11 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         p.x += shelfsz.x;
         p.zy -= vec2(.1,-.02);
         d2 = fBox(p, shelfsz);
-        d = mincol(d, d2, col, woodcol);
+        d = mincol(d, d2, meta, Meta(p, woodcol, 12));
 
         // door
         p = pp - doorpos;
-        d = mincol(d, fBox(p, doorsz), col, woodcol);  
+        d = mincol(d, fBox(p, doorsz), meta, Meta(p, woodcol, 13));  
     }
     
     // table
@@ -550,13 +578,13 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     } else {
         float ttop = .0015;
         d2 = fBox(p - vec3(0,tablesz.y - ttop,0), vec3(tablesz.x, ttop, tablesz.z) + .0002) - .0002;
-        d = mincol(d, d2, col, woodcol);
+        d = mincol(d, d2, meta, Meta(p, woodcol, 141));
         p.xz = abs(p.xz);
         float tleg = .0035;
         d2 = sdUberprim(p.xzy - vec3(0,0,tablesz.y-ttop-tleg*1.5), vec4(vec3(tablesz.xz - .003, tleg * 1.5), tleg/3.), vec3(.0002,.0002,0));
         p.xz -= tablesz.xz - tleg - .002;
         d2 = min(d2, fBox(p, vec3(tleg, tablesz.y, tleg) + .0002) - .0002);
-        d = mincol(d, d2, col, whitecol);
+        d = mincol(d, d2, meta, Meta(p, whitecol, 14));
     }
     
     // sofa
@@ -564,8 +592,9 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p.xy += s.xy;    
     vec3 sofasz = vec3(.08, .075, .2) / 2.;
     p.xy -= sofasz.xy;
-    mincol(d, col, fBox(p, sofasz), pink);
-    d = max(d, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
+    d2 = fBox(p, sofasz);
+    d2 = max(d2, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
+    d = mincol(d, d2, meta, Meta(p, pink, 15));
 
     p = pp;
     p.y -= s.y;
@@ -583,7 +612,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         vec2 pc2 = vec2(rx, -pc.y + .008);
         d2 = smax(d2, pc.x - .042, .0005);
         d2 = max(d2, p.y);
-        d = mincol(d, d2, col, whitecol);
+        d = mincol(d, d2,  meta, Meta(p, whitecol, 16));
 
         // light
         p = pp;
@@ -596,13 +625,13 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         pc.y = abs(pc.y) - lightheight;
         d2 = min(d2, length(pc) - .0003);
         vec3 mainlightcol = pc.x * step(pc.y, -.0003) < 0. ? whitecol : lampshadeCol * 20.;
-        d = mincol(d, d2, col, mainlightcol);
+        d = mincol(d, d2, meta, Meta(p, mainlightcol, 17));
 
         // cable and bulb
         d2 = length(p) - .013;
         p.y = max(max(p.y - lightoffset, -p.y), .0);
         d2 = min(d2, length(p) - .0005);
-        d = mincol(d, d2, col, whitecol);
+        d = mincol(d, d2, meta, Meta(p, whitecol, 18));
     }
 
     // lamp
@@ -631,7 +660,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     d3 = fBox(p - doorpos + vec3(0,doorsz.y,0), doorsz * vec3(10,2,1) + sksz.y * 2.) + sksz.y * 2.;
     d3 = min(d3, p.y + s.y);
     d4 = fBox(vec2(-d2, d3) - sksz, sksz) - .0005;
-    d = mincol(d, d4, col, whitecol);
+    d = mincol(d, d4, meta, Meta(p, whitecol, 19));
 
     // cornice
     p = pp;
@@ -644,7 +673,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     //d4 = smin(d4, length((pc - vec2(.003,-.0025)) * vec2(.7,1)) - .005, .002);
     d4 *= 1.5;
     d4 = smax(d4, fBox(vec2(d2, d3) + corsz, corsz), .0002);
-    d = mincol(d, d4, col, whitecol);
+    d = mincol(d, d4, meta, Meta(p, whitecol, 20));
 
     // rail
     p = pp;
@@ -657,7 +686,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     d4 = stairmin(d4, length(pc - railsz * vec2(1.75, 2.)) - .0014, .0014, 2.);
     d4 = max(d4, -(length((pc - railsz * vec2(0,1) - vec2(.0008,.0022)) * vec2(1.,.9)) - .0004));
     d4 = max(d4, -fBox(p - s * vec3(0,0,1), baysz) - .02);
-    d = mincol(d, d4, col, whitecol);
+    d = mincol(d, d4, meta, Meta(p, whitecol, 21));
  
     // picture
     p = p2;
@@ -665,7 +694,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec3 picsz = vec3(.005,.07,.09) / 2.;
     d2 = fBox(p - picsz * vec3(1,0,0), picsz);
     d2 = max(d2, -fBox(p - picsz * vec3(1.75,0,0), picsz * .8));
-    d = mincol(d, d2, col, woodcol);
+    d = mincol(d, d2, meta, Meta(p, woodcol, 22));
 
     // mirror
     p = pp;
@@ -674,16 +703,11 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     d2 = length(p.yz) - .06 / 2.;
     d2 = max(d2, abs(p.x) - .01 / 2.);
     d3 = length(p.yz) - .04 / 2.;
-    d2 = max(d2, -d3);    
-    d = mincol(d, d2, col, woodcol);
+    d2 = max(d2, -d3);
+    d = mincol(d, d2, meta, Meta(p, woodcol, 24));
     d3 = length(p - vec3(-.022,0,0)) - .033;
     d3 = max(d3, -p.x);
-    if (d3 < d) {
-        d = d3;
-        col = vec3(1,.5,.3);
-        spec = vec2(1,0);
-        id = 5;
-    }
+    d = mincol(d, d3, meta, Meta(p, vec3(1,.5,.3), 23));
 
     p = p3;
     p.x += .3 / 2.;
@@ -697,8 +721,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         d = d2;
         col = lampshadeOuter ? lampshadeCol : bulbCol * .5;
         col *= isFirstRay ? 80. : 1.;
-        spec = vec2(0);
-        id = 7;
+        meta = Meta(p, col, 7);
     } 
 
     // lamp bulb
@@ -707,11 +730,10 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         d = d2;
         col = bulbCol;
         col *= isFirstRay ? 80. : 1.;// * vec3(8.10,6.00,4.20);
-        spec = vec2(0);
-        id = 8;
+        meta = Meta(p, col, 8);
     }
 
-    return Model(d, col, spec, id);
+    return Model(d, meta);
 }
 
 float fBricks(vec2 p, out vec2 c, out vec2 uv, out float hide) {
@@ -757,7 +779,6 @@ Model scene(vec3 p) {
 
     float d = 1e12;
     float d2;
-    int id = 1;
 
     float wall = .05;
     vec3 roomsz = vec3(.2,.2,.2);
@@ -779,7 +800,8 @@ Model scene(vec3 p) {
 
     p.z = -p.z;
     vec3 pp = p;
-    vec3 col = darkpurple;
+    Meta meta = Meta(p, vec3(.5), 1);
+
     
     // core
     vec2 peak = vec2(-.1, .08);
@@ -812,8 +834,7 @@ Model scene(vec3 p) {
         float rnd2 = rnd(ivec2(c * 100. + 30. + fc * 10.)) * PI * 6.;
         bf -= dot(uv, vec2(sin(rnd2), cos(rnd2))) * .01 * rnd1;
         float bd = cmax(bf, bricks, .003);
-        //col = lightpurple;
-        mincol(d, col, bd, lightpurple);
+        d = mincol(d, bd, meta, Meta(p, lightpurple, 201));
         //d = bd;
         //return Model(d, col, id);
 
@@ -832,7 +853,7 @@ Model scene(vec3 p) {
 
         if (p.y > d) {
             d = p.y;
-            col = pink;
+            meta = Meta(p, pink, 202);
         }
         d = min(d, tiles);
     }
@@ -851,7 +872,7 @@ Model scene(vec3 p) {
     bay = max(bay, p.z);
     //main = min(main, bay);
     //d = min(d, main);
-    mincol(d, col, bay, pink);
+    d = mincol(d, bay, meta, Meta(p, pink, 203));
     
     // window
     p = pp;
@@ -885,30 +906,19 @@ Model scene(vec3 p) {
             }
         }
     }
-
-    vec2 spec = vec2(0);
     
     //d2 = max(d2, p.y + .15);
     if (d2 > d) {
-        col = wallcol;
+        meta = Meta(p, wallcol, 207);
         if (roomFace == vec3(0,-1,0)) {
-            col = woodcol;
-            spec = vec2(.5,.5);
+            meta = Meta(p, woodcol, 204);
         }
-        if (roomFace == vec3(-1,0,0)) col = featurewallcol;
-        // if (roomFace == vec3(0,1,0)) {
-        //     if (d2 < .008) {
-        //         //d2 -= sin(p.x * 1000.) * sin(p.z * 1000.) * .0005;
-        //         float tx = texture2D(lichenTex, p.xz * 20.).r * .002;
-        //         d2 -= tx;
-        //         d2 *= .7;
-        //     }
-        // }
-        if (p.y > 0.1) col = whitecol;
+        if (roomFace == vec3(-1,0,0)) meta = Meta(p, featurewallcol, 205);
+        if (p.y > 0.1) meta = Meta(p, whitecol, 206);
         d = d2;
     }
 
-    Model m = Model(d, col, spec, id);
+    Model m = Model(d, meta);
     
     if (fBox(p, roomsz) < 0.) {
         m = opU(m, fRoom(p, roomsz, baysz));
@@ -1100,7 +1110,7 @@ Model sceneWarped(vec3 p) {
     if (model.d > .7) model.d = .7 - 1. / model.d / 5.;
     
     if (dbg < model.d) {
-        model.col = vec3(fract(model.d * 10.), max(0., sign(model.d)), 0);
+        model.meta.albedo = vec3(fract(model.d * 10.), max(0., sign(model.d)), 0);
         model.d = dbg;
     }
        
@@ -1270,7 +1280,7 @@ Hit marchFirst(vec3 origin, inout vec3 rayDirection, float maxDist) {
         
         if (rayLength > maxDist) {
             bg = true;
-            candidateModel.id = 0;
+            candidateModel.meta.id = 0;
             break;
         }
     }
@@ -1314,7 +1324,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist) {
         
         if (rayLength > maxDist) {
             bg = true;
-            candidateModel.id = 0;
+            candidateModel.meta.id = 0;
             break;
         }
     }
@@ -1402,7 +1412,7 @@ vec3 sampleLight(Hit hit, vec3 nor, vec2 seed, vec3 light, vec3 lightCol, int id
     vec3 shadowOrigin = hit.pos + nor * .01;
     if (diffuse > 0.) {
         Hit sh = march(shadowOrigin, lightSampleDir, 5.);
-        if (sh.model.id == id) {
+        if (sh.model.meta.id == id) {
             return lightCol * diffuse;
         }
     }
@@ -1418,8 +1428,9 @@ vec3 sampleLight2(Hit hit, vec3 nor, vec2 seed, vec3 light, int id, float radius
     vec3 shadowOrigin = hit.pos + nor * .01;
     if (diffuse > 0.) {
         Hit sh = march(shadowOrigin, lightSampleDir, 5.);
-        if (sh.model.id == id) {
-            return sh.model.col * diffuse;
+        if (sh.model.meta.id == id) {
+            Material material = shadeModel(sh.model);
+            return material.albedo * diffuse;
         }
     }
     return vec3(0);
@@ -1506,6 +1517,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     Hit hit;
     vec3 nor, ref;
+    Material material;
 
     vec3 accum = vec3(1);
     vec3 bgCol = skyColor;
@@ -1534,13 +1546,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         }
 
         nor = calcNormal(hit.pos);
+        material = shadeModel(hit.model);
 
         // calculate whether we are going to do a diffuse or specular reflection ray 
         seed = hash22(seed);
-        bool doSpecular = hash12(seed) < hit.model.spec.x;
+        bool doSpecular = hash12(seed) < material.specular;
 
         // update the colorMultiplier
-       	accum *= hit.model.col;
+       	accum *= material.albedo;
 
         // Calculate diffuse ray direction
         seed = hash22(seed);
@@ -1564,7 +1577,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         } else {
             // Calculate specular ray direction
             vec3 specularRayDir = reflect(rayDir, nor);
-            rayDir = normalize(mix(specularRayDir, diffuseRayDir, hit.model.spec.y * hit.model.spec.y));
+            rayDir = normalize(mix(specularRayDir, diffuseRayDir, material.roughness * material.roughness));
         }
 
         origin = hit.pos + nor * .0002;    
