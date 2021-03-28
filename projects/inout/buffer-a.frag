@@ -559,7 +559,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec3 doorpos = vec3(s.x, doorsz.y - s.y, -.11);
 
     bound = -p.x + s.x * .55;
-    if (bound > .0004) {
+    if (bound > .002) {
         d = min(d, bound);
     } else {
         // tv unit
@@ -619,7 +619,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec3 tablesz = vec3(.066,.05,.1) / 2.;
     p.y -= tablesz.y;
     bound = fBox(p, tablesz + .001);
-    if (bound > .0004) {
+    if (bound > .002) {
         d = min(d, bound);
     } else {
         float ttop = .0015;
@@ -645,7 +645,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p = pp;
     p.y -= s.y;
     bound = max(-p.y - .09, length(p.xz) - .05);
-    if (bound > .0004) {
+    if (bound > .002) {
         d = min(d, bound);
     } else {
         // ceiling rose
