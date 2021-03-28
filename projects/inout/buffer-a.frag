@@ -419,9 +419,9 @@ if (dark) {
 
 
 
-void fBlocks(inout vec2 p, vec2 size, out vec2 c) {
+void fBlocks(inout vec2 p, vec2 size, float offset, out vec2 c) {
     c = floor((p + size / 2.) / size);
-    p.x += mod(c.y, 2.) * size.x / 2.;
+    p.x += mod(c.y, 2.) * size.x * offset;
     c = floor((p + size / 2.) / size);
     p = (fract(p / size + .5) - .5);
     p *= size;
@@ -483,11 +483,41 @@ vec3 pink = pow(vec3(0.533,0.302,0.247), vec3(2.2));
 vec3 lightyellow = pow(vec3(1.000,0.925,0.722), vec3(2.2));
 vec3 lampshadeCol = vec3(1.,.1,.0) * .05;
 vec3 bulbCol = vec3(1,.75,.5) * .25;
-vec3 woodcol = vec3(0.714,0.451,0.184);
+vec3 woodcol = vec3(0.714,0.43,0.19);
 vec3 whitecol = vec3(.5);
 vec3 wallcol = vec3(179,179,195)/255./2.;
 vec3 darkgrey = vec3(.09,.105,.11)*.8;
 vec3 featurewallcol = vec3(.05,.26,.32);
+
+
+Material woodMat(vec3 p, inout vec3 nor, vec3 col, vec2 size, float offset, float variance) {
+    float spec = .2;
+    float rough = .5;
+    vec2 c;
+    fBlocks(p.zx, size, offset, c);
+    float d = fBox(p.zx, size / 2.);
+    float r = hash12((c+20.) * 80.);
+    float r2 = hash12((c+1.) * 60.);
+    col = mix(col, col * vec3(1.05,.95,1.05), mix(.5, r2, variance));
+    col *= mix(.1, 1., smoothstep(.0, -.0003, d));
+    col *= mix(.5, 1., mix(.5, r, variance));
+    vec3 ax = rndunit(r * 10.);
+    nor = erot(nor, ax, (r * 2. - 1.) * .1);
+    p.y = 0.;
+    p += length(sin(sin(p * 100. + r * 10.) * 10.)) * .0005;
+    p.xz += size * (hash22(c * 20.) * 2. - 1.);
+    p.z /= 10.;
+    p = erot(p, ax, (r * 2. - 1.) * 2.2);
+    p += sin((p + r * 100.) * 200.) * .04;
+    d = length(p);
+    d = sin(d * 1500.) * .5 + .5;
+    //d = step(d, .5);
+    col *= mix(.5, 1., d);
+    rough = mix(.6, .4, d);
+    //rough = 1.;
+    //spec = mix(.0, .2, d);
+    return Material(col, spec, rough);
+}
 
 Material shadeModel(Model model, inout vec3 nor) {
     int id = model.meta.id;
@@ -508,30 +538,12 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     // floorboards
     if (id == 204) {
-        spec = .2;
-        rough = .5;
-        vec2 c;
-        vec2 size = vec2(.1,.02);
-        fBlocks(p.zx, size, c);
-        float d = fBox(p.zx, size / 2.);
-        float r = hash12(c * 50. + 1.);
-        float r2 = hash12(c * 60. + 10.);
-        col = mix(woodcol, woodcol * vec3(1.05,.95,1.05), r2);
-        col *= mix(.1, 1., smoothstep(.0, -.0003, d));
-        col *= mix(.5, 1., r);
-        vec3 ax = rndunit(r * 10.);
-        nor = erot(nor, ax, (r * 2. - 1.) * .1);
-        p.y = 0.;
-        p += length(sin(sin(p * 100. + r * 10.) * 10.)) * .0005;
-        p.z /= 10.;
-        p = erot(p, ax, (r * 2. - 1.) * 2.2);
-        p += sin((p + r * 100.) * 200.) * .04;
-        d = length(p);
-        d = sin(d * 1500.) * .5 + .5;
-        col *= mix(.5, 1., d);
-        rough = mix(.7, .3, d);
-        //spec = mix(.0, .2, d);
-        
+        return woodMat(p, nor, woodcol + .1, vec2(.1,.02), .5, .75);
+    }
+
+    // table
+    if (id == 141) {
+        return woodMat(p * 2.5, nor, woodcol * vec3(.5,.3,.2), vec2(.03,.03), 0., .5);
     }
 
     return Material(col, spec, rough);
@@ -1579,6 +1591,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     initialsample = true;
     inside = false;
     isFirstRay = true;
+    bool firstBounce = true;
     vec3 rd = rayDir;
     hit = marchFirst(origin, rayDir, 30.);
     firstHit = hit;
@@ -1592,6 +1605,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             col += env(rayDir, false) * accum;
             break;
         }
+
+        firstBounce = false;
 
         nor = calcNormal(hit.pos);
         material = shadeModel(hit.model, nor);
@@ -1647,8 +1662,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             || (time < .15 && startedinside && passedwindow1 == 1 && passedwindow2 == 1)
         );
         vec3 _;
-        warpspin(time, ! isLight, _, rd);
-        col = env(rd, ! isLight);
+        rayDir = firstBounce ? rd : rayDir;
+        warpspin(time, ! isLight, _, rayDir);
+        col = env(rayDir, ! isLight);
     }
 
     //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
