@@ -13,7 +13,6 @@ uniform float iTime;
 uniform vec4 iMouse;
 
 uniform sampler2D iChannel0; // /images/blue-noise.png filter: linear
-uniform sampler2D lichenTex; // /images/lichen.png filter: linear wrap: repeat
 uniform sampler2D revisionTex; // /images/revision-logo.png filter: linear
 uniform vec2 iChannel0Size;
 uniform vec2 revisionTexSize;
@@ -490,7 +489,7 @@ vec3 darkgrey = vec3(.09,.105,.11)*.8;
 vec3 featurewallcol = vec3(.05,.26,.32);
 
 
-Material woodMat(vec3 p, inout vec3 nor, vec3 col, vec2 size, float offset, float variance) {
+Material woodMat(vec3 p, inout vec3 nor, vec3 col, vec2 size, float offset, float variance, float uneven) {
     float spec = .2;
     float rough = .5;
     vec2 c;
@@ -502,7 +501,7 @@ Material woodMat(vec3 p, inout vec3 nor, vec3 col, vec2 size, float offset, floa
     col *= mix(.1, 1., smoothstep(.0, -.0003, d));
     col *= mix(.5, 1., mix(.5, r, variance));
     vec3 ax = rndunit(r * 10.);
-    nor = erot(nor, ax, (r * 2. - 1.) * .1);
+    nor = erot(nor, ax, (r * 2. - 1.) * .1 * uneven);
     p.y = 0.;
     p += length(sin(sin(p * 100. + r * 10.) * 10.)) * .0005;
     p.xz += size * (hash22(c * 20.) * 2. - 1.);
@@ -538,12 +537,12 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     // floorboards
     if (id == 204) {
-        return woodMat(p, nor, woodcol + .1, vec2(.1,.02), .5, .75);
+        return woodMat(p, nor, woodcol + .1, vec2(.1,.02), .5, 1., 1.);
     }
 
     // table
     if (id == 141) {
-        return woodMat(p * 2.5, nor, woodcol * vec3(.5,.3,.2), vec2(.03,.03), 0., .5);
+        return woodMat(p * 2.5, nor, woodcol * vec3(.5,.3,.2), vec2(.03,.03), 0., .5, 0.);
     }
 
     return Material(col, spec, rough);
@@ -564,7 +563,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec2 pc;
     Meta meta = Meta(p, vec3(.5), 2);
    
-    vec3 p2 = pp - vec3(0,0,.1);
+    vec3 p2 = pp - vec3(0,0,.05);
     vec3 p3 = pp + vec3(0,0,.11);
    
     vec3 doorsz = (vec3(35, 1981, 762) * .0001) / 2.;
@@ -625,10 +624,10 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     }
     
     // table
-    p = pp - vec3(-.01,0,.1);
+    p = p2 - vec3(-.01,0,.0);
     pR(p.xz, .1);
     p.y += s.y;
-    vec3 tablesz = vec3(.066,.05,.1) / 2.;
+    vec3 tablesz = vec3(.075,.05,.075) / 2.;
     p.y -= tablesz.y;
     bound = fBox(p, tablesz + .001);
     if (bound > .002) {
@@ -748,14 +747,16 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
  
     // picture
     p = p2;
+    p.z -= .04;
     p.x += s.x;
-    vec3 picsz = vec3(.005,.07,.09) / 2.;
+    vec3 picsz = vec3(.005,.08,.11) / 2.;
     d2 = fBox(p - picsz * vec3(1,0,0), picsz);
     d2 = max(d2, -fBox(p - picsz * vec3(1.75,0,0), picsz * .8));
     d = mincol(d, d2, meta, Meta(p, woodcol, 22));
 
     // mirror
-    p = pp;
+    p = p2;
+    p.z += .08;
     p.x += s.x;
     //p.z -= .15;
     d2 = length(p.yz) - .06 / 2.;
@@ -1652,7 +1653,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         // col.r = float(passedwindow1) / 2.;
         // col.g = float(passedwindow2) / 2.;
         // col.b = startedinside ? 1. : 0.;
-        bool isLight = (
+        bool isLight = ! firstBounce || (
             false
             || (time < .3 && ! startedinside && passedwindow1 < 2)
             || (time < .3 && startedinside && passedwindow2 == 1 && passedwindow1 == 0)
