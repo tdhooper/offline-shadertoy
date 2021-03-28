@@ -194,6 +194,7 @@ vec3 stereographic(vec4 p4) {
 // https://www.shadertoy.com/view/4djSRW
 vec2 hash22(vec2 p)
 {
+    p += 1.61803398875; // fix artifacts when reseeding
 	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
     p3 += dot(p3, p3.yzx+33.33);
     return fract((p3.xx+p3.yz)*p3.zy);
@@ -1524,7 +1525,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
 
-    bool db = p.y > 0.;
+    bool db = p.x > 0.;
 
     time = iTime / 8.;
 
@@ -1596,7 +1597,6 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         material = shadeModel(hit.model, nor);
 
         // calculate whether we are going to do a diffuse or specular reflection ray 
-        seed = hash22(seed);
         bool doSpecular = hash12(seed) < material.specular;
 
         // update the colorMultiplier
