@@ -1265,7 +1265,7 @@ Hit marchFirst(vec3 origin, inout vec3 rayDirection, float maxDist) {
 
         float error = dist / rayLength;
 
-        if (abs(dist) < .00001 * rayLength) {
+        if (abs(dist) < .0001) {
             candidateModel = model;
         	break;
         }
@@ -1312,7 +1312,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist) {
 
         float error = dist / rayLength;
 
-        if (abs(dist) < .00001 * rayLength) {
+        if (abs(dist) < .0001) {
             candidateModel = model;
         	break;
         }
@@ -1582,7 +1582,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
         origin = hit.pos + nor * .0002;    
         seed = hash22(seed);
-        hit = march(origin, rayDir, 5.);        
+        hit = march(origin, rayDir, 5.);
     }
 
     if (hit.sky && isFirstRay) {
