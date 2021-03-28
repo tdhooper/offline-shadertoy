@@ -420,6 +420,7 @@ bool lightingPass;
 struct Model {
     float d;
     vec3 col;
+    vec2 spec; // specular, roughness
     int id;
 };
 
@@ -473,6 +474,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p.x = -p.x;
     vec3 pp = p;    
     vec3 col = purple;
+    vec2 spec = vec2(0);
     vec3 p4;
     vec2 pc;
    
@@ -679,6 +681,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     if (d3 < d) {
         d = d3;
         col = vec3(1,.5,.3);
+        spec = vec2(1,0);
         id = 5;
     }
 
@@ -694,6 +697,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         d = d2;
         col = lampshadeOuter ? lampshadeCol : bulbCol * .5;
         col *= isFirstRay ? 80. : 1.;
+        spec = vec2(0);
         id = 7;
     } 
 
@@ -703,10 +707,11 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         d = d2;
         col = bulbCol;
         col *= isFirstRay ? 80. : 1.;// * vec3(8.10,6.00,4.20);
+        spec = vec2(0);
         id = 8;
     }
 
-    return Model(d, col, id);
+    return Model(d, col, spec, id);
 }
 
 float fBricks(vec2 p, out vec2 c, out vec2 uv, out float hide) {
@@ -880,11 +885,16 @@ Model scene(vec3 p) {
             }
         }
     }
+
+    vec2 spec = vec2(0);
     
     //d2 = max(d2, p.y + .15);
     if (d2 > d) {
         col = wallcol;
-        if (roomFace == vec3(0,-1,0)) col = woodcol;
+        if (roomFace == vec3(0,-1,0)) {
+            col = woodcol;
+            spec = vec2(.5,.5);
+        }
         if (roomFace == vec3(-1,0,0)) col = featurewallcol;
         // if (roomFace == vec3(0,1,0)) {
         //     if (d2 < .008) {
@@ -898,7 +908,7 @@ Model scene(vec3 p) {
         d = d2;
     }
 
-    Model m = Model(d, col, id);
+    Model m = Model(d, col, spec, id);
     
     if (fBox(p, roomsz) < 0.) {
         m = opU(m, fRoom(p, roomsz, baysz));
@@ -1322,6 +1332,16 @@ vec3 ortho(vec3 a){
     return (b);
 }
 
+vec3 RandomUnitVector(vec2 state)
+{
+    float z = hash12(state) * 2. - 1.;
+    float a = hash12(state) * PI * 2.;
+    float r = sqrt(1. - z * z);
+    float x = r * cos(a);
+    float y = r * sin(a);
+    return vec3(x, y, z);
+}
+
 // re-borrowed from yx from
 // http://blog.hvidtfeldts.net/index.php/2015/01/path-tracing-3d-fractals/
 vec3 getSampleBiased(vec3  dir, float power, vec2 seed) {
@@ -1513,21 +1533,40 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             break;
         }
 
-       	accum *= hit.model.col;
         nor = calcNormal(hit.pos);
 
-        if (hit.model.id == 5) {
-            origin = hit.pos + nor * .0002;
-            rayDir = reflect(rayDir, nor); 
-        } else {
+        // calculate whether we are going to do a diffuse or specular reflection ray 
+        seed = hash22(seed);
+        bool doSpecular = hash12(seed) < hit.model.spec.x;
+
+        // update the colorMultiplier
+       	accum *= hit.model.col;
+
+        // Calculate diffuse ray direction
+        seed = hash22(seed);
+        vec3 diffuseRayDir = getSampleBiased(nor, 1., seed);
+
+        if ( ! doSpecular) {
+            // disable emissive for 2nd bounce
             isFirstRay = false;
-            col += accum * sampleLight(hit, nor, seed, sunPos, sunColor, 0, .005);
-            col += accum * sampleLight(hit, nor, seed, lampPos, bulbCol * 2., 8, .001);
-            col += accum * sampleLight2(hit, nor, seed, lampPos, 7, .01);
-            rayDir = getSampleBiased(nor, 1., seed);
+            
+            // calculate direct lighting
+            vec3 directLight = vec3(0);
+            seed = hash22(seed);
+            directLight += sampleLight(hit, nor, seed, sunPos, sunColor, 0, .005);
+            directLight += sampleLight(hit, nor, seed, lampPos, bulbCol * 2., 8, .001);
+            directLight += sampleLight2(hit, nor, seed, lampPos, 7, .01);
+
+            // mix direct light
+            col += accum * directLight;
+
+            rayDir = diffuseRayDir;
+        } else {
+            // Calculate specular ray direction
+            vec3 specularRayDir = reflect(rayDir, nor);
+            rayDir = normalize(mix(specularRayDir, diffuseRayDir, hit.model.spec.y * hit.model.spec.y));
         }
 
-        // set new origin and direction for dffuse bounce
         origin = hit.pos + nor * .0002;    
         seed = hash22(seed);
         hit = march(origin, rayDir, 5.);        
