@@ -36,6 +36,7 @@ void main() {
 
 //#define ROOM_ONLY
 //#define FREE_FLY
+//#define HIDE_ROOM;
 
 
 float time;
@@ -126,7 +127,7 @@ float sdUberprim(vec3 p, vec4 s, vec3 r) {
     return sdUnterprim(p, s, r, ba/dot(ba,ba), ba.y);
 }
 
-// Rotate on axis, blackle
+// Rotate on axis, blackle https://suricrasia.online/demoscene/functions/
 vec3 erot(vec3 p, vec3 ax, float ro) {
   return mix(dot(ax,p)*ax, p, cos(ro))+sin(ro)*cross(ax,p);
 }
@@ -206,8 +207,19 @@ float hash12(vec2 p)
     return fract((p3.x + p3.y) * p3.z);
 }
 
+vec3 hash31(float p)
+{
+   vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973));
+   p3 += dot(p3, p3.yzx+33.33);
+   return fract((p3.xxy+p3.yzz)*p3.zyx); 
+}
+
 float rnd(ivec2 uv) {
     return texture2D(iChannel0, vec2(uv) / iChannel0Size.xy, -10000.).r;
+}
+
+vec3 rndunit(float seed) {
+  return normalize(tan(hash31(seed)));
 }
 
 
@@ -406,6 +418,16 @@ if (dark) {
 
 
 
+void fBlocks(inout vec2 p, vec2 size, out vec2 c) {
+    c = floor((p + size / 2.) / size);
+    p.x += mod(c.y, 2.) * size.x / 2.;
+    c = floor((p + size / 2.) / size);
+    p = (fract(p / size + .5) - .5);
+    p *= size;
+    c *= size;
+}
+
+
 //========================================================
 // Modelling
 //========================================================
@@ -466,7 +488,7 @@ vec3 wallcol = vec3(179,179,195)/255./2.;
 vec3 darkgrey = vec3(.09,.105,.11)*.8;
 vec3 featurewallcol = vec3(.05,.26,.32);
 
-Material shadeModel(Model model) {
+Material shadeModel(Model model, inout vec3 nor) {
     int id = model.meta.id;
     vec3 p = model.meta.p;
 
@@ -483,9 +505,32 @@ Material shadeModel(Model model) {
         spec = 1.;
     }
 
+    // floorboards
     if (id == 204) {
-        spec = .5;
+        spec = .2;
         rough = .5;
+        vec2 c;
+        vec2 size = vec2(.1,.02);
+        fBlocks(p.zx, size, c);
+        float d = fBox(p.zx, size / 2.);
+        float r = hash12(c * 50. + 1.);
+        float r2 = hash12(c * 60. + 10.);
+        col = mix(woodcol, woodcol * vec3(1.05,.95,1.05), r2);
+        col *= mix(.1, 1., smoothstep(.0, -.0003, d));
+        col *= mix(.5, 1., r);
+        vec3 ax = rndunit(r * 10.);
+        nor = erot(nor, ax, (r * 2. - 1.) * .1);
+        p.y = 0.;
+        p += length(sin(sin(p * 100. + r * 10.) * 10.)) * .0005;
+        p.z /= 10.;
+        p = erot(p, ax, (r * 2. - 1.) * 2.2);
+        p += sin((p + r * 100.) * 200.) * .04;
+        d = length(p);
+        d = sin(d * 1500.) * .5 + .5;
+        col *= mix(.5, 1., d);
+        rough = mix(.7, .3, d);
+        //spec = mix(.0, .2, d);
+        
     }
 
     return Material(col, spec, rough);
@@ -911,7 +956,7 @@ Model scene(vec3 p) {
     if (d2 > d) {
         meta = Meta(p, wallcol, 207);
         if (roomFace == vec3(0,-1,0)) {
-            meta = Meta(p, woodcol, 204);
+            meta = Meta(p - vec3(0, mainsz.y, 0), woodcol, 204);
         }
         if (roomFace == vec3(-1,0,0)) meta = Meta(p, featurewallcol, 205);
         if (p.y > 0.1) meta = Meta(p, whitecol, 206);
@@ -920,9 +965,11 @@ Model scene(vec3 p) {
 
     Model m = Model(d, meta);
     
+    #ifndef HIDE_ROOM
     if (fBox(p, roomsz) < 0.) {
         m = opU(m, fRoom(p, roomsz, baysz));
     }
+    #endif
     
     m.d *= sc;
 
@@ -1429,7 +1476,7 @@ vec3 sampleLight2(Hit hit, vec3 nor, vec2 seed, vec3 light, int id, float radius
     if (diffuse > 0.) {
         Hit sh = march(shadowOrigin, lightSampleDir, 5.);
         if (sh.model.meta.id == id) {
-            Material material = shadeModel(sh.model);
+            Material material = shadeModel(sh.model, nor);
             return material.albedo * diffuse;
         }
     }
@@ -1488,7 +1535,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     #ifndef FREE_FLY
         // jitter for motion blur
-        time += (hash12(seed) * 2. - 1.) * .001;
+        //time += (hash12(seed) * 2. - 1.) * .001;
     #endif
 
     timeRaw = time;
@@ -1546,7 +1593,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         }
 
         nor = calcNormal(hit.pos);
-        material = shadeModel(hit.model);
+        material = shadeModel(hit.model, nor);
 
         // calculate whether we are going to do a diffuse or specular reflection ray 
         seed = hash22(seed);
