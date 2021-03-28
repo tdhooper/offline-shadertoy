@@ -1,4 +1,4 @@
-// framebuffer drawcount: 1
+// framebuffer drawcount: 10
 
 #extension GL_OES_standard_derivatives : enable
 
@@ -87,6 +87,19 @@ float fBox(vec3 p, vec3 b, out vec3 face) {
     face = step(d.yzx, d.xyz)*step(d.zxy, d.xyz)*sign(p);
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
+float fMailbox(vec3 p, vec3 b) {
+    bool top = p.y > 0.;
+    p = abs(p) - b;
+    float o = vmax(min(p, 0.));
+    if (top) {
+        p.xz += b.xz;
+        p.y = max(p.y, 0.);
+        p.xy = vec2(length(p.xy), p.z) - b.xz;
+        p.z = 0.;
+        o = min(vmax(p.xy), 0.);
+    }
+    return length(max(p, 0.)) + o;
+}
 float smax(float a, float b, float r) {
     vec2 u = max(vec2(r + a,r + b), vec2(0));
     return min(-r, max (a, b)) + length(u);
@@ -125,6 +138,8 @@ float sdUberprim(vec3 p, vec4 s, vec3 r) {
     vec2 ba = vec2(r.z, -2.0*s.z);
     return sdUnterprim(p, s, r, ba/dot(ba,ba), ba.y);
 }
+
+
 
 // Rotate on axis, blackle https://suricrasia.online/demoscene/functions/
 vec3 erot(vec3 p, vec3 ax, float ro) {
@@ -548,6 +563,23 @@ Material shadeModel(Model model, inout vec3 nor) {
     return Material(col, spec, rough);
 }
 
+float fLampshade(vec3 p, float h, float r1, float r2, out bool side) {
+
+    /*
+    float d = sdUberprim(p.xzy, vec4(r2,r2,h,.00005), vec3(r2,0,r1 - r2), side);
+    vec2 pc = vec2(length(p.xz) - mix(r2, r1, step(p.y, 0.)), abs(p.y) - h);
+    d = min(d, length(pc) - .0003);
+    return d;
+    */
+
+    vec2 pc = vec2(length(p.xz) - r1, p.y);
+    float d = fBox(pc, vec2(.0, h)) - .0001;
+    pc.y = abs(pc.y) - h;
+    d = min(d, length(pc) - .0003);
+    side = pc.x * step(pc.y, -.0003) < 0.;
+    return d;
+}
+
 Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     #if ANIM != 0
         p.z = -p.z;
@@ -649,8 +681,15 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p.xy += s.xy;    
     vec3 sofasz = vec3(.08, .075, .2) / 2.;
     p.xy -= sofasz.xy;
-    d2 = fBox(p, sofasz);
-    d2 = max(d2, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
+    // d2 = fBox(p, sofasz);
+    // d2 = max(d2, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
+    // d = mincol(d, d2, meta, Meta(p, pink, 15));
+
+    // p = pp;
+    vec3 b = vec3(.01,.02,.03);
+    d2 = fMailbox(p, b);
+    d2 = abs(d2) - .0001;
+    d2 = max(d2, -vmax(-pp) - .005);
     d = mincol(d, d2, meta, Meta(p, pink, 15));
 
     p = pp;
@@ -675,13 +714,10 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         p = pp;
         p.y -= s.y;
         float lightoffset = .065;
-        float lightheight = .02;
         p.y += lightoffset;
-        pc = vec2(length(p.xz) - .04, p.y);
-        d2 = fBox(pc, vec2(.0, lightheight)) - .0001;
-        pc.y = abs(pc.y) - lightheight;
-        d2 = min(d2, length(pc) - .0003);
-        vec3 mainlightcol = pc.x * step(pc.y, -.0003) < 0. ? whitecol : lampshadeCol * 20.;
+        bool side;
+        d2 = fLampshade(p, .02, .04, .03, side);
+        vec3 mainlightcol = side ? whitecol : lampshadeCol * 20.;
         d = mincol(d, d2, meta, Meta(p, mainlightcol, 17));
 
         // cable and bulb
@@ -690,25 +726,6 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         d2 = min(d2, length(p) - .0005);
         d = mincol(d, d2, meta, Meta(p, whitecol, 18));
     }
-
-    // lamp
-    p = p3;
-   
-    p.x += .3 / 2.;
-    d2 = length(p.xz) - .007 / 2.;
-    //p.y -= .01 / 2.;
-    d2 = max(d2, p.y);
-    
-    d = min(d, d2);
-
-    //p.y += .02 / 2.;
-    p.y += s.y;
-    d2 = length(p.xz) - .05 / 2.;
-    d2 = max(d2, p.y - .01 / 2.);
-    d = min(d, d2);
-
-    p = p3;
-    d = max(d, -p.y - s.y);
 
     // skirting
     p = pp;
@@ -768,17 +785,17 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     d3 = max(d3, -p.x);
     d = mincol(d, d3, meta, Meta(p, vec3(1,.5,.3), 23));
 
+
+    // lamp
     p = p3;
     p.x += .3 / 2.;
 
     // lampshade
-    d2 = length(p.xz) - .05 / 2. + p.y * .05;
-    bool lampshadeOuter = d2 > 0.;
-    d2 = abs(d2) - .0002;
-    d2 = smax(d2, abs(p.y) - .04 / 2., 0.);
+    bool side;
+    d2 = fLampshade(p, .02, .025, .025, side);
     if (d2 < d) {
         d = d2;
-        col = lampshadeOuter ? lampshadeCol : bulbCol * .5;
+        col = side ? bulbCol * .5 : lampshadeCol;
         col *= isFirstRay ? 80. : 1.;
         meta = Meta(p, col, 7);
     } 
@@ -792,6 +809,17 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         meta = Meta(p, col, 8);
     }
 
+    // lamp stand
+    d2 = length(p.xz) - .007 / 2.;
+    d2 = max(d2, p.y);   
+    p.y += s.y;
+    d3 = length(p.xz) - .05 / 2.;
+    d3 = max(d3, p.y - .01 / 2.);
+    d2 = min(d2, d3);
+    p = p3;
+    d2 = max(d2, -p.y - s.y);
+    d = mincol(d, d2, meta, Meta(p, woodcol, 25));
+    
     return Model(d, meta);
 }
 
@@ -1151,7 +1179,7 @@ vec3 camPos;
 
 Model sceneWarped(vec3 p) {
 
-    float dbg = abs(p.y);
+    float dbg = min(abs(p.z), abs(p.y));
     dbg = 1e12;
 
     float k;
@@ -1171,7 +1199,7 @@ Model sceneWarped(vec3 p) {
     if (model.d > .7) model.d = .7 - 1. / model.d / 5.;
     
     if (dbg < model.d) {
-        model.meta.albedo = vec3(fract(model.d * 10.), max(0., sign(model.d)), 0);
+        model.meta.albedo = vec3(fract(model.d * 100.), max(0., sign(model.d)), 0);
         model.d = dbg;
     }
        
