@@ -206,12 +206,22 @@ vec3 stereographic(vec4 p4) {
 //========================================================
 
 // https://www.shadertoy.com/view/4djSRW
-vec2 hash22(vec2 p)
+vec2 hash22_original(vec2 p)
 {
-    p += 1.61803398875; // fix artifacts when reseeding
 	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
     p3 += dot(p3, p3.yzx+33.33);
     return fract((p3.xx+p3.yz)*p3.zy);
+}
+
+vec2 hash22(vec2 p)
+{
+    p += 1.61803398875; // fix artifacts when reseeding
+    return hash22_original(p);
+}
+
+vec2 hash22b(vec2 p)
+{
+    return hash22_original(p);
 }
 
 // https://www.shadertoy.com/view/4djSRW
@@ -336,7 +346,7 @@ vec4 voronoiCenters(vec2 p, float t) {
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
             vec2 cell = round(p) + vec2(x,y);
-            vec2 offset = hash22(cell) * 2. - 1.;
+            vec2 offset = hash22b(cell) * 2. - 1.;
             //offset = sin( iTime + 6.2831*offset );
             vec2 point = cell + offset * t;
             float dist = distance(p, point);
@@ -361,7 +371,7 @@ vec2 voronoi( in vec2 x )
     for( int i=-1; i<=1; i++ )
     {
         vec2  g = vec2( float(i), float(j) );
-        vec2  o = hash22( n + g );
+        vec2  o = hash22b( n + g );
       //vec2  r = g - f + o;
 	    vec2  r = g - f + o;
         float size = hash12( n + g );
@@ -380,7 +390,7 @@ void scatterclouds(vec2 p, inout vec4 col) {
     for (int x = -1; x <= 1; x++) {
         for (int y = -1; y <= 1; y++) {
             vec2 cell = round(p) + vec2(x,y);
-            vec2 offset = hash22(cell) * 2. - 1.;
+            vec2 offset = hash22b(cell) * 2. - 1.;
             vec2 point = cell + offset * .5;
             float r = hash12(cell);
             vec4 cl = cloud(p - point, vec2(.2), mix(.5, 2., r), 5.);
