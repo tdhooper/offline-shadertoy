@@ -1,4 +1,4 @@
-// framebuffer drawcount: 10
+// framebuffer drawcount: 1
 
 #extension GL_OES_standard_derivatives : enable
 
@@ -74,6 +74,9 @@ float vmax(vec3 v) {
 float vmax(vec2 v) {
 	return max(v.x, v.y);
 }
+float vmin(vec2 v) {
+	return min(v.x, v.y);
+}
 float fBox(vec3 p, vec3 b) {
 	vec3 d = abs(p) - b;
 	return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
@@ -87,6 +90,19 @@ float fBox(vec3 p, vec3 b, out vec3 face) {
     face = step(d.yzx, d.xyz)*step(d.zxy, d.xyz)*sign(p);
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
+float fMailbox(vec2 p, vec2 b) {
+    bool top = p.y > 0.;
+    p = abs(p);
+    float o;
+    if (top) {
+        p.y -= b.y;
+        o = -b.x;
+    } else {
+        p -= b;
+        o = vmax(min(p, 0.));
+    }
+    return length(max(p, 0.)) + o;
+}
 float fMailbox(vec3 p, vec3 b) {
     bool top = p.y > 0.;
     p = abs(p) - b;
@@ -99,6 +115,15 @@ float fMailbox(vec3 p, vec3 b) {
         o = min(vmax(p.xy), 0.);
     }
     return length(max(p, 0.)) + o;
+}
+float fHalfCapsule(vec2 p, float r) {
+    p.y = max(p.y, 0.);
+    return length(p) - r;
+}
+float sdCappedCylinder( vec3 p, float h, float r )
+{
+  vec2 d = abs(vec2(length(p.xz),p.y)) - vec2(h,r);
+  return min(max(d.x,d.y),0.0) + length(max(d,0.0));
 }
 float smax(float a, float b, float r) {
     vec2 u = max(vec2(r + a,r + b), vec2(0));
@@ -689,17 +714,61 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     // sofa
     p = p2;
     p.xy += s.xy;    
-    vec3 sofasz = vec3(.08, .075, .2) / 2.;
-    p.xy -= sofasz.xy;
+    p = p.zyx;
+    vec3 sofasz = vec3(.2, .1, .1) / 2.;
+    vec3 armsz = vec3(.012,.03,sofasz.z);
+    float footh = .0075;
+    vec3 isofasz = sofasz - vec3(armsz.x * 2., 0, 0);
+    p.zy -= sofasz.zy;
+    float psx = sign(p.x);
+    p.x = abs(p.x);
+    vec3 psofa = p;
     // d2 = fBox(p, sofasz);
     // d2 = max(d2, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
     // d = mincol(d, d2, meta, Meta(p, pink, 15));
 
-    // p = pp;
-    vec3 b = vec3(.01,.02,.03);
-    d2 = fMailbox(p, b);
-    d2 = abs(d2) - .0001;
-    d2 = max(d2, -vmax(-pp) - .005);
+    // arms
+    p.x -= sofasz.x - armsz.x;
+    p.y -= footh - sofasz.y + armsz.y;
+    d2 = fHalfCapsule(p.xy - vec2(0, armsz.y), armsz.x);
+    d2 = smin(d2, length(p.xy - vec2(.004, armsz.y + .005)) - armsz.x - .002, .01);
+    d3 = d2 + armsz.x * .4;
+    d2 = smax(d2, abs(p.z) - armsz.z, .007);
+    float ar = .00725;
+    d4 = smax(d3, abs(p.z) - armsz.z - .003, ar);
+    d2 = smax(d2, -d4, .001);
+    //pc = vec2(d2, d3);
+    ar += sin(sin(sin((p.y + 1.) * 80.) * 10.) * 5. + p.x * 300.) * .0003;
+    d4 = smax(d3, abs(p.z) - armsz.z - .003, ar);
+    d2 = min(d2, d4);
+    //d3 = (length(pc) - .0002) * .7;
+    //d2 = min(smax(d2, -d3, .0003), d3);
+    d2 = smax(d2, -p.y - armsz.y, .001);
+
+    // base
+    p = psofa;
+    float baseh = .012;
+    p.y -= footh - sofasz.y + baseh;
+    d3 = fBox(p, vec3(isofasz.x + .0058, baseh, isofasz.z) - .001) - .001;
+    d2 = min(d2, d3);
+
+    // cushion
+    p = psofa;
+    vec3 cushionsz = vec3(isofasz.x / 2., .01, sofasz.z - .018);
+    p.y -= footh - sofasz.y + baseh * 2. + cushionsz.y - .001;
+    p.x -= isofasz.x / 2.;
+    p.z -= sofasz.z - cushionsz.z + .005;
+    //float rr = mix(.007, .005, length(sin(sin((p.xz + max(psx, 0.)) * 50.) * 35.) * .5 + .5));
+    float cs = mix(.95, 1.01, length(sin(sin((p + max(psx * 240., 0.)) * 30.) * 3.) * .5 + .5));
+    float cr = .007;
+    cr += sin(sin(sin((vmin(abs(p.xz)) + .5) * mix(50., 44., max(psx, 0.))) * 10.) * 5. + p.y * 300.) * .0004;
+    d3 = (fBox(p / cs, cushionsz - cr) - cr) * cs;
+    d3 = smax(d3, -abs(abs(p.y) - cushionsz.y * .75), .0008);
+    d2 = min(d2, d3);
+
+    p = psofa;
+
+
     d = mincol(d, d2, meta, Meta(p, pink, 15));
 
     p = pp;
