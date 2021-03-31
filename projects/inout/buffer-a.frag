@@ -36,7 +36,7 @@ void main() {
 
 //#define ROOM_ONLY
 //#define FREE_FLY
-#define HIDE_ROOM;
+//#define HIDE_ROOM;
 
 
 float time;
@@ -63,6 +63,9 @@ vec2 round(vec2 v) {
 #define saturate(x) clamp(x, 0., 1.)
 
 // HG_SDF
+float dot2( in vec2 v ) { 
+    return dot(v,v);
+}
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
@@ -77,6 +80,9 @@ float vmax(vec2 v) {
 }
 float vmin(vec2 v) {
 	return min(v.x, v.y);
+}
+float vmin(vec3 v) {
+	return min(min(v.x, v.y), v.z);
 }
 float vsin(vec3 v) {
     v = sin(v);
@@ -116,6 +122,9 @@ float fCorner(vec2 p, vec2 b) {
 	vec2 d = p;
     d -= b;
 	return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
+}
+float fCorner(vec2 p) {
+	return length(max(p, vec2(0))) + vmax(min(p, vec2(0)));
 }
 float fMailbox(vec2 p, vec2 b) {
     bool top = p.y > 0.;
@@ -163,6 +172,31 @@ float smin(float a, float b, float k){
 float smin2(float a, float b, float k) {
     float h = max(0., k-abs(b-a))/k;
     return min(a,b)-h*h*h*k/6.;
+}
+float smin3(float a, float b, float r) {
+    vec2 u = max(vec2(r - a,r - b), vec2(0));
+    return max(r, min (a, b)) - length(u);
+}
+float smax2(float a, float b, float k) {
+    return -smin3(-a, -b, k);
+}
+
+
+float fCornerBevel(vec2 p, vec2 c) {
+    vec2 n = normalize(c.yx);   
+    vec2 pc = p + vec2(c.x, 0);
+    float e = dot(pc, n);
+    float i = max(vmax(min(p, vec2(0))), min(e, 0.));
+    float t = dot(pc, c * vec2(1,-1)) / dot2(c);
+    vec2 v = vec2(0);
+    if (t < 0.) {
+        v = max(p + vec2(c.x,0), 0.);
+    }
+    if (t > 1.) {
+        v = max(p + vec2(0,c.y), 0.);
+    }
+    e = max(length(v), e);
+    return e + i;
 }
 
 // https://www.shadertoy.com/view/MsVGWG
@@ -1295,7 +1329,7 @@ Model scene(vec3 p) {
 
     // bay caps
     float capheight = .006;
-    float baycaps = max(abs(abs(p.y) - baysz.y) - capheight, bayshape - .01);
+    float baycaps = smax(abs(abs(p.y) - baysz.y) - capheight, bayshape - .01, .0);
     baycaps = max(baycaps, -p.z - wall + .001);
     baycaps = min(baycaps, fBox(p + vec3(0,baysz.y - capheight / 2.,.045), vec3(baysz.x, capheight / 2., .01)));
     //if (p.y > 0.) caps = caps = max(-p.z - wall);
@@ -1311,27 +1345,15 @@ Model scene(vec3 p) {
     p.x += thick + framesz.x;
     float fr = .01;
     vec2 pc = vec2(fBox(p.xy, framesz + fr) + fr, frame);
-
-    //pc = p.xy;
-
-    //frame = stairmax(frame, -fBox(p.xy, framesz + fr) - fr, fr, 2.);
     pc.x += .008;
     pc.y = -pc.y;
-    float fd = pc.x;
-    fd = min(fd, fCorner(pc, vec2(.01, .003)));
-    fd = min(fd, fBox(pc - vec2(.0, .003), vec2(.015, .0003)));
-    fd = min(fd, dot(pc, normalize(vec2(1,1.5))) - .005);
-    fd = cmin(fd, fCorner(pc, vec2(.015, .0)), .002);
-
-    //d = min(d, max(fd, abs(p.z - .1) - .1));
-
-    frame = max(frame, -fd);
-    
-    //frame = min(frame, sdUberprim(p, vec4(framesz, .001, 10), vec3(0,0,-.005)));
-    
-    
+    float fd = fCornerBevel(-pc + vec2(0,.0033), vec2(.005, .003));
+    fd = min(fd, max(fCornerBevel(-pc + vec2(.01,.0), vec2(.002, .002)), pc.y - .0027));
+    frame = max(frame, fd);
 
     d = mincol(d, frame, meta, Meta(p, whitecol, 203));
+    
+    
     
 
     // p = pp;
@@ -1519,7 +1541,7 @@ vec3 camPos;
 
 Model sceneWarped(vec3 p) {
 
-    float dbg = min(abs(p.z), abs(p.y));
+    float dbg = vmin(abs(p.yz));
     dbg = 1e12;
 
     float k;
@@ -1854,7 +1876,7 @@ vec3 sampleLight2(Hit hit, vec3 nor, vec2 seed, vec3 light, int id, float radius
     vec3 lightDir = (light - hit.pos);
     vec3 lightSampleDir = getConeSample(lightDir, radius, seed);
     float diffuse = dot(nor, lightSampleDir) / length(lightDir);
-    vec3 shadowOrigin = hit.pos + nor * .01; // TODO: Make this smaller!
+    vec3 shadowOrigin = hit.pos + nor * .0002;
     if (diffuse > 0.) {
         Hit sh = march(shadowOrigin, lightSampleDir, 5.);
         if (sh.model.meta.id == id) {
