@@ -666,11 +666,31 @@ Material shadeModel(Model model, inout vec3 nor) {
         return mat;
     }
 
-    // door
-    if (id == 13) {
+    // door, mirror
+    if (id == 13 || id == 24) {
         mat = woodMat(p.zxy * 2. + 20., nor, woodcol * vec3(.5,.3,.2), vec2(1.,.03), 0., .5, 0.);
         return mat;
         //col = fract(p.xyz * 100.);
+    }
+
+    // picture
+    if (id == 22) {
+        mat = woodMat(p.zxy, nor, woodcol + .1, vec2(.1,.02), .5, 1., 1.);
+        return mat;
+        //col = fract(p.xyz * 100.);
+    }
+
+    // picture image
+    if (id == 221) {
+        p = p.zyx;
+        p *= 20.;
+        col = mix(vec3(.596,.596,.68) * .5, vec3(.596,.596,.68) * 1.5, smoothstep(-.5, .5, p.y));
+        //col = mix(col, vec3(.5,1,.5), .5);
+        p *= 10.;
+        vec3 sk = skyTex(p.xy - vec2(-2,9), true, 10.);
+        col *= pow(sk, vec3(2.));
+        col += pow(sk, vec3(10.));
+        spec = .1;
     }
 
 
@@ -844,6 +864,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec2 spec = vec2(0);
     vec3 p4;
     vec2 pc;
+    vec3 uvw;
     Meta meta = Meta(p, vec3(.5), 2);
 
     //fSofa(p, s, d, meta);
@@ -896,17 +917,17 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
         }
 
         // shelf
-        p = pp;
-        p.x -= s.x;
-        vec3 shelfsz = vec3(.03,.003,.1) / 2.;
-        p.x += shelfsz.x;
-        p.zy -= vec2(.1,-.02);
-        d2 = fBox(p, shelfsz);
-        d = mincol(d, d2, meta, Meta(p, woodcol, 12));
+        //p = pp;
+        //p.x -= s.x;
+        //vec3 shelfsz = vec3(.03,.003,.1) / 2.;
+        //p.x += shelfsz.x;
+        //p.zy -= vec2(.1,-.02);
+        //d2 = fBox(p, shelfsz);
+        //d = mincol(d, d2, meta, Meta(p, woodcol, 12));
 
         // door
         p = pp - doorpos;
-        vec3 uvw = p;
+        uvw = p;
         d2 = fBox(p, doorsz);
         p = abs(p);
         p.y -= .004;
@@ -1032,9 +1053,24 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     p.z -= .04;
     p.x += s.x;
     vec3 picsz = vec3(.005,.08,.11) / 2.;
+    vec3 picimgsz = picsz * .8;
     d2 = fBox(p - picsz * vec3(1,0,0), picsz);
-    d2 = max(d2, -fBox(p - picsz * vec3(1.75,0,0), picsz * .8));
-    d = mincol(d, d2, meta, Meta(p, woodcol, 22));
+    d3 = fBox(p - picsz * vec3(1.75,0,0), picimgsz);
+    if (d2 < d) {
+        uvw = p;
+        if (fBox(p.zy, picimgsz.zy) < -.0002) {
+            meta = Meta(uvw, woodcol, 221);
+        } else {
+            pc = abs(p.zy) / picsz.zy;
+            if (pc.x < pc.y) {
+                uvw = p.xzy;
+            }
+            meta = Meta(uvw, woodcol, 22);
+        }
+        d2 = max(d2, -d3);
+        d = d2;
+        
+    }
 
     // mirror
     p = p2;
