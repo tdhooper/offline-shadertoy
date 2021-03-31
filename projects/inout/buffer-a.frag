@@ -36,7 +36,7 @@ void main() {
 
 //#define ROOM_ONLY
 //#define FREE_FLY
-//#define HIDE_ROOM;
+#define HIDE_ROOM;
 
 
 float time;
@@ -105,6 +105,17 @@ float fBox(vec3 p, vec3 b, out vec3 face) {
 	vec3 d = abs(p) - b;
     face = step(d.yzx, d.xyz)*step(d.zxy, d.xyz)*sign(p);
     return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
+float fBoxHalf(vec2 p, vec2 b) {
+	vec2 d = p;
+    d.y = abs(d.y);
+    d -= b;
+	return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
+}
+float fCorner(vec2 p, vec2 b) {
+	vec2 d = p;
+    d -= b;
+	return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
 }
 float fMailbox(vec2 p, vec2 b) {
     bool top = p.y > 0.;
@@ -211,6 +222,10 @@ float cmax(float a, float b, float r) {
 	} else {
 		return m;
 	}
+}
+
+float cmin(float a, float b, float r) {
+    return -cmax(-a, -b, r);
 }
 
 float pMod1(inout float p, float size) {
@@ -580,6 +595,12 @@ Model opU(Model a, Model b) {
 
 float mincol(float a, float b, inout Meta metaa, Meta metab) {
     if (a < b) return a;
+    metaa = metab;
+    return b;
+}
+
+float maxcol(float a, float b, inout Meta metaa, Meta metab) {
+    if (a > b) return a;
     metaa = metab;
     return b;
 }
@@ -1171,7 +1192,7 @@ Model scene(vec3 p) {
     float wall = .05;
     vec3 roomsz = vec3(.2,.2,.2);
     vec3 mainsz = roomsz + wall;
-    vec3 baysz = vec3(mainsz.xy * vec2(.7, .7), .08) * vec3(1,.8,1);    
+    vec3 baysz = vec3(mainsz.xy * vec2(.7, .7), .08) * vec3(1,.8,1);
 
     d = 1e12;
 
@@ -1250,37 +1271,91 @@ Model scene(vec3 p) {
     p = pp;
     //p.z += baysz.z / 2.;
     float main = fBox(p, mainsz);
-    p = pp;
-    p.z -= mainsz.z - baysz.z;
-    float bay = fBox(p, baysz * vec3(1,1,2));
-    p.z -= baysz.z;
-    p.x = abs(p.x);
-    p.x -= baysz.x;
-    pR(p.xz, -.7);
-    bay = max(bay, p.z);
-    //main = min(main, bay);
-    //d = min(d, main);
-    d = mincol(d, bay, meta, Meta(p, pink, 203));
-    
+
     // window
     p = pp;
     p.z += roomsz.z;
     d = max(d, -fBox(p - vec3(0,.0,0), vec3(.2,.175,.3)/2.));
     p.x = abs(p.x);
     p.z -= roomsz.z * 2.;
-    d = max(d, -fBox(p - vec3(0,0,0), vec3(.08,.12,.3)));
-    d = max(d, -fBox(p - vec3(.12,0,0), vec3(.035,.12,.3)));
+    d = maxcol(d, -fBox(p, baysz), meta, Meta(p, wallcol, 207));
+    //d = max(d, -fBox(p - vec3(0,0,0), vec3(.08,.12,.3)));
+    //d = max(d, -fBox(p - vec3(.12,0,0), vec3(.035,.12,.3)));
+
+    // bay
+    float bayinner = baysz.x * .45;
+    p = pp;
+    p.z -= mainsz.z;
+    p.x = abs(p.x);
+
+    float bayshape = p.z - baysz.z;
+	//bayshape = fBoxHalf(p.zy, baysz.zy);
+    //bayshape = fBox(p, baysz);
+    bayshape = max(bayshape, dot(p.xz - vec2(baysz.x, 0), normalize(vec2(baysz.z, baysz.x - bayinner))));
+
+    // bay caps
+    float capheight = .006;
+    float baycaps = max(abs(abs(p.y) - baysz.y) - capheight, bayshape - .01);
+    baycaps = max(baycaps, -p.z - wall + .001);
+    baycaps = min(baycaps, fBox(p + vec3(0,baysz.y - capheight / 2.,.045), vec3(baysz.x, capheight / 2., .01)));
+    //if (p.y > 0.) caps = caps = max(-p.z - wall);
+    //d = min(d, bayshape);
+
+    float frame = max(max(bayshape, -bayshape - .02), fBox(p, baysz));
+    p.xz -= vec2(bayinner, baysz.z);
+    vec3 fn = normalize(mix(vec3(1,0,0), normalize(vec3(baysz.x - bayinner, 0, -baysz.z)), .5));
+    float bs = pReflect(p, -fn, 0.);
+    float thick = .01;
+    vec2 framesz = vec2(bayinner - thick, baysz.y - thick * 2.);
+    if (bs < 0.) framesz.x = length(vec2(baysz.x - bayinner, baysz.z)) / 2. - thick * 1.25;
+    p.x += thick + framesz.x;
+    float fr = .01;
+    vec2 pc = vec2(fBox(p.xy, framesz + fr) + fr, frame);
+
+    //pc = p.xy;
+
+    //frame = stairmax(frame, -fBox(p.xy, framesz + fr) - fr, fr, 2.);
+    pc.x += .008;
+    pc.y = -pc.y;
+    float fd = pc.x;
+    fd = min(fd, fCorner(pc, vec2(.01, .003)));
+    fd = min(fd, fBox(pc - vec2(.0, .003), vec2(.015, .0003)));
+    fd = min(fd, dot(pc, normalize(vec2(1,1.5))) - .005);
+    fd = cmin(fd, fCorner(pc, vec2(.015, .0)), .002);
+
+    //d = min(d, max(fd, abs(p.z - .1) - .1));
+
+    frame = max(frame, -fd);
+    
+    //frame = min(frame, sdUberprim(p, vec4(framesz, .001, 10), vec3(0,0,-.005)));
     
     
+
+    d = mincol(d, frame, meta, Meta(p, whitecol, 203));
+    
+
+    // p = pp;
+    // p.z -= mainsz.z - baysz.z;
+    // float bay = fBox(p, baysz * vec3(1,1,2));
+    // p.z -= baysz.z;
+    // p.x = abs(p.x);
+    // p.x -= baysz.x;
+    // pR(p.xz, -.7);
+    // bay = max(bay, p.z);
+    // //main = min(main, bay);
+    // //d = min(d, main);
+    // d = mincol(d, bay, meta, Meta(p, pink, 203));
+    // d = bay;
+    
+
     pp.z *= -1.;
-    //pp.x *= -1.;
-    // roomA
     p = pp;
 
-    d2 = -main - wall;
-    d2 = max(d2, -bay - .02);
+    // Subtract room
 
+    d2 = -main - wall;
     inside = d2 > 0.;
+
     if (initialsample) {
         lastinside = inside;
         startedinside = inside;
@@ -1295,7 +1370,6 @@ Model scene(vec3 p) {
         }
     }
     
-    //d2 = max(d2, p.y + .15);
     if (d2 > d) {
         meta = Meta(p, wallcol, 207);
         if (roomFace == vec3(0,-1,0)) {
@@ -1306,8 +1380,11 @@ Model scene(vec3 p) {
         d = d2;
     }
 
+    d = mincol(d, baycaps, meta, Meta(p, whitecol, 300));
+
     Model m = Model(d, meta);
     
+    // Add room
     #ifndef HIDE_ROOM
     if (fBox(p, roomsz) < 0.) {
         m = opU(m, fRoom(p, roomsz, baysz));
@@ -1315,10 +1392,6 @@ Model scene(vec3 p) {
     #endif
     
     m.d *= sc;
-
-    //if (inside) m.id = 99;
-
-   // m.d = min(m.d, ld);
 
     return m;
 }
@@ -1765,7 +1838,7 @@ vec3 sampleLight(Hit hit, vec3 nor, vec2 seed, vec3 light, vec3 lightCol, int id
     vec3 lightDir = (light - hit.pos);
     vec3 lightSampleDir = getConeSample(lightDir, radius, seed);
     float diffuse = dot(nor, lightSampleDir);
-    vec3 shadowOrigin = hit.pos + nor * .01;
+    vec3 shadowOrigin = hit.pos + nor * .0002;
     if (diffuse > 0.) {
         Hit sh = march(shadowOrigin, lightSampleDir, 5.);
         if (sh.model.meta.id == id) {
@@ -1781,7 +1854,7 @@ vec3 sampleLight2(Hit hit, vec3 nor, vec2 seed, vec3 light, int id, float radius
     vec3 lightDir = (light - hit.pos);
     vec3 lightSampleDir = getConeSample(lightDir, radius, seed);
     float diffuse = dot(nor, lightSampleDir) / length(lightDir);
-    vec3 shadowOrigin = hit.pos + nor * .01;
+    vec3 shadowOrigin = hit.pos + nor * .01; // TODO: Make this smaller!
     if (diffuse > 0.) {
         Hit sh = march(shadowOrigin, lightSampleDir, 5.);
         if (sh.model.meta.id == id) {
