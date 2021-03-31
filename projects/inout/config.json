@@ -19,7 +19,7 @@
         "width": 640,
         "height": 360
     },
-    "fov": 0.7,
+    "fov": 1.2,
     "controls": {
         "skyX": {
             "type": "range",

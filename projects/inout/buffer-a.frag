@@ -12,8 +12,9 @@ uniform int iFrame;
 uniform float iTime;
 uniform vec4 iMouse;
 
-uniform sampler2D iChannel0; // /images/blue-noise.png filter: linear
+uniform sampler2D iChannel0; // /images/blue-noise.png filter: linear wrap: repeat
 uniform sampler2D revisionTex; // /images/revision-logo.png filter: linear
+uniform sampler2D linenTex; // /images/linen.jpg filter: linear wrap: mirror
 uniform vec2 iChannel0Size;
 uniform vec2 revisionTexSize;
 
@@ -76,6 +77,13 @@ float vmax(vec2 v) {
 }
 float vmin(vec2 v) {
 	return min(v.x, v.y);
+}
+float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
+	float t = dot(p, planeNormal)+offset;
+	if (t < 0.) {
+		p = p - (2.*t)*planeNormal;
+	}
+	return sign(t);
 }
 float fBox(vec3 p, vec3 b) {
 	vec3 d = abs(p) - b;
@@ -164,7 +172,13 @@ float sdUberprim(vec3 p, vec4 s, vec3 r) {
     return sdUnterprim(p, s, r, ba/dot(ba,ba), ba.y);
 }
 
-
+// generic ellipsoid - approximated distance: https://www.shadertoy.com/view/tdS3DG
+float sdEllipsoid( in vec3 p, in vec3 r ) 
+{
+    float k0 = length(p/r);
+    float k1 = length(p/(r*r));
+    return k0*(k0-1.0)/k1;
+}
 
 // Rotate on axis, blackle https://suricrasia.online/demoscene/functions/
 vec3 erot(vec3 p, vec3 ax, float ro) {
@@ -595,6 +609,16 @@ Material shadeModel(Model model, inout vec3 nor) {
         return woodMat(p * 2.5, nor, woodcol * vec3(.5,.3,.2), vec2(.03,.03), 0., .5, 0.);
     }
 
+    // sofa
+    if (id == 15) {
+        vec2 s = vec2(5,.1)*.75;
+        float a = texture2D(iChannel0, p.xy * s).r;
+        float b = texture2D(iChannel0, p.xy * s.yx).g;
+        col = pink * pow(a + b, 2.2);
+        //nor = normalize(nor + vec3(a,0,b) * 1.5);
+     //   col = pow(max((nor.zyx * vec3(1,1,-1)) * .5 + .5, vec3(0)), vec3(1.8));
+    }
+
     return Material(col, spec, rough);
 }
 
@@ -615,6 +639,115 @@ float fLampshade(vec3 p, float h, float r1, float r2, out bool side) {
     return d;
 }
 
+void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
+    
+    vec3 uvw = p;
+    float d2, d3, d4;
+    p.xy += s.xy;
+    p.x -= .003;
+    p = p.zyx;
+    vec3 sofasz = vec3(.2, .1, .1) / 2.;
+    vec3 armsz = vec3(.012,.026,sofasz.z);
+    float footh = .0075;
+    vec3 isofasz = sofasz - vec3(armsz.x * 2., 0, 0);
+    p.zy -= sofasz.zy;
+    float psx = sign(p.x);
+    float vary =  max(psx, 0.);
+    vec3 psofa = p;
+    // d2 = fBox(p, sofasz);
+    // d2 = max(d2, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
+    // d = mincol(d, d2, meta, Meta(p, pink, 15));
+
+    // arms
+    p.x = abs(p.x);
+    p.x -= sofasz.x - armsz.x;
+    p.y -= footh - sofasz.y + armsz.y;
+    d2 = fHalfCapsule(p.xy - vec2(0, armsz.y), armsz.x);
+    vec2 armtopp = p.xy - vec2(.004, armsz.y + .005);
+    d2 = smin(d2, length(armtopp) - armsz.x - .002, .01);
+    d3 = d2 + armsz.x * .4;
+    float ar = .007;
+    float armang = atan(armtopp.y, armtopp.x);
+    float ar0 = sin(sin(sin(armang) * 10.) * 5. + length(armtopp) * 500. + p.z * 100.);
+    float ar1 = sin(sin(sin((p.y + 1.) * 65.) * 10.) * 5. + p.x * 300. + p.z * 100.);
+    float arw = mix(ar0, ar1, smoothstep(.01, -.01, p.y - armsz.y / 3.));
+    arw *= smoothstep(0., armsz.z, abs(p.z));
+    d2 = smax(d2 + arw * .0001, abs(p.z) - armsz.z, ar + arw * .0005);
+    ar = .00725;
+    d3 = max(d3, -p.z);
+    d4 = smax(d3, abs(p.z) - armsz.z - .003, ar);
+    d2 = smax(d2, -d4, .001);
+    ar += sin(sin(sin((p.y + 1.) * 80.) * 10.) * 5. + p.x * 300.) * .0003;
+    d4 = smax(d3, abs(p.z) - armsz.z - .003, ar);
+    d2 = min(d2, d4);
+    d2 = smax(d2, -p.y - armsz.y, .001);
+
+    // base
+    p = psofa;
+    float baseh = .012;
+    p.y -= footh - sofasz.y + baseh;
+    d3 = fBox(p, vec3(isofasz.x + .0058, baseh, isofasz.z) - .001) - .001;
+    if (d3 < d2) {
+        uvw = p;
+        d2 = d3;
+    }
+
+    // back
+    p = psofa;
+    vec3 backsz = vec3(isofasz.x + .001, armsz.y + .005, .005);
+    p.y -= footh - sofasz.y + baseh + backsz.y;
+    p.z -= -sofasz.z + backsz.z;
+    d3 = fMailbox(p.zyx, backsz.zyx - .006) - .006;
+    d2 = min(d2, d3);
+
+    // cushion
+    p = psofa;
+    p.x = abs(p.x);
+    vec3 cushionsz = vec3(isofasz.x / 2. + .001, .01, sofasz.z - .018);
+    p.y -= footh - sofasz.y + baseh * 2. - .001;
+    p.y -= cushionsz.y * 2.;
+    p.x -= isofasz.x / 2.;
+    p.z -= sofasz.z - cushionsz.z * 2. + .005;
+    vary += pReflect(p, normalize(vec3(0,-.66,1)), 0.);
+    p.y += cushionsz.y;
+    p.z -= cushionsz.z - .004;
+    //float rr = mix(.007, .005, length(sin(sin((p.xz + max(psx, 0.)) * 50.) * 35.) * .5 + .5));
+    float cs = mix(.95, 1.01, length(sin(sin((p + vary * 240.) * 30.) * 3.) * .5 + .5));
+    float cr = .008;
+    float axisx = max(vmin(p.xz), vmin(-p.xz));
+    float axisz = min(vmin(p.xz), vmin(-p.xz));
+    float crw = sin(sin(sin((axisx + mix(.4, .6, vary)) * (48. + vary)) * 10.) * 5. + p.y * 300. + p.z * 300.);
+    crw *= smoothstep(0., .0005, abs(dot(abs(p.xz), cushionsz.zx * vec2(1,-1))));
+    crw *= vmax(abs(p.xz) / cushionsz.xz);
+    cr += crw * .0003;
+    //p.y -= smoothstep(cushionsz.x * 1.2, 0., length(p.xz)) * .005;
+    cs += smoothstep(cushionsz.x * 1.2, 0., length(p.xz)) * .4;
+    //p.xz -= normalize(p.xz) * .0075;
+    //cs -= .15;
+    d3 = (fBox(p / cs, cushionsz - cr - crw * .0001) - cr) * cs;
+    float seam = abs(p.y) - cushionsz.y * .75;
+    d3 = smax(d3, -abs(seam), .0016);
+    //d3 = mix(d3, sdEllipsoid(p, cushionsz), .5);
+    if (d3 < d2) {
+        uvw = vec3(axisx, p.y, axisz);
+        if (seam > 0.) {
+            uvw = p.xzy;
+        }
+        d2 = d3;
+    }
+    
+
+    p = psofa;
+
+    //vec3 col = fract((uvw + vec3(.00,0,-0.107)) * 4.66 * 2.);
+    //vec3 col = fract(uvw * 500.);
+    //col.z = 1.;
+    vec3 col = fract(uvw * 50.);
+    //vec3 col = pink;
+
+    d = mincol(d, d2, meta, Meta(uvw, col, 15));
+}
+
 Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     #if ANIM != 0
         p.z = -p.z;
@@ -629,6 +762,9 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec3 p4;
     vec2 pc;
     Meta meta = Meta(p, vec3(.5), 2);
+
+    // fSofa(p, s, d, meta);
+    // return Model(d, meta);
    
     vec3 p2 = pp - vec3(0,0,.05);
     vec3 p3 = pp + vec3(0,0,.11);
@@ -713,63 +849,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     
     // sofa
     p = p2;
-    p.xy += s.xy;    
-    p = p.zyx;
-    vec3 sofasz = vec3(.2, .1, .1) / 2.;
-    vec3 armsz = vec3(.012,.03,sofasz.z);
-    float footh = .0075;
-    vec3 isofasz = sofasz - vec3(armsz.x * 2., 0, 0);
-    p.zy -= sofasz.zy;
-    float psx = sign(p.x);
-    p.x = abs(p.x);
-    vec3 psofa = p;
-    // d2 = fBox(p, sofasz);
-    // d2 = max(d2, -fBox(p - sofasz * vec3(.5,1.25,0), sofasz * vec3(1,1,.6)));
-    // d = mincol(d, d2, meta, Meta(p, pink, 15));
-
-    // arms
-    p.x -= sofasz.x - armsz.x;
-    p.y -= footh - sofasz.y + armsz.y;
-    d2 = fHalfCapsule(p.xy - vec2(0, armsz.y), armsz.x);
-    d2 = smin(d2, length(p.xy - vec2(.004, armsz.y + .005)) - armsz.x - .002, .01);
-    d3 = d2 + armsz.x * .4;
-    d2 = smax(d2, abs(p.z) - armsz.z, .007);
-    float ar = .00725;
-    d4 = smax(d3, abs(p.z) - armsz.z - .003, ar);
-    d2 = smax(d2, -d4, .001);
-    //pc = vec2(d2, d3);
-    ar += sin(sin(sin((p.y + 1.) * 80.) * 10.) * 5. + p.x * 300.) * .0003;
-    d4 = smax(d3, abs(p.z) - armsz.z - .003, ar);
-    d2 = min(d2, d4);
-    //d3 = (length(pc) - .0002) * .7;
-    //d2 = min(smax(d2, -d3, .0003), d3);
-    d2 = smax(d2, -p.y - armsz.y, .001);
-
-    // base
-    p = psofa;
-    float baseh = .012;
-    p.y -= footh - sofasz.y + baseh;
-    d3 = fBox(p, vec3(isofasz.x + .0058, baseh, isofasz.z) - .001) - .001;
-    d2 = min(d2, d3);
-
-    // cushion
-    p = psofa;
-    vec3 cushionsz = vec3(isofasz.x / 2., .01, sofasz.z - .018);
-    p.y -= footh - sofasz.y + baseh * 2. + cushionsz.y - .001;
-    p.x -= isofasz.x / 2.;
-    p.z -= sofasz.z - cushionsz.z + .005;
-    //float rr = mix(.007, .005, length(sin(sin((p.xz + max(psx, 0.)) * 50.) * 35.) * .5 + .5));
-    float cs = mix(.95, 1.01, length(sin(sin((p + max(psx * 240., 0.)) * 30.) * 3.) * .5 + .5));
-    float cr = .007;
-    cr += sin(sin(sin((vmin(abs(p.xz)) + .5) * mix(50., 44., max(psx, 0.))) * 10.) * 5. + p.y * 300.) * .0004;
-    d3 = (fBox(p / cs, cushionsz - cr) - cr) * cs;
-    d3 = smax(d3, -abs(abs(p.y) - cushionsz.y * .75), .0008);
-    d2 = min(d2, d3);
-
-    p = psofa;
-
-
-    d = mincol(d, d2, meta, Meta(p, pink, 15));
+    fSofa(p, s, d, meta);
 
     p = pp;
     p.y -= s.y;
