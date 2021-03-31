@@ -34,8 +34,8 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 
-#define ROOM_ONLY
-#define FREE_FLY
+//#define ROOM_ONLY
+//#define FREE_FLY
 //#define HIDE_ROOM;
 
 
@@ -231,6 +231,10 @@ float stairmin(float a, float b, float r, float n) {
     d = min(d, p.y);
     pR45(p);
     return min(d, vmax(p -vec2(0.5*r/n)));
+}
+
+float stairmax(float a, float b, float r, float n) {
+	return -stairmin(-a, -b, r, n);
 }
 
 
@@ -603,7 +607,7 @@ vec3 featurewallcol = vec3(.05,.26,.32);
 
 
 Material woodMat(vec3 p, inout vec3 nor, vec3 col, vec2 size, float offset, float variance, float uneven) {
-    float spec = .2;
+    float spec = .1;
     float rough = .5;
     vec2 c;
     fBlocks(p.zx, size, offset, c);
@@ -635,6 +639,8 @@ Material shadeModel(Model model, inout vec3 nor) {
     int id = model.meta.id;
     vec3 p = model.meta.p;
 
+    Material mat;
+
     vec3 col = model.meta.albedo;
     float spec = 0.;
     float rough = 0.;
@@ -650,13 +656,23 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     // floorboards
     if (id == 204) {
-        return woodMat(p, nor, woodcol + .1, vec2(.1,.02), .5, 1., 1.);
+        mat = woodMat(p, nor, woodcol + .1, vec2(.1,.02), .5, 1., 1.);
+        return mat;
     }
 
     // table
     if (id == 141) {
-        return woodMat(p * 2.5, nor, woodcol * vec3(.5,.3,.2), vec2(.03,.03), 0., .5, 0.);
+        mat = woodMat(p * 2.5, nor, woodcol * vec3(.5,.3,.2), vec2(.03,.03), 0., .5, 0.);
+        return mat;
     }
+
+    // door
+    if (id == 13) {
+        mat = woodMat(p.zxy * 2. + 20., nor, woodcol * vec3(.5,.3,.2), vec2(1.,.03), 0., .5, 0.);
+        return mat;
+        //col = fract(p.xyz * 100.);
+    }
+
 
 /*
     // sofa
@@ -890,7 +906,30 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
 
         // door
         p = pp - doorpos;
-        d = mincol(d, fBox(p, doorsz), meta, Meta(p, woodcol, 13));  
+        vec3 uvw = p;
+        d2 = fBox(p, doorsz);
+        p = abs(p);
+        p.y -= .004;
+        vec3 panelsz = doorsz / 2.4 - .005;
+        panelsz.x = .001;
+        p.z -= panelsz.z + (doorsz.z - panelsz.z * 2.) / 3.;
+        p.y -= panelsz.y + (doorsz.y - panelsz.y * 2.) / 3.;
+        float dr = .0005;
+        d2 = cmax(d2 + dr, -fBox(p.zy, panelsz.zy), dr) - dr;
+        p.x -= panelsz.x + .0005;// + doorsz.x - sqrt(dr*dr*2.);
+        p.x = -p.x;
+        d2 = min(d2, sdUberprim(p.zyx, vec4(panelsz.zyx,10), vec3(0,0,-.005)));
+        //d2 = d3;
+        d = mincol(d, d2, meta, Meta(uvw, woodcol, 13));  
+
+        // handle
+        p = pp - doorpos;
+        p.x += .007;
+        p.y -= .004;
+        p.z -= doorsz.z * .75;
+        d2 = length(p) - .004;
+        d = mincol(d, d2, meta, Meta(p, vec3(1,.5,.3), 23));  
+
     }
     
     // table
@@ -1769,7 +1808,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     #ifndef FREE_FLY
         // jitter for motion blur
-        time += (hash12(seed) * 2. - 1.) * .001;
+        time += (hash12(seed) * 2. - 1.) * .0005;
     #endif
 
     timeRaw = time;
