@@ -78,6 +78,14 @@ float vmax(vec2 v) {
 float vmin(vec2 v) {
 	return min(v.x, v.y);
 }
+float vsin(vec3 v) {
+    v = sin(v);
+    return v.x + v.y + v.z;
+}
+float vsin(vec2 v) {
+    v = sin(v);
+    return v.x + v.y;
+}
 float pReflect(inout vec3 p, vec3 planeNormal, float offset) {
 	float t = dot(p, planeNormal)+offset;
 	if (t < 0.) {
@@ -223,6 +231,47 @@ float stairmin(float a, float b, float r, float n) {
     d = min(d, p.y);
     pR45(p);
     return min(d, vmax(p -vec2(0.5*r/n)));
+}
+
+
+float unlerp(float vmin, float vmax, float value) {
+    return clamp((value - vmin) / (vmax - vmin), 0., 1.);
+}
+
+float sinbump(float a, float b, float x) {
+    x = unlerp(a, b, x);
+    return sin(x * PI * 2. - PI / 2.) * .5 + .5;
+}
+
+float smoothbump(float a, float b, float x) {
+    float c = mix(a, b, .5);
+    return smoothstep(a, c, x) - smoothstep(c, b, x);
+}
+
+float gain(float x, float P) {
+    if (x > 0.5)
+        return 1.0 - 0.5*pow(2.0-2.0*x, P);
+    else
+        return 0.5*pow(2.0*x, P);
+}
+
+float gain(float x, float P, float S) {
+    return mix(x, gain(x, P), S);
+}
+
+float gain2(float x, float P, float S) {
+    float s = sign(.5 - x);
+    return gain(x + .5 * s, P, S) - .5 * s;
+}
+
+float gainB(float x, float P, float g) {
+    x = clamp(unlerp(g/2., 1. - g/2., x), 0., 1.);
+    return gain(x, P);
+}
+
+float gain2B(float x, float P, float g) {
+    float s = sign(.5 - x);
+    return gainB(x + .5 * s, P, g) - .5 * s;
 }
 
 
@@ -609,6 +658,7 @@ Material shadeModel(Model model, inout vec3 nor) {
         return woodMat(p * 2.5, nor, woodcol * vec3(.5,.3,.2), vec2(.03,.03), 0., .5, 0.);
     }
 
+/*
     // sofa
     if (id == 15) {
         vec2 s = vec2(5,.1)*.75;
@@ -618,7 +668,7 @@ Material shadeModel(Model model, inout vec3 nor) {
         //nor = normalize(nor + vec3(a,0,b) * 1.5);
      //   col = pow(max((nor.zyx * vec3(1,1,-1)) * .5 + .5, vec3(0)), vec3(1.8));
     }
-
+*/
     return Material(col, spec, rough);
 }
 
@@ -641,6 +691,7 @@ float fLampshade(vec3 p, float h, float r1, float r2, out bool side) {
 
 void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
     
+    float fade = 0.;
     vec3 uvw = p;
     float d2, d3, d4;
     p.xy += s.xy;
@@ -673,8 +724,13 @@ void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
     float arw = mix(ar0, ar1, smoothstep(.01, -.01, p.y - armsz.y / 3.));
     arw *= smoothstep(0., armsz.z, abs(p.z));
     d2 = smax(d2 + arw * .0001, abs(p.z) - armsz.z, ar + arw * .0005);
-    ar = .00725;
     d3 = max(d3, -p.z);
+    if (d3 > 0.) {
+        fade = smoothbump(.5, 3., mod(armang - .5, PI * 2.)) * smoothbump(-armsz.z / 2., armsz.z * 1.5, p.z);
+        fade *= mix(1.2, .5, arw);
+        fade *= mix(.5, 1.2, smoothstep(.005, 0., abs(abs(p.z) - armsz.z + .005)));
+    }
+    ar = .00725;
     d4 = smax(d3, abs(p.z) - armsz.z - .003, ar);
     d2 = smax(d2, -d4, .001);
     ar += sin(sin(sin((p.y + 1.) * 80.) * 10.) * 5. + p.x * 300.) * .0003;
@@ -686,11 +742,19 @@ void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
     p = psofa;
     float baseh = .012;
     p.y -= footh - sofasz.y + baseh;
-    d3 = fBox(p, vec3(isofasz.x + .0058, baseh, isofasz.z) - .001) - .001;
-    if (d3 < d2) {
-        uvw = p;
-        d2 = d3;
-    }
+    float br = .002;
+    br += sin(sin(sin(p.x * 55. + 2.) * 10.) * 5. + p.y * 100.) * .00025;
+    d3 = fBox(p, vec3(isofasz.x + .0068, baseh, isofasz.z) - br) - br;
+    d2 = min(d2, d3);
+    p.x = abs(p.x);
+    p.xy -= vec2(sofasz.x / 2.5, 0.);
+    p.y += sin(p.x * 250.) * .0005;
+    p.xy *= vec2(.4, 1);
+    fade = max(fade, pow(smoothstep(.025, .0, length(p.xy)), 3.)/2.);
+    // if (d3 < d2) {
+    //     uvw = p;
+    //     d2 = d3;
+    // }
 
     // back
     p = psofa;
@@ -713,37 +777,39 @@ void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
     p.z -= cushionsz.z - .004;
     //float rr = mix(.007, .005, length(sin(sin((p.xz + max(psx, 0.)) * 50.) * 35.) * .5 + .5));
     float cs = mix(.95, 1.01, length(sin(sin((p + vary * 240.) * 30.) * 3.) * .5 + .5));
+    cs = 1. + vsin((p.xz + vary * 2. + 1.) * 100.) * .02;
     float cr = .008;
     float axisx = max(vmin(p.xz), vmin(-p.xz));
     float axisz = min(vmin(p.xz), vmin(-p.xz));
     float crw = sin(sin(sin((axisx + mix(.4, .6, vary)) * (48. + vary)) * 10.) * 5. + p.y * 300. + p.z * 300.);
     crw *= smoothstep(0., .0005, abs(dot(abs(p.xz), cushionsz.zx * vec2(1,-1))));
-    crw *= vmax(abs(p.xz) / cushionsz.xz);
+    crw *= unlerp(.5, 1., vmax(abs(p.xz) / cushionsz.xz));
     cr += crw * .0003;
     //p.y -= smoothstep(cushionsz.x * 1.2, 0., length(p.xz)) * .005;
     cs += smoothstep(cushionsz.x * 1.2, 0., length(p.xz)) * .4;
+    vec3 pc = p;
+    pc.x += sin(pc.z * 150. + vary * 3.) * .02;
+    pR(pc.xz, -vary * .2 + 1.6);
+    float buttpatch = vsin((sin(2. + pc.xy * 122. * (1. + abs(vary - 1.) * .2)) + vary * 30.) * 8.);
+    buttpatch *= smoothstep(cushionsz.z, 0., length(p.xz));
+    cs += buttpatch * .03;
     //p.xz -= normalize(p.xz) * .0075;
     //cs -= .15;
-    d3 = (fBox(p / cs, cushionsz - cr - crw * .0001) - cr) * cs;
+    //p.y += (sin((p.x + ) * 100.) * sin(p.z * 100.)) * .005;
+    d3 = (fBox(p / cs, cushionsz - cr - crw * .0001) - cr) * cs* .9;
     float seam = abs(p.y) - cushionsz.y * .75;
     d3 = smax(d3, -abs(seam), .0016);
     //d3 = mix(d3, sdEllipsoid(p, cushionsz), .5);
     if (d3 < d2) {
-        uvw = vec3(axisx, p.y, axisz);
-        if (seam > 0.) {
-            uvw = p.xzy;
-        }
         d2 = d3;
+        fade += smoothbump(.0, .002, seam) * mix(.5, .25, crw);
+        fade += smoothbump(.0, .001, -seam) * mix(.5, .25, crw);
+        fade = max(fade, smoothstep(cushionsz.x * 1.1, 0., length(p.xz)));
     }
-    
 
-    p = psofa;
-
-    //vec3 col = fract((uvw + vec3(.00,0,-0.107)) * 4.66 * 2.);
-    //vec3 col = fract(uvw * 500.);
-    //col.z = 1.;
-    vec3 col = fract(uvw * 50.);
-    //vec3 col = pink;
+    vec3 col = pow(vec3(0.55,0.29,0.23), vec3(2.2));
+    col = mix(col, mix(col * 1.75, vec3(1.), .0125), fade);
+    //col = vec3(fade);
 
     d = mincol(d, d2, meta, Meta(uvw, col, 15));
 }
@@ -763,8 +829,8 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     vec2 pc;
     Meta meta = Meta(p, vec3(.5), 2);
 
-    // fSofa(p, s, d, meta);
-    // return Model(d, meta);
+    //fSofa(p, s, d, meta);
+    //return Model(d, meta);
    
     vec3 p2 = pp - vec3(0,0,.05);
     vec3 p3 = pp + vec3(0,0,.11);
@@ -1181,40 +1247,6 @@ Model scene(vec3 p) {
     return m;
 }
 
-float unlerp(float vmin, float vmax, float value) {
-    return clamp((value - vmin) / (vmax - vmin), 0., 1.);
-}
-
-float sinbump(float a, float b, float x) {
-    x = unlerp(a, b, x);
-    return sin(x * PI * 2. - PI / 2.) * .5 + .5;
-}
-
-float gain(float x, float P) {
-    if (x > 0.5)
-        return 1.0 - 0.5*pow(2.0-2.0*x, P);
-    else
-        return 0.5*pow(2.0*x, P);
-}
-
-float gain(float x, float P, float S) {
-    return mix(x, gain(x, P), S);
-}
-
-float gain2(float x, float P, float S) {
-    float s = sign(.5 - x);
-    return gain(x + .5 * s, P, S) - .5 * s;
-}
-
-float gainB(float x, float P, float g) {
-    x = clamp(unlerp(g/2., 1. - g/2., x), 0., 1.);
-    return gain(x, P);
-}
-
-float gain2B(float x, float P, float g) {
-    float s = sign(.5 - x);
-    return gainB(x + .5 * s, P, g) - .5 * s;
-}
 
 
 float gWarp;
