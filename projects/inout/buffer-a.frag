@@ -34,8 +34,8 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 
-//#define ROOM_ONLY
-//#define FREE_FLY
+#define ROOM_ONLY
+#define FREE_FLY
 //#define HIDE_ROOM;
 
 
@@ -695,7 +695,7 @@ void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
     vec3 uvw = p;
     float d2, d3, d4;
     p.xy += s.xy;
-    p.x -= .003;
+    p.x -= .01;
     p = p.zyx;
     vec3 sofasz = vec3(.2, .1, .1) / 2.;
     vec3 armsz = vec3(.012,.026,sofasz.z);
@@ -719,16 +719,15 @@ void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
     d3 = d2 + armsz.x * .4;
     float ar = .007;
     float armang = atan(armtopp.y, armtopp.x);
-    float ar0 = sin(sin(sin(armang) * 10.) * 5. + length(armtopp) * 500. + p.z * 100.);
+    float ar0 = sin(sin(sin(armang) * 10. - vary*2.) * 5. + length(armtopp) * 500. + p.z * 100.);
     float ar1 = sin(sin(sin((p.y + 1.) * 65.) * 10.) * 5. + p.x * 300. + p.z * 100.);
     float arw = mix(ar0, ar1, smoothstep(.01, -.01, p.y - armsz.y / 3.));
     arw *= smoothstep(0., armsz.z, abs(p.z));
+    fade = mix(.33, 0., arw) * smoothstep(.01, .0, length(vec2(d2, 2. * abs(abs(p.z) - armsz.z + .0035)))) * smoothstep(-.03, .06, p.y);// mix(1., 0., arw) // * mix(.5, 1., smoothstep(.005, 0., abs(abs(p.z) - armsz.z + .005)));
     d2 = smax(d2 + arw * .0001, abs(p.z) - armsz.z, ar + arw * .0005);
     d3 = max(d3, -p.z);
     if (d3 > 0.) {
-        fade = smoothbump(.5, 3., mod(armang - .5, PI * 2.)) * smoothbump(-armsz.z / 2., armsz.z * 1.5, p.z);
-        fade *= mix(1.2, .5, arw);
-        fade *= mix(.5, 1.2, smoothstep(.005, 0., abs(abs(p.z) - armsz.z + .005)));
+        fade = max(fade, smoothbump(.5, 3., mod(armang - .5, PI * 2.)) * smoothbump(-armsz.z / 2., armsz.z * 1.5, p.z)) *  mix(1., .5, arw);
     }
     ar = .00725;
     d4 = smax(d3, abs(p.z) - armsz.z - .003, ar);
@@ -802,12 +801,14 @@ void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
     //d3 = mix(d3, sdEllipsoid(p, cushionsz), .5);
     if (d3 < d2) {
         d2 = d3;
+        fade = 0.;
         fade += smoothbump(.0, .002, seam) * mix(.5, .25, crw);
         fade += smoothbump(.0, .001, -seam) * mix(.5, .25, crw);
         fade = max(fade, smoothstep(cushionsz.x * 1.1, 0., length(p.xz)));
     }
 
     vec3 col = pow(vec3(0.55,0.29,0.23), vec3(2.2));
+    col = mix(col, lampshadeCol * 6., .6);
     col = mix(col, mix(col * 1.75, vec3(1.), .0125), fade);
     //col = vec3(fade);
 
@@ -1768,7 +1769,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     #ifndef FREE_FLY
         // jitter for motion blur
-        //time += (hash12(seed) * 2. - 1.) * .001;
+        time += (hash12(seed) * 2. - 1.) * .001;
     #endif
 
     timeRaw = time;
