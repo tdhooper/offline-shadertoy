@@ -36,7 +36,7 @@ void main() {
 
 //#define ROOM_ONLY
 //#define FREE_FLY
-//#define HIDE_ROOM;
+#define HIDE_ROOM;
 
 
 float time;
@@ -1233,7 +1233,9 @@ float fTiles(vec3 p, vec3 area, vec2 limit, out vec3 col) {
     p.xy -= size;
     vec2 co = floor((p.xy + size / 2.) / size);
 
-    float d = 1e12;
+   float d = 1e12;
+
+   float vary = 0.;
 
     for (float x = 0.; x < 2.; x++)
     for (float y = 0.; y < 2.; y++)
@@ -1242,10 +1244,17 @@ float fTiles(vec3 p, vec3 area, vec2 limit, out vec3 col) {
         c = clamp(c, vec2(0), limit);
         vec3 pc = p - vec3((c - .5) * size, 0);
         pR(pc.yz, .05);
-        d = min(d, fTile(pc, vec3(size + vec2(0,.005), area.z) / 2.));
+        float d2 = fTile(pc, vec3(size + vec2(0,.005), area.z) / 2.);
+        if (d2 < d) {
+            d = d2;
+            vary = hash12(c + 70.);
+        }
     }
 
-    col = pink;
+    col = pow(vec3(0.45,0.25,0.2), vec3(2.2));
+//    col /= 2.;
+    //col = pink * .8;
+    col *= 1. + (vary * 2. - 1.) * .4;
 
     return d;
 }
@@ -1306,7 +1315,7 @@ Model scene(vec3 p) {
 
     p.z = -p.z;
     vec3 pp = p;
-    meta = Meta(p, vec3(.5), 1);
+    meta = Meta(p, vec3(.1), 1);
 
     
     // core
@@ -1340,7 +1349,12 @@ Model scene(vec3 p) {
         float rnd2 = rnd(ivec2(c * 100. + 30. + fc * 10.)) * PI * 6.;
         bf -= dot(uv, vec2(sin(rnd2), cos(rnd2))) * .01 * rnd1;
         float bd = cmax(bf, bricks, .003);
-        d = mincol(d, bd, meta, Meta(p, lightpurple, 201));
+        vec3 brickcol = pow(vec3(0.533,0.35,0.25), vec3(2.2));
+        //brickcol = featurewallcol;
+        //float ct = 1. + (rnd1 * 2. - 1.) * 1.5;
+        brickcol = mix(brickcol, mix(brickcol, pow(vec3(0.7,0.6,0.48), vec3(2.2)), 1.5), hash12(c * 5. + 20.));
+        brickcol = pow(brickcol, vec3(.5)) - .1;
+        d = mincol(d, bd, meta, Meta(p, brickcol, 201));
         //d = bd;
         //return Model(d, col, id);
 
