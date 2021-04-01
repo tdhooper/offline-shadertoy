@@ -1593,7 +1593,12 @@ void warpspin(float time, bool isDark, inout vec3 p, inout vec3 dir) {
         gSpin = mix(fract(time), gain(unlerp(.0, 1., fract(time)), 1.75), .7);
         gAxblend = smoothstep(.0, .66, tf) - smoothstep(.66, 1., tf);
         vec3 ax = normalize(mix(vec3(-1,0,0), vec3(-.5,2,0), gAxblend));
+
+        float obt = .575;
+        gSpin += sinbump(obt - .03, obt + .03, tf) * .005;
+
         p = erot(p, ax, 4. * gSpin * PI * -2.);
+
 
         gSpinBg = gSpin;
 
@@ -2082,6 +2087,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     //time = .907;
     //time = 1. / (30. * 8.);
+    //time = .575;
 
     vec2 seed = hash22(fragCoord + (float(iFrame) + time * 30.) * 1.61803398875);
     
