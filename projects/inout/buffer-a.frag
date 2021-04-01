@@ -745,19 +745,22 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     // picture image
     if (id == 221) {
-        p = p.zyx;
-        p *= 20.;
-        col = mix(vec3(.596,.596,.68) * .5, vec3(.596,.596,.68) * 1.5, smoothstep(-.5, .5, p.y));
-        //col = mix(col, vec3(.5,1,.5), .5);
-        p *= 10.;
-        vec3 sk = skyTex(p.xy - vec2(-2,9), true, 10.);
-        col *= pow(sk, vec3(2.));
-        col += pow(sk, vec3(10.));
+        col = whitecol;
+        if (fBox(p.zy, vec2(.035,.023)) < 0.) {
+            p = p.zyx;
+            p *= 20.;
+            col = mix(vec3(.596,.596,.68) * .5, vec3(.596,.596,.68) * 1.5, smoothstep(-.5, .5, p.y));
+            //col = mix(col, vec3(.5,1,.5), .5);
+            p *= 10.;
+            vec3 sk = skyTex(p.xy - vec2(-2,9), true, 10.);
+            col *= pow(sk, vec3(2.));
+            col += pow(sk, vec3(10.));
+        }
         spec = .1;
     }
 
     // bay cap
-    if (id == 203) {
+    if (id == 203 || id == 25) {
         mat = woodMat(p.zxy/2. - 12., nor, mix(woodcol * vec3(.5,.3,.2), woodcol + .1, .3), vec2(2,.03), .0, 1., 1.);
         mat.specular = 0.;
         return mat;
