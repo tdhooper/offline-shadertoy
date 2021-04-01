@@ -1361,7 +1361,7 @@ Model scene(vec3 p) {
         bf = max(bf, -bf - .02);
         bf = bf - rnd1 * .0025 - .0025;
         float rnd2 = rnd(ivec2(c * 100. + 30. + fc * 10.)) * PI * 6.;
-        bf -= dot(uv, vec2(sin(rnd2), cos(rnd2))) * .01 * rnd1;
+        //bf -= dot(uv, vec2(sin(rnd2), cos(rnd2))) * .01 * rnd1;
         float bd = cmax(bf, bricks, .003);
         vec3 brickcol = pow(vec3(0.533,0.35,0.25), vec3(2.2));
         //brickcol = featurewallcol;
@@ -2074,6 +2074,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     time = iTime / 8.;
 
     //time = .907;
+    //time = 1. / (30. * 8.);
 
     vec2 seed = hash22(fragCoord + (float(iFrame) + time * 30.) * 1.61803398875);
     
