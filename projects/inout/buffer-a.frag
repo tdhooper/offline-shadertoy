@@ -35,8 +35,8 @@ void main() {
 }
 
 //#define ROOM_ONLY
-//#define FREE_FLY
-//#define HIDE_ROOM;
+#define FREE_FLY
+#define HIDE_ROOM;
 
 
 float time;
@@ -674,7 +674,6 @@ Material woodMat(vec3 p, inout vec3 nor, vec3 col, vec2 size, float offset, floa
     col *= mix(.5, 1., mix(.5, r, variance));
     vec3 ax = rndunit(r * 10.);
     nor = erot(nor, ax, (r * 2. - 1.) * .1 * uneven);
-    p.y = 0.;
     p += length(sin(sin(p * 100. + r * 10.) * 10.)) * .0005;
     p.xz += size * (hash22(c * 20.) * 2. - 1.);
     p.z /= 10.;
@@ -711,18 +710,21 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     // floorboards
     if (id == 204) {
+        p.y = 0.;
         mat = woodMat(p, nor, woodcol + .1, vec2(.1,.02), .5, 1., 1.);
         return mat;
     }
 
     // table
     if (id == 141) {
+        p.y = 0.;
         mat = woodMat(p * 2.5, nor, woodcol * vec3(.5,.3,.2), vec2(.03,.03), 0., .5, 0.);
         return mat;
     }
 
     // door, mirror
     if (id == 13 || id == 24) {
+        p.x = 0.;
         mat = woodMat(p.zxy * 2. + 20., nor, woodcol * vec3(.5,.3,.2), vec2(1.,.03), 0., .5, 0.);
         return mat;
         //col = fract(p.xyz * 100.);
@@ -730,6 +732,7 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     // picture
     if (id == 22) {
+        p.x = 0.;
         mat = woodMat(p.zxy, nor, woodcol + .1, vec2(.1,.02), .5, 1., 1.);
         return mat;
         //col = fract(p.xyz * 100.);
@@ -746,6 +749,13 @@ Material shadeModel(Model model, inout vec3 nor) {
         col *= pow(sk, vec3(2.));
         col += pow(sk, vec3(10.));
         spec = .1;
+    }
+
+    // bay cap
+    if (id == 203) {
+        mat = woodMat(p.zxy/2. - 12., nor, mix(woodcol * vec3(.5,.3,.2), woodcol + .1, .3), vec2(2,.03), .0, 1., 1.);
+        mat.specular = 0.;
+        return mat;
     }
 
 
@@ -1196,6 +1206,50 @@ float fBricks(vec2 p, out vec2 c, out vec2 uv, out float hide) {
     return d;
 }
 
+float fTile(vec3 p, vec3 s) {
+    p.z = -p.z;
+    //return fBox(p, s);
+    float overlap = s.x * .2;
+    float d = 1e12;
+    float r = s.x / 4.;
+    float bx = fBox(p + vec3(r,0,0), s);
+    float cut = dot(p.xz - vec2(s.x - r, 0), normalize(vec2(1,2)));
+    p.x = abs(p.x - s.x / 4.) - s.x / 2.;
+    float cir = length(p.zx) - r;
+    d = min(d, cir);
+    d = max(d, p.z - s.z);
+    d = min(d, bx);
+    d = max(d, -cir - s.z * 2.);
+    d = max(d, abs(p.y) - s.y);
+    d = max(d, cut);
+    return d;
+}
+
+float fTiles(vec3 p, vec3 area, vec2 limit, out vec3 col) {
+    col = pink;
+    //return fBox(p, area);
+    p += area;
+    vec2 size = area.xy / (limit / 2. + .5);
+    p.xy -= size;
+    vec2 co = floor((p.xy + size / 2.) / size);
+
+    float d = 1e12;
+
+    for (float x = 0.; x < 2.; x++)
+    for (float y = 0.; y < 2.; y++)
+    {
+        vec2 c = co + vec2(x, y);
+        c = clamp(c, vec2(0), limit);
+        vec3 pc = p - vec3((c - .5) * size, 0);
+        pR(pc.yz, .05);
+        d = min(d, fTile(pc, vec3(size + vec2(0,.005), area.z) / 2.));
+    }
+
+    col = pink;
+
+    return d;
+}
+
 vec2 face(vec2 p) {
      vec2 a = abs(p);
      return step(a.yx, a.xy)*step(a.xy, a.xy)*sign(p);
@@ -1227,11 +1281,20 @@ Model scene(vec3 p) {
     vec3 roomsz = vec3(.2,.2,.2);
     vec3 mainsz = roomsz + wall;
     vec3 baysz = vec3(mainsz.xy * vec2(.7, .7), .08) * vec3(1,.8,1);
+    Meta meta;
 
     d = 1e12;
 
     float sc = 3.2;
     p /= sc;
+
+/*
+    float hi = fTile(p, vec3(.1,.15,.005)) * sc;
+    hi = min(hi, fTile(p - vec3(.2,0,0), vec3(.1,.15,.005)) * sc);
+    meta = Meta(p, pink, 202);
+    return Model(hi, meta);
+*/
+
 
     #ifdef ROOM_ONLY
         Model rm = fRoom(p, roomsz, baysz);
@@ -1243,7 +1306,7 @@ Model scene(vec3 p) {
 
     p.z = -p.z;
     vec3 pp = p;
-    Meta meta = Meta(p, vec3(.5), 1);
+    meta = Meta(p, vec3(.5), 1);
 
     
     // core
@@ -1287,18 +1350,27 @@ Model scene(vec3 p) {
         p.y -= peak.y;
         p.y -= mainsz.y + peak.y;
         p.z -= peak.x;
+        vec3 ps = sign(p);
         p.z = abs(p.z);
         pGr(p.zy, vec2(0), vec2(-(mainsz.z - peak.x) / 2., peak.y));
-        float tiles = fBricks(p.xz, c, uv, hide);
-        tiles = max(tiles, max(p.y-.01, -(p.y + .01)));
-        tiles = max(tiles, tilebound);
-        //return Model(tiles, col, id);
 
-        if (p.y > d) {
-            d = p.y;
-            meta = Meta(p, pink, 202);
+        d = max(d, p.y + .005);
+
+        //float tiles = fBricks(p.xz, c, uv, hide);
+        vec3 tilecol;
+        vec3 tilearea = vec3(mainsz.x, .2, .005);
+        vec2 tilelimit = vec2(4);
+        if (ps.z < 0.) {
+            tilearea.y = .09;
+            tilelimit.y = 1.;
         }
-        d = min(d, tiles);
+        p.z -= tilearea.y;
+        float tiles = fTiles(p.xzy, tilearea, tilelimit, tilecol);
+        //tiles = fTile(p.xzy, vec3(.1, .1, .01));
+        //tiles = max(tiles, max(p.y-.01, -(p.y + .01)));
+        //tiles = max(tiles, tilebound);
+
+        d = mincol(d, tiles, meta, Meta(p, tilecol, 202));
     }
     
     // main
@@ -1318,6 +1390,10 @@ Model scene(vec3 p) {
 
     // bay
     float bayinner = baysz.x * .45;
+    float framethick = .01;
+    float capheightTop = .016;
+    float capheight = p.y > 0. ? capheightTop : .008;
+
     p = pp;
     p.z -= mainsz.z;
     p.x = abs(p.x);
@@ -1326,23 +1402,31 @@ Model scene(vec3 p) {
 	//bayshape = fBoxHalf(p.zy, baysz.zy);
     //bayshape = fBox(p, baysz);
     bayshape = max(bayshape, dot(p.xz - vec2(baysz.x, 0), normalize(vec2(baysz.z, baysz.x - bayinner))));
+//    float bayshapeInner = abs(p.y) - baysz.y + capheight + .001;//max(abs(p.y) + baysz.y/2., bayshape + framethick);
+
+  //  int bayid = bayshapeInner > 0. ? 203 : 2033;
 
     // bay caps
-    float capheight = .006;
     float baycaps = smax(abs(abs(p.y) - baysz.y) - capheight, bayshape - .01, .0);
     baycaps = max(baycaps, -p.z - wall + .001);
     baycaps = min(baycaps, fBox(p + vec3(0,baysz.y - capheight / 2.,.045), vec3(baysz.x, capheight / 2., .01)));
     //if (p.y > 0.) caps = caps = max(-p.z - wall);
     //d = min(d, bayshape);
 
+
+    //d2 = max(bayshape - .012, -fCorner(-p.zy + vec2(.01, baysz.y + capheightTop + .005)));
+    //d2 = max(d2, fBox(p - vec3(0,baysz.y + capheightTop + .01,0), vec3(baysz.x + .02,.02,1)));
+    //d = mincol(d, d2, meta, Meta(p, vec3(.05), 209));
+
+
+
     float frame = max(max(bayshape, -bayshape - .02), fBox(p, baysz));
     p.xz -= vec2(bayinner, baysz.z);
     vec3 fn = normalize(mix(vec3(1,0,0), normalize(vec3(baysz.x - bayinner, 0, -baysz.z)), .5));
     float bs = pReflect(p, -fn, 0.);
-    float thick = .01;
-    vec2 framesz = vec2(bayinner - thick, baysz.y - thick * 2.);
-    if (bs < 0.) framesz.x = length(vec2(baysz.x - bayinner, baysz.z)) / 2. - thick * 1.25;
-    p.x += thick + framesz.x;
+    vec2 framesz = vec2(bayinner - framethick, baysz.y - framethick * 2.);
+    if (bs < 0.) framesz.x = length(vec2(baysz.x - bayinner, baysz.z)) / 2. - framethick * 1.25;
+    p.x += framethick + framesz.x;
     float fr = .01;
     vec2 pc = vec2(fBox(p.xy, framesz + fr) + fr, frame);
     pc.x += .008;
@@ -1351,7 +1435,10 @@ Model scene(vec3 p) {
     fd = min(fd, max(fCornerBevel(-pc + vec2(.01,.0), vec2(.002, .002)), pc.y - .0027));
     frame = max(frame, fd);
 
-    d = mincol(d, frame, meta, Meta(p, whitecol, 203));
+    //int frameid = pc.x < 0.0099 ? 2033 : 203;
+    int frameid = 2033;
+
+    d = mincol(d, frame, meta, Meta(p, whitecol, frameid));
     
     
     
@@ -1402,7 +1489,7 @@ Model scene(vec3 p) {
         d = d2;
     }
 
-    d = mincol(d, baycaps, meta, Meta(p, whitecol, 300));
+    d = mincol(d, baycaps, meta, Meta(p.yxz, whitecol, 203));
 
     Model m = Model(d, meta);
     
