@@ -1909,7 +1909,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist) {
     Model firstModel;
 
     for (int i = 0; i < 200; i++) {
-        rayLength += dist * .75;
+        rayLength += dist;// * .75;
         rayPosition = origin + rayDirection * rayLength;
         model = scene(rayPosition);
         dist = model.d;
