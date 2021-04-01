@@ -199,6 +199,7 @@ module.exports = (project) => {
       } 
 
       if (node.drawCount && ! state.isAccumulationDraw) {
+      //if (node.drawCount) {
         for(let i = 0; i < node.drawCount; i++) {
           attachDependencies();
           swapPingPong();

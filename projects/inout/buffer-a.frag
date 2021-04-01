@@ -2085,78 +2085,18 @@ vec3 debugWarpspin(vec2 uv) {
 }
 
 
-// main path tracing loop, based on yx's
-// https://www.shadertoy.com/view/ts2cWm
-void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    
- 
-    vec2 uv = fragCoord.xy / iResolution.xy;
-    vec4 sampl = vec4(0);
-    
-    vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
+vec3 sample(Hit firstHit, vec3 origin, vec3 rayDir, vec3 originalRayDir, inout vec2 seed, vec2 p) {
 
-    bool db = p.x > 0.;
-
-    time = iTime / 8.;
-
-    //time = .907;
-    //time = 1. / (30. * 8.);
-    //time = .575;
-
-    vec2 seed = hash22(fragCoord + (float(iFrame) + time * 30.) * 1.61803398875);
-    
-    // jitter for antialiasing
-    p += 2. * (seed - .5) / iResolution.xy;
-
-    #ifndef FREE_FLY
-        // jitter for motion blur
-        time += (hash12(seed) * 2. - 1.) * .0005;
-    #endif
-
-    timeRaw = time;
-    time = fract(time);
-
-    vec3 col = vec3(0);
-
-    vec3 origin = eye;
-    vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
-
-    #ifndef FREE_FLY
-        float focalLength = 6.;
-        camPos = vec3(0, 0, focalLength * 1.9);// * (1. + sinbump(0., 1., time) * .45);
-        //camPos = vec3(0, 0, focalLength * mix(1.8, 2.2, sinbump(0., 1., fract(time))));
-        vec3 camTar = vec3(0);
-        vec2 im = .5 - vec2(.45,.42);
-        //im = iMouse.xy / iResolution.xy; im = .5 - im; im.x *= 2.;
-        pR(camPos.yz, im.y * PI / 2.);
-        pR(camPos.xz, im.x * PI * 2.);   
-        camTar = mix(camTar, camPos, .25);
-        mat3 camMat = basisMatrix(camTar - camPos, vec3(0,1,0));
-        rayDir = normalize(camMat * vec3(p.xy, focalLength));
-        origin = camPos;
-    #endif
-
-
-    Hit hit;
+    isFirstRay = true;
+    Hit hit = firstHit;
     vec3 nor, ref;
     Material material;
-
     vec3 accum = vec3(1);
     vec3 bgCol = skyColor;
-    
-    Hit firstHit;
+    bool firstBounce = true;
+    vec3 col = vec3(0);
 
     const int MAX_BOUNCE = 8;
-
-    passedwindow1 = 0;
-    passedwindow2 = 0;
-    initialsample = true;
-    inside = false;
-    isFirstRay = true;
-    bool firstBounce = true;
-    vec3 rd = rayDir;
-    hit = marchFirst(origin, rayDir, 30.);
-    firstHit = hit;
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
@@ -2226,10 +2166,82 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             || (time < .15 && startedinside && passedwindow1 == 1 && passedwindow2 == 1)
         );
         vec3 _;
-        rayDir = firstBounce ? rd : rayDir;
+        rayDir = firstBounce ? originalRayDir : rayDir;
         warpspin(time, ! isLight, _, rayDir);
         col = env(rayDir, ! isLight);
     }
+
+    return col;
+}
+
+// main path tracing loop, based on yx's
+// https://www.shadertoy.com/view/ts2cWm
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    
+ 
+    vec2 uv = fragCoord.xy / iResolution.xy;
+    vec4 sampl = vec4(0);
+    
+    vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
+
+    bool db = p.x > 0.;
+
+    time = iTime / 8.;
+
+    //time = .907;
+    //time = 1. / (30. * 8.);
+    //time = .575;
+
+    vec2 seed = hash22(fragCoord + (float(iFrame) + time * 30.) * 1.61803398875);
+    
+    // jitter for antialiasing
+    p += 2. * (seed - .5) / iResolution.xy;
+
+    #ifndef FREE_FLY
+        // jitter for motion blur
+        time += (hash12(seed) * 2. - 1.) * .0005;
+    #endif
+
+    timeRaw = time;
+    time = fract(time);
+
+    vec3 col = vec3(0);
+
+    vec3 origin = eye;
+    vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
+
+    #ifndef FREE_FLY
+        float focalLength = 6.;
+        camPos = vec3(0, 0, focalLength * 1.9);// * (1. + sinbump(0., 1., time) * .45);
+        //camPos = vec3(0, 0, focalLength * mix(1.8, 2.2, sinbump(0., 1., fract(time))));
+        vec3 camTar = vec3(0);
+        vec2 im = .5 - vec2(.45,.42);
+        //im = iMouse.xy / iResolution.xy; im = .5 - im; im.x *= 2.;
+        pR(camPos.yz, im.y * PI / 2.);
+        pR(camPos.xz, im.x * PI * 2.);   
+        camTar = mix(camTar, camPos, .25);
+        mat3 camMat = basisMatrix(camTar - camPos, vec3(0,1,0));
+        rayDir = normalize(camMat * vec3(p.xy, focalLength));
+        origin = camPos;
+    #endif
+
+
+    passedwindow1 = 0;
+    passedwindow2 = 0;
+    initialsample = true;
+    inside = false;
+    isFirstRay = true;
+    vec3 originalRayDir = rayDir;
+    Hit firstHit = marchFirst(origin, rayDir, 30.);
+
+    // col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+
+    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+    col /= 5.;
 
     //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
     //col = col + cold;
