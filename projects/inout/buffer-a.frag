@@ -1368,10 +1368,11 @@ Model scene(vec3 p) {
         //bf -= dot(uv, vec2(sin(rnd2), cos(rnd2))) * .01 * rnd1;
         float bd = cmax(bf, bricks, .003);
         vec3 brickcol = pow(vec3(0.533,0.35,0.25), vec3(2.2));
+        vec3 brickcol2 = pow(vec3(0.7,0.6,0.48), vec3(2.2));
         //brickcol = featurewallcol;
         //float ct = 1. + (rnd1 * 2. - 1.) * 1.5;
-        meta.albedo = brickcol;
-        brickcol = mix(brickcol, mix(brickcol, pow(vec3(0.7,0.6,0.48), vec3(2.2)), 1.5), hash12(c * 5. + 20.));
+        meta.albedo = mix(brickcol, brickcol2, .5);
+        brickcol = mix(brickcol, mix(brickcol, brickcol2, 1.5), hash12(c * 5. + 20.));
         brickcol = pow(brickcol, vec3(.5)) - .1;
         
         d = mincol(d, bd, meta, Meta(p, brickcol, 201));
