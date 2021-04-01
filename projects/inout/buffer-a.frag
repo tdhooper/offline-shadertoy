@@ -916,7 +916,7 @@ void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
     d = mincol(d, d2, meta, Meta(uvw, col, 15));
 }
 
-Model fRoom(vec3 p, vec3 s, vec3 baysz) {
+Model fRoom(vec3 p, vec3 s, vec3 baysz, float windowcut) {
     #if ANIM != 0
         p.z = -p.z;
     #endif
@@ -1111,6 +1111,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz) {
     d4 = stairmin(d4, length(pc - railsz * vec2(1.75, 2.)) - .0014, .0014, 2.);
     d4 = max(d4, -(length((pc - railsz * vec2(0,1) - vec2(.0008,.0022)) * vec2(1.,.9)) - .0004));
     d4 = max(d4, -fBox(p - s * vec3(0,0,1), baysz) - .02);
+    d4 = max(d4, -windowcut);
     d = mincol(d, d4, meta, Meta(p, whitecol, 21));
  
     // picture
@@ -1264,6 +1265,14 @@ vec2 face(vec2 p) {
      return step(a.yx, a.xy)*step(a.xy, a.xy)*sign(p);
 }
 
+float frameshape(vec2 pc) {
+    pc.x += .008;
+    pc.y = -pc.y;
+    float fd = fCornerBevel(-pc + vec2(0,.0033), vec2(.005, .003));
+    fd = min(fd, max(fCornerBevel(-pc + vec2(.01,.0), vec2(.002, .002)), pc.y - .0027));
+    return fd;
+}
+
 vec3 lampPos = vec3(.3/2., 0, -.11) * 3.25;
 
 bool inside;
@@ -1306,7 +1315,7 @@ Model scene(vec3 p) {
 
 
     #ifdef ROOM_ONLY
-        Model rm = fRoom(p, roomsz, baysz);
+        Model rm = fRoom(p, roomsz, baysz, 1e12);
         rm.d *= sc;
         return rm;
     #endif
@@ -1409,16 +1418,32 @@ Model scene(vec3 p) {
     // window
     p = pp;
     p.z += roomsz.z;
-    d = max(d, -fBox(p - vec3(0,.0,0), vec3(.2,.175,.3)/2.));
-    p.x = abs(p.x);
-    p.z -= roomsz.z * 2.;
+    p.y -= .02;
+
+    vec3 windowsz = vec3(.2,.175,.3)/2.;
+    float windowcut = fBox(p, windowsz);
+    d = maxcol(d, -windowcut, meta, Meta(p, wallcol, 207));
+
+    int frameid = 2033;
+    float framethick = .01;
+    p.z += wall / 2.;
+    p.z = abs(p.z);
+    float frame = fBox(p, vec3(windowsz.x, windowsz.y, .01));
+    vec2 framesz = windowsz.xy - framethick * .7;
+    float fr = .01;
+    vec2 pc = vec2(fBox(p.xy, framesz + fr) + fr, frame);
+    float fd = frameshape(pc);
+    frame = max(frame, fd);
+    d = mincol(d, frame, meta, Meta(p, whitecol, frameid));
+
+    p = pp;
+    p.z -= roomsz.z;
     d = maxcol(d, -fBox(p, baysz), meta, Meta(p, wallcol, 207));
     //d = max(d, -fBox(p - vec3(0,0,0), vec3(.08,.12,.3)));
     //d = max(d, -fBox(p - vec3(.12,0,0), vec3(.035,.12,.3)));
 
     // bay
     float bayinner = baysz.x * .45;
-    float framethick = .01;
     float capheightTop = .016;
     float capheight = p.y > 0. ? capheightTop : .008;
 
@@ -1448,27 +1473,17 @@ Model scene(vec3 p) {
 
 
 
-    float frame = max(max(bayshape, -bayshape - .02), fBox(p, baysz));
+    frame = max(max(bayshape, -bayshape - .02), fBox(p, baysz));
     p.xz -= vec2(bayinner, baysz.z);
     vec3 fn = normalize(mix(vec3(1,0,0), normalize(vec3(baysz.x - bayinner, 0, -baysz.z)), .5));
     float bs = pReflect(p, -fn, 0.);
-    vec2 framesz = vec2(bayinner - framethick, baysz.y - framethick * 2.);
+    framesz = vec2(bayinner - framethick, baysz.y - framethick * 2.);
     if (bs < 0.) framesz.x = length(vec2(baysz.x - bayinner, baysz.z)) / 2. - framethick * 1.25;
     p.x += framethick + framesz.x;
-    float fr = .01;
-    vec2 pc = vec2(fBox(p.xy, framesz + fr) + fr, frame);
-    pc.x += .008;
-    pc.y = -pc.y;
-    float fd = fCornerBevel(-pc + vec2(0,.0033), vec2(.005, .003));
-    fd = min(fd, max(fCornerBevel(-pc + vec2(.01,.0), vec2(.002, .002)), pc.y - .0027));
+    pc = vec2(fBox(p.xy, framesz + fr) + fr, frame);
+    fd = frameshape(pc);
     frame = max(frame, fd);
-
-    //int frameid = pc.x < 0.0099 ? 2033 : 203;
-    int frameid = 2033;
-
     d = mincol(d, frame, meta, Meta(p, whitecol, frameid));
-    
-    
     
 
     // p = pp;
@@ -1524,7 +1539,7 @@ Model scene(vec3 p) {
     // Add room
     #ifndef HIDE_ROOM
     if (fBox(p, roomsz) < 0.) {
-        m = opU(m, fRoom(p, roomsz, baysz));
+        m = opU(m, fRoom(p, roomsz, baysz, windowcut));
     }
     #endif
     
