@@ -440,7 +440,7 @@ module.exports = (project) => {
   };
 
   let tick = regl.frame(() => draw());
-  events.on('draw', () => draw(true));
+  //events.on('draw', () => draw(true));
   //let tick;
 
   const captureSetup = (width, height, done) => {
