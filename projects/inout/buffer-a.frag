@@ -761,7 +761,7 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     // bay cap
     if (id == 203 || id == 25) {
-        mat = woodMat(p.zxy/2. - 12., nor, mix(woodcol * vec3(.5,.3,.2), woodcol + .1, .3), vec2(2,.03), .0, 1., 1.);
+        mat = woodMat(p.zxy - 6., nor, mix(woodcol * vec3(.5,.3,.2), woodcol + .1, .3), vec2(2,.03), .0, 1., 1.);
         mat.specular = 0.;
         return mat;
     }
