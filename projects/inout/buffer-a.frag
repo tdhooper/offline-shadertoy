@@ -35,8 +35,8 @@ void main() {
 }
 
 //#define ROOM_ONLY
-#define FREE_FLY
-#define HIDE_ROOM;
+//#define FREE_FLY
+//#define HIDE_ROOM;
 
 
 float time;
@@ -1344,33 +1344,47 @@ Model scene(vec3 p) {
         //d = bd;
         //return Model(d, col, id);
 
+        float tilecap = fBox(p.xz, mainsz.xz + .008);
+
         // roof
         p = pp;
-        float tilebound = fBox(p, mainsz + vec3(0, 1, 0));
         p.y -= peak.y;
         p.y -= mainsz.y + peak.y;
         p.z -= peak.x;
+
+        //float tilestop = length(p.zy - vec2(0., -.005)) - .02;
+        float tilestop = sdCappedCylinder((p - vec3(0., -.005, 0)).yxz, .0175, mainsz.x * 1.07 - .0025) - .0025;
+
         vec3 ps = sign(p);
         p.z = abs(p.z);
         pGr(p.zy, vec2(0), vec2(-(mainsz.z - peak.x) / 2., peak.y));
+        tilestop = max(tilestop, -p.y - .003);
 
         d = max(d, p.y + .005);
+        tilecap = max(max(tilecap, p.y + .005), -p.y - .05);
+
+        d = mincol(d, tilecap, meta, Meta(p, whitecol, 2011));
 
         //float tiles = fBricks(p.xz, c, uv, hide);
         vec3 tilecol;
-        vec3 tilearea = vec3(mainsz.x, .2, .005);
+        vec3 tilearea = vec3(mainsz.x * 1.13, .203, .005);
         vec2 tilelimit = vec2(4);
         if (ps.z < 0.) {
-            tilearea.y = .09;
+            tilearea.y = .093;
             tilelimit.y = 1.;
         }
         p.z -= tilearea.y;
-        float tiles = fTiles(p.xzy, tilearea, tilelimit, tilecol);
-        //tiles = fTile(p.xzy, vec3(.1, .1, .01));
-        //tiles = max(tiles, max(p.y-.01, -(p.y + .01)));
-        //tiles = max(tiles, tilebound);
+        float tiles = fTiles(p.xzy - vec3(.017,0,0), tilearea, tilelimit, tilecol);
+        tilestop = max(tilestop, -tiles+.0015);
+        p.x = abs(p.x) - mainsz.x * 1.07;
+        tiles = max(tiles, p.x);
+        tiles = min(tiles, tilestop);
+        //tiles = min(tiles, fBox(p + vec3(0,.005,0), vec3(.01, .0075, tilearea.y + .003)));
+
 
         d = mincol(d, tiles, meta, Meta(p, tilecol, 202));
+
+
     }
     
     // main
