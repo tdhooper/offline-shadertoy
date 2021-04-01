@@ -760,11 +760,20 @@ Material shadeModel(Model model, inout vec3 nor) {
     }
 
     // bay cap
-    if (id == 203 || id == 25) {
+    if (id == 203) {
         mat = woodMat(p.zxy - 6., nor, mix(woodcol * vec3(.5,.3,.2), woodcol + .1, .3), vec2(2,.03), .0, 1., 1.);
         mat.specular = 0.;
         return mat;
     }
+
+    // lamp
+    if (id == 25) {
+        mat = woodMat(p.zxy - 6., nor, woodcol + .1, vec2(2,.03), .0, 1., 1.);
+        mat.specular = 0.;
+        return mat;
+    }
+
+
 
 
 /*
@@ -1207,8 +1216,8 @@ float fBricks(vec2 p, out vec2 c, out vec2 uv, out float hide) {
     uv = p;
     p *= size;
     float r = rnd(ivec2(c)) * 2. - 1.;
-    pR(p, .1 * r);
-    float gap = .001;
+    pR(p, .2 * r);
+    float gap = .003;
     float d = fBox(p, size / 2. - gap);
     hide = -fBox(p, size / 2. + gap * 4.);
     c *= size;
@@ -1339,7 +1348,8 @@ Model scene(vec3 p) {
     // core
     vec2 peak = vec2(-.1, .08);
     p.y -= peak.y;
-    d = min(d, fBox(p, mainsz + vec3(0, peak.y, 0)));
+    float cementInset = .005;
+    d = min(d, fBox(p, mainsz + vec3(-cementInset, peak.y, -cementInset)));
 
     p = pp;
     vec3 roomFace;
@@ -1369,11 +1379,13 @@ Model scene(vec3 p) {
         float bd = cmax(bf, bricks, .003);
         vec3 brickcol = pow(vec3(0.533,0.35,0.25), vec3(2.2));
         vec3 brickcol2 = pow(vec3(0.7,0.6,0.48), vec3(2.2));
+        //brickcol = vec3(.5);
+        //brickcol2 = vec3(.3);
         //brickcol = featurewallcol;
         //float ct = 1. + (rnd1 * 2. - 1.) * 1.5;
-        meta.albedo = mix(brickcol, brickcol2, .5);
+        meta.albedo = vec3(.2);
         brickcol = mix(brickcol, mix(brickcol, brickcol2, 1.5), hash12(c * 5. + 20.));
-        brickcol = pow(brickcol, vec3(.5)) - .1;
+        //brickcol = pow(brickcol, vec3(.5)) - .1;
         
         d = mincol(d, bd, meta, Meta(p, brickcol, 201));
         //d = bd;
