@@ -27,14 +27,14 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 col = texture2D(iChannel0, uv).rgb;
     //fragColor = vec4(col, 1); return;
     vec3 uGain = vec3(1.8);
-    vec3 uLift = vec3(.002,-.003,.007);
+    vec3 uLift = vec3(.002,-.003,.007)/3.;
     vec3 uOffset = vec3(.00,.00,.00);
     vec3 uGamma = vec3(-.3);
     
 	//col = mix(col, vec3(Luma(col)), .25);
-    //col = pow(max(vec3(0.0), col * (1.0 + uGain - uLift) + uLift + uOffset), max(vec3(0.0), 1.0 - uGamma));
+    col = pow(max(vec3(0.0), col * (1.0 + uGain - uLift) + uLift + uOffset), max(vec3(0.0), 1.0 - uGamma));
 	//col = max(col, vec3(0));
-    col = pow( col, vec3(0.4545) );
+    col = pow( col, vec3(1./2.2) );
     col = aces(col);
 	fragColor = vec4(col, 1);
 }

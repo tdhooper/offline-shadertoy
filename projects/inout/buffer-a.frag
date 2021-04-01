@@ -36,7 +36,7 @@ void main() {
 
 //#define ROOM_ONLY
 //#define FREE_FLY
-#define HIDE_ROOM;
+//#define HIDE_ROOM;
 
 
 float time;
