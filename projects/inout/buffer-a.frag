@@ -730,6 +730,7 @@ Material shadeModel(Model model, inout vec3 nor) {
     if (id == 13 || id == 24) {
         p.x = 0.;
         mat = woodMat(p.zxy * 2. + 20., nor, woodcol * vec3(.5,.3,.2), vec2(1.,.03), 0., .5, 0.);
+        mat.specular = .05;
         return mat;
         //col = fract(p.xyz * 100.);
     }
