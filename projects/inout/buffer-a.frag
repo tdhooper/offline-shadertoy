@@ -36,7 +36,7 @@ void main() {
 
 //#define ROOM_ONLY
 //#define FREE_FLY
-//#define HIDE_ROOM;
+#define HIDE_ROOM;
 
 
 float time;
@@ -1443,7 +1443,7 @@ Model scene(vec3 p) {
     //d = max(d, -fBox(p - vec3(.12,0,0), vec3(.035,.12,.3)));
 
     // bay
-    float bayinner = baysz.x * .45;
+    float bayinner = baysz.x * .5;
     float capheightTop = .016;
     float capheight = p.y > 0. ? capheightTop : .008;
 
@@ -1455,7 +1455,8 @@ Model scene(vec3 p) {
 	//bayshape = fBoxHalf(p.zy, baysz.zy);
     //bayshape = fBox(p, baysz);
     bayshape = max(bayshape, dot(p.xz - vec2(baysz.x, 0), normalize(vec2(baysz.z, baysz.x - bayinner))));
-//    float bayshapeInner = abs(p.y) - baysz.y + capheight + .001;//max(abs(p.y) + baysz.y/2., bayshape + framethick);
+
+    float bayshapeInner = max(bayshape + framethick, fBox(p, baysz));
 
   //  int bayid = bayshapeInner > 0. ? 203 : 2033;
 
@@ -1505,8 +1506,7 @@ Model scene(vec3 p) {
 
     // Subtract room
 
-    d2 = -main - wall;
-    inside = d2 > 0.;
+    inside = max(-bayshapeInner, -main - wall * 1.) > 0.;
 
     if (initialsample) {
         lastinside = inside;
@@ -1522,6 +1522,7 @@ Model scene(vec3 p) {
         }
     }
     
+    d2 = -main - wall;
     if (d2 > d) {
         meta = Meta(p, wallcol, 207);
         if (roomFace == vec3(0,-1,0)) {
@@ -1533,6 +1534,8 @@ Model scene(vec3 p) {
     }
 
     d = mincol(d, baycaps, meta, Meta(p.yxz, whitecol, 203));
+
+    //d = min(d, bayshapeInner);
 
     Model m = Model(d, meta);
     
@@ -2062,6 +2065,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = iTime / 8.;
 
+    //time = .907;
+
     vec2 seed = hash22(fragCoord + (float(iFrame) + time * 30.) * 1.61803398875);
     
     // jitter for antialiasing
@@ -2169,9 +2174,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     }
 
     if (hit.sky && isFirstRay) {
-        // col = vec3(0);
-        // col.r = float(passedwindow1) / 2.;
-        // col.g = float(passedwindow2) / 2.;
+       //  col = vec3(0);
+       //  col.r = float(passedwindow1) / 2.;
+       //  col.g = float(passedwindow2) / 2.;
         // col.b = startedinside ? 1. : 0.;
         bool isLight = ! firstBounce || (
             false
@@ -2179,6 +2184,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             || (time < .3 && startedinside && passedwindow2 == 1 && passedwindow1 == 0)
             || (time > .4 && time < .5 && startedinside && passedwindow1 == 1)
             || ( ! startedinside && passedwindow1 == 0 && passedwindow2 == 0)
+            || (time > .9 && startedinside && passedwindow2 == 2)
+            || ( time > .908 && vmax(p.xy) < 0.)
             || ( ! startedinside && passedwindow1 == 1 && passedwindow2 == 1)
             || (time < .15 && startedinside && passedwindow1 == 1 && passedwindow2 == 1)
         );
