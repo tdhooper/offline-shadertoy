@@ -1909,14 +1909,16 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist) {
     Model firstModel;
 
     for (int i = 0; i < 200; i++) {
-        rayLength += dist;// * .75;
         rayPosition = origin + rayDirection * rayLength;
         model = scene(rayPosition);
         dist = model.d;
+        rayLength += dist;// * .75;
 
         float error = dist / rayLength;
 
-        if (abs(dist) < .0001) {
+        //if (abs(dist) < .0001) {
+        //if (abs(dist) < max(.0001, .0000005 / rayLength)) {
+        if (error < .005) {
             candidateModel = model;
         	break;
         }
@@ -2013,7 +2015,7 @@ vec3 sampleLight(Hit hit, vec3 nor, vec2 seed, vec3 light, vec3 lightCol, int id
     vec3 lightDir = (light - hit.pos);
     vec3 lightSampleDir = getConeSample(lightDir, radius, seed);
     float diffuse = dot(nor, lightSampleDir);
-    vec3 shadowOrigin = hit.pos + nor * .0002;
+    vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightSampleDir, nor)));
     if (diffuse > 0.) {
         Hit sh = march(shadowOrigin, lightSampleDir, 5.);
         if (sh.model.meta.id == id) {
@@ -2029,7 +2031,7 @@ vec3 sampleLight2(Hit hit, vec3 nor, vec2 seed, vec3 light, int id, float radius
     vec3 lightDir = (light - hit.pos);
     vec3 lightSampleDir = getConeSample(lightDir, radius, seed);
     float diffuse = dot(nor, lightSampleDir) / length(lightDir);
-    vec3 shadowOrigin = hit.pos + nor * .0002;
+    vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightSampleDir, nor)));
     if (diffuse > 0.) {
         Hit sh = march(shadowOrigin, lightSampleDir, 5.);
         if (sh.model.meta.id == id) {
@@ -2190,7 +2192,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
             rayDir = normalize(mix(specularRayDir, diffuseRayDir, material.roughness * material.roughness));
         }
 
-        origin = hit.pos + nor * .0002;    
+        origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
         seed = hash22(seed);
         hit = march(origin, rayDir, 5.);
     }
