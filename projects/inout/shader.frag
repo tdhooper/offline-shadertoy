@@ -29,7 +29,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 uGain = vec3(1.8);
     vec3 uLift = vec3(.002,-.003,.007)/3.;
     vec3 uOffset = vec3(.00,.00,.00);
-    vec3 uGamma = vec3(-.3);
+    vec3 uGamma = vec3(-.25);
     
 	//col = mix(col, vec3(Luma(col)), .25);
     col = pow(max(vec3(0.0), col * (1.0 + uGain - uLift) + uLift + uOffset), max(vec3(0.0), 1.0 - uGamma));
