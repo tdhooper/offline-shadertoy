@@ -180,6 +180,10 @@ float smin3(float a, float b, float r) {
 float smax2(float a, float b, float k) {
     return -smin3(-a, -b, k);
 }
+float roundmax(float a, float b) {
+    vec2 p = vec2(a, b);
+    return length(max(p, vec2(0))) + vmax(min(p, 0.));
+}
 
 
 float fCornerBevel(vec2 p, vec2 c) {
@@ -916,7 +920,7 @@ void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
     d = mincol(d, d2, meta, Meta(uvw, col, 15));
 }
 
-Model fRoom(vec3 p, vec3 s, vec3 baysz, float windowcut) {
+Model fRoom(vec3 p, vec3 s, float bothcut) {
     #if ANIM != 0
         p.z = -p.z;
     #endif
@@ -1045,7 +1049,8 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz, float windowcut) {
 
     p = pp;
     p.y -= s.y;
-    bound = max(-p.y - .09, length(p.xz) - .05);
+    //bound = max(-p.y - .09, length(p.xz) - .05);
+    bound = sdCappedCylinder(p, .043, .088);
     if (bound > .002) {
         d = min(d, bound);
     } else {
@@ -1110,8 +1115,7 @@ Model fRoom(vec3 p, vec3 s, vec3 baysz, float windowcut) {
     d4 = fBox(pc, railsz) - .001;
     d4 = stairmin(d4, length(pc - railsz * vec2(1.75, 2.)) - .0014, .0014, 2.);
     d4 = max(d4, -(length((pc - railsz * vec2(0,1) - vec2(.0008,.0022)) * vec2(1.,.9)) - .0004));
-    d4 = max(d4, -fBox(p - s * vec3(0,0,1), baysz) - .02);
-    d4 = max(d4, -windowcut);
+    d4 = max(d4, -bothcut);
     d = mincol(d, d4, meta, Meta(p, whitecol, 21));
  
     // picture
@@ -1299,6 +1303,7 @@ Model scene(vec3 p) {
     vec3 roomsz = vec3(.2,.2,.2);
     vec3 mainsz = roomsz + wall;
     vec3 baysz = vec3(mainsz.xy * vec2(.7, .7), .08) * vec3(1,.8,1);
+    vec3 windowsz = vec3(.2,.175,.4)/2.;
     Meta meta;
 
     d = 1e12;
@@ -1315,7 +1320,7 @@ Model scene(vec3 p) {
 
 
     #ifdef ROOM_ONLY
-        Model rm = fRoom(p, roomsz, baysz, 1e12);
+        Model rm = fRoom(p, roomsz, 1e12);
         rm.d *= sc;
         return rm;
     #endif
@@ -1412,18 +1417,20 @@ Model scene(vec3 p) {
     
     // main
     p = pp;
-    //p.z += baysz.z / 2.;
     float main = fBox(p, mainsz);
+    float baycut = -fBox(p.xy, baysz.xy);
+
+    p.y -= .02;
+    float windowcut = -fBox(p.xy, windowsz.xy);
+
+    float bothcut = p.z < 0. ? windowcut : baycut;
+    if (bothcut > d) {
+        meta = Meta(p, wallcol, 207);
+    }
+    d = roundmax(d, bothcut);
 
     // window
-    p = pp;
     p.z += roomsz.z;
-    p.y -= .02;
-
-    vec3 windowsz = vec3(.2,.175,.3)/2.;
-    float windowcut = fBox(p, windowsz);
-    d = maxcol(d, -windowcut, meta, Meta(p, wallcol, 207));
-
     int frameid = 2033;
     float framethick = .01;
     p.z += wall / 2.;
@@ -1438,7 +1445,6 @@ Model scene(vec3 p) {
 
     p = pp;
     p.z -= roomsz.z;
-    d = maxcol(d, -fBox(p, baysz), meta, Meta(p, wallcol, 207));
     //d = max(d, -fBox(p - vec3(0,0,0), vec3(.08,.12,.3)));
     //d = max(d, -fBox(p - vec3(.12,0,0), vec3(.035,.12,.3)));
 
@@ -1530,8 +1536,8 @@ Model scene(vec3 p) {
         }
         if (roomFace == vec3(-1,0,0)) meta = Meta(p, featurewallcol, 205);
         if (p.y > 0.1) meta = Meta(p, whitecol, 206);
-        d = d2;
     }
+    d = roundmax(d, d2);
 
     d = mincol(d, baycaps, meta, Meta(p.yxz, whitecol, 203));
 
@@ -1542,7 +1548,7 @@ Model scene(vec3 p) {
     // Add room
     #ifndef HIDE_ROOM
     if (fBox(p, roomsz) < 0.) {
-        m = opU(m, fRoom(p, roomsz, baysz, windowcut));
+        m = opU(m, fRoom(p, roomsz, bothcut));
     }
     #endif
     
@@ -1674,8 +1680,9 @@ vec3 camPos;
 
 Model sceneWarped(vec3 p) {
 
-    float dbg = vmin(abs(p.yz));
+    float dbg = vmin(abs(p.yz - vec2(-.5,-.0)));
     dbg = 1e12;
+    //dbg = abs(p.y);
 
     float k;
     vec4 p4 = inverseStereographic(p, k);
@@ -1696,6 +1703,7 @@ Model sceneWarped(vec3 p) {
     if (dbg < model.d) {
         model.meta.albedo = vec3(fract(model.d * 100.), max(0., sign(model.d)), 0);
         model.d = dbg;
+        model.meta.id = 999;
     }
        
     return model;
