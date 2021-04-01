@@ -1115,7 +1115,7 @@ Model fRoom(vec3 p, vec3 s, float bothcut) {
     d4 = fBox(pc, railsz) - .001;
     d4 = stairmin(d4, length(pc - railsz * vec2(1.75, 2.)) - .0014, .0014, 2.);
     d4 = max(d4, -(length((pc - railsz * vec2(0,1) - vec2(.0008,.0022)) * vec2(1.,.9)) - .0004));
-    d4 = max(d4, -bothcut);
+    d4 = max(d4, bothcut);
     d = mincol(d, d4, meta, Meta(p, whitecol, 21));
  
     // picture
