@@ -923,11 +923,20 @@ void fSofa(vec3 p, vec3 s, inout float d, inout Meta meta) {
         fade += smoothbump(.0, .002, seam) * mix(.5, .25, crw);
         fade += smoothbump(.0, .001, -seam) * mix(.5, .25, crw);
         fade = max(fade, smoothstep(cushionsz.x * 1.1, 0., length(p.xz)));
+        if (psx < 0.) {
+            fade /= 3.;
+        } else {
+            fade *= 1.2;
+            fade += .1;
+        }
     }
 
     vec3 col = pow(vec3(0.55,0.29,0.23), vec3(2.2));
     col = mix(col, lampshadeCol * 6., .6);
-    col = mix(col, mix(col * 1.75, vec3(1.), .0125), fade);
+    col.r -= .05;
+    col.g += .006;
+    col.b += .006;
+    col = mix(col, mix(col * 1.75, vec3(.2), .04), fade);
     //col = vec3(fade);
 
     d = mincol(d, d2, meta, Meta(uvw, col, 15));
