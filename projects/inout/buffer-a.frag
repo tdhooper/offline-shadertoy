@@ -704,7 +704,9 @@ Material shadeModel(Model model, inout vec3 nor) {
     float rough = 0.;
 
     if (id == 101) {
-        float logo = texture2D(revisionTex, p.zy).r;
+        p.xy = p.zy;
+        p.x = 1. - p.x;
+        float logo = texture2D(revisionTex, p.xy).r;
         col = mix(vec3(1.4), vec3(.2,1.4,.8), logo);
     }
 
@@ -1425,7 +1427,7 @@ Model scene(vec3 p) {
         //float ct = 1. + (rnd1 * 2. - 1.) * 1.5;
         meta.albedo = vec3(.2);
         brickcol = mix(brickcol, mix(brickcol, brickcol2, 1.5), hash12(c * 5. + 20.));
-        //brickcol = pow(brickcol, vec3(.5)) - .1;
+        brickcol = pow(brickcol, vec3(.5)) - .05;
         
         d = mincol(d, bd, meta, Meta(p, brickcol, 201));
         //d = bd;
