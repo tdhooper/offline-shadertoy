@@ -2,14 +2,24 @@ var budo = require('budo');
 var Router = require('router');
 var browserify = require('browserify');
 
+var router = Router();
 
-var browserifyOpts = {
-  plugin: [
-    require('regl')
-  ]
+var renderWorker;
+
+var bundleWorker = () => {
+  console.log("Bundling worker");
+  renderWorker = new Promise((resolve, reject) => {
+    browserify('render.js').bundle((err, buffer) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(buffer);
+      }
+    });
+  });
 };
 
-var router = Router();
+bundleWorker();
 
 budo('index.js', {
   live: true,
@@ -18,19 +28,12 @@ budo('index.js', {
   css: '/styles/main.css',
   middleware: [
     router
-  ],
-  browserify: browserifyOpts
+  ]
+}).on('reload', function() {
+  bundleWorker();
 });
 
-var renderWorker = new Promise((resolve, reject) => {
-  browserify('render.js', browserifyOpts).bundle((err, buffer) => {
-    if (err) {
-      reject(err);
-    } else {
-      resolve(buffer);
-    }
-  });
-});
+
 
 router.get('/render.js', function(req, res) {
   renderWorker.then(

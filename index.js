@@ -43,6 +43,6 @@ const main = require('./main.js');
 // raytracing
 // inout
 
-const project = LOADPROJECT('clifford-torus');
+const project = LOADPROJECT('aura');
 
 main(project);

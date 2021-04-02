@@ -1099,8 +1099,8 @@ CastRay newCastRay(Hit hit, vec3 rayDirection) {
     return CastRay(rayOrigin, rayDirection);
 }
 
-const float REFRACT_BOUNCES = 4.;
-const float REFRACT_SAMPLES_S = 40.;
+const float REFRACT_BOUNCES = 2.;
+const float REFRACT_SAMPLES_S = 2.;
 // float DISPERSION = mix(0., 1., mod(iGlobalTime / 4., 1.));
 const float MULT = 5.;
 #define ALLOW_ESCAPE

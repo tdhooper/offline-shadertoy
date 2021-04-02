@@ -4,6 +4,7 @@
 const createMouse = require('./lib/mouse');
 const createCamera = require('./lib/camera');
 const StateStore = require('./lib/state-store');
+const glslify = require('glslify');
 const createScrubber = require('./lib/scrubber');
 const Timer = require('./lib/timer');
 const AccumulateControl = require('./lib/accumulate');
@@ -12,6 +13,7 @@ const buildRenderNodes = require('./lib/multipass');
 
 const canvas = document.createElement('canvas');
 document.body.appendChild(canvas);
+
 
 
 module.exports = (project) => {
@@ -26,14 +28,15 @@ module.exports = (project) => {
     });
   }
 
-  const frag = shaders.main;
+  const vertexShader = glslify('./quad.vert');
 
   const renderNodes = buildRenderNodes(shaders);
 
-  const controlUniforms = {};
+  // const controlUniforms = {};
 
-  const controls = defaultState && defaultState.controls
-    ? createControls(defaultState.controls, controlUniforms) : null;
+  // const controls = defaultState && defaultState.controls
+  //   ? createControls(defaultState.controls, controlUniforms) : null;
+
 
   const camera = createCamera(canvas, {
     position: [0, 0, 5],
@@ -76,9 +79,9 @@ module.exports = (project) => {
       r: [canvas.width, canvas.height],
       debugPlane,
     };
-    if (controls) {
-      state.controls = controls.toState();
-    }
+    // if (controls) {
+    //   state.controls = controls.toState();
+    // }
     return state;
   };
 
@@ -97,9 +100,9 @@ module.exports = (project) => {
     if (state.timer) {
       timer.fromObject(state.timer);
     }
-    if (state.controls) {
-      controls.fromState(state.controls);
-    }
+    // if (state.controls) {
+    //   controls.fromState(state.controls);
+    // }
     if (state.accumulateControl) {
       accumulateControl.fromObject(state.accumulateControl);
     }
@@ -118,16 +121,22 @@ module.exports = (project) => {
 
   let frame = 0;
 
+  const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
+
 
   // INIT WORKER
-
   var offscreen = canvas.transferControlToOffscreen();
   var worker = new Worker('render.js');
-  worker.postMessage({ canvas: offscreen }, [offscreen]);
+  worker.postMessage({
+    canvas: offscreen,
+    shaders,
+    vertexShader,
+    renderNodes,
+    fov
+  }, [offscreen]);
 
 
   const draw = (force) => {
-    stats.begin();
     camera.tick();
     scrubber.update();
     let stateChanged = stateStore.update(['accumulateControl']);
@@ -138,6 +147,10 @@ module.exports = (project) => {
       state.frame = frame++;
 
       // CALL WORKER
+      worker.postMessage({
+        draw: true,
+        state,
+      });
     }
   };
 
@@ -145,5 +158,6 @@ module.exports = (project) => {
   //events.on('draw', () => draw(true));
   //let tick;
 
+  draw();
 
 };

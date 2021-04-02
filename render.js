@@ -1,12 +1,19 @@
 /* eslint no-param-reassign: ["error", { "props": false }] */
 /* eslint space-unary-ops: [2, { "overrides": {"!": true} }] */
 
-const glslify = require('glslify');
 const createRegl = require('regl');
 const { mat4 } = require('gl-matrix');
 const textureUniforms = require('./lib/textures');
 
-const init = (canvas) => {
+let draw;
+
+const init = (
+  canvas,
+  shaders,
+  vertexShader,
+  renderNodes,
+  fov
+) => {
 
   const regl = createRegl({
     canvas: canvas,
@@ -31,6 +38,9 @@ const init = (canvas) => {
   const gl = regl._gl;
 
   let firstPass = true;
+
+  function triggerDraw() {
+  }
 
   renderNodes.forEach((node, i) => {
     node.buffer = regl.framebuffer({
@@ -187,8 +197,6 @@ const init = (canvas) => {
     };
   });
 
-  const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
-
   const setup = regl({
     uniforms: {
       projection: ({ viewportWidth, viewportHeight }) => mat4.perspective(
@@ -222,8 +230,10 @@ const init = (canvas) => {
     },
   };
 
+  //Object.assign(uniforms, controlUniforms);
+
   const drawRaymarch = regl({
-    vert: glslify('./quad.vert'),
+    vert: vertexShader,
     frag,
     attributes: {
       position: [
@@ -267,11 +277,12 @@ const init = (canvas) => {
   });
 
   let projectDraw;
-  if (project.draw) {
-    projectDraw = project.draw(drawRaymarch, renderNodes, uniforms);
-  }
+  // if (project.draw) {
+  //   projectDraw = project.draw(drawRaymarch, renderNodes, uniforms);
+  // }
 
-  const draw = (state) => {
+  draw = (state) => {
+
 
     regl.clear({
       color: [0, 0, 0, 1],
@@ -310,6 +321,17 @@ const init = (canvas) => {
 
 onmessage = function (e) {
   if (e.data.canvas) {
-    init(e.data.canvas);
+    init(
+      e.data.canvas,
+      e.data.shaders,
+      e.data.vertexShader,
+      e.data.renderNodes,
+      e.data.fov
+    );
+  }
+  if (e.data.draw) {
+    draw(
+      e.data.state
+    );
   }
 };
