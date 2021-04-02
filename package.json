@@ -4,8 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "budo index.js --ssl --css /styles/main.css --live"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",
@@ -36,7 +35,7 @@
     "pad-number": "0.0.4",
     "parse-wavefront-obj": "^1.0.3",
     "primitive-cube": "^2.0.1",
-    "regl": "^1.3.9",
+    "regl": "^1.7.0",
     "stats.js": "^0.17.0",
     "through2": "^3.0.0",
     "web-frames-capture": "github:tdhooper/web-frames-capture#feature/cli",

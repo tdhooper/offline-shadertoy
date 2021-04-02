@@ -1,35 +1,74 @@
 /* eslint no-param-reassign: ["error", { "props": false }] */
 /* eslint space-unary-ops: [2, { "overrides": {"!": true} }] */
 
+const EventEmitter = require('events');
+const Stats = require('stats.js');
 const glslify = require('glslify');
 const createRegl = require('regl');
 const { mat4 } = require('gl-matrix');
+const webFramesCapture = require('web-frames-capture');
+const createMouse = require('./lib/mouse');
+const createCamera = require('./lib/camera');
+const StateStore = require('./lib/state-store');
+const createScrubber = require('./lib/scrubber');
+const Timer = require('./lib/timer');
+const AccumulateControl = require('./lib/accumulate');
+const createControls = require('./lib/uniform-controls');
+const buildRenderNodes = require('./lib/multipass');
 const textureUniforms = require('./lib/textures');
 
-const init = (canvas) => {
+const canvas = document.createElement('canvas');
+document.body.appendChild(canvas);
 
-  const regl = createRegl({
-    canvas: canvas,
-    extensions: [
-      'webgl_depth_texture',
-      'ext_frag_depth',
-      'oes_standard_derivatives',
-      'oes_texture_float',
-      'oes_texture_float_linear',
-      'ext_shader_texture_lod',
-    ],
-    pixelRatio: .25,
-    //pixelRatio: 1,
-    attributes: {
-      preserveDrawingBuffer: true,
-    },
-  });
+const regl = createRegl({
+  canvas: canvas,
+  extensions: [
+    'webgl_depth_texture',
+    'ext_frag_depth',
+    'oes_standard_derivatives',
+    'oes_texture_float',
+    'oes_texture_float_linear',
+    'ext_shader_texture_lod',
+  ],
+  pixelRatio: .25,
+  //pixelRatio: 1,
+  attributes: {
+    preserveDrawingBuffer: true,
+  },
+});
 
-  global.regl = regl;
+
+var dbt = performance.now();
+
+global.regl = regl;
+
+module.exports = (project) => {
+  const defaultState = project.config || null;
+  const shaders = Object.assign({}, project.shaders);
+
+  if (shaders.common) {
+    Object.entries(shaders).forEach(([name, shader]) => {
+      if (name !== 'common') {
+        shaders[name] = `${shaders.common}\n\n${shader}`;
+      }
+    });
+  }
+
+  const events = new EventEmitter();
+  function triggerDraw() {
+    events.emit('draw');
+  }
 
   const frag = shaders.main;
+
+  const stats = new Stats();
+  stats.showPanel(0);
+  document.body.appendChild(stats.dom);
+  stats.dom.classList.add('stats');
+
   const gl = regl._gl;
 
+  const renderNodes = buildRenderNodes(shaders);
   let firstPass = true;
 
   renderNodes.forEach((node, i) => {
@@ -215,12 +254,16 @@ const init = (canvas) => {
     iTime: (context, props) => props.timer.elapsed / 1000,
     firstPass: () => firstPass,
     iMouse: (context, props) => {
+
       const mouseProp = props.mouse.map(value => value * context.pixelRatio);
       mouseProp[1] = context.viewportHeight - mouseProp[1];
       //console.log(mouseProp[0] / context.viewportWidth, mouseProp[1] / context.viewportHeight);
       return mouseProp;
     },
   };
+
+  const controls = defaultState && defaultState.controls
+    ? createControls(defaultState.controls, uniforms) : null;
 
   const drawRaymarch = regl({
     vert: glslify('./quad.vert'),
@@ -271,45 +314,195 @@ const init = (canvas) => {
     projectDraw = project.draw(drawRaymarch, renderNodes, uniforms);
   }
 
-  const draw = (state) => {
+  const camera = createCamera(canvas, {
+    position: [0, 0, 5],
+  });
 
-    regl.clear({
-      color: [0, 0, 0, 1],
-      depth: 1,
-    });
+  window.camera = camera;
 
-    setup(state, (context) => {
-      renderNodes.forEach((node) => {
-        if ( ! node.buffer) return;
-        let width = context.viewportWidth;
-        let height = context.viewportHeight;
-        if (node.size) {
-          [width, height] = node.size;
-        }
-        if (node.buffer.width !== width || node.buffer.height !== height) {
-          node.buffer.resize(width, height);
-          if (node.lastBuffer) {
-            node.lastBuffer.resize(width, height);
+  let debugPlane = {};
+
+  window.dropDebugPlane = () => {
+    debugPlane = {
+      matrix: Array.prototype.slice.call(camera.view()),
+      position: Array.prototype.slice.call(camera.position),
+    };
+  };
+
+  const mouse = createMouse(canvas);
+
+  const timer = new Timer();
+
+  const controlsContainer = document.createElement('div');
+  controlsContainer.classList.add('controls');
+  document.body.appendChild(controlsContainer);
+
+  const scrubber = createScrubber(controlsContainer, timer);
+  const accumulateControl = new AccumulateControl(controlsContainer);
+
+  let screenQuad = undefined;
+
+  const toState = () => {
+    const state = {
+      camera: camera.toState(),
+      view: camera.view(),
+      cameraMatrix: camera.view(),
+      cameraPosition: camera.position,
+      timer: timer.serialize(),
+      accumulateControl: accumulateControl.serialize(),
+      mouse,
+      screenQuad,
+      r: [canvas.width, canvas.height],
+      debugPlane,
+    };
+    if (controls) {
+      state.controls = controls.toState();
+    }
+    return state;
+  };
+
+  const fromState = (state) => {
+    if (state.camera) {
+      camera.fromState(state.camera);
+    } else if (state.cameraMatrix) {
+      camera.fromState(state.cameraMatrix);
+    }
+    if (state.mouse) {
+      mouse[0] = state.mouse[0];
+      mouse[1] = state.mouse[1];
+      mouse[2] = state.mouse[2];
+      mouse[3] = state.mouse[3];
+    }
+    if (state.timer) {
+      timer.fromObject(state.timer);
+    }
+    if (state.controls) {
+      controls.fromState(state.controls);
+    }
+    if (state.accumulateControl) {
+      accumulateControl.fromObject(state.accumulateControl);
+    }
+    debugPlane = state.debugPlane;
+  };
+
+  window.resetCamera = function() {
+    if (defaultState.camera) {
+      camera.fromState(defaultState.camera);
+    } else if (state.cameraMatrix) {
+      camera.fromState(defaultState.cameraMatrix);
+    }
+  }
+
+  const stateStore = new StateStore(toState, fromState, defaultState);
+
+  let frame = 0;
+
+  const draw = (force) => {
+    stats.begin();
+    camera.tick();
+    scrubber.update();
+    let stateChanged = stateStore.update(['accumulateControl']);
+
+    if (stateChanged || force || accumulateControl.accumulate) {
+      regl.clear({
+        color: [0, 0, 0, 1],
+        depth: 1,
+      });
+
+      let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
+      state.frame = frame++;
+
+      setup(state, (context) => {
+        renderNodes.forEach((node) => {
+          if ( ! node.buffer) return;
+          let width = context.viewportWidth;
+          let height = context.viewportHeight;
+          if (node.size) {
+            [width, height] = node.size;
           }
+          if (node.buffer.width !== width || node.buffer.height !== height) {
+            node.buffer.resize(width, height);
+            if (node.lastBuffer) {
+              node.lastBuffer.resize(width, height);
+            }
+          }
+        });
+        if (projectDraw) {
+          projectDraw(state, context);
+        } else {
+          drawRaymarch(state, () => {
+            renderNodes.forEach((node) => {
+              node.draw(state);
+            });
+          });
         }
       });
-      if (projectDraw) {
-        projectDraw(state, context);
-      } else {
-        drawRaymarch(state, () => {
-          renderNodes.forEach((node) => {
-            node.draw(state);
-          });
-        });
-      }
-    });
-    firstPass = false;
+      firstPass = false;
+    }
+    stats.end();
+    if (dbt !== undefined) {
+      console.log(performance.now() - dbt);
+      dbt = undefined;
+    }
   };
-};
 
+  let tick = regl.frame(() => draw());
+  //events.on('draw', () => draw(true));
+  //let tick;
 
-onmessage = function (e) {
-  if (e.data.canvas) {
-    init(e.data.canvas);
+  const captureSetup = (width, height, done) => {
+    console.log('captureSetup', width, height);
+    tick && tick.cancel();
+    timer.pause();
+    canvas.width = width;
+    canvas.height = height;
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+    regl.poll();
+    setTimeout(done, 1000);
+  };
+
+  const captureTeardown = () => {
+    console.log('captureTeardown');
+    screenQuad = undefined;
+    // tick = regl.frame(draw);
+  };
+
+  const captureRender = (milliseconds, quad, done) => {
+    console.log('captureRender', milliseconds, quad);
+    // setTimeout(function() {
+      timer.set(milliseconds);
+      screenQuad = quad;
+      draw();
+      done();
+    //   setTimeout(done, 500);
+    // }, 500);
+  };
+
+  // Default config used by the UI
+  let captureConfig = {
+    fps: 20,
+    seconds: 3, // (duration)
+    width: 640,
+    height: 640,
+    // quads: true,
+    prefix: 'rtexample-',
+  };
+
+  if (defaultState && defaultState.capture) {
+    captureConfig = Object.assign({}, defaultState.capture);
+    captureConfig.prefix = `${defaultState.id}-`;
+    if (captureConfig.scale) {
+      captureConfig.width *= captureConfig.scale;
+      captureConfig.height *= captureConfig.scale;
+    }
   }
+
+  webFramesCapture(
+    canvas,
+    captureSetup,
+    captureTeardown,
+    captureRender,
+    captureConfig
+  );
 };
