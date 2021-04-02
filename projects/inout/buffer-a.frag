@@ -783,6 +783,9 @@ Material shadeModel(Model model, inout vec3 nor) {
         return mat;
     }
 
+    if (id == 1445) {
+        spec = .1;
+    }
 
 
 
@@ -1058,13 +1061,14 @@ Model fRoom(vec3 p, vec3 s, float bothcut) {
     p = p2 - vec3(-.01,0,.0);
     pR(p.xz, .1);
     p.y += s.y;
+    vec3 tablep = p;
     vec3 tablesz = vec3(.075,.05,.075) / 2.;
+    float ttop = .0015;
     p.y -= tablesz.y;
     bound = fBox(p, tablesz + .001);
     if (bound > .002) {
         d = min(d, bound);
     } else {
-        float ttop = .0015;
         d2 = fBox(p - vec3(0,tablesz.y - ttop,0), vec3(tablesz.x, ttop, tablesz.z) + .0002) - .0002;
         d = mincol(d, d2, meta, Meta(p, woodcol, 141));
         p.xz = abs(p.xz);
@@ -1074,6 +1078,22 @@ Model fRoom(vec3 p, vec3 s, float bothcut) {
         d2 = min(d2, fBox(p, vec3(tleg, tablesz.y, tleg) + .0002) - .0002);
         d = mincol(d, d2, meta, Meta(p, whitecol, 14));
     }
+
+    // cup
+    p = tablep;
+    p.y -= tablesz.y * 2. + ttop + .0048;
+    p.xz += vec2(.02,-.015);
+    pR(p.xz, 2.);
+    p = p.xzy;
+    d2 = sdUberprim(p, vec4(.005,.005,.006, .0003), vec3(.005,.0003,0));
+    d3 = sdUberprim(p.xzy - vec3(.005,0,0), vec4(.004,.004,.001, .0005), vec3(.003,.0005,0));
+    d3 = max(d3, -length(p.xy) + .00515);
+    d2 = smin(d2, d3, .0005);
+    p.z += .006;
+//    d2 = min(d2, sdCappedCylinder(p.xzy, .005, .0003));
+    d = mincol(d, d2, meta, Meta(p, whitecol, 1445));
+    d = mincol(d, sdCappedCylinder(p.xzy, .0045, .0004),  meta, Meta(p, pink, 144));
+
     
     // sofa
     p = p2;
