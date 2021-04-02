@@ -746,10 +746,11 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     // picture
     if (id == 22) {
-        p.x = 0.;
-        mat = woodMat(p.zxy, nor, woodcol + .1, vec2(.1,.02), .5, 1., 1.);
-        return mat;
+        //p.x = 0.;
+        //mat = woodMat(p.zxy, nor, woodcol * vec3(.5,.3,.2), vec2(.1,.02), .5, 1., 1.);
+        //return mat;
         //col = fract(p.xyz * 100.);
+        col = darkgrey;
     }
 
     // picture image
@@ -777,8 +778,8 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     // lamp
     if (id == 25) {
-        mat = woodMat(p.zxy - 6., nor, woodcol + .1, vec2(2,.03), .0, 1., 1.);
-        mat.specular = 0.;
+        mat = woodMat(p.zxy - 6., nor, woodcol * vec3(.5,.3,.2), vec2(2,.03), .0, 1., 1.);
+        //mat.specular = 0.;
         return mat;
     }
 
@@ -1220,7 +1221,7 @@ Model fRoom(vec3 p, vec3 s, float bothcut) {
     d2 = min(d2, d3);
     p = p3;
     d2 = max(d2, -p.y - s.y);
-    d = mincol(d, d2, meta, Meta(p, woodcol, 25));
+    d = mincol(d, d2, meta, Meta(p, darkgrey, 25));
     
     return Model(d, meta);
 }
