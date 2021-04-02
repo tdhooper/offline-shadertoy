@@ -158,6 +158,12 @@ module.exports = (project) => {
   //events.on('draw', () => draw(true));
   //let tick;
 
-  draw();
+  // main thread
+  let tick = (t) => {
+    draw();
+    requestAnimationFrame(tick);
+  };
+  
+  tick(performance.now());
 
 };
