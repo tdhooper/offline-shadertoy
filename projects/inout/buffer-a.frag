@@ -660,6 +660,7 @@ vec3 lampshadeCol = vec3(1.,.1,.0) * .05;
 vec3 bulbCol = vec3(1,.75,.5) * .25;
 vec3 woodcol = vec3(0.714,0.43,0.19);
 vec3 whitecol = vec3(.5);
+vec3 whitecol2 = vec3(.7);
 vec3 wallcol = vec3(179,179,195)/255./2.;
 vec3 darkgrey = vec3(.09,.105,.11)*.8;
 vec3 featurewallcol = vec3(.05,.26,.32);
@@ -1333,6 +1334,8 @@ float frameshape(vec2 pc) {
 
 vec3 lampPos = vec3(.3/2., 0, -.11) * 3.25;
 
+float Luma(vec3 color) { return dot(color, vec3(0.2126, 0.7152, 0.0722)); }
+
 bool inside;
 bool lastinside;
 bool initialsample;
@@ -1419,21 +1422,23 @@ Model scene(vec3 p) {
         float rnd2 = rnd(ivec2(c * 100. + 30. + fc * 10.)) * PI * 6.;
         //bf -= dot(uv, vec2(sin(rnd2), cos(rnd2))) * .01 * rnd1;
         float bd = cmax(bf, bricks, .003);
-        vec3 brickcol = pow(vec3(0.533,0.35,0.25), vec3(2.2));
-        vec3 brickcol2 = pow(vec3(0.7,0.6,0.48), vec3(2.2));
+        //vec3 brickcol = vec3(.2,.25,.3);
+        vec3 brickcol = vec3(.4,.45,.55) * 1.75;
+        vec3 brickcol2 = vec3(.3,.38,.46) * .8;
         //brickcol = vec3(.5);
         //brickcol2 = vec3(.3);
         //brickcol = featurewallcol;
         //float ct = 1. + (rnd1 * 2. - 1.) * 1.5;
-        meta.albedo = vec3(.2);
-        brickcol = mix(brickcol, mix(brickcol, brickcol2, 1.5), hash12(c * 5. + 20.));
-        brickcol = pow(brickcol, vec3(.5)) - .05;
-        
+        meta.albedo = vec3(.2,.25,.3) * .7;
+        brickcol = mix(brickcol, brickcol2, hash12(c * 5. + 20.));
+        //brickcol = pow(brickcol, vec3(.5)) - .05;
+        brickcol.g += .01;
+        brickcol = mix(brickcol, vec3(Luma(brickcol)), .5);
         d = mincol(d, bd, meta, Meta(p, brickcol, 201));
         //d = bd;
         //return Model(d, col, id);
 
-        float tilecap = fBox(p.xz, mainsz.xz + .008);
+        float tilecap = fBox(p.xz, mainsz.xz + .012);
 
         // roof
         p = pp;
@@ -1450,9 +1455,9 @@ Model scene(vec3 p) {
         tilestop = max(tilestop, -p.y - .003);
 
         d = max(d, p.y + .005);
-        tilecap = max(max(tilecap, p.y + .005), -p.y - .05);
+        tilecap = max(max(tilecap, p.y + .005), -p.y - .04);
 
-        d = mincol(d, tilecap, meta, Meta(p, whitecol, 2011));
+        d = mincol(d, tilecap, meta, Meta(p, whitecol2, 2011));
 
         //float tiles = fBricks(p.xz, c, uv, hide);
         vec3 tilecol;
@@ -1502,7 +1507,7 @@ Model scene(vec3 p) {
     vec2 pc = vec2(fBox(p.xy, framesz + fr) + fr, frame);
     float fd = frameshape(pc);
     frame = max(frame, fd);
-    d = mincol(d, frame, meta, Meta(p, whitecol, frameid));
+    d = mincol(d, frame, meta, Meta(p, whitecol2, frameid));
 
     p = pp;
     p.z -= roomsz.z;
