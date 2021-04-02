@@ -1235,10 +1235,10 @@ float fBricks(vec2 p, out vec2 c, out vec2 uv, out float hide) {
     uv = p;
     p *= size;
     float r = rnd(ivec2(c)) * 2. - 1.;
-    pR(p, .2 * r);
+    pR(p, .1 * r);
     float gap = .003;
     float d = fBox(p, size / 2. - gap);
-    hide = -fBox(p, size / 2. + gap * 4.);
+    hide = -fBox(p, size / 2. + gap);
     c *= size;
     return d;
 }
@@ -1384,6 +1384,7 @@ Model scene(vec3 p) {
         vec2 fc = face(p.xz);
         p = abs(p.x) < abs(p.z) - (mainsz.z - mainsz.x) ? p : p.zyx;
         float bricks = fBricks(p.xy, c, uv, hide);
+        // 197 198
         float rnd3 = rnd(ivec2(c * 100. + 185. + fc * 7.)) * 2. - 1.;
         float hh = (c.y + mainsz.y * 1.15) + (-abs(c.x) + mainsz.x / 2.) * .75;
         hh = mix(hh, rnd3, .3);
