@@ -1,4 +1,4 @@
-// framebuffer drawcount: 5
+// framebuffer drawcount: 100
 
 precision highp float;
 

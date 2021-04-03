@@ -121,12 +121,13 @@ module.exports = (project) => {
       },
     });
 
-    node.draw = (state) => {
-
+    node.draw = (state, done) => {
+      
       // Don't mutate the original state
       state = Object.assign({}, state);
 
       if (node.firstPassOnly && ! firstPass) {
+        done();
         return;
       }
 
@@ -199,8 +200,15 @@ module.exports = (project) => {
       } 
 
       if (node.drawCount && ! state.isAccumulationDraw) {
-      //if (node.drawCount) {
-        for(let i = 0; i < node.drawCount; i++) {
+
+        let i = -1;
+        (function next () {
+          i += 1;
+          if (i >= node.drawCount) {
+            done();
+            return;
+          }
+
           attachDependencies();
           swapPingPong();
           clearTarget();
@@ -209,13 +217,17 @@ module.exports = (project) => {
           repeatTile(state);
           state.frame += 1;
           gl.finish();
-        }
+          
+          next();          
+        })();
+
       } else {
         attachDependencies();
         swapPingPong();
         clearTarget();
         setTarget();
-        repeatTile(state)
+        repeatTile(state);
+        done();
       }  
     };
   });
@@ -391,8 +403,36 @@ module.exports = (project) => {
 
   let frame = 0;
 
-  const draw = (force) => {
-    stats.begin();
+  const resizeBuffers = (viewportWidth, viewportHeight) => {
+    renderNodes.forEach((node) => {
+      if ( ! node.buffer) return;
+      let width = viewportWidth;
+      let height = viewportHeight;
+      if (node.size) {
+        [width, height] = node.size;
+      }
+      if (node.buffer.width !== width || node.buffer.height !== height) {
+        node.buffer.resize(width, height);
+        if (node.lastBuffer) {
+          node.lastBuffer.resize(width, height);
+        }
+      }
+    });
+  }
+
+  const drawNode = (node, state, done) => {
+    document.title = node.name + ' ' + state.drawIndex;
+    setup(state, (context) => {
+      resizeBuffers(context.viewportWidth, context.viewportHeight);
+      drawRaymarch(state, () => {
+        node.draw(state, () => {
+          setTimeout(done, 10);
+        });
+      });
+    });
+  };
+
+  const draw = (force, done) => {
     camera.tick();
     scrubber.update();
     let stateChanged = stateStore.update(['accumulateControl']);
@@ -406,41 +446,71 @@ module.exports = (project) => {
       let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
       state.frame = frame++;
 
-      setup(state, (context) => {
-        renderNodes.forEach((node) => {
-          if ( ! node.buffer) return;
-          let width = context.viewportWidth;
-          let height = context.viewportHeight;
-          if (node.size) {
-            [width, height] = node.size;
-          }
-          if (node.buffer.width !== width || node.buffer.height !== height) {
-            node.buffer.resize(width, height);
-            if (node.lastBuffer) {
-              node.lastBuffer.resize(width, height);
-            }
-          }
-        });
-        if (projectDraw) {
-          projectDraw(state, context);
-        } else {
-          drawRaymarch(state, () => {
-            renderNodes.forEach((node) => {
-              node.draw(state);
-            });
-          });
+      let nodeIndex = 0;
+      let drawIndex = 0;
+      let node;
+      (function next () {
+        if (nodeIndex >= renderNodes.length) {
+          done();
+          return;
         }
-      });
+        state.drawIndex = drawIndex;
+        node = renderNodes[nodeIndex];
+        drawNode(node, state, () => {
+          drawIndex += 1;
+          if ( ! node.drawCount || drawIndex >= node.drawCount) {
+            nodeIndex += 1;
+            drawIndex = 0;
+          }
+          next();
+        });
+      })();
+
       firstPass = false;
-    }
-    stats.end();
-    if (dbt !== undefined) {
-      console.log(performance.now() - dbt);
-      dbt = undefined;
+    } else {
+      done();
     }
   };
 
-  let tick = regl.frame(() => draw());
+
+  // let i = -1;
+  // (function next () {
+  //   i += 1;
+  //   if (i >= node.drawCount) {
+  //     done();
+  //     return;
+  //   }
+
+  //   attachDependencies();
+  //   swapPingPong();
+  //   clearTarget();
+  //   setTarget();
+  //   Object.assign(state, {drawIndex: i});
+  //   repeatTile(state);
+  //   state.frame += 1;
+  //   gl.finish();
+    
+  //   next();          
+  // })();
+
+
+
+
+  (function tick (t) {
+    //console.log(t);
+    stats.begin();
+    draw(false, () => {
+      stats.end();
+      if (dbt !== undefined) {
+        console.log('dbt', performance.now() - dbt);
+        dbt = undefined;
+      }
+      requestAnimationFrame(tick);
+    });
+  })(performance.now());
+
+
+  //let tick = regl.frame(() => draw());
   //events.on('draw', () => draw(true));
   //let tick;
 
