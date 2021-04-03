@@ -199,36 +199,14 @@ module.exports = (project) => {
         }  
       } 
 
-      if (node.drawCount && ! state.isAccumulationDraw) {
+      attachDependencies();
+      swapPingPong();
+      clearTarget();
+      setTarget();
+      repeatTile(state);
+      gl.finish();
+      done();
 
-        let i = -1;
-        (function next () {
-          i += 1;
-          if (i >= node.drawCount) {
-            done();
-            return;
-          }
-
-          attachDependencies();
-          swapPingPong();
-          clearTarget();
-          setTarget();
-          Object.assign(state, {drawIndex: i});
-          repeatTile(state);
-          state.frame += 1;
-          gl.finish();
-          
-          next();          
-        })();
-
-      } else {
-        attachDependencies();
-        swapPingPong();
-        clearTarget();
-        setTarget();
-        repeatTile(state);
-        done();
-      }  
     };
   });
 
@@ -421,12 +399,15 @@ module.exports = (project) => {
   }
 
   const drawNode = (node, state, done) => {
+    state.frame += state.drawIndex;
     document.title = node.name + ' ' + state.drawIndex;
+    console.log(node.name, state.drawIndex, node.drawCount);
     setup(state, (context) => {
       resizeBuffers(context.viewportWidth, context.viewportHeight);
       drawRaymarch(state, () => {
         node.draw(state, () => {
-          setTimeout(done, 10);
+          //setTimeout(done, 100);
+          requestAnimationFrame(done);
         });
       });
     });
@@ -459,6 +440,7 @@ module.exports = (project) => {
         drawNode(node, state, () => {
           drawIndex += 1;
           if ( ! node.drawCount || drawIndex >= node.drawCount) {
+            console.clear();
             nodeIndex += 1;
             drawIndex = 0;
           }
@@ -496,23 +478,23 @@ module.exports = (project) => {
 
 
 
-  (function tick (t) {
-    //console.log(t);
-    stats.begin();
-    draw(false, () => {
-      stats.end();
-      if (dbt !== undefined) {
-        console.log('dbt', performance.now() - dbt);
-        dbt = undefined;
-      }
-      requestAnimationFrame(tick);
-    });
-  })(performance.now());
+  // (function tick (t) {
+  //   //console.log(t);
+  //   stats.begin();
+  //   draw(false, () => {
+  //     stats.end();
+  //     if (dbt !== undefined) {
+  //       console.log('dbt', performance.now() - dbt);
+  //       dbt = undefined;
+  //     }
+  //     requestAnimationFrame(tick);
+  //   });
+  // })(performance.now());
 
 
   //let tick = regl.frame(() => draw());
   //events.on('draw', () => draw(true));
-  //let tick;
+  let tick;
 
   const captureSetup = (width, height, done) => {
     console.log('captureSetup', width, height);
@@ -537,8 +519,7 @@ module.exports = (project) => {
     // setTimeout(function() {
       timer.set(milliseconds);
       screenQuad = quad;
-      draw();
-      done();
+      draw(false, done);
     //   setTimeout(done, 500);
     // }, 500);
   };

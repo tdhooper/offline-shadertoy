@@ -1,4 +1,4 @@
-// framebuffer drawcount: 1
+// framebuffer drawcount: 100
 
 #extension GL_OES_standard_derivatives : enable
 
@@ -2287,8 +2287,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
     col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
     col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
-    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
-    col /= 5.;
+    col /= 4.;
 
     //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
     //col = col + cold;
