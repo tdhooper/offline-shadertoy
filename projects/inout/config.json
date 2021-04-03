@@ -14,7 +14,7 @@
         ]
     },
     "capture": {
-        "fps": 30,
+        "fps": 40,
         "seconds": 8,
         "width": 640,
         "height": 360
