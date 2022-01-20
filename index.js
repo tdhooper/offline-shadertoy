@@ -42,7 +42,8 @@ const main = require('./main.js');
 // accumulation
 // raytracing
 // inout
+// skinball
 
-const project = LOADPROJECT('raytracing');
+const project = LOADPROJECT('skinball');
 
 main(project);
