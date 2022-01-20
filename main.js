@@ -428,22 +428,29 @@ module.exports = (project) => {
       let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
       state.frame = frame++;
 
+      let drawIndex = state.drawIndex;
+
       let nodeIndex = 0;
-      let drawIndex = 0;
       let node;
+
+      let nodeDrawIndex = 0;
       (function next () {
         if (nodeIndex >= renderNodes.length) {
           done();
           return;
         }
-        state.drawIndex = drawIndex;
         node = renderNodes[nodeIndex];
+        if (node.drawCount) {
+          state.drawIndex = drawIndex * node.drawCount + nodeDrawIndex;
+        } else {
+          state.drawIndex = drawIndex;
+        }
         drawNode(node, state, () => {
-          drawIndex += 1;
-          if ( ! node.drawCount || drawIndex >= node.drawCount) {
+          nodeDrawIndex += 1;
+          if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
             //console.clear();
             nodeIndex += 1;
-            drawIndex = 0;
+            nodeDrawIndex = 0;
           }
           next();
         });
