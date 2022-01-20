@@ -43,6 +43,6 @@ const main = require('./main.js');
 // raytracing
 // inout
 
-const project = LOADPROJECT('inout');
+const project = LOADPROJECT('raytracing');
 
 main(project);

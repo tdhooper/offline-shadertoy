@@ -401,13 +401,14 @@ module.exports = (project) => {
   const drawNode = (node, state, done) => {
     state.frame += state.drawIndex;
     document.title = node.name + ' ' + state.drawIndex;
-    console.log(node.name, state.drawIndex, node.drawCount);
+    //console.log(node.name, state.drawIndex, node.drawCount);
     setup(state, (context) => {
       resizeBuffers(context.viewportWidth, context.viewportHeight);
       drawRaymarch(state, () => {
         node.draw(state, () => {
           //setTimeout(done, 100);
-          requestAnimationFrame(done);
+          //requestAnimationFrame(done); // FIX CRASHES
+          done();
         });
       });
     });
@@ -440,7 +441,7 @@ module.exports = (project) => {
         drawNode(node, state, () => {
           drawIndex += 1;
           if ( ! node.drawCount || drawIndex >= node.drawCount) {
-            console.clear();
+            //console.clear();
             nodeIndex += 1;
             drawIndex = 0;
           }
@@ -477,24 +478,24 @@ module.exports = (project) => {
 
 
 
-
-  // (function tick (t) {
-  //   //console.log(t);
-  //   stats.begin();
-  //   draw(false, () => {
-  //     stats.end();
-  //     if (dbt !== undefined) {
-  //       console.log('dbt', performance.now() - dbt);
-  //       dbt = undefined;
-  //     }
-  //     requestAnimationFrame(tick);
-  //   });
-  // })(performance.now());
+   // DISABLE WHEN CAPTURING
+  (function tick (t) {
+    //console.log(t);
+    stats.begin();
+    draw(false, () => {
+      stats.end();
+      if (dbt !== undefined) {
+        //console.log('dbt', performance.now() - dbt);
+        dbt = undefined;
+      }
+      requestAnimationFrame(tick);
+    });
+  })(performance.now());
 
 
   //let tick = regl.frame(() => draw());
   //events.on('draw', () => draw(true));
-  let tick;
+  //let tick;
 
   const captureSetup = (width, height, done) => {
     console.log('captureSetup', width, height);
