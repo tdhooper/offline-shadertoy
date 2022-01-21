@@ -107,8 +107,8 @@ module.exports = (project) => {
             return {};
           }
           const i = props.tileIndex;
-          const w = Math.ceil(context.viewportWidth / node.tile);
-          const h = Math.ceil(context.viewportHeight / node.tile);
+          const w = Math.ceil(context.framebufferWidth / node.tile);
+          const h = Math.ceil(context.framebufferHeight / node.tile);
           const x = i % node.tile;
           const y = Math.floor(i / node.tile);
           return {
@@ -240,7 +240,7 @@ module.exports = (project) => {
     iMouse: (context, props) => {
 
       const mouseProp = props.mouse.map(value => value * context.pixelRatio);
-      mouseProp[1] = context.viewportHeight - mouseProp[1];
+      mouseProp[1] = context.drawingBuffertHeight - mouseProp[1];
       //console.log(mouseProp[0] / context.viewportWidth, mouseProp[1] / context.viewportHeight);
       return mouseProp;
     },
@@ -263,28 +263,28 @@ module.exports = (project) => {
     uniforms,
     viewport: {
       x: function(context, props) {
-        var s = context.viewportWidth;
+        var s = context.drawingBufferWidth;
         if (props.screenQuad !== undefined) {
           return props.screenQuad % 2 === 1 ? -s : 0;
         }
         return 0;
       },
       y: function(context, props) {
-        var s = context.viewportHeight;
+        var s = context.drawingBufferHeight;
         if (props.screenQuad !== undefined) {
           return props.screenQuad < 2 ? -s : 0;
         }
         return 0;
       },
       width: function(context, props) {
-        var s = context.viewportWidth;
+        var s = context.drawingBufferWidth;
         if (props.screenQuad !== undefined) {
           return s * 2;
         }
         return s;
       },
       height: function(context, props) {
-        var s = context.viewportHeight;
+        var s = context.drawingBufferHeight;
         if (props.screenQuad !== undefined) {
           return s * 2;
         }
@@ -403,7 +403,8 @@ module.exports = (project) => {
     document.title = node.name + ' ' + state.drawIndex;
     //console.log(node.name, state.drawIndex, node.drawCount);
     setup(state, (context) => {
-      resizeBuffers(context.viewportWidth, context.viewportHeight);
+      resizeBuffers(context.drawingBufferWidth, context.drawingBufferHeight);
+      //resizeBuffers(context.viewportWidth, context.viewportHeight);
       drawRaymarch(state, () => {
         node.draw(state, () => {
           //setTimeout(done, 100);
@@ -485,7 +486,8 @@ module.exports = (project) => {
 
 
 
-   // DISABLE WHEN CAPTURING
+  // DISABLE WHEN CAPTURING
+  //*
   (function tick (t) {
     //console.log(t);
     stats.begin();
@@ -498,11 +500,13 @@ module.exports = (project) => {
       requestAnimationFrame(tick);
     });
   })(performance.now());
-
+  /*/
+  let tick;
+  //*/
 
   //let tick = regl.frame(() => draw());
   //events.on('draw', () => draw(true));
-  //let tick;
+  
 
   const captureSetup = (width, height, done) => {
     console.log('captureSetup', width, height);
