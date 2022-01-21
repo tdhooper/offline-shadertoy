@@ -1,4 +1,4 @@
-// framebuffer drawcount: 100
+// framebuffer drawcount: 300
 
 #extension GL_OES_standard_derivatives : enable
 
@@ -2281,13 +2281,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 originalRayDir = rayDir;
     Hit firstHit = marchFirst(origin, rayDir, 30.);
 
-    // col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
 
-    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
-    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
-    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
-    col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
-    col /= 4.;
+    // col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+    // col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+    // col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+    // col += sample(firstHit, origin, rayDir, originalRayDir, seed, p);
+    // col /= 4.;
 
     //vec3 cold = debugWarpspin(fragCoord.xy/iResolution.xy);
     //col = col + cold;

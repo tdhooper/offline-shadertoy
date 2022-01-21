@@ -16,8 +16,8 @@
     "capture": {
         "fps": 40,
         "seconds": 8,
-        "width": 640,
-        "height": 360
+        "width": 1280,
+        "height": 720
     },
     "fov": 1.2,
     "controls": {
