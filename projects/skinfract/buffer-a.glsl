@@ -1,4 +1,4 @@
-// framebuffer drawcount: 1
+// framebuffer drawcount: 3
 
 precision highp float;
 
@@ -76,13 +76,11 @@ float fractal(vec3 p) {
     float l = 0.;
     float len = length(p) * spaceAnimFreq*2.;
 
-    //p.xz = mod(p.xz, vec2(scale*3.)) - vec2(scale*1.5);
-
     float phase = time*2.0+len*2.0;
     vec2 anim = vec2(len + rotPhase.y + sin(phase) * animAmp.x,len + rotPhase.x + cos(phase) * animAmp.y);
 
     for (int i=0; i<iterations; i++) {
-        p = abs(p);
+        p.xz = abs(p.zx);
         p = p*scale - offset;
         pR(p.xz, anim.x);
         pR(p.yz, anim.y);
@@ -115,14 +113,6 @@ Material shadeModel(Model model, inout vec3 nor) {
 }
 
 Model map(vec3 p) {
-
-    vec2 rot = vec2(.0);
-    if (iMouse.x > 0.) {
-        rot = (.5 - iMouse.yx / iResolution.yx + vec2(0,0)) * PI * vec2(1., 2.);
-    }
-    
-    pR(p.yz, rot.x);
-    pR(p.xz, rot.y);
 
     float s = .4;
     p /= s;
@@ -355,8 +345,12 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 vv = normalize(cross(ww,uu));
     mat3 camMat = mat3(-uu, vv, ww);
     
-    vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
-    vec3 origin = camPos;
+    //vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
+    //vec3 origin = camPos;
+
+    vec3 origin = eye;
+    vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
+
 
     #ifdef DOF
     float fpd = .37 * focalLength;
@@ -372,7 +366,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 bgCol = skyColor;
     bool doSpecular = true;
 
-    const int MAX_BOUNCE = 6;
+    const int MAX_BOUNCE = 3;
     
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
@@ -393,6 +387,7 @@ vec4 draw(vec2 fragCoord, int frame) {
         doSpecular = hash12(seed) < material.specular;
         
         bool doSSS = material.sss && bounce < 1 && ! doSpecular;
+        doSSS = false;
         if (doSSS) {
             seed = hash22(seed);
             doSSS = hash12(seed) < .8;
