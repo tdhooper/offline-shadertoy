@@ -57,146 +57,39 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
-float smin(float a, float b, float k){
-    float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
-    return (1. - f) * a + f  * b - f * (1. - f) * k;
+float time;
+
+vec2 rotPhase = vec2(.6);
+vec3 offset = vec3(0.5, 0.15, 0.4);
+float spaceAnimFreq = .05;
+float startScale = 1.5;
+
+vec3 animAmp = vec3(.1);
+ 
+float fractal(vec3 p) {
+    float scale = startScale;
+
+    const int iterations = 27;
+
+    float a = time;
+
+    float l = 0.;
+    float len = length(p) * spaceAnimFreq*2.;
+
+    //p.xz = mod(p.xz, vec2(scale*3.)) - vec2(scale*1.5);
+
+    float phase = time*2.0+len*2.0;
+    vec2 anim = vec2(len + rotPhase.y + sin(phase) * animAmp.x,len + rotPhase.x + cos(phase) * animAmp.y);
+
+    for (int i=0; i<iterations; i++) {
+        p = abs(p);
+        p = p*scale - offset;
+        pR(p.xz, anim.x);
+        pR(p.yz, anim.y);
+    }
+
+    return length(p)*pow(scale, -float(iterations))-.01;
 }
-
-float smax(float a, float b, float k) {
-    return -smin(-a, -b, k);
-}
-
-// iq https://www.shadertoy.com/view/Xds3zN
-float sdRoundCone( in vec3 p, in float r1, float r2, float h )
-{
-    vec2 q = vec2( length(p.xz), p.y );
-    
-    float b = (r1-r2)/h;
-    float a = sqrt(1.0-b*b);
-    float k = dot(q,vec2(-b,a));
-    
-    if( k < 0.0 ) return length(q) - r1;
-    if( k > a*h ) return length(q-vec2(0.0,h)) - r2;
-        
-    return dot(q, vec2(a,b) ) - r1;
-}
-
-float sdRoundCone(vec3 p, vec3 dir, float r1, float r2, float h) {
-    p = reflect(p, normalize(mix(vec3(0,1,0), -dir, .5)));
-    return sdRoundCone(p, r1, r2, h);
-}
-
-
-// Icosahedral domain mirroring
-// knighty https://www.shadertoy.com/view/MsKGzw
-
-#define PI 3.14159265359
-
-vec3 facePlane;
-vec3 uPlane;
-vec3 vPlane;
-
-int Type=5;
-vec3 nc;
-vec3 pab;
-vec3 pbc;
-vec3 pca;
-
-void init() {
-    float cospin=cos(PI/float(Type)), scospin=sqrt(0.75-cospin*cospin);
-    nc=vec3(-0.5,-cospin,scospin);
-    pbc=vec3(scospin,0.,0.5);
-    pca=vec3(0.,scospin,cospin);
-    pbc=normalize(pbc); pca=normalize(pca);
-	pab=vec3(0,0,1);
-    
-    facePlane = pca;
-    uPlane = cross(vec3(1,0,0), facePlane);
-    vPlane = vec3(1,0,0);
-}
-
-vec3 fold(vec3 p) {
-	for(int i=0;i<5 /*Type*/;i++){
-		p.xy = abs(p.xy);
-		p -= 2. * min(0., dot(p,nc)) * nc;
-	}
-    return p;
-}
-
-vec3 sfold(vec3 p, float s) {
-	for(int i=0;i<5 /*Type*/;i++){
-        p.xy = sqrt(p.xy * p.xy + s);
-		p -= 2. * min(0., dot(p,nc)) * nc;
-	}
-    return p;
-}
-
-
-// Triangle tiling
-// mattz https://www.shadertoy.com/view/4d2GzV
-
-const float sqrt3 = 1.7320508075688772;
-const float i3 = 0.5773502691896258;
-
-const mat2 cart2tri = mat2(1, 0, i3, 2. * i3);
-const mat2 tri2cart = mat2(1, 0, -.5, .5 * sqrt3);
-
-vec2 pick3(vec2 a, vec2 b, vec2 c, float u) {
-	float v = fract(u * 0.3333333333333);
-	return mix(mix(a, b, step(0.3, v)), c, step(0.6, v));
-}
-
-vec2 closestHex(vec2 p) {
-    p = cart2tri * p;
-	vec2 pi = floor(p);
-	vec2 pf = fract(p);
-	vec2 nn = pick3(
-        vec2(0, 0),
-        vec2(1, 1),
-        vec2(1, 0),
-        pi.x + pi.y
-    );
-	vec2 hex = mix(nn.xy, nn.yx, step(pf.x, pf.y)) + pi;
-    hex = tri2cart * hex;
-    return hex;
-}
-
-
-// Geodesic tiling
-// tdhooper https://www.shadertoy.com/view/llGXWc
-
-vec3 intersection(vec3 n, vec3 planeNormal, float planeOffset) {
-    float denominator = dot(planeNormal, n);
-    float t = (dot(vec3(0), planeNormal) + planeOffset) / -denominator;
-    return n * t;
-}
-
-vec2 icosahedronFaceCoordinates(vec3 p) {
-    vec3 i = intersection(normalize(p), facePlane, -1.);
-    return vec2(dot(i, uPlane), dot(i, vPlane));
-}
-
-vec3 faceToSphere(vec2 facePoint) {
-	return normalize(facePlane + (uPlane * facePoint.x) + (vPlane * facePoint.y));
-}
-
-const float edgeLength = 1. / ((sqrt(3.) / 12.) * (3. + sqrt(5.)));
-const float faceRadius = (1./6.) * sqrt(3.) * edgeLength;
-
-vec3 geodesicTri(vec3 p, float subdivisions) {
-	float uvScale = subdivisions / faceRadius;
-    vec2 uv = icosahedronFaceCoordinates(p);
-    uvScale /= 1.3333;
-    vec2 closest = closestHex(uv * uvScale); 
-    return faceToSphere(closest / uvScale);
-}
-
-
-
-//========================================================
-// Modeling
-//========================================================
-
 
 struct Material {
     vec3 albedo;
@@ -221,77 +114,23 @@ Material shadeModel(Model model, inout vec3 nor) {
     return Material(vec3(.02), .01, .2, false);
 }
 
-float sin3(vec3 x) {
-    return sin(x.x) * sin(x.y) * sin(x.z);
-}
-
-float ball(vec3 p, float hs, float rep, float radius) {
-
-    float o = sin3( (p + sin(p * 10. * .66)) * 100.) * .0001 * 2.;
-    o += sin3( (p + cos(p * 18. * .66)) * 132.) * .00005 * 2.;
-
-    float d = length(p) - (radius + .01 * hs);
-    
-    vec3 sp = sfold(p, .00005);
-    p = fold(p);
-    
-    vec3 spp = p;
-    
-    vec3 point = geodesicTri(p, rep);
-
-    p -= point * radius;
-    sp -= point * radius;
-    
-    float d2 = length(sp) - .02 * hs;
-
-    d = smin(d, d2, .05 * hs);
-    d = smax(d, -d2, .03 * hs);
-    
-    d2 += .01 * hs;
-    d2 = smin(d2, sdRoundCone(sp, normalize(point), .01 * hs, .000, .125 * hs * radius), .03 * hs);
-    
-    d = min(d, d2);
-    
-    d += o;
-    
-    return d;
-}
-
-const float boundRadius = .3;
-
 Model map(vec3 p) {
-    int id = 1;
-    
+
     vec2 rot = vec2(.0);
-    
     if (iMouse.x > 0.) {
         rot = (.5 - iMouse.yx / iResolution.yx + vec2(0,0)) * PI * vec2(1., 2.);
     }
     
-    rot.x = -.45;
-    rot.y = .85;
-    
     pR(p.yz, rot.x);
     pR(p.xz, rot.y);
 
-    float t = iTime * 3.;
-    
-    #ifndef ANIMATE
-    t = 1.25;
-    #endif
-    
-    float b = sin(dot(normalize(p), pbc) * 8. + t) * .5 + .5;
-    float b2 = sin(dot(normalize(p), pbc) * 4. + t) * .5 + .5;
-    
-    float s = 1.2 - .1 * b2;
+    float s = .4;
     p /= s;
+    float d = fractal(p);
+    d *= s;
 
-    float d = ball(p, 3.1, 1.5, .175);
-    float d2 = ball(p, 1.2, 2.5, .2);
+    return Model(d, p, vec3(.5), 1);
 
-    d = mix(d, d2, b);
-
-    return Model(d * s, p, vec3(.5), id);
 }
 
 
@@ -309,14 +148,14 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 }
 
 
-vec3 sunPos = normalize(vec3(-1,1,-.75)) * 100.;
+vec3 sunPos = normalize(vec3(-1,1,-.5)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
 vec3 sunColor = vec3(8.10,6.00,4.20) * 3.;
 
 
 vec3 env(vec3 dir, bool includeSun) {
-   vec3 col = mix(vec3(.5,.7,1) * .0, vec3(.5,.7,1) * 1., smoothstep(-.2, .2, dir.y));
-   return col * .5;
+    vec3 col = mix(vec3(.5,.7,1) * .0, vec3(.5,.7,1) * 1., smoothstep(-.2, .2, dir.y));
+    return col * .3;
 }
 
 struct Hit {
@@ -337,7 +176,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
 
         if (model.d < .0002) break;
 
-        if (rayLength > maxDist || length(rayPosition) > (boundRadius + .001)) {
+        if (rayLength > maxDist) {
             model.id = 0;
             break;
         }
@@ -488,15 +327,18 @@ vec2 iSphere( in vec3 ro, in vec3 rd, float r )
 	return vec2(-b-h, -b+h );
 }
 
+const float sqrt3 = 1.7320508075688772;
+
 // main path tracing loop, based on yx's
 // https://www.shadertoy.com/view/ts2cWm
 // with a bit of demofox's
 // https://www.shadertoy.com/view/WsBBR3
 vec4 draw(vec2 fragCoord, int frame) {
 
+    time = iTime;
+
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
-    //p /= 2.;
-   
+    
     vec2 seed = hash22(fragCoord + (float(frame)) * sqrt3);
     
     // jitter for antialiasing
@@ -523,11 +365,6 @@ vec4 draw(vec2 fragCoord, int frame) {
     rayDir = normalize(fp - origin);
     #endif
 
-    vec2 bound = iSphere(origin, rayDir, boundRadius);
-    if (bound.x < 0.) {
-    	return vec4(col, 1);
-    }
-
     Hit hit;
     vec3 nor, ref;
     Material material;
@@ -535,13 +372,11 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 bgCol = skyColor;
     bool doSpecular = true;
 
-    const int MAX_BOUNCE = 2;
+    const int MAX_BOUNCE = 6;
     
-    origin += rayDir * bound.x;
-
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
-        hit = march(origin, rayDir, 1., 1.);
+        hit = march(origin, rayDir, 10., .9);
    
         if (hit.model.id == 0)
         {
@@ -560,7 +395,7 @@ vec4 draw(vec2 fragCoord, int frame) {
         bool doSSS = material.sss && bounce < 1 && ! doSpecular;
         if (doSSS) {
             seed = hash22(seed);
-            doSSS = hash12(seed) < .9;
+            doSSS = hash12(seed) < .8;
         }
         
         if ( ! doSpecular) {
@@ -575,9 +410,9 @@ vec4 draw(vec2 fragCoord, int frame) {
             hit = walkOnSpheres(origin, nor, .075, seed);
             nor = calcNormal(hit.pos);
 
-            float extinctionDist = distance(origin, hit.pos) * 10.;
+            float extinctionDist = distance(origin, hit.pos) * 20.;
             vec3 extinctionCol = material.albedo;
-            extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .25), vec3(1,0,0), clamp(extinctionDist - 1., 0., 1.));
+            extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .5), vec3(1,0,0), 1. - clamp(extinctionDist * .5 - 1., 0., 1.));
             vec3 extinction = (1. - extinctionCol);
             extinction = 1. / (1. + (extinction * extinctionDist));	
             extinction = clamp(extinction, vec3(0), vec3(1));
@@ -614,8 +449,6 @@ vec4 draw(vec2 fragCoord, int frame) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    init();
-
     vec4 col = draw(fragCoord, iFrame);
        
     if (drawIndex > 0.) {
