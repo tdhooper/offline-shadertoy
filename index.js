@@ -43,7 +43,8 @@ const main = require('./main.js');
 // raytracing
 // inout
 // skinball
+// skinfract
 
-const project = LOADPROJECT('skinball');
+const project = LOADPROJECT('skinfract');
 
 main(project);
