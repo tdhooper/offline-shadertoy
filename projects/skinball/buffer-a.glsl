@@ -23,11 +23,10 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 
-//#define NOPT
-//#define SSS_ONLY
+//#define ANIMATE
 //#define DOF
 
-// https://www.shadertoy.com/view/4djSRW
+// Dave_Hoskins https://www.shadertoy.com/view/4djSRW
 vec2 hash22(vec2 p)
 {
     p += 1.61803398875; // fix artifacts when reseeding
@@ -36,8 +35,7 @@ vec2 hash22(vec2 p)
     return fract((p3.xx+p3.yz)*p3.zy);
 }
 
-
-// https://www.shadertoy.com/view/4djSRW
+// Dave_Hoskins https://www.shadertoy.com/view/4djSRW
 float hash12(vec2 p)
 {
 	vec3 p3  = fract(vec3(p.xyx) * .1031);
@@ -45,7 +43,7 @@ float hash12(vec2 p)
     return fract((p3.x + p3.y) * p3.z);
 }
 
-
+// iq https://www.shadertoy.com/view/tl23Rm
 vec2 rndunit2(vec2 seed ) {
     vec2 h = seed * vec2(1,6.28318530718);
     float phi = h.y;
@@ -53,23 +51,11 @@ vec2 rndunit2(vec2 seed ) {
 	return r*vec2(sin(phi),cos(phi));
 }
 
-
 #define PI 3.14159265359
 
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
-
-float vmax(vec3 v) {
-	return max(max(v.x, v.y), v.z);
-}
-
-float fBox(vec3 p, vec3 b) {
-    vec3 d = abs(p) - b;
-    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
-}
-
-
 
 float smin(float a, float b, float k){
     float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
@@ -80,7 +66,7 @@ float smax(float a, float b, float k) {
     return -smin(-a, -b, k);
 }
 
-// IQ https://www.shadertoy.com/view/Xds3zN
+// iq https://www.shadertoy.com/view/Xds3zN
 float sdRoundCone( in vec3 p, in float r1, float r2, float h )
 {
     vec2 q = vec2( length(p.xz), p.y );
@@ -101,15 +87,8 @@ float sdRoundCone(vec3 p, vec3 dir, float r1, float r2, float h) {
 }
 
 
-
-
-// --------------------------------------------------------
 // Icosahedral domain mirroring
 // knighty https://www.shadertoy.com/view/MsKGzw
-// 
-// Also get the face normal, and tangent planes used to
-// calculate the uv coordinates later.
-// --------------------------------------------------------
 
 #define PI 3.14159265359
 
@@ -153,12 +132,8 @@ vec3 sfold(vec3 p, float s) {
 }
 
 
-// --------------------------------------------------------
 // Triangle tiling
-// Adapted from mattz https://www.shadertoy.com/view/4d2GzV
-//
-// Finds the closest triangle center on a 2D plane 
-// --------------------------------------------------------
+// mattz https://www.shadertoy.com/view/4d2GzV
 
 const float sqrt3 = 1.7320508075688772;
 const float i3 = 0.5773502691896258;
@@ -187,62 +162,34 @@ vec2 closestHex(vec2 p) {
 }
 
 
-
-
-// --------------------------------------------------------
 // Geodesic tiling
-//
-// Finds the closest triangle center on the surface of a
-// sphere:
-// 
-// 1. Intersect position with the face plane
-// 2. Convert that into 2D uv coordinates
-// 3. Find the closest triangle center (tile the plane)
-// 4. Convert back into 3D coordinates
-// 5. Project onto a unit sphere (normalize)
-//
-// You can use any tiling method, such as one that returns
-// hex centers or adjacent cells, so you can create more
-// interesting geometry later.
-// --------------------------------------------------------
+// tdhooper https://www.shadertoy.com/view/llGXWc
 
-// Intersection point of vector and plane
 vec3 intersection(vec3 n, vec3 planeNormal, float planeOffset) {
     float denominator = dot(planeNormal, n);
     float t = (dot(vec3(0), planeNormal) + planeOffset) / -denominator;
     return n * t;
 }
 
-// 3D position -> 2D (uv) coordinates on the icosahedron face
 vec2 icosahedronFaceCoordinates(vec3 p) {
     vec3 i = intersection(normalize(p), facePlane, -1.);
     return vec2(dot(i, uPlane), dot(i, vPlane));
 }
 
-// 2D (uv) coordinates -> 3D point on a unit sphere
 vec3 faceToSphere(vec2 facePoint) {
 	return normalize(facePlane + (uPlane * facePoint.x) + (vPlane * facePoint.y));
 }
 
-// Edge length of an icosahedron with an inscribed sphere of radius of 1
 const float edgeLength = 1. / ((sqrt(3.) / 12.) * (3. + sqrt(5.)));
-// Inner radius of the icosahedron's face
 const float faceRadius = (1./6.) * sqrt(3.) * edgeLength;
 
-// Closest geodesic point (triangle center) on unit sphere's surface
 vec3 geodesicTri(vec3 p, float subdivisions) {
-    // faceRadius is used as a scale multiplier so that our triangles
-    // always stop at the edge of the face
 	float uvScale = subdivisions / faceRadius;
-
     vec2 uv = icosahedronFaceCoordinates(p);
-
     uvScale /= 1.3333;
-    vec2 closest = closestHex(uv * uvScale);
-    
+    vec2 closest = closestHex(uv * uvScale); 
     return faceToSphere(closest / uvScale);
 }
-
 
 
 
@@ -274,28 +221,19 @@ Material shadeModel(Model model, inout vec3 nor) {
     return Material(vec3(.02), .01, .2, false);
 }
 
-
 float sin3(vec3 x) {
     return sin(x.x) * sin(x.y) * sin(x.z);
 }
 
-
-const float iterOffset = .2;
-
-float ball(vec3 p, bool simple, float hs, float rep, float radius) {
+float ball(vec3 p, float hs, float rep, float radius) {
 
     float o = sin3( (p + sin(p * 10. * .66)) * 100.) * .0001 * 2.;
     o += sin3( (p + cos(p * 18. * .66)) * 132.) * .00005 * 2.;
 
     float d = length(p) - (radius + .01 * hs);
-
-    if (simple) {
-        return d;
-    }
-
+    
     vec3 sp = sfold(p, .00005);
     p = fold(p);
-    //sp = p;
     
     vec3 spp = p;
     
@@ -314,63 +252,42 @@ float ball(vec3 p, bool simple, float hs, float rep, float radius) {
     
     d = min(d, d2);
     
-    //sp = spp;
-    //sp -= pca * .2 * 1.05;
-    
-    //d2 = length(sp) - .03;
-    //d = smin(d, d2, .02);
-    //d = smax(d, -d2, .01);
-    
-    //d = min(d, d2 + .01);
-
-    
     d += o;
     
     return d;
 }
 
-
+const float boundRadius = .3;
 
 Model map(vec3 p) {
-
-    vec2 rot = vec2(.0);
-
     int id = 1;
     
-
+    vec2 rot = vec2(.0);
+    
     if (iMouse.x > 0.) {
         rot = (.5 - iMouse.yx / iResolution.yx + vec2(0,0)) * PI * vec2(1., 2.);
     }
     
     rot.x = -.45;
     rot.y = .85;
-        pR(p.yz, rot.x);
+    
+    pR(p.yz, rot.x);
     pR(p.xz, rot.y);
-    
-    
+
     float t = iTime * 3.;
     
+    #ifndef ANIMATE
+    t = 1.25;
+    #endif
     
     float b = sin(dot(normalize(p), pbc) * 8. + t) * .5 + .5;
     float b2 = sin(dot(normalize(p), pbc) * 4. + t) * .5 + .5;
-
+    
     float s = 1.2 - .1 * b2;
     p /= s;
 
-    
-    vec3 point = pbc;
-
-    float scl = 1.;
-    
-
-
-
-
-    //b = 1.;
-    float d;
-    
-    d = ball(p, false, 3.1, 1.5, .175);
-    float d2 = ball(p, false, 1.2, 2.5, .2);
+    float d = ball(p, 3.1, 1.5, .175);
+    float d2 = ball(p, 1.2, 2.5, .2);
 
     d = mix(d, d2, b);
 
@@ -382,21 +299,13 @@ Model map(vec3 p) {
 // Rendering
 //========================================================
 
-vec3 calcNormal(vec3 p )
+vec3 calcNormal( in vec3 p ) // for function f(p)
 {
-    const float h = 0.00001;      // replace by an appropriate value
-    vec3 n = vec3(0.0);
-    for( int i=0; i<4; i++ )
-    {
-        vec3 v = vec3(
-            int(mod(float(i + 3), 4.)) / 2, // 1 0 0 1
-            i / 2, // 0 0 1 1
-            int(mod(float(i), 2.)) // 0 1 0 1
-        );
-        vec3 e = 0.5773 * (2. * v- 1.);
-        n += e * map(p + e * h).d;
-    }
-    return normalize(n);
+    const float eps = 0.0001; // or some other value
+    const vec2 h = vec2(eps,0);
+    return normalize( vec3(map(p+h.xyy).d - map(p-h.xyy).d,
+                           map(p+h.yxy).d - map(p-h.yxy).d,
+                           map(p+h.yyx).d - map(p-h.yyx).d ) );
 }
 
 
@@ -406,11 +315,7 @@ vec3 sunColor = vec3(8.10,6.00,4.20) * 3.;
 
 
 vec3 env(vec3 dir, bool includeSun) {
-    vec3 col = mix(vec3(.5,.7,1) * .0, vec3(.5,.7,1) * 1., smoothstep(-.2, .2, dir.y));
-  //  col = mix(col, vec3(8.10,6.00,4.20) / 2., smoothstep(.8, .99, dot(dir, normalize(sunPos))));
-   
-   //if (includeSun) col += sunColor * smoothstep(.995, .999, dot(dir, normalize(sunPos))) * 20.;
-
+   vec3 col = mix(vec3(.5,.7,1) * .0, vec3(.5,.7,1) * 1., smoothstep(-.2, .2, dir.y));
    return col * .5;
 }
 
@@ -432,7 +337,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
 
         if (model.d < .0002) break;
 
-        if (rayLength > maxDist) {
+        if (rayLength > maxDist || length(rayPosition) > (boundRadius + .001)) {
             model.id = 0;
             break;
         }
@@ -473,12 +378,10 @@ vec3 getConeSample(vec3 dir, float extent, vec2 seed) {
 	return cos(r.x)*oneminus*o1+sin(r.x)*oneminus*o2+r.y*dir;
 }
 
-
+// Walk on spheres subsurface scattering
+// inspired by blackle https://www.shadertoy.com/view/wsfBDB
 Hit walkOnSpheres(vec3 origin, vec3 normal, float startdepth, inout vec2 seed) {
     Model model;
-    
-    //normal = getSampleBiased(normal, 1., seed);
-    //seed = hash22(seed);
     
     vec2 lastSeed = seed;
     seed = hash22(seed);
@@ -486,7 +389,6 @@ Hit walkOnSpheres(vec3 origin, vec3 normal, float startdepth, inout vec2 seed) {
     
     model = map(origin - normal * startdepth);
     origin -= normal * abs(model.d);
-    //origin -= normal * startdepth;
     
     for (int v = 0; v < 250; v++) {
         model = map(origin);
@@ -502,30 +404,12 @@ Hit walkOnSpheres(vec3 origin, vec3 normal, float startdepth, inout vec2 seed) {
     return Hit(model, origin);
 }
 
-Hit walkOnSpheresX(vec3 origin, vec3 normal, float startdepth, inout vec2 seed) {
-
-    vec2 lastSeed = seed;
-    seed = hash22(seed);
-    vec3 pointInSphere = normalize(tan(vec3(seed.x, seed.y, lastSeed.x) * 2. - 1.)) * lastSeed.y;
-    
-    origin += pointInSphere * startdepth;
-    normal = calcNormal(origin);
-        
-    Hit hit = march(origin, -normal, startdepth * 10., 1.);
-    
-    return hit;
-}
-
-
-
-
 vec3 sampleDirect(Hit hit, vec3 nor, vec3 throughput, inout vec2 seed) {
     vec3 col = vec3(0);
-    seed = hash22(seed);
     vec3 lightDir = (sunPos - hit.pos);
     vec3 lightSampleDir = getConeSample(lightDir, .0005, seed);
+    seed = hash22(seed);
     float diffuse = dot(nor, lightSampleDir);
-    //return throughput * vec3(8.10,6.00,4.20)/10. * max(0., diffuse);
     vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightSampleDir, nor)));
     if (diffuse > 0.) {
         Hit sh = march(shadowOrigin, lightSampleDir, 1., 1.);
@@ -540,6 +424,7 @@ float G1V(float dnv, float k){
     return 1.0/(dnv*(1.0-k)+k);
 }
 
+// noby https://www.shadertoy.com/view/lllBDM
 float ggx(vec3 nor, vec3 rayDir, vec3 l, float rough, float f0){
     float alpha = rough*rough;
     vec3 h = normalize(-rayDir + l);
@@ -560,24 +445,6 @@ float ggx(vec3 nor, vec3 rayDir, vec3 l, float rough, float f0){
     return spec;
 }
 
-float pow5(float x)
-{
-	float x2 = x*x;
-	return x2*x2*x;
-}
-
-float F_Schlick(float f0, float VoN)
-{
-	return f0 + (1.0 - f0) * pow5(1.0 - VoN);
-}
-
-
-float D_GGX(float NoH, float roughness) {
-    float a = NoH * roughness;
-    float k = roughness / (1.0 - NoH * NoH + a * a);
-    return k * k * (1.0 / PI);
-}
-
 vec3 sphereLight(vec3 lightPos, float radius, vec3 pos, vec3 rayDir, vec3 nor) {
     vec3 L = (lightPos - pos);
     vec3 ref = reflect(rayDir, nor);
@@ -589,47 +456,36 @@ vec3 sphereLight(vec3 lightPos, float radius, vec3 pos, vec3 rayDir, vec3 nor) {
 vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, inout vec2 seed) {
     vec3 lpos = sphereLight(sunPos, 5., hit.pos, rayDir, nor);
     
-    
     vec3 lightDir = normalize(lpos - hit.pos);
     vec3 h = normalize(rayDir + lightDir);
     float specular = pow(clamp(dot(h, nor), 0., 1.), 64.0);
-    //return throughput * sunColor * specular;
-    
-    //return dot(h, nor) * vec3(1);
-    
-    
+
     vec3 col = vec3(0);
-    vec3 lightSampleDir = getConeSample(lightDir, .0005, seed);
-    lightSampleDir = lightDir;
-    //h = normalize(-rayDir + lightSampleDir);
-    //specular = pow(clamp(dot(h, nor), 0., 1.), 64.0);
 
-    //vec3 ld = normalize(hit.pos + sunPos);
     float fresnel = pow(max(0., 1. + dot(nor, rayDir)), 5.);
-    specular = ggx(nor, rayDir, lightSampleDir, rough, fresnel);
-    //specular = fresnel;
-        //return F * vec3(1);
+    specular = ggx(nor, rayDir, lightDir, rough, fresnel);
 
-    /*
-    float NoV = abs(dot(nor, -rayDir)) + 1e-5;
-    float F = F_Schlick(0.035, NoV);
-    vec3 L = normalize(sunPos - hit.pos);
-    vec3 H = normalize(-rayDir + L);
-    float NoH = clamp(dot(nor, H), 0.0, 1.0);
-   // specular = D_GGX(NoH, rough*rough) * F;
-    */
-    //specular = fresnel;
-
-    //return sunColor * specular;
-
-    vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightSampleDir, nor)));
+    vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightDir, nor)));
     if (specular > 0.) {
-        Hit sh = march(shadowOrigin, lightSampleDir, 1., 1.);
+        Hit sh = march(shadowOrigin, lightDir, 1., 1.);
         if (sh.model.id == 0) {
             col += sunColor * 10. * specular;
         }
     }
     return col;
+}
+
+// origin sphere intersection
+// returns entry and exit distances from ray origin
+vec2 iSphere( in vec3 ro, in vec3 rd, float r )
+{
+	vec3 oc = ro;
+	float b = dot( oc, rd );
+	float c = dot( oc, oc ) - r*r;
+	float h = b*b - c;
+	if( h<0.0 ) return vec2(-1.0);
+	h = sqrt(h);
+	return vec2(-b-h, -b+h );
 }
 
 // main path tracing loop, based on yx's
@@ -664,12 +520,15 @@ vec4 draw(vec2 fragCoord, int frame) {
     float fpd = .37 * focalLength;
     vec3 fp = origin + rayDir * fpd;
     origin = origin + camMat * vec3(rndunit2(seed), 0.) * .05;
-    seed = hash22(seed);
     rayDir = normalize(fp - origin);
     #endif
 
-    Hit hit = march(origin, rayDir, focalLength * 2., 1.);
+    vec2 bound = iSphere(origin, rayDir, boundRadius);
+    if (bound.x < 0.) {
+    	return vec4(col, 1);
+    }
 
+    Hit hit;
     vec3 nor, ref;
     Material material;
     vec3 throughput = vec3(1);
@@ -677,15 +536,17 @@ vec4 draw(vec2 fragCoord, int frame) {
     bool doSpecular = true;
 
     const int MAX_BOUNCE = 2;
+    
+    origin += rayDir * bound.x;
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
+        hit = march(origin, rayDir, 1., 1.);
+   
         if (hit.model.id == 0)
         {
-            #ifndef SSS_ONLY
             if (bounce > 0)
-            col += env(rayDir, doSpecular) * throughput;
-            #endif
+                col += env(rayDir, doSpecular) * throughput;
             break;
         }
 
@@ -693,14 +554,13 @@ vec4 draw(vec2 fragCoord, int frame) {
         material = shadeModel(hit.model, nor);
 
         // calculate whether we are going to do a diffuse or specular reflection ray 
-        doSpecular = hash12(seed) < material.specular;
         seed = hash22(seed);
+        doSpecular = hash12(seed) < material.specular;
         
         bool doSSS = material.sss && bounce < 1 && ! doSpecular;
         if (doSSS) {
-            doSSS = hash12(seed) < .9;
-            //doSSS = true;
             seed = hash22(seed);
+            doSSS = hash12(seed) < .9;
         }
         
         if ( ! doSpecular) {
@@ -711,36 +571,33 @@ vec4 draw(vec2 fragCoord, int frame) {
         if (doSSS) {
             origin = hit.pos;
             
-            Hit hit2 = walkOnSpheres(origin, nor, .075, seed);
-            vec3 nor2 = calcNormal(hit2.pos);
+            seed = hash22(seed);
+            hit = walkOnSpheres(origin, nor, .075, seed);
+            nor = calcNormal(hit.pos);
 
-            float extinctionDist = distance(origin, hit2.pos) * 10.;
+            float extinctionDist = distance(origin, hit.pos) * 10.;
             vec3 extinctionCol = material.albedo;
             extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .25), vec3(1,0,0), clamp(extinctionDist - 1., 0., 1.));
-            //extinctionCol = vec3(1,0,0);
             vec3 extinction = (1. - extinctionCol);
             extinction = 1. / (1. + (extinction * extinctionDist));	
             extinction = clamp(extinction, vec3(0), vec3(1));
             throughput *= extinction;
-            
-            hit = hit2; nor = nor2;
         }
-
 
         // Calculate diffuse ray direction
         seed = hash22(seed);
         vec3 diffuseRayDir = getSampleBiased(nor, 1., seed);
 
-        if ( ! doSpecular) {
-            
-            #ifndef SSS_ONLY
+        if ( ! doSpecular)
+        {
+            seed = hash22(seed);
             col += sampleDirect(hit, nor, throughput, seed);
-            #endif
-
             rayDir = diffuseRayDir;
-        } else {
-        
+        }
+        else
+        {
             if (bounce == 0) { // fix fireflies from diffuse-bounce specular
+                seed = hash22(seed);
                 col += sampleDirectSpec(hit, rayDir, nor, material.roughness, seed) * throughput;
             }
             
@@ -751,10 +608,7 @@ vec4 draw(vec2 fragCoord, int frame) {
 
         // offset from sufrace https://www.shadertoy.com/view/lsXGzH
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
-        seed = hash22(seed);
-        hit = march(origin, rayDir, 1., 1.);
     }
-
 
     return vec4(col, 1);
 }
