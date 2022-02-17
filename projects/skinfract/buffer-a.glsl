@@ -1,4 +1,4 @@
-// framebuffer drawcount: 3
+// framebuffer drawcount: 5
 
 precision highp float;
 
@@ -67,7 +67,14 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+float smin(float a, float b, float k){
+    float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
+    return (1. - f) * a + f  * b - f * (1. - f) * k;
+}
 
+float smax(float a, float b, float k) {
+    return -smin(-a, -b, k);
+}
 
 float vmax(vec2 v) {
 	return max(v.x, v.y);
@@ -100,7 +107,7 @@ float time;
 float spaceAnimFreq = .06;
 float startScale = 1.5;
 
-vec3 animAmp = vec3(.05,.02,.05) * 2.;
+vec3 animAmp = vec3(-.02,.02,-.06) * 3.;
  
 struct Material {
     vec3 albedo;
@@ -119,26 +126,32 @@ struct Model {
 Material shadeModel(Model model, inout vec3 nor) {
     vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
 
-    float flush = smoothstep(0., 30., model.albedo.x);
-    skin += mix(vec3(-.15,.05,.05), vec3(.2,.0,-.1), flush);
+    float flush = smoothstep(-1.75, -.0, model.albedo.x);
+    skin += mix(vec3(-.4,.0,.15) * .5, vec3(.5,-.01,-.1), flush);
+
+    skin = clamp(skin, vec3(0,0,0), vec3(1,1,1));
+
+    //skin += vec3(.1,-.05,-.05);
 
     if (model.id == 1)
-        return Material(skin, .02, .3, true);
+        return Material(skin, .15, .3, true);
 
     return Material(vec3(.5), .0, .2, false);
 }
 
 Model map(vec3 p) {
 
-    p.y += .1;
+    p.y += .12;
     pR(p.yz, .75);
 
     float s = .3;
     p /= s;
 
+    vec3 pp = p;
+
     float scale = startScale;
 
-    const int iterations = 27;
+    const int iterations = 20;
 
     float a = time;
 
@@ -153,19 +166,26 @@ Model map(vec3 p) {
 
     vec3 anim = len + rotPhase + sin(phase + animPhase) * animAmp;
 
+ 
+    float orbitTrap = 1e20;
     for (int i=0; i<iterations; i++) {
         p.xz = abs(p.zx);
         p = p * scale - offset;
         pR(p.xz, anim.x);
         pR(p.yz, anim.y);
         pR(p.xy, anim.z);
+        orbitTrap = min(orbitTrap, length(p)-scale);
     }
 
     float d = length(p) * pow(scale, -float(iterations));
 
+    p = pp;
+    d = smax(d, -(length(p * vec3(1,1,.75)) - .4), .1);
+
     d *= s;
 
-    return Model(d, p, vec3(p.y), 1);
+
+    return Model(d, p, vec3(orbitTrap), 1);
 
 }
 
@@ -184,14 +204,14 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 }
 
 
-vec3 sunPos = normalize(vec3(-.5,1,-.5)) * 100.;
+vec3 sunPos = normalize(vec3(-.5,.5,-.25)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
 vec3 sunColor = vec3(8.10,6.00,4.20) * 3.;
 
 
 vec3 env(vec3 dir, bool includeSun) {
     vec3 col = mix(vec3(.5,.7,1) * .0, vec3(.5,.7,1) * 1., smoothstep(-.2, .2, dir.y));
-    return col * .3;
+    return col * .6;
 }
 
 struct Hit {
@@ -344,7 +364,7 @@ vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, inout vec2 se
     if (specular > 0.) {
         Hit sh = march(shadowOrigin, lightDir, 1., 1.);
         if (sh.model.id == 0) {
-            col += sunColor * 10. * specular;
+            col += sunColor * specular * .1;
         }
     }
     return col;
@@ -399,9 +419,9 @@ vec4 draw(vec2 fragCoord, int frame) {
 
 
     #ifdef DOF
-    float fpd = .37 * focalLength;
+    float fpd = .36 * focalLength;
     vec3 fp = origin + rayDir * fpd;
-    origin = origin + camMat * vec3(rndunit2(seed), 0.) * .05;
+    origin = origin + camMat * vec3(rndunit2(seed), 0.) * .02;
     rayDir = normalize(fp - origin);
     #endif
 
@@ -420,7 +440,7 @@ vec4 draw(vec2 fragCoord, int frame) {
    
         if (hit.model.id == 0)
         {
-            if (bounce > 0)
+            if (bounce > 0 && ! doSpecular)
                 col += env(rayDir, doSpecular) * throughput;
             break;
         }
@@ -447,12 +467,12 @@ vec4 draw(vec2 fragCoord, int frame) {
             origin = hit.pos;
             
             seed = hash22(seed);
-            hit = walkOnSpheres(origin, nor, .075, seed);
+            hit = walkOnSpheres(origin, nor, .05, seed);
             nor = calcNormal(hit.pos);
 
-            float extinctionDist = distance(origin, hit.pos) * 20.;
+            float extinctionDist = distance(origin, hit.pos) * 10.;
             vec3 extinctionCol = material.albedo;
-            extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .5), vec3(1,0,0), clamp(extinctionDist * .5 - 1., 0., 1.));
+            extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .5), vec3(1,0,0), clamp(extinctionDist - 1., 0., 1.));
             vec3 extinction = (1. - extinctionCol);
             extinction = 1. / (1. + (extinction * extinctionDist));	
             extinction = clamp(extinction, vec3(0), vec3(1));
