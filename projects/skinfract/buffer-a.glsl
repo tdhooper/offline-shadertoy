@@ -1,4 +1,4 @@
-// framebuffer drawcount: 5
+// framebuffer drawcount: 1
 
 precision highp float;
 
@@ -34,7 +34,7 @@ void main() {
 }
 
 //#define ANIMATE
-//#define DOF
+#define DOF
 
 // Dave_Hoskins https://www.shadertoy.com/view/4djSRW
 vec2 hash22(vec2 p)
@@ -127,7 +127,7 @@ Material shadeModel(Model model, inout vec3 nor) {
     vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
 
     float flush = smoothstep(-1.75, -.0, model.albedo.x);
-    skin += mix(vec3(-.4,.0,.15) * .5, vec3(.5,-.01,-.1), flush);
+    skin += mix(vec3(-.4,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
 
     skin = clamp(skin, vec3(0,0,0), vec3(1,1,1));
 
@@ -158,11 +158,11 @@ Model map(vec3 p) {
     float l = 0.;
     float len = length(p) * spaceAnimFreq*2.;
 
-    float phase = time*2.0+len*-5.0;
+    float phase = time * PI * 2. + len * -5.0;
 
     vec3 rotPhase = vec3(guiRotPhaseX, guiRotPhaseY, guiRotPhaseZ) * PI * 2.;
     vec3 animPhase = vec3(guiAnimPhaseX, guiAnimPhaseY, guiAnimPhaseZ) * PI * 2.;
-    vec3 offset = vec3(guiOffsetX, guiOffsetY, guiOffsetZ) + sin(phase + PI * .5) * .00 * vec3(0,2,-2);
+    vec3 offset = vec3(guiOffsetX, guiOffsetY, guiOffsetZ);
 
     vec3 anim = len + rotPhase + sin(phase + animPhase) * animAmp;
 
@@ -391,7 +391,7 @@ const float sqrt3 = 1.7320508075688772;
 // https://www.shadertoy.com/view/WsBBR3
 vec4 draw(vec2 fragCoord, int frame) {
 
-    time = iTime;
+    time = fract(iTime);
 
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
     
