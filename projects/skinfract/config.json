@@ -1,71 +1,145 @@
 {
-    "id": "skinfract",
-    "camera": {
-        "rotation": [
-        0,
-        0,
-        0,
-        1
-        ],
-        "position": [
-        0,
-        0,
-        5
-        ]
-    },
-    "view": {
-        "0": 1,
-        "1": 0,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5": 1,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0,
-        "10": 1,
-        "11": 0,
-        "12": 0,
-        "13": 0,
-        "14": -5,
-        "15": 1
-    },
-    "cameraMatrix": {
-        "0": 1,
-        "1": 0,
-        "2": 0,
-        "3": 0,
-        "4": 0,
-        "5": 1,
-        "6": 0,
-        "7": 0,
-        "8": 0,
-        "9": 0,
-        "10": 1,
-        "11": 0,
-        "12": 0,
-        "13": 0,
-        "14": -5,
-        "15": 1
-    },
-    "cameraPosition": [
-        0,
-        0,
-        5
+  "id": "skinfract13",
+  "camera": {
+    "rotation": [
+      0,
+      0,
+      0,
+      1
     ],
-    "timer": {
-        "running": false,
-        "elapsed": 0
-    },
-    "mouse": [
-        388,
-        198,
-        false,
-        0
-    ],
-    "r": [
-        768,
-        455
+    "position": [
+      0,
+      0,
+      5
     ]
+  },
+  "view": {
+    "0": 1,
+    "1": 0,
+    "2": 0,
+    "3": 0,
+    "4": 0,
+    "5": 1,
+    "6": 0,
+    "7": 0,
+    "8": 0,
+    "9": 0,
+    "10": 1,
+    "11": 0,
+    "12": 0,
+    "13": 0,
+    "14": -5,
+    "15": 1
+  },
+  "cameraMatrix": {
+    "0": 1,
+    "1": 0,
+    "2": 0,
+    "3": 0,
+    "4": 0,
+    "5": 1,
+    "6": 0,
+    "7": 0,
+    "8": 0,
+    "9": 0,
+    "10": 1,
+    "11": 0,
+    "12": 0,
+    "13": 0,
+    "14": -5,
+    "15": 1
+  },
+  "cameraPosition": [
+    0,
+    0,
+    5
+  ],
+  "timer": {
+    "running": true,
+    "elapsed": 182921.0000000596
+  },
+  "accumulateControl": {
+    "accumulate": true
+  },
+  "mouse": [
+    388,
+    198,
+    false,
+    0
+  ],
+  "r": [
+    325,
+    285
+  ],
+  "controls": {
+    "rotPhaseX": {
+      "type": "range",
+      "controller": 11,
+      "step": 0.0005,
+      "min": 0,
+      "max": 1,
+      "value": 0.591
+    },
+    "rotPhaseY": {
+      "type": "range",
+      "controller": 12,
+      "step": 0.0005,
+      "min": 0,
+      "max": 1,
+      "value": 0.366
+    },
+    "rotPhaseZ": {
+      "type": "range",
+      "controller": 13,
+      "step": 0.0005,
+      "min": 0,
+      "max": 1,
+      "value": 0.5005000000000001
+    },
+    "animPhaseX": {
+      "type": "range",
+      "controller": 14,
+      "step": 0.005,
+      "min": -1,
+      "max": 1,
+      "value": -0.03
+    },
+    "animPhaseY": {
+      "type": "range",
+      "controller": 15,
+      "step": 0.005,
+      "min": -1,
+      "max": 1,
+      "value": 0.28500000000000003
+    },
+    "animPhaseZ": {
+      "type": "range",
+      "controller": 16,
+      "step": 0.005,
+      "min": -1,
+      "max": 1,
+      "value": 0.1
+    },
+    "offsetX": {
+      "type": "range",
+      "step": 0.005,
+      "min": 0,
+      "max": 1,
+      "value": 0.675
+    },
+    "offsetY": {
+      "type": "range",
+      "step": 0.005,
+      "min": 0,
+      "max": 1,
+      "value": 0.37
+    },
+    "offsetZ": {
+      "type": "range",
+      "step": 0.005,
+      "min": 0,
+      "max": 1,
+      "value": 0.18
+    }
+  }
 }

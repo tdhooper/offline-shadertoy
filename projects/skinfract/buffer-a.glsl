@@ -10,6 +10,16 @@ uniform int iFrame;
 uniform float iTime;
 uniform vec4 iMouse;
 
+uniform float guiRotPhaseX;
+uniform float guiRotPhaseY;
+uniform float guiRotPhaseZ;
+uniform float guiAnimPhaseX;
+uniform float guiAnimPhaseY;
+uniform float guiAnimPhaseZ;
+uniform float guiOffsetX;
+uniform float guiOffsetY;
+uniform float guiOffsetZ;
+
 varying vec3 eye;
 varying vec3 dir;
 varying float fov;
@@ -57,38 +67,41 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
-float time;
 
-vec2 rotPhase = vec2(.6);
-vec3 offset = vec3(0.5, 0.15, 0.4);
-float spaceAnimFreq = .05;
-float startScale = 1.5;
 
-vec3 animAmp = vec3(.1);
- 
-float fractal(vec3 p) {
-    float scale = startScale;
-
-    const int iterations = 27;
-
-    float a = time;
-
-    float l = 0.;
-    float len = length(p) * spaceAnimFreq*2.;
-
-    float phase = time*2.0+len*2.0;
-    vec2 anim = vec2(len + rotPhase.y + sin(phase) * animAmp.x,len + rotPhase.x + cos(phase) * animAmp.y);
-
-    for (int i=0; i<iterations; i++) {
-        p.xz = abs(p.zx);
-        p = p*scale - offset;
-        pR(p.xz, anim.x);
-        pR(p.yz, anim.y);
-    }
-
-    return length(p)*pow(scale, -float(iterations))-.01;
+float vmax(vec2 v) {
+	return max(v.x, v.y);
 }
 
+float vmin(vec2 v) {
+	return min(v.x, v.y);
+}
+
+float vmax(vec3 v) {
+	return max(max(v.x, v.y), v.z);
+}
+
+float vmin(vec3 v) {
+	return min(min(v.x, v.y), v.z);
+}
+
+float fBox(vec2 p, vec2 b) {
+	vec2 d = abs(p) - b;
+	return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
+}
+
+float fBox(vec3 p, vec3 b) {
+	vec3 d = abs(p) - b;
+	return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
+
+float time;
+
+float spaceAnimFreq = .06;
+float startScale = 1.5;
+
+vec3 animAmp = vec3(.05,.02,.05) * 2.;
+ 
 struct Material {
     vec3 albedo;
     float specular;
@@ -106,20 +119,53 @@ struct Model {
 Material shadeModel(Model model, inout vec3 nor) {
     vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
 
-    if (model.id == 1)
-        return Material(skin, .025, .3, true);
+    float flush = smoothstep(0., 30., model.albedo.x);
+    skin += mix(vec3(-.15,.05,.05), vec3(.2,.0,-.1), flush);
 
-    return Material(vec3(.02), .01, .2, false);
+    if (model.id == 1)
+        return Material(skin, .02, .3, true);
+
+    return Material(vec3(.5), .0, .2, false);
 }
 
 Model map(vec3 p) {
 
-    float s = .4;
+    p.y += .1;
+    pR(p.yz, .75);
+
+    float s = .3;
     p /= s;
-    float d = fractal(p);
+
+    float scale = startScale;
+
+    const int iterations = 27;
+
+    float a = time;
+
+    float l = 0.;
+    float len = length(p) * spaceAnimFreq*2.;
+
+    float phase = time*2.0+len*-5.0;
+
+    vec3 rotPhase = vec3(guiRotPhaseX, guiRotPhaseY, guiRotPhaseZ) * PI * 2.;
+    vec3 animPhase = vec3(guiAnimPhaseX, guiAnimPhaseY, guiAnimPhaseZ) * PI * 2.;
+    vec3 offset = vec3(guiOffsetX, guiOffsetY, guiOffsetZ) + sin(phase + PI * .5) * .00 * vec3(0,2,-2);
+
+    vec3 anim = len + rotPhase + sin(phase + animPhase) * animAmp;
+
+    for (int i=0; i<iterations; i++) {
+        p.xz = abs(p.zx);
+        p = p * scale - offset;
+        pR(p.xz, anim.x);
+        pR(p.yz, anim.y);
+        pR(p.xy, anim.z);
+    }
+
+    float d = length(p) * pow(scale, -float(iterations));
+
     d *= s;
 
-    return Model(d, p, vec3(.5), 1);
+    return Model(d, p, vec3(p.y), 1);
 
 }
 
@@ -138,7 +184,7 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 }
 
 
-vec3 sunPos = normalize(vec3(-1,1,-.5)) * 100.;
+vec3 sunPos = normalize(vec3(-.5,1,-.5)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
 vec3 sunColor = vec3(8.10,6.00,4.20) * 3.;
 
@@ -159,7 +205,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
     float rayLength, dist = 0.;
     Model model;
 
-    for (int i = 0; i < 200; i++) {
+    for (int i = 0; i < 400; i++) {
         rayPosition = origin + rayDirection * rayLength;
         model = map(rayPosition);
         rayLength += model.d * understep;
@@ -345,11 +391,11 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 vv = normalize(cross(ww,uu));
     mat3 camMat = mat3(-uu, vv, ww);
     
-    //vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
-    //vec3 origin = camPos;
+    vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
+    vec3 origin = camPos;
 
-    vec3 origin = eye;
-    vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
+    //vec3 origin = eye;
+    //vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
 
 
     #ifdef DOF
@@ -370,7 +416,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
-        hit = march(origin, rayDir, 10., .9);
+        hit = march(origin, rayDir, 10., .5);
    
         if (hit.model.id == 0)
         {
@@ -387,7 +433,6 @@ vec4 draw(vec2 fragCoord, int frame) {
         doSpecular = hash12(seed) < material.specular;
         
         bool doSSS = material.sss && bounce < 1 && ! doSpecular;
-        doSSS = false;
         if (doSSS) {
             seed = hash22(seed);
             doSSS = hash12(seed) < .8;
@@ -407,7 +452,7 @@ vec4 draw(vec2 fragCoord, int frame) {
 
             float extinctionDist = distance(origin, hit.pos) * 20.;
             vec3 extinctionCol = material.albedo;
-            extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .5), vec3(1,0,0), 1. - clamp(extinctionDist * .5 - 1., 0., 1.));
+            extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .5), vec3(1,0,0), clamp(extinctionDist * .5 - 1., 0., 1.));
             vec3 extinction = (1. - extinctionCol);
             extinction = 1. / (1. + (extinction * extinctionDist));	
             extinction = clamp(extinction, vec3(0), vec3(1));
