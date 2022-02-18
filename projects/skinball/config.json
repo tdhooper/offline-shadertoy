@@ -1,5 +1,11 @@
 {
     "id": "skinball",
+    "capture": {
+        "fps": 40,
+        "seconds": 1.2,
+        "width": 1600,
+        "height": 1600
+    },
     "camera": {
         "rotation": [
         0,

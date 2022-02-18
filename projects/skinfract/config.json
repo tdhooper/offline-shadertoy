@@ -1,5 +1,11 @@
 {
-  "id": "skinfract16",
+  "id": "skinfract18",
+  "capture": {
+    "fps": 100,
+    "seconds": 1,
+    "width": 1600,
+    "height": 1600
+  },
   "camera": {
     "rotation": [
       -0.20579689741134644,
