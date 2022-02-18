@@ -127,7 +127,9 @@ Material shadeModel(Model model, inout vec3 nor) {
     vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
 
     float flush = smoothstep(-1.75, -.0, model.albedo.x);
-    skin += mix(vec3(-.4,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
+    skin += mix(vec3(-.6,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
+
+    skin *= vec3(1.1,.8,.7);
 
     skin = clamp(skin, vec3(0,0,0), vec3(1,1,1));
 
@@ -395,6 +397,8 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
     
+    p *= .85;
+
     vec2 seed = hash22(fragCoord + (float(frame)) * sqrt3);
     
     // jitter for antialiasing
