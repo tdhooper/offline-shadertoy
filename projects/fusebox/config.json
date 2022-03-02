@@ -1,0 +1,9 @@
+{
+    "id": "fusebox04",
+    "capture": {
+        "fps": 30,
+        "seconds": 3,
+        "width": 3072,
+        "height": 2048
+      }
+}

@@ -13,8 +13,8 @@ const regl = require('regl')({
     'oes_texture_float_linear',
     'ext_shader_texture_lod',
   ],
-  pixelRatio: .5,
-  //pixelRatio: 1,
+  //pixelRatio: .5,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -489,7 +489,7 @@ module.exports = (project) => {
 
 
   // DISABLE WHEN CAPTURING
-  //*
+  /*
   (function tick (t) {
     //console.log(t);
     stats.begin();
