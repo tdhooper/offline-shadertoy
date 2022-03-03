@@ -13,8 +13,8 @@ const regl = require('regl')({
     'oes_texture_float_linear',
     'ext_shader_texture_lod',
   ],
-  //pixelRatio: .5,
-  pixelRatio: 1,
+  pixelRatio: .5,
+  //pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -300,8 +300,8 @@ module.exports = (project) => {
 
   const camera = createCamera(canvas, {
     position: [0, 0, 5],
-    positionSpeed: .2 * 4,
-    rotationSpeed: .1 * 4
+    positionSpeed: 10,
+    rotationSpeed: .5
   });
 
   window.camera = camera;
@@ -489,7 +489,7 @@ module.exports = (project) => {
 
 
   // DISABLE WHEN CAPTURING
-  /*
+  //*
   (function tick (t) {
     //console.log(t);
     stats.begin();

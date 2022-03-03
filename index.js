@@ -45,8 +45,9 @@ const main = require('./main.js');
 // skinball
 // skinfract
 // skinfract2
+// skinfract3
 // fusebox
 
-const project = LOADPROJECT('fusebox');
+const project = LOADPROJECT('skinfract3');
 
 main(project);
