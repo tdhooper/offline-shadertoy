@@ -139,20 +139,52 @@ struct Model {
 Material shadeModel(Model model, inout vec3 nor) {
     vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
 
-    float flush = smoothstep(-1.75, -.0, model.albedo.x);
-    skin += mix(vec3(-.6,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
+
+    float blend = smoothstep(-1.5, -0., model.albedo.z);
+
+    
+    
+    blend = smoothstep(-.1, .3, model.albedo.y);
+
+    //blend = step(model.albedo.y, .005);
+
+    //blend = smoothstep(-1.75, -.0, model.albedo.x);
+    skin += mix(vec3(-.6,.0,.15) * .5, vec3(.4,-.03,-.05), blend);
 
     skin *= vec3(1.1,.8,.7);
 
     skin = clamp(skin, vec3(0,0,0), vec3(1,1,1));
 
     //skin += vec3(.1,-.05,-.05);
+   // return Material(vec3(.8), .0, .0, false);
 
     if (model.id == 1) {
-        return Material(skin, .15, .3, true);
+        //return Material(skin, .15, .3, true);
     }
 
-    return Material(spectrum(model.albedo.x), .0, .0, false);
+    blend = smoothstep(-.1, .6, model.albedo.y);
+
+    float spec = 0.;
+    float rough = 0.;
+
+
+    vec3 col = vec3(.0);
+
+    if (blend > .5) {
+        //spec = 1.;
+        //rough = 1.;
+        //col = vec3(10);
+    }
+
+    col = mix(col, vec3(5), blend);
+
+    col = spectrum(model.albedo.y * 2.) * mix(1., 4., smoothstep(0., .3, model.albedo.y));
+    
+    //blend = smoothstep(.0, -3., model.albedo.x);
+
+
+   
+    return Material(col, spec, rough, false);
 }
 
 
@@ -182,7 +214,7 @@ void TransA(inout vec3 z, inout float DF, float a, float b){
 }
 
 // https://www.shadertoy.com/view/XlVXzh
-vec2 JosKleinian(vec3 z)
+vec4 JosKleinian(vec3 z)
 {
     float t = 0.;
 
@@ -198,14 +230,14 @@ vec2 JosKleinian(vec3 z)
 		z=(rad*rad/d2)*z+InvCenter;
             }
 
-    float orbitTrap = 1e20;
+    vec3 orbitTrap = vec3(1e20);
 
 	float DE=1e10;
 	float DF = 1.0;
 	float a = KleinR;
     float b = KleinI;
 	float f = sign(b)*1. ;     
-	for (int i = 0; i < 50 ; i++) 
+	for (int i = 0; i < 100 ; i++) 
 	{
 		z.x=z.x+b/a*z.y;
 		z.xz = wrap(z.xz, vec2(2. * box_size_x, 2. * box_size_z), vec2(- box_size_x, - box_size_z));
@@ -224,7 +256,7 @@ vec2 JosKleinian(vec3 z)
 		//Store prévious iterates
 		llz=lz; lz=z;
 
-        orbitTrap = min(orbitTrap, length(z));
+        orbitTrap = min(orbitTrap, z);
 	}
 	
 	
@@ -232,7 +264,7 @@ vec2 JosKleinian(vec3 z)
 	DE=min(DE,min(y,0.3)/max(DF,2.));
       if (SI) {DE=DE*d2/(rad+d*DE);}
 
-	return vec2(DE, orbitTrap);
+	return vec4(DE, orbitTrap);
 }
 
 
@@ -241,24 +273,33 @@ Model map(vec3 p) {
 
     //float dd = length(p) - .5;
 
-    float s = .5;
+    float s = 1.;
 
     p /= s;
 
     //vec2 res = PseudoKleinian(p);
     //float d = res.x;
     //float orbitTrap = res.y;
+    
+    float dd = length(p) - 2.5;
 
+    vec3 center = vec3(-.79,.89,1.5);
 
-    vec2 res = JosKleinian(p);
+    center = vec3(-.86,1.16,1.76);
+
+    p += center;
+
+    vec4 res = JosKleinian(p);
     float d = res.x;
-    float orbitTrap = res.y;
+    vec3 orbitTrap = res.yzw;
+
+    d = max(d, dd);
 
     d *= s;
 
     //d = min(d, dd);
 
-    return Model(d, p, vec3(orbitTrap), 1);
+    return Model(d, p, orbitTrap, 1);
 
 }
 
@@ -277,19 +318,20 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 }
 
 
-vec3 sunPos = normalize(vec3(.6,.6,-.1)) * 100.;
+vec3 sunPos = normalize(vec3(-.1,1.5,-.5)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
-vec3 sunColor = vec3(8.10,6.00,4.20) * 3.;
+vec3 sunColor = vec3(8.10,6.00,4.20) * 1.5;
 
 
 vec3 env(vec3 dir, bool includeSun) {
-    vec3 col = mix(vec3(.5,.7,1) * .0, vec3(.5,.7,1) * 1., smoothstep(-.2, .2, dir.y));
-    return col * .6;
+    vec3 col = mix(vec3(.5,.7,1) * .0, vec3(.5,.7,1) * 1., smoothstep(-.2, .2, dot(dir, normalize(vec3(.5,1.,-.5)))));
+    return col;
 }
 
 struct Hit {
     Model model;
     vec3 pos;
+    float rayLength;
 };
 
 Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
@@ -303,14 +345,14 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
         model = map(rayPosition);
         rayLength += model.d * understep;
 
-        if (model.d < .0002) break;
+        if (model.d < .00002) break;
 
         if (rayLength > maxDist) {
             model.id = 0;
             break;
         }
     }
-    return Hit(model, rayPosition);
+    return Hit(model, rayPosition, rayLength);
 }
 
 
@@ -350,6 +392,8 @@ vec3 getConeSample(vec3 dir, float extent, vec2 seed) {
 // inspired by blackle https://www.shadertoy.com/view/wsfBDB
 Hit walkOnSpheres(vec3 origin, vec3 normal, float startdepth, inout vec2 seed) {
     Model model;
+
+    vec3 initialOrigin = origin;
     
     vec2 lastSeed = seed;
     seed = hash22(seed);
@@ -369,7 +413,7 @@ Hit walkOnSpheres(vec3 origin, vec3 normal, float startdepth, inout vec2 seed) {
         
         origin += dir * abs(model.d);
     }
-    return Hit(model, origin);
+    return Hit(model, origin, distance(initialOrigin, origin));
 }
 
 vec3 sampleDirect(Hit hit, vec3 nor, vec3 throughput, inout vec2 seed) {
@@ -381,7 +425,7 @@ vec3 sampleDirect(Hit hit, vec3 nor, vec3 throughput, inout vec2 seed) {
     float diffuse = dot(nor, lightSampleDir);
     vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightSampleDir, nor)));
     if (diffuse > 0.) {
-        Hit sh = march(shadowOrigin, lightSampleDir, 1., 1.);
+        Hit sh = march(shadowOrigin, lightSampleDir, 1., .5);
         if (sh.model.id == 0) {
             col += throughput * sunColor/10. * diffuse;
         }
@@ -436,7 +480,7 @@ vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, inout vec2 se
 
     vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightDir, nor)));
     if (specular > 0.) {
-        Hit sh = march(shadowOrigin, lightDir, 1., 1.);
+        Hit sh = march(shadowOrigin, lightDir, 1., .5);
         if (sh.model.id == 0) {
             col += sunColor * specular * .1;
         }
@@ -494,11 +538,11 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 origin = eye;
     vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
 
-
-    #if 0
-    float fpd = .36 * focalLength;
+    float fpd = .9;
+    #if 1
     vec3 fp = origin + rayDir * fpd;
-    origin = origin + camMat * vec3(rndunit2(seed), 0.) * .02;
+    origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .02;
+    //origin = origin + camMat * vec3(rndunit2(seed), 0.) * .05;
     rayDir = normalize(fp - origin);
     #endif
 
@@ -506,21 +550,27 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 nor, ref;
     Material material;
     vec3 throughput = vec3(1);
-    vec3 bgCol = skyColor;
+    vec3 bgCol = skyColor * .075 * 0.;
     bool doSpecular = true;
+    float rayLength = 0.;
 
     const int MAX_BOUNCE = 3;
     
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
-        hit = march(origin, rayDir, 5., .5);
+        hit = march(origin, rayDir, 20., .333);
    
         if (hit.model.id == 0)
         {
             if (bounce > 0 && ! doSpecular)
                 col += env(rayDir, doSpecular) * throughput;
+            if (bounce == 0) {
+                col = bgCol;
+            }
             break;
         }
+
+        rayLength += hit.rayLength;
 
         nor = calcNormal(hit.pos);
         material = shadeModel(hit.model, nor);
@@ -581,6 +631,9 @@ vec4 draw(vec2 fragCoord, int frame) {
         // offset from sufrace https://www.shadertoy.com/view/lsXGzH
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
     }
+
+    float fog = 1. - exp((rayLength - fpd) * -1.);
+    col = mix(col, bgCol, clamp(fog, 0., 1.)); 
 
     return vec4(col, 1);
 }
