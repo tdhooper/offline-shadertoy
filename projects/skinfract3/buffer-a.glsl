@@ -1,4 +1,4 @@
-// framebuffer drawcount: 3
+// framebuffer drawcount: 1
 
 precision highp float;
 
@@ -178,7 +178,7 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     col = mix(col, vec3(5), blend);
 
-    col = spectrum(model.albedo.y * 2.) * mix(1., 4., smoothstep(0., .3, model.albedo.y));
+    col = spectrum(model.albedo.y * 2.) * mix(1., 3., smoothstep(0., .4, model.albedo.y));
     
     //blend = smoothstep(.0, -3., model.albedo.x);
 
@@ -538,7 +538,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 origin = eye;
     vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
 
-    float fpd = .9;
+    float fpd = .88;
     #if 1
     vec3 fp = origin + rayDir * fpd;
     origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .02;
@@ -554,11 +554,11 @@ vec4 draw(vec2 fragCoord, int frame) {
     bool doSpecular = true;
     float rayLength = 0.;
 
-    const int MAX_BOUNCE = 3;
+    const int MAX_BOUNCE = 6;
     
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
-        hit = march(origin, rayDir, 20., .333);
+        hit = march(origin, rayDir, 3., .333);
    
         if (hit.model.id == 0)
         {
