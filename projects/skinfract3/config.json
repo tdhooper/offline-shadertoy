@@ -1,5 +1,5 @@
 {
-  "id": "skinfract3-08",
+  "id": "skinfract3-08b",
   "camera": {
     "rotation": [
       -0.30902695655822754,
@@ -59,17 +59,17 @@
     "elapsed": 2870972.999999523
   },
   "accumulateControl": {
-    "accumulate": false
+    "accumulate": true
   },
   "mouse": [
-    571,
-    320,
+    425,
+    209,
     false,
     0
   ],
   "r": [
-    2080,
-    1226
+    311,
+    255
   ],
   "controls": {
     "closed": true,
@@ -95,7 +95,7 @@
       "step": 0.00005,
       "min": -1,
       "max": 1,
-      "value": -0.4
+      "value": -0.40445000000000003
     },
     "boxSizeZ": {
       "type": "range",

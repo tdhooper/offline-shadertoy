@@ -237,7 +237,7 @@ vec4 JosKleinian(vec3 z)
 	float a = KleinR;
     float b = KleinI;
 	float f = sign(b)*1. ;     
-	for (int i = 0; i < 100 ; i++) 
+	for (int i = 0; i < 50 ; i++) 
 	{
 		z.x=z.x+b/a*z.y;
 		z.xz = wrap(z.xz, vec2(2. * box_size_x, 2. * box_size_z), vec2(- box_size_x, - box_size_z));
@@ -345,7 +345,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
         model = map(rayPosition);
         rayLength += model.d * understep;
 
-        if (model.d < .00002) break;
+        if (model.d < .0002) break;
 
         if (rayLength > maxDist) {
             model.id = 0;
@@ -538,8 +538,8 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 origin = eye;
     vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
 
-    float fpd = .88;
-    #if 1
+    float fpd = length(origin);
+    #if 0
     vec3 fp = origin + rayDir * fpd;
     origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .02;
     //origin = origin + camMat * vec3(rndunit2(seed), 0.) * .05;
@@ -554,7 +554,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     bool doSpecular = true;
     float rayLength = 0.;
 
-    const int MAX_BOUNCE = 6;
+    const int MAX_BOUNCE = 2;
     
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
