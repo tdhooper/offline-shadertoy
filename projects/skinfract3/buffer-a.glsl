@@ -178,7 +178,7 @@ Material shadeModel(Model model, inout vec3 nor) {
 
     col = mix(col, vec3(5), blend);
 
-    col = spectrum(model.albedo.y * 2.) * mix(1., 3., smoothstep(0., .4, model.albedo.y));
+    col = spectrum(clamp(model.albedo.y * 2., 0., 1.)) * mix(1., 3., smoothstep(0., .4, model.albedo.y));
     
     //blend = smoothstep(.0, -3., model.albedo.x);
 
@@ -237,7 +237,7 @@ vec4 JosKleinian(vec3 z)
 	float a = KleinR;
     float b = KleinI;
 	float f = sign(b)*1. ;     
-	for (int i = 0; i < 50 ; i++) 
+	for (int i = 0; i < 100 ; i++) 
 	{
 		z.x=z.x+b/a*z.y;
 		z.xz = wrap(z.xz, vec2(2. * box_size_x, 2. * box_size_z), vec2(- box_size_x, - box_size_z));
@@ -293,7 +293,7 @@ Model map(vec3 p) {
     float d = res.x;
     vec3 orbitTrap = res.yzw;
 
-    d = max(d, dd);
+    //d = max(d, dd);
 
     d *= s;
 
@@ -345,7 +345,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
         model = map(rayPosition);
         rayLength += model.d * understep;
 
-        if (model.d < .0002) break;
+        if (model.d < .00002) break;
 
         if (rayLength > maxDist) {
             model.id = 0;
@@ -538,12 +538,14 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 origin = eye;
     vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
 
-    float fpd = length(origin);
+    float focalPointDist = length(origin);
     #if 0
-    vec3 fp = origin + rayDir * fpd;
-    origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .02;
+    vec3 forward = vec3(0, 0, -1) * mat3(vView);
+    vec3 rayFocalPoint = origin + rayDir / dot(rayDir, forward) * focalPointDist;
+    //vec3 rayFocalPoint = origin + rayDir * focalPointDist;
+    origin += vec3(rndunit2(seed), 0.) * mat3(vView) * .03;
     //origin = origin + camMat * vec3(rndunit2(seed), 0.) * .05;
-    rayDir = normalize(fp - origin);
+    rayDir = normalize(rayFocalPoint - origin);
     #endif
 
     Hit hit;
@@ -554,7 +556,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     bool doSpecular = true;
     float rayLength = 0.;
 
-    const int MAX_BOUNCE = 2;
+    const int MAX_BOUNCE = 6;
     
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
@@ -632,7 +634,7 @@ vec4 draw(vec2 fragCoord, int frame) {
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
     }
 
-    float fog = 1. - exp((rayLength - fpd) * -1.);
+    float fog = 1. - exp((rayLength - focalPointDist) * -1.);
     col = mix(col, bgCol, clamp(fog, 0., 1.)); 
 
     return vec4(col, 1);
