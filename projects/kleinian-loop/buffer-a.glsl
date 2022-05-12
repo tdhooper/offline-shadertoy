@@ -213,13 +213,15 @@ void calcApex() {
     }
 }
 
+float time;
+
 Model map(vec3 p) {
 
    // pR(p.yz, iTime);
 
     p += vec3(-.86,1.16,1.76);
     
-    float t = mod(iTime/.75, 1.);
+    float t = mod(time * 20., 1.);
     
    // t = 1. - t;
     
@@ -295,7 +297,7 @@ Model map(vec3 p) {
         TransA(z, DF, a, b);
 
         //If the iterated points enters a 2-cycle , bail out.
-        if(dot(z-llz,z-llz) < 1e-8) {break;}
+        if(dot(z-llz,z-llz) < 1e-12) {break;}
 
         //Store prévious iterates
         llz=lz; lz=z;
@@ -439,7 +441,7 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     float focalLength = 3.;
     vec3 camPos = vec3(-.8346,-.1214,-.4026) * .3;
-    vec3 camTar = vec3(0,-.02,-.04);
+    vec3 camTar = vec3(0,-.02,-.03);
     vec3 up = vec3(1,.45,0);
     
     //camPos = vec3(-.5,.0,-2.); camTar = vec3(0,0,-box_size.y*2.); up = vec3(0,1,0);
@@ -449,11 +451,11 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 vv = normalize(cross(ww,uu));
     mat3 camMat = mat3(-uu, vv, ww);
     
-    //mat3 txm = rotationMatrix(normalize(vec3(-1,0,-1)), .5 * .125 * (iTime * PI * 2.));
+    mat3 txm = rotationMatrix(normalize(vec3(-1,.1,-.75)), (time * PI * 2.));
     //mat3 txm = rotationMatrix(normalize(vec3(0,0,1)), -.5 * .125 * (iTime * PI * 2.));
     //mat3 txm = rotationMatrix(normalize(vec3(0,1,1)), .5 * .125 * (iTime * PI * 2.));
     
-    mat3 txm = mat3(1,0,0, 0,1,0, 0,0,1);
+    //txm = mat3(1,0,0, 0,1,0, 0,0,1);
     
     camMat = inverse(txm) * camMat;
     camPos = camPos * txm;
@@ -473,8 +475,8 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     float focalPointDist = distance(camPos, camTar) * 1.1;
     float focalPlaneDist = dot(camMat[2], rayDir) * focalPointDist;
-    //*
-
+    
+    /*
     hit = march(origin, rayDir, focalPlaneDist);
     if (hit.model.id == 0)
     {
@@ -485,8 +487,15 @@ vec4 draw(vec2 fragCoord, int frame) {
         rayLength += hit.rayLength;
         hit = march(origin, rayDir, 2.);
     }
-    //*/
+    /*/
     
+    vec3 rayFocalPoint = origin + rayDir * focalPlaneDist;
+    origin += camMat * vec3(rndunit2(seed), 0.) * .01;
+    rayDir = normalize(rayFocalPoint - origin);
+
+    //*/
+
+
     #ifdef DEBUG
         hit = march(origin, rayDir, 2.);
         if (hit.model.id == 0) {
@@ -556,6 +565,8 @@ vec4 draw(vec2 fragCoord, int frame) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
     calcApex();
+
+    time = mod(iTime / 12., 1.);
 
     vec4 col = draw(fragCoord, iFrame);
        
