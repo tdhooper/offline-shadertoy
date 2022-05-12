@@ -32,11 +32,11 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 
-const int MAX_BOUNCE = 2; // Try 6 if you have the power
+const int MAX_BOUNCE = 6; // Try 6 if you have the power
 const float UNDERSTEP = .75;
 const float BOUNCE_UNDERSTEP = 1.;
 
-#define DEBUG
+//#define DEBUG
 
 #define PI 3.14159265359
 
@@ -234,6 +234,9 @@ Model map(vec3 p) {
     float scl = pow(1.48, t);
     
     p -= apex;
+
+    float bound = length(p) - .4;
+
     p = erot(p, normalize(apex2 - apex), t);
     p /= scl;
     p += apex;
@@ -317,6 +320,8 @@ Model map(vec3 p) {
     //DE = dd;
     
     DE *= scl;
+
+  //  DE = max(DE, bound);
     
     return Model(DE, .5, p, orbitTrap, 1);
 }
@@ -326,7 +331,9 @@ Model map(vec3 p) {
 // Rendering
 //========================================================
 
-vec3 sunPos = normalize(vec3(-.1,1.5,-.5)) * 100.;
+//vec3 sunPos = normalize(vec3(-.1,1.5,-.5)) * 100.;
+//vec3 sunPos = normalize(vec3(-.3,1.,-.5)) * 100.;
+vec3 sunPos = normalize(vec3(-.35,.8,-.4)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
 vec3 sunColor = vec3(8.10,6.00,4.20) * 1.5;
 
@@ -350,7 +357,7 @@ struct Hit {
     float rayLength;
 };
 
-Hit march(vec3 origin, vec3 rayDirection, float maxDist) {
+Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
 
     vec3 rayPosition;
     float rayLength, dist = 0.;
@@ -358,7 +365,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist) {
 
     for (int i = 0; i < 400; i++) {
         model = map(rayPosition);
-        rayLength += model.d * model.understep;
+        rayLength += model.d * understep;
         rayPosition = origin + rayDirection * rayLength;
 
         if (model.d < .00002) break;
@@ -412,7 +419,7 @@ vec3 sampleDirect(Hit hit, vec3 nor, vec3 throughput, inout vec2 seed) {
     float diffuse = dot(nor, lightSampleDir);
     vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightSampleDir, nor)));
     if (diffuse > 0.) {
-        Hit sh = march(shadowOrigin, lightSampleDir, .5);
+        Hit sh = march(shadowOrigin, lightSampleDir, 1., BOUNCE_UNDERSTEP);
         if (sh.model.id == 0) {
             col += throughput * sunColor/10. * diffuse;
         }
@@ -485,19 +492,19 @@ vec4 draw(vec2 fragCoord, int frame) {
         rayDir = normalize(rayFocalPoint - origin);
         origin = hit.pos;
         rayLength += hit.rayLength;
-        hit = march(origin, rayDir, 2.);
+        hit = march(origin, rayDir, 2., UNDERSTEP);
     }
     /*/
     
     vec3 rayFocalPoint = origin + rayDir * focalPlaneDist;
-    origin += camMat * vec3(rndunit2(seed), 0.) * .01;
+    origin += camMat * vec3(rndunit2(seed), 0.) * .005;
     rayDir = normalize(rayFocalPoint - origin);
-
+    hit = march(origin, rayDir, 30., UNDERSTEP);
+        
     //*/
 
 
     #ifdef DEBUG
-        hit = march(origin, rayDir, 2.);
         if (hit.model.id == 0) {
             return vec4(0);
         } else {
@@ -520,7 +527,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
         if (bounce > 0) {
-            hit = march(origin, rayDir, 1.);
+            hit = march(origin, rayDir, 2., BOUNCE_UNDERSTEP);
         }
        
         if (hit.model.id == 0)
@@ -566,7 +573,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
     calcApex();
 
-    time = mod(iTime / 12., 1.);
+    time = mod(iTime / 12. / 1., 1.);
 
     vec4 col = draw(fragCoord, iFrame);
        
