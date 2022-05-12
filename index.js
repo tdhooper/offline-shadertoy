@@ -49,6 +49,6 @@ const main = require('./main.js');
 // fusebox
 // kleinian-loop
 
-const project = LOADPROJECT('kleinian-loop');
+const project = LOADPROJECT('skinfract3');
 
 main(project);
