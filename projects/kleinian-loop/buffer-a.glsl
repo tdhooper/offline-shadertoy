@@ -214,7 +214,6 @@ void calcApex() {
 }
 
 float time;
-
 Model map(vec3 p) {
 
    // pR(p.yz, iTime);
@@ -449,7 +448,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     float focalLength = 3.;
     vec3 camPos = vec3(-.8346,-.1214,-.4026) * .3;
     vec3 camTar = vec3(0,-.02,-.03);
-    vec3 up = vec3(1,.45,0);
+    vec3 up = normalize(vec3(1,.45,0));
     
     //camPos = vec3(-.5,.0,-2.); camTar = vec3(0,0,-box_size.y*2.); up = vec3(0,1,0);
     
@@ -480,7 +479,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     // if we hit something, continue as normal,
     // if we don't hit anything, add a circle of confusion to the ray direction before continuing
 
-    float focalPointDist = distance(camPos, camTar) * 1.1;
+    float focalPointDist = distance(camPos, vec3(0));
     float focalPlaneDist = dot(camMat[2], rayDir) * focalPointDist;
     
     /*
@@ -497,7 +496,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     /*/
     
     vec3 rayFocalPoint = origin + rayDir * focalPlaneDist;
-    origin += camMat * vec3(rndunit2(seed), 0.) * .005;
+    origin += camMat * vec3(rndunit2(seed), 0.) * .01;
     rayDir = normalize(rayFocalPoint - origin);
     hit = march(origin, rayDir, 30., UNDERSTEP);
         
