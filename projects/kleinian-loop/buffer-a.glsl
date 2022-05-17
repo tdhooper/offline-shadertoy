@@ -1,4 +1,4 @@
-// framebuffer drawcount: 1
+// framebuffer drawcount: 128
 
 precision highp float;
 
@@ -33,7 +33,7 @@ void main() {
 }
 
 const int MAX_BOUNCE = 6; // Try 6 if you have the power
-const float UNDERSTEP = .75;
+const float UNDERSTEP = .5;
 const float BOUNCE_UNDERSTEP = 1.;
 
 //#define DEBUG
@@ -136,6 +136,8 @@ mat3 rotationMatrix(vec3 axis, float angle)
 // Modelling
 //========================================================
 
+float time;
+
 struct Material {
     vec3 albedo;
     float specular;
@@ -213,7 +215,7 @@ void calcApex() {
     }
 }
 
-float time;
+
 Model map(vec3 p) {
 
    // pR(p.yz, iTime);
@@ -521,7 +523,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 nor, ref;
     Material material;
     vec3 throughput = vec3(1);
-    vec3 bgCol = vec3(0.);
+    vec3 bgCol = vec3(.01,.0,.015);
     
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
