@@ -1,4 +1,4 @@
-// framebuffer drawcount: 128
+// framebuffer drawcount: 128, tile: 4
 
 precision highp float;
 
@@ -435,6 +435,11 @@ const float sqrt3 = 1.7320508075688772;
 // with a bit of demofox's
 // https://www.shadertoy.com/view/WsBBR3
 vec4 draw(vec2 fragCoord, int frame) {
+    
+    //vec2 grid = floor(fragCoord / 10.);
+    //grid = mod(grid, vec2(6.));
+    //vec3 c = grid == vec2(drawIndex) ? spectrum(drawIndex / 6.) : vec3(0); 
+    //return vec4(c, 1);
 
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
     
@@ -571,12 +576,13 @@ vec4 draw(vec2 fragCoord, int frame) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    
+
     calcApex();
 
     time = mod(iTime / 12. / 1., 1.);
 
     vec4 col = draw(fragCoord, iFrame);
+    //vec4 col = vec4(1);
        
     if (drawIndex > 0.) {
         vec4 lastCol = texture2D(previousSample, fragCoord.xy / iResolution.xy);

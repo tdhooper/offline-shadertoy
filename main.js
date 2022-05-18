@@ -12,6 +12,7 @@ const regl = require('regl')({
     'oes_texture_float',
     'oes_texture_float_linear',
     'ext_shader_texture_lod',
+    'webgl_color_buffer_float',
   ],
   //pixelRatio: .5,
   pixelRatio: 1,
@@ -122,7 +123,6 @@ module.exports = (project) => {
     });
 
     node.draw = (state, done) => {
-      
       // Don't mutate the original state
       state = Object.assign({}, state);
 
@@ -133,7 +133,8 @@ module.exports = (project) => {
 
       function attachDependencies() {
         node.dependencies.forEach((dep) => {
-          const texture = dep.node.buffer.color[0]._texture;
+          let depBuffer = dep.node.lastBuffer || dep.node.buffer;
+          const texture = depBuffer.color[0]._texture;
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(texture.target, texture.texture);
           if (dep.filter === 'nearest') {
@@ -158,7 +159,7 @@ module.exports = (project) => {
             gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
           }
           const s = {};
-          s[dep.uniform] = dep.node.buffer;
+          s[dep.uniform] = depBuffer;
           Object.assign(state, s);
         });
       }
@@ -187,26 +188,20 @@ module.exports = (project) => {
         }
       }
 
-      function repeatTile(state) {
-        if (node.tile) {
-          for(let i = 0; i < node.tile * node.tile; i++) {
-            Object.assign(state, {tileIndex: i});
-            nodeCommand(state);
-            gl.finish();
-          }
-        } else {
-          nodeCommand(state)
-        }  
-      } 
+      if (state.tileIndex == 0) {
+        swapPingPong();
+        clearTarget();
+      }
 
       attachDependencies();
-      swapPingPong();
-      clearTarget();
       setTarget();
-      repeatTile(state);
-      gl.finish();
-      done();
 
+      console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
+
+      nodeCommand(state);
+      gl.finish();
+      
+      done();      
     };
   });
 
@@ -410,8 +405,8 @@ module.exports = (project) => {
       drawRaymarch(state, () => {
         node.draw(state, () => {
           //setTimeout(done, 100);
-          //requestAnimationFrame(done); // FIX CRASHES
-          done();
+          requestAnimationFrame(done); // FIX CRASHES
+          //done();
         });
       });
     });
@@ -436,6 +431,7 @@ module.exports = (project) => {
       let nodeIndex = 0;
       let node;
 
+      let tileIndex = 0;
       let nodeDrawIndex = 0;
       (function next () {
         if (nodeIndex >= renderNodes.length) {
@@ -448,13 +444,24 @@ module.exports = (project) => {
         } else {
           state.drawIndex = drawIndex;
         }
+        state.tileIndex = tileIndex;
         drawNode(node, state, () => {
-          nodeDrawIndex += 1;
+          if ( ! node.tile) {
+            nodeDrawIndex += 1;
+          } else {
+            tileIndex += 1;
+            if (tileIndex >= node.tile * node.tile) {
+              tileIndex = 0;
+              nodeDrawIndex += 1;
+            }
+          }
           if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
             //console.clear();
             nodeIndex += 1;
             nodeDrawIndex = 0;
+            tileIndex = 0;
           }
+          //setTimeout(next, 100);
           next();
         });
       })();
