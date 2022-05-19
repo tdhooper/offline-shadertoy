@@ -134,6 +134,7 @@
     "fps": 30,
     "seconds": 12,
     "width": 2560,
-    "height": 1440
+    "height": 1440,
+    "startFrame": 255
   }
 }

@@ -189,6 +189,8 @@ module.exports = (project) => {
       }
 
       if (state.tileIndex == 0) {
+        console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount);
+
         swapPingPong();
         clearTarget();
       }
@@ -196,7 +198,7 @@ module.exports = (project) => {
       attachDependencies();
       setTarget();
 
-      console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
+     // console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
 
       nodeCommand(state);
       gl.finish();
