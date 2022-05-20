@@ -407,8 +407,8 @@ module.exports = (project) => {
       drawRaymarch(state, () => {
         node.draw(state, () => {
           //setTimeout(done, 100);
-          //requestAnimationFrame(done); // FIX CRASHES
-          done();
+          requestAnimationFrame(done); // FIX CRASHES
+          //done();
         });
       });
     });
@@ -498,7 +498,7 @@ module.exports = (project) => {
 
 
   // DISABLE WHEN CAPTURING
-  //*
+  /*
   (function tick (t) {
     //console.log(t);
     stats.begin();

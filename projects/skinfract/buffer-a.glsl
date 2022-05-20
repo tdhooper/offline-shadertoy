@@ -1,4 +1,4 @@
-// framebuffer drawcount: 1
+// framebuffer drawcount: 500
 
 precision highp float;
 
@@ -493,9 +493,9 @@ vec4 draw(vec2 fragCoord, int frame) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-    time = fract(iTime);
+    time = fract(iTime / 6.);
     
-    time = 0.5;
+    time = fract(time + 0.5);
 
 
     vec4 col = draw(fragCoord, iFrame);
