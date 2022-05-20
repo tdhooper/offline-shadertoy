@@ -34,6 +34,7 @@ void main() {
 }
 
 //#define ANIMATE
+#define SSS
 #define DOF
 
 // Dave_Hoskins https://www.shadertoy.com/view/4djSRW
@@ -125,22 +126,19 @@ struct Model {
 
 Material shadeModel(Model model, inout vec3 nor) {
     vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
-
     float flush = smoothstep(-1.75, -.0, model.albedo.x);
     skin += mix(vec3(-.6,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
-
     skin *= vec3(1.1,.8,.7);
-
     skin = clamp(skin, vec3(0,0,0), vec3(1,1,1));
-
-    //skin += vec3(.1,-.05,-.05);
-
-    if (model.id == 1)
-        return Material(skin, .15, .3, true);
-
-    return Material(vec3(.5), .0, .2, false);
+    bool sss = false;
+    #ifdef SSS
+    sss = true;
+    #endif
+    return Material(skin, .15, .3, sss);
 }
 
+
+// IFS from Connor Bell (macbooktall)
 Model map(vec3 p) {
 
     p.y += .12;
@@ -155,8 +153,6 @@ Model map(vec3 p) {
 
     const int iterations = 20;
 
-    float a = time;
-
     float l = 0.;
     float len = length(p) * spaceAnimFreq*2.;
 
@@ -167,7 +163,6 @@ Model map(vec3 p) {
     vec3 offset = vec3(guiOffsetX, guiOffsetY, guiOffsetZ);
 
     vec3 anim = len + rotPhase + sin(phase + animPhase) * animAmp;
-
  
     float orbitTrap = 1e20;
     for (int i=0; i<iterations; i++) {
@@ -208,7 +203,7 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 
 vec3 sunPos = normalize(vec3(-.5,.5,-.25)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
-vec3 sunColor = vec3(8.10,6.00,4.20) * 3.;
+vec3 sunColor = vec3(8.10,6.00,4.20) * 4.5;
 
 
 vec3 env(vec3 dir, bool includeSun) {
@@ -372,19 +367,6 @@ vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, inout vec2 se
     return col;
 }
 
-// origin sphere intersection
-// returns entry and exit distances from ray origin
-vec2 iSphere( in vec3 ro, in vec3 rd, float r )
-{
-	vec3 oc = ro;
-	float b = dot( oc, rd );
-	float c = dot( oc, oc ) - r*r;
-	float h = b*b - c;
-	if( h<0.0 ) return vec2(-1.0);
-	h = sqrt(h);
-	return vec2(-b-h, -b+h );
-}
-
 const float sqrt3 = 1.7320508075688772;
 
 // main path tracing loop, based on yx's
@@ -392,8 +374,6 @@ const float sqrt3 = 1.7320508075688772;
 // with a bit of demofox's
 // https://www.shadertoy.com/view/WsBBR3
 vec4 draw(vec2 fragCoord, int frame) {
-
-    time = fract(iTime);
 
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
     
@@ -513,8 +493,13 @@ vec4 draw(vec2 fragCoord, int frame) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    time = fract(iTime);
+    
+    time = 0.5;
+
+
     vec4 col = draw(fragCoord, iFrame);
-       
+   
     if (drawIndex > 0.) {
         vec4 lastCol = texture2D(previousSample, fragCoord.xy / iResolution.xy);
         col = mix(lastCol, col, 1. / (drawIndex + 1.));
