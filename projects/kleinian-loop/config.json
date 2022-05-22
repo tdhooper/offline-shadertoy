@@ -133,8 +133,8 @@
   "capture": {
     "fps": 30,
     "seconds": 12,
-    "width": 2560,
-    "height": 1440,
+    "width": 2160,
+    "height": 2700,
     "startFrame": 276
   }
 }

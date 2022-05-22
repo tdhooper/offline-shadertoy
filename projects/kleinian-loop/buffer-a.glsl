@@ -1,4 +1,4 @@
-// framebuffer drawcount: 2, tile: 4
+// framebuffer drawcount: 128, tile: 4
 
 precision highp float;
 
@@ -430,6 +430,8 @@ vec3 sampleDirect(Hit hit, vec3 nor, vec3 throughput, inout vec2 seed) {
 
 const float sqrt3 = 1.7320508075688772;
 
+#define INSTA
+
 // main path tracing loop, based on yx's
 // https://www.shadertoy.com/view/ts2cWm
 // with a bit of demofox's
@@ -443,7 +445,14 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
     
-    //p *= .85;
+    #ifdef INSTA
+        float ratio = 2160./2700.;
+        float oldratio = 2560./1440.;
+
+//        if (abs(p.x) > ratio) return vec4(0);
+
+        p = vec2(p.y,-p.x) * oldratio;
+    #endif
 
     vec2 seed = hash22(fragCoord + (float(frame)) * sqrt3);
     
