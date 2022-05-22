@@ -1,6 +1,8 @@
 /* eslint no-param-reassign: ["error", { "props": false }] */
 /* eslint space-unary-ops: [2, { "overrides": {"!": true} }] */
 
+const DO_CAPTURE = false;
+
 const EventEmitter = require('events');
 const Stats = require('stats.js');
 const glslify = require('glslify');
@@ -14,8 +16,8 @@ const regl = require('regl')({
     'ext_shader_texture_lod',
     'webgl_color_buffer_float',
   ],
-  //pixelRatio: .5,
-  pixelRatio: 1,
+  pixelRatio: .5,
+  //pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -122,18 +124,17 @@ module.exports = (project) => {
       },
     });
 
-    node.draw = (state, done) => {
+    node.draw = (state) => {
       // Don't mutate the original state
       state = Object.assign({}, state);
 
       if (node.firstPassOnly && ! firstPass) {
-        done();
         return;
       }
 
       function attachDependencies() {
         node.dependencies.forEach((dep) => {
-          let depBuffer = dep.node.lastBuffer || dep.node.buffer;
+          let depBuffer = dep.node == node ? dep.node.lastBuffer : dep.node.buffer
           const texture = depBuffer.color[0]._texture;
           gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(texture.target, texture.texture);
@@ -189,7 +190,7 @@ module.exports = (project) => {
       }
 
       if (state.tileIndex == 0) {
-        console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount);
+        //console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount);
 
         swapPingPong();
         clearTarget();
@@ -198,12 +199,13 @@ module.exports = (project) => {
       attachDependencies();
       setTarget();
 
-     // console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
-
-      nodeCommand(state);
-      gl.finish();
+      if (DO_CAPTURE)
+      {
+       // console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
+      }
       
-      done();      
+      nodeCommand(state);
+      gl.finish();      
     };
   });
 
@@ -397,7 +399,7 @@ module.exports = (project) => {
     });
   }
 
-  const drawNode = (node, state, done) => {
+  const drawNode = (node, state) => {
     state.frame += state.drawIndex;
     document.title = node.name + ' ' + state.drawIndex;
     //console.log(node.name, state.drawIndex, node.drawCount);
@@ -405,11 +407,7 @@ module.exports = (project) => {
       resizeBuffers(context.drawingBufferWidth, context.drawingBufferHeight);
       //resizeBuffers(context.viewportWidth, context.viewportHeight);
       drawRaymarch(state, () => {
-        node.draw(state, () => {
-          //setTimeout(done, 100);
-          requestAnimationFrame(done); // FIX CRASHES
-          //done();
-        });
+        node.draw(state);
       });
     });
   };
@@ -435,7 +433,9 @@ module.exports = (project) => {
 
       let tileIndex = 0;
       let nodeDrawIndex = 0;
+
       (function next () {
+        
         if (nodeIndex >= renderNodes.length) {
           done();
           return;
@@ -447,25 +447,31 @@ module.exports = (project) => {
           state.drawIndex = drawIndex;
         }
         state.tileIndex = tileIndex;
-        drawNode(node, state, () => {
-          if ( ! node.tile) {
-            nodeDrawIndex += 1;
-          } else {
-            tileIndex += 1;
-            if (tileIndex >= node.tile * node.tile) {
-              tileIndex = 0;
-              nodeDrawIndex += 1;
-            }
-          }
-          if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
-            //console.clear();
-            nodeIndex += 1;
-            nodeDrawIndex = 0;
+
+        drawNode(node, state);
+
+        if ( ! node.tile) {
+          nodeDrawIndex += 1;
+        } else {
+          tileIndex += 1;
+          if (tileIndex >= node.tile * node.tile) {
             tileIndex = 0;
+            nodeDrawIndex += 1;
           }
-          //setTimeout(next, 100);
+        }
+        if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
+          //console.clear();
+          nodeIndex += 1;
+          nodeDrawIndex = 0;
+          tileIndex = 0;
+        }
+        
+        if (DO_CAPTURE) {
+          requestAnimationFrame(next);
+        } else {
           next();
-        });
+        }
+
       })();
 
       firstPass = false;
@@ -497,23 +503,25 @@ module.exports = (project) => {
 
 
 
-  // DISABLE WHEN CAPTURING
-  /*
-  (function tick (t) {
-    //console.log(t);
-    stats.begin();
-    draw(false, () => {
-      stats.end();
-      if (dbt !== undefined) {
-        //console.log('dbt', performance.now() - dbt);
-        dbt = undefined;
-      }
-      requestAnimationFrame(tick);
-    });
-  })(performance.now());
-  /*/
-  let tick;
-  //*/
+  if ( ! DO_CAPTURE)
+  {
+    (function tick (t) {
+      //console.log(t);
+      stats.begin();
+      draw(false, () => {
+        stats.end();
+        if (dbt !== undefined) {
+          //console.log('dbt', performance.now() - dbt);
+          dbt = undefined;
+        }
+        requestAnimationFrame(tick);
+      });
+    })(performance.now());
+  }
+  else
+  {
+    let tick;
+  }
 
   //let tick = regl.frame(() => draw());
   //events.on('draw', () => draw(true));

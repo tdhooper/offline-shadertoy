@@ -1,4 +1,4 @@
-// framebuffer drawcount: 128, tile: 4
+// framebuffer drawcount: 2, tile: 4
 
 precision highp float;
 
