@@ -48,7 +48,8 @@ const main = require('./main.js');
 // skinfract3
 // fusebox
 // kleinian-loop
+// ifs-zoom
 
-const project = LOADPROJECT('kleinian-loop');
+const project = LOADPROJECT('ifs-zoom');
 
 main(project);
