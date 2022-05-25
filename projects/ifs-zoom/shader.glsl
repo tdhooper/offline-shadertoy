@@ -255,10 +255,10 @@ float time;
 Model mGizmo(vec3 p) {
  // p = mul(p, rotY(time * PI * 2.));
   //p.z -= .2;
-  float s = .5;
+  float s = .0125;
 	float d = fBox(p, vec3(.5, .5, .5) * s);
-  d = max(d, length(p) - .66 * s);
-  d = length(p) - .66 * s;
+  //d = max(d, length(p) - .66 * s);
+    d = length(p);
    	return Model(d, p, 1);
 }
 
@@ -301,7 +301,7 @@ Model map(vec3 p) {
 
 
     float scl;
-    const int n = 32;
+    const int n = 24;
     
         float orbitTrap = 1e20;
 
@@ -315,7 +315,7 @@ Model map(vec3 p) {
         
         
         if (i == n - 1) {
-        	//scl = t;
+        	scl = t;
         }
 
         if (i == 0 || isMirror) {
@@ -328,9 +328,10 @@ Model map(vec3 p) {
         if (scl <= 0.) break;
         
         // Draw gizmo
-		    Model gizmo = mGizmo(p / scl);
+	    Model gizmo = mGizmo(p / scl);
         gizmo.d *= scale * scl; // Fix distance for scale factor
-        model = opU(model, gizmo, scale);
+        gizmo.d += (1. - scl) * 10.1 * scale;
+        model = opU(model, gizmo, scale * scl);
         
         // Apply matrix and scale
         p = mul(p, txmi);
@@ -392,7 +393,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     // Build the TRS transformation matrix for each iteration
     mat4 mT = mTranslate(vec3(guiOffsetX,guiOffsetY,guiOffsetZ));
     //mat4 mR = mRotate(vec3(.2,-.2,-1. + sin(t+.5) * .3), vec3(.2,.3,1));
-    mat4 mR = rotX(guiRotX) * rotY(guiRotY) * rotZ(guiRotZ);
+    mat4 mR = rotX(guiRotX * PI * 2.) * rotY(guiRotY * PI * 2.) * rotZ(guiRotZ * PI * 2.);
     mat4 mS = mScale(guiScale);
 	txm = mS * mR * mT;
     txmScale = getScale(txm);
@@ -412,6 +413,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     rayOrigin = eye;
     rayDirection = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
+
+    vec3 camUp = vec3(0,1,0) * mat3(vView);
 
     vec3 rayPosition = rayOrigin;
     float rayLength = 0.;
@@ -445,12 +448,13 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     		  vec3 face = step(vec3(vmax(abs(model.p))), abs(model.p)) * sign(model.p);
           float faceIndex = max(vmax(face * vec3(0,1,2)), vmax(face * -vec3(3,4,5)));
     		  color = spectrum(faceIndex / 6.);
+              //color = vec3(.5);
           vec3 nor = calcNormal(rayPosition);
-          color *= dot(nor, vec3(0,1,0)) * .5 + .5;
+          color *= clamp(dot(nor, camUp) * .66 + .33, 0., 1.);
     	}
     }
     
-    float fog = 1. - exp((rayLength - 13.) * -.25);
+    float fog = 1. - exp(rayLength * -15. + 1.);
     color = mix(color, bgcol, clamp(fog, 0., 1.));
 
     color = pow(color, vec3(1. / 2.2)); // Gamma

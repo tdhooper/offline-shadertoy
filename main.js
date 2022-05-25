@@ -16,8 +16,8 @@ const regl = require('regl')({
     'ext_shader_texture_lod',
     'webgl_color_buffer_float',
   ],
-  pixelRatio: .5,
-  //pixelRatio: 1,
+  //pixelRatio: .5,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -190,7 +190,7 @@ module.exports = (project) => {
       }
 
       if (state.tileIndex == 0) {
-        //console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount);
+       // console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount);
 
         swapPingPong();
         clearTarget();
@@ -201,7 +201,7 @@ module.exports = (project) => {
 
       if (DO_CAPTURE)
       {
-       // console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
+        console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
       }
       
       nodeCommand(state);
@@ -501,11 +501,11 @@ module.exports = (project) => {
   //   next();          
   // })();
 
-
+  function tick() {}
 
   if ( ! DO_CAPTURE)
   {
-    (function tick (t) {
+    (function tick(t) {
       //console.log(t);
       stats.begin();
       draw(false, () => {
@@ -517,10 +517,6 @@ module.exports = (project) => {
         requestAnimationFrame(tick);
       });
     })(performance.now());
-  }
-  else
-  {
-    let tick;
   }
 
   //let tick = regl.frame(() => draw());
