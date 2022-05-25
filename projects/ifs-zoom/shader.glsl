@@ -244,8 +244,8 @@ vec2 smin(float a, float b, float k){
 }
 
 Model opU(Model a, Model b, float scale) {
-    vec2 dc = smin(a.d, b.d, 2.4 * scale);    
-    return Model(dc.x, mix(a.p, b.p, dc.y), a.id);
+    //vec2 dc = smin(a.d, b.d, 2.4 * scale);    
+    //return Model(dc.x, mix(a.p, b.p, dc.y), a.id);
     if (a.d < b.d) return a;
     return b;
 }
@@ -255,11 +255,17 @@ float time;
 Model mGizmo(vec3 p) {
  // p = mul(p, rotY(time * PI * 2.));
   //p.z -= .2;
-  float s = .0125;
-	float d = fBox(p, vec3(.5, .5, .5) * s);
-  //d = max(d, length(p) - .66 * s);
-    d = length(p);
-   	return Model(d, p, 1);
+  float s = .5;
+
+    vec3 sz = vec3(3., 1., 1.) * s;
+
+	float d = fBox(p, sz);
+
+    //d = max(d, dot(p, normalize(vec3(0,1,1))) - .6);
+
+  //d = max(d, length(p) - 1. * s);
+    //d = length(p);
+   	return Model(d, (p / sz) * vec3(-1,-1,1), 1);
 }
 
 Model mAxisAndCenter(vec3 p) {
@@ -329,8 +335,9 @@ Model map(vec3 p) {
         
         // Draw gizmo
 	    Model gizmo = mGizmo(p / scl);
+        gizmo.p.x = float(i) - t;
         gizmo.d *= scale * scl; // Fix distance for scale factor
-        gizmo.d += (1. - scl) * 10.1 * scale;
+       // gizmo.d += (1. - scl) * 10.1 * scale;
         model = opU(model, gizmo, scale * scl);
         
         // Apply matrix and scale
@@ -353,7 +360,7 @@ Model map(vec3 p) {
 
     model.d /= camScale;
 
-    model.d = min(model.d, ball);
+   // model.d = min(model.d, ball);
     return model;
 }
 
@@ -378,6 +385,15 @@ vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
 }
 vec3 spectrum(float n) {
     return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+// Dave_Hoskins https://www.shadertoy.com/view/4djSRW
+vec2 hash22(vec2 p)
+{
+    p += 1.61803398875; // fix artifacts when reseeding
+	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
+    p3 += dot(p3, p3.yzx+33.33);
+    return fract((p3.xx+p3.yz)*p3.zy);
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -421,15 +437,23 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     Model model;
     float dist = 0.;
-    vec3 bgcol = vec3(.014,.01,.02);
+    vec3 bgcol = vec3(0.);
     vec3 color = bgcol;
     bool isBackground = false;
+    float glow = 0.;
+
+    vec2 hash = hash22(p);
 
     for (float i = 0.; i < 100.; i++) {
         rayLength += dist;
         rayPosition = rayOrigin + rayDirection * rayLength;
         model = map(rayPosition);
 		dist = model.d;
+        dist += model.d * (hash.x * 2. - 1.) * .01;
+
+        glow += 1.;
+
+        hash = hash22(hash);
         
         if (dist < .0001) {
             break;
@@ -441,6 +465,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         }
     }
 
+
+
     if ( ! isBackground) {
         if (model.id == 2) {
         	color = vec3(1);
@@ -450,13 +476,22 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     		  color = spectrum(faceIndex / 6.);
               //color = vec3(.5);
           vec3 nor = calcNormal(rayPosition);
-          color *= clamp(dot(nor, camUp) * .66 + .33, 0., 1.);
+          color = (nor.yxz * .5 + .5);
+          color = mix(color, color.yxz, smoothstep(14., 15., model.p.x));
+          //color = spectrum(dot(rayDirection, nor) * .75 - .1);
+          color *= clamp(dot(nor, camUp) * .75 + .25, 0., 1.);
     	}
     }
     
-    float fog = 1. - exp(rayLength * -15. + 1.);
-    color = mix(color, bgcol, clamp(fog, 0., 1.));
+    float fog = 1. - exp(rayLength * -16. + 2.);
+    color += clamp(pow(glow, 2.) * .00025, 0., 1.);
+    //color = mix(color, bgcol, clamp(fog, 0., 1.));
+    color = mix(color, vec3(1) * length(color * .01), clamp(fog, 0., 1.));
+
 
     color = pow(color, vec3(1. / 2.2)); // Gamma
+
+    color += (hash.y * 2. - 1.) * .005;
+
     fragColor = vec4(color, 1);
 }
