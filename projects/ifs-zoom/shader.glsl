@@ -22,6 +22,7 @@ varying float aspect;
 varying mat4 vView;
 
 #pragma glslify: inverse = require(glsl-inverse)
+#pragma glslify: sdSkull = require(../skull/skull-min)
 
 void mainImage(out vec4 a, in vec2 b);
 
@@ -252,7 +253,11 @@ Model opU(Model a, Model b, float scale) {
 
 float time;
 
-Model mGizmo(vec3 p) {
+void pR(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+Model mGizmo(vec3 p, float scl, float i) {
  // p = mul(p, rotY(time * PI * 2.));
   //p.z -= .2;
   float s = .5;
@@ -265,6 +270,17 @@ Model mGizmo(vec3 p) {
 
   //d = max(d, length(p) - 1. * s);
     //d = length(p);
+
+    d = length(p) - .7;
+    if (d < .0002 / scl) {
+        pR(p.xz, 2.2);
+        //pR(p.xz, iTime * .5);
+        pR(p.xz, i * PI * .25 + 3.5);
+        
+        d = sdSkull((p.xzy * vec3(1,-1,1)).zyx * vec3(1,-1,1));
+    }
+
+    
    	return Model(d, (p / sz) * vec3(-1,-1,1), 1);
 }
 
@@ -278,6 +294,13 @@ Model mAxisAndCenter(vec3 p) {
 
 Model map(vec3 p) {
 
+/*
+    float dd = length(p) - .7;
+    if (dd < .001) {
+        dd = sdSkull(p);
+    }
+    return Model(dd, p, 1);
+*/
 
     float ball = length(p) - .001;
 
@@ -307,7 +330,7 @@ Model map(vec3 p) {
 
 
     float scl;
-    const int n = 24;
+    const int n = 22;
     
         float orbitTrap = 1e20;
 
@@ -334,7 +357,7 @@ Model map(vec3 p) {
         if (scl <= 0.) break;
         
         // Draw gizmo
-	    Model gizmo = mGizmo(p / scl);
+	    Model gizmo = mGizmo(p / scl, scl * scale, float(i) - t);
         gizmo.p.x = float(i) - t;
         gizmo.d *= scale * scl; // Fix distance for scale factor
        // gizmo.d += (1. - scl) * 10.1 * scale;
@@ -351,7 +374,7 @@ Model map(vec3 p) {
         //  isMirror = isMirror || i == 0;
         //}
 
-        p = abs(p);
+        p.y = abs(p.y);
        
         orbitTrap = min(orbitTrap, length(p)-scale);
 
@@ -360,7 +383,7 @@ Model map(vec3 p) {
 
     model.d /= camScale;
 
-   // model.d = min(model.d, ball);
+    model.d = min(model.d, ball);
     return model;
 }
 
@@ -449,7 +472,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
         rayPosition = rayOrigin + rayDirection * rayLength;
         model = map(rayPosition);
 		dist = model.d;
-        dist += model.d * (hash.x * 2. - 1.) * .01;
+        //dist += model.d * (hash.x * 2. - 1.) * .01;
 
         glow += 1.;
 
@@ -477,16 +500,17 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
               //color = vec3(.5);
           vec3 nor = calcNormal(rayPosition);
           color = (nor.yxz * .5 + .5);
-          color = mix(color, color.yxz, smoothstep(14., 15., model.p.x));
+          color = vec3(1.);
+          //color = mix(color, color.yxz, smoothstep(14., 15., model.p.x));
           //color = spectrum(dot(rayDirection, nor) * .75 - .1);
-          color *= clamp(dot(nor, camUp) * .75 + .25, 0., 1.);
+          color *= clamp(dot(nor, camUp) * .666 + .333, 0., 1.);
     	}
     }
     
-    float fog = 1. - exp(rayLength * -16. + 2.);
-    color += clamp(pow(glow, 2.) * .00025, 0., 1.);
-    //color = mix(color, bgcol, clamp(fog, 0., 1.));
-    color = mix(color, vec3(1) * length(color * .01), clamp(fog, 0., 1.));
+    float fog = 1. - exp(rayLength * -20. + 2.);
+    //color += clamp(pow(glow, 2.) * .00025, 0., 1.);
+    color = mix(color, bgcol, clamp(fog, 0., 1.));
+    //color = mix(color, vec3(1) * length(color * .01), clamp(fog, 0., 1.));
 
 
     color = pow(color, vec3(1. / 2.2)); // Gamma

@@ -16,8 +16,8 @@ const regl = require('regl')({
     'ext_shader_texture_lod',
     'webgl_color_buffer_float',
   ],
-  //pixelRatio: .5,
-  pixelRatio: 1,
+  pixelRatio: .5,
+  //pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -501,8 +501,6 @@ module.exports = (project) => {
   //   next();          
   // })();
 
-  function tick() {}
-
   if ( ! DO_CAPTURE)
   {
     (function tick(t) {
@@ -525,7 +523,6 @@ module.exports = (project) => {
 
   const captureSetup = (width, height, done) => {
     console.log('captureSetup', width, height);
-    tick && tick.cancel();
     timer.pause();
     canvas.width = width;
     canvas.height = height;
