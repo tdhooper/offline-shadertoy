@@ -235,6 +235,7 @@ float fLine(vec3 p, vec3 n) {
 
 struct Model {
 	float d;
+    float bound;
     vec3 p;
     int id;
 };
@@ -245,9 +246,9 @@ vec2 smin(float a, float b, float k){
 }
 
 Model opU(Model a, Model b, float scale) {
-    //vec2 dc = smin(a.d, b.d, 2.4 * scale);    
-    //return Model(dc.x, mix(a.p, b.p, dc.y), a.id);
-    if (a.d < b.d) return a;
+    vec2 dc = smin(a.d, b.d, .1 * scale);    
+    return Model(dc.x, min(a.bound, b.bound), mix(a.p, b.p, dc.y), a.id);
+    if (min(a.d, a.bound) < min(b.d, b.bound)) return a;
     return b;
 }
 
@@ -258,37 +259,30 @@ void pR(inout vec2 p, float a) {
 }
 
 Model mGizmo(vec3 p, float scl, float i) {
- // p = mul(p, rotY(time * PI * 2.));
-  //p.z -= .2;
-  float s = .5;
 
-    vec3 sz = vec3(3., 1., 1.) * s;
-
-	float d = fBox(p, sz);
-
-    //d = max(d, dot(p, normalize(vec3(0,1,1))) - .6);
-
-  //d = max(d, length(p) - 1. * s);
-    //d = length(p);
-
-    d = length(p) - .7;
-    if (d < .0002 / scl) {
-        pR(p.xz, 2.2);
+    float d = 1e12;
+    float bound = (length(p) - 1.) * scl;
+    if (bound < .0002)
+    {
+        //pR(p.xz, 2.2);
         //pR(p.xz, iTime * .5);
-        pR(p.xz, i * PI * .25 + 3.5);
+        pR(p.yz, i * PI * -.5 - 3.5);
+        //p.y *= -1.;
+        p.z *= -1.;
         
-        d = sdSkull((p.xzy * vec3(1,-1,1)).zyx * vec3(1,-1,1));
+        d = sdSkull(p) * scl;
+        bound = 1e12;
     }
 
     
-   	return Model(d, (p / sz) * vec3(-1,-1,1), 1);
+   	return Model(d, bound, p, 1);
 }
 
 Model mAxisAndCenter(vec3 p) {
     float axis = fLine(p - cameraApex, cameraAxis) - .08;
     float center = length(p - cameraApex) - .3;
     float d = min(axis, center);
-   	return Model(d, p, 2);
+   	return Model(d, 1e12, p, 2);
 }
 
 
@@ -304,17 +298,30 @@ Model map(vec3 p) {
 
     float ball = length(p) - .001;
 
-  p -= cameraApex;
+  //p += cameraApex;
 
+    float skl = 1.88;
+    vec3 ps = p;
+    pR(ps.yz, .5);
+    ps.y += .5;
+    ps.z -= 1.;
+    float skullBound = (length(ps / skl) - .7) * skl;
+    float skull = 1e12;
+    if (skullBound < .001) {
+        skull = sdSkull((ps * vec3(1,1,-1)) / skl) * skl;
+        skullBound = 1e12;
+    }
 
-    float t = time;
+    Model mSkull = Model(skull, skullBound, p, 1);
 
-  	Model model = Model(1e12, p, 0);
+    float t = 1.-time;
+
+  	Model model = Model(1e12, 1e12, p, 0);
     
     float scale = 1.;
     vec3 pp = p;
 
-  p = abs(p);
+    p.x = abs(p.x);
   
   
     for (int i = 0; i < 0; i++) {
@@ -330,7 +337,7 @@ Model map(vec3 p) {
 
 
     float scl;
-    const int n = 22;
+    const int n = 24;
     
         float orbitTrap = 1e20;
 
@@ -347,8 +354,8 @@ Model map(vec3 p) {
         	scl = t;
         }
 
-        if (i == 0 || isMirror) {
-        //	scl *= 1. - t;
+        if (i == 1 || isMirror) {
+        	scl *= smoothstep(0., 1., 1. - t);
         }
         
 
@@ -357,12 +364,13 @@ Model map(vec3 p) {
         if (scl <= 0.) break;
         
         // Draw gizmo
+        if (i != 0){
 	    Model gizmo = mGizmo(p / scl, scl * scale, float(i) - t);
         gizmo.p.x = float(i) - t;
-        gizmo.d *= scale * scl; // Fix distance for scale factor
+        //gizmo.d *= scale * scl; // Fix distance for scale factor
        // gizmo.d += (1. - scl) * 10.1 * scale;
         model = opU(model, gizmo, scale * scl);
-        
+        }
         // Apply matrix and scale
         p = mul(p, txmi);
         scale *= txmScale;
@@ -374,7 +382,7 @@ Model map(vec3 p) {
         //  isMirror = isMirror || i == 0;
         //}
 
-        p.y = abs(p.y);
+        p.x = abs(p.x);
        
         orbitTrap = min(orbitTrap, length(p)-scale);
 
@@ -382,8 +390,24 @@ Model map(vec3 p) {
 
 
     model.d /= camScale;
+    model.bound /= camScale;
 
-    model.d = min(model.d, ball);
+    //model.d = min(model.d, ball);
+   // model.d = min(model.d, skull);
+   // model.bound = min(model.bound, skullBound);
+    
+    p = pp;
+    p.x = abs(p.x);
+    mSkull.d = smin(mSkull.d, length(p - vec3(.4,-.15,.5)) - .55, 0.3).x;
+
+    model = opU(model, mSkull, .4);
+
+    //model = mSkull;
+
+    //model.d = skull;
+    //model.bound = skullBound;
+
+
     return model;
 }
 
@@ -460,18 +484,18 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     Model model;
     float dist = 0.;
-    vec3 bgcol = vec3(0.);
+    vec3 bgcol = vec3(.45,.5,.9) * .05;
     vec3 color = bgcol;
     bool isBackground = false;
     float glow = 0.;
 
     vec2 hash = hash22(p);
 
-    for (float i = 0.; i < 100.; i++) {
+    for (float i = 0.; i < 200.; i++) {
         rayLength += dist;
         rayPosition = rayOrigin + rayDirection * rayLength;
         model = map(rayPosition);
-		dist = model.d;
+		dist = min(model.bound, model.d);
         //dist += model.d * (hash.x * 2. - 1.) * .01;
 
         glow += 1.;
@@ -492,7 +516,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     if ( ! isBackground) {
         if (model.id == 2) {
-        	color = vec3(1);
+        	//color = vec3(1);
         } else {
     		  vec3 face = step(vec3(vmax(abs(model.p))), abs(model.p)) * sign(model.p);
           float faceIndex = max(vmax(face * vec3(0,1,2)), vmax(face * -vec3(3,4,5)));
@@ -503,14 +527,16 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
           color = vec3(1.);
           //color = mix(color, color.yxz, smoothstep(14., 15., model.p.x));
           //color = spectrum(dot(rayDirection, nor) * .75 - .1);
-          color *= clamp(dot(nor, camUp) * .666 + .333, 0., 1.);
+          color *= clamp(dot(nor, camUp) * .75 + .25, 0., 1.);
+
+            float fog = 1. - exp(rayLength * -20. + 2.5);
+           // color = mix(color, bgcol, clamp(fog, 0., 1.));
+
+         // color *= clamp(dot(nor, camUp) * .5 + .5, 0., 1.);
+
     	}
     }
     
-    float fog = 1. - exp(rayLength * -20. + 2.);
-    //color += clamp(pow(glow, 2.) * .00025, 0., 1.);
-    color = mix(color, bgcol, clamp(fog, 0., 1.));
-    //color = mix(color, vec3(1) * length(color * .01), clamp(fog, 0., 1.));
 
 
     color = pow(color, vec3(1. / 2.2)); // Gamma
