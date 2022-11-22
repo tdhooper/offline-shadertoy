@@ -259,21 +259,33 @@ void pR(inout vec2 p, float a) {
 }
 
 Model mGizmo(vec3 p, float scl, float i) {
-
     float d = 1e12;
+
+    float proxy = length(p) - .48;
+
+    float swap = 8.;
+    
+    if (i > swap)
+    {
+        return Model(proxy * scl, 1e12, p, 1);
+    }
+
     float bound = (length(p) - 1.) * scl;
     if (bound < .0002)
     {
-        //pR(p.xz, 2.2);
-        //pR(p.xz, iTime * .5);
-        pR(p.yz, i * PI * -.5 - 3.5);
-        //p.y *= -1.;
+        pR(p.yz, i * PI * .125 + 5.5);
         p.z *= -1.;
         
-        d = sdSkull(p) * scl;
+        d = sdSkull(p);
+
+        if (i > swap - 1.) {
+            d = mix(d, proxy, clamp(i - swap + 1., 0., 1.));
+        }
+
         bound = 1e12;
     }
 
+    d *= scl;
     
    	return Model(d, bound, p, 1);
 }
@@ -382,7 +394,8 @@ Model map(vec3 p) {
         //  isMirror = isMirror || i == 0;
         //}
 
-        p.x = abs(p.x);
+        //p.x = abs(p.x);
+        p.x = sqrt(p.x * p.x + .01 * scale * scl);
        
         orbitTrap = min(orbitTrap, length(p)-scale);
 
@@ -398,9 +411,9 @@ Model map(vec3 p) {
     
     p = pp;
     p.x = abs(p.x);
-    mSkull.d = smin(mSkull.d, length(p - vec3(.4,-.15,.5)) - .55, 0.3).x;
+    mSkull.d = smin(mSkull.d, length(p - vec3(.4,-.15,.5)) - .55, .3).x;
 
-    model = opU(model, mSkull, .4);
+    model = opU(model, mSkull, .6);
 
     //model = mSkull;
 
