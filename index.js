@@ -49,7 +49,8 @@ const main = require('./main.js');
 // fusebox
 // kleinian-loop
 // ifs-zoom
+// coral
 
-const project = LOADPROJECT('ifs-zoom');
+const project = LOADPROJECT('coral');
 
 main(project);
