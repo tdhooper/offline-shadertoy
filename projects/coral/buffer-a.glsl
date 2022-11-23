@@ -29,6 +29,7 @@ void main() {
 //#define ANIMATE
 #define SSS
 #define DOF
+//#define PREVIEW
 
 // Dave_Hoskins https://www.shadertoy.com/view/4djSRW
 vec2 hash22(vec2 p)
@@ -95,6 +96,118 @@ float fBox(vec3 p, vec3 b) {
 	vec3 d = abs(p) - b;
 	return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
 }
+
+
+
+// Icosahedral domain mirroring
+// knighty https://www.shadertoy.com/view/MsKGzw
+
+#define PI 3.14159265359
+
+vec3 facePlane;
+vec3 uPlane;
+vec3 vPlane;
+
+int Type=5;
+vec3 nc;
+vec3 pab;
+vec3 pbc;
+vec3 pca;
+
+void init() {
+    float cospin=cos(PI/float(Type)), scospin=sqrt(0.75-cospin*cospin);
+    nc=vec3(-0.5,-cospin,scospin);
+    pbc=vec3(scospin,0.,0.5);
+    pca=vec3(0.,scospin,cospin);
+    pbc=normalize(pbc); pca=normalize(pca);
+	pab=vec3(0,0,1);
+    
+    facePlane = pca;
+    uPlane = cross(vec3(1,0,0), facePlane);
+    vPlane = vec3(1,0,0);
+}
+
+vec3 fold(vec3 p) {
+	for(int i=0;i<5 /*Type*/;i++){
+		p.xy = abs(p.xy);
+		p -= 2. * min(0., dot(p,nc)) * nc;
+	}
+    return p;
+}
+
+vec3 sfold(vec3 p, float s) {
+	for(int i=0;i<5 /*Type*/;i++){
+        p.xy = sqrt(p.xy * p.xy + s);
+		p -= 2. * min(0., dot(p,nc)) * nc;
+	}
+    return p;
+}
+
+
+// Triangle tiling
+// mattz https://www.shadertoy.com/view/4d2GzV
+
+const float sqrt3 = 1.7320508075688772;
+const float i3 = 0.5773502691896258;
+
+const mat2 cart2tri = mat2(1, 0, i3, 2. * i3);
+const mat2 tri2cart = mat2(1, 0, -.5, .5 * sqrt3);
+
+vec2 pick3(vec2 a, vec2 b, vec2 c, float u) {
+	float v = fract(u * 0.3333333333333);
+	return mix(mix(a, b, step(0.3, v)), c, step(0.6, v));
+}
+
+vec2 closestHex(vec2 p) {
+    p = cart2tri * p;
+	vec2 pi = floor(p);
+	vec2 pf = fract(p);
+	vec2 nn = pick3(
+        vec2(0, 0),
+        vec2(1, 1),
+        vec2(1, 0),
+        pi.x + pi.y
+    );
+	vec2 hex = mix(nn.xy, nn.yx, step(pf.x, pf.y)) + pi;
+    hex = tri2cart * hex;
+    return hex;
+}
+
+
+// Geodesic tiling
+// tdhooper https://www.shadertoy.com/view/llGXWc
+
+vec3 intersection(vec3 n, vec3 planeNormal, float planeOffset) {
+    float denominator = dot(planeNormal, n);
+    float t = (dot(vec3(0), planeNormal) + planeOffset) / -denominator;
+    return n * t;
+}
+
+vec2 icosahedronFaceCoordinates(vec3 p) {
+    vec3 i = intersection(normalize(p), facePlane, -1.);
+    return vec2(dot(i, uPlane), dot(i, vPlane));
+}
+
+vec3 faceToSphere(vec2 facePoint) {
+	return normalize(facePlane + (uPlane * facePoint.x) + (vPlane * facePoint.y));
+}
+
+const float edgeLength = 1. / ((sqrt(3.) / 12.) * (3. + sqrt(5.)));
+const float faceRadius = (1./6.) * sqrt(3.) * edgeLength;
+
+vec3 geodesicTri(vec3 p, float subdivisions) {
+	float uvScale = subdivisions / faceRadius;
+    vec2 uv = icosahedronFaceCoordinates(p);
+    uvScale /= 1.3333;
+    vec2 closest = closestHex(uv * uvScale); 
+    return faceToSphere(closest / uvScale);
+}
+
+
+
+
+
+
 
 float time;
 
@@ -199,14 +312,26 @@ p.y += .3;
         float ridge = sin(a * PI * 2. * 5. * e) * .5 + .5;
         ridge *= (sin(w * 2. * e * PI - PI * .5) * .5 + .5) * smoothstep(1., .9, abs(w));
 
+        
+    vec3 sp = normalize(sfold(p, .00005));
+    float subd = mix(4., 2., t);
+    vec3 point = geodesicTri(sp, subd);
+
+    ridge = smoothstep(1. - .03 / subd, 1.005, dot(sp, point));
+
         ridge *= sqrt(t);
+
 
         d2 -= (ridge * 2. - 1.) * 2. * scl / e;
 
         float ridgestep = smoothstep(.3, .8, ridge);
 
+        //ridgestep = 0.;
+
         vec3 col2 = spectrum((t * t) * .2 + .15 + ridgestep * .1);
         
+//col2 *= ridge;
+
         col2 *= 1. + ridgestep * 1.;
         col2 *= t*t;
         col2 *= mix(.5, 1., ridge);
@@ -442,7 +567,7 @@ vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, inout vec2 se
     return col;
 }
 
-const float sqrt3 = 1.7320508075688772;
+//const float sqrt3 = 1.7320508075688772;
 
 // main path tracing loop, based on yx's
 // https://www.shadertoy.com/view/ts2cWm
@@ -471,7 +596,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     mat3 camMat = mat3(-uu, vv, ww);
 
 
-    #if 0
+    #if 1
         vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
         vec3 origin = camPos;
     #else
@@ -494,8 +619,12 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 bgCol = skyColor;
     bool doSpecular = true;
 
-    const int MAX_BOUNCE = 3;
-    
+    #ifndef PREVIEW
+        const int MAX_BOUNCE = 3;
+    #else
+        const int MAX_BOUNCE = 1;
+    #endif
+
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
         hit = march(origin, rayDir, 10., .5);
@@ -550,6 +679,10 @@ vec4 draw(vec2 fragCoord, int frame) {
             seed = hash22(seed);
             col += sampleDirect(hit, nor, throughput, seed);
             rayDir = diffuseRayDir;
+
+            #ifdef PREVIEW
+                col += env(rayDir, doSpecular) * throughput;
+            #endif
         }
         else
         {
@@ -571,6 +704,8 @@ vec4 draw(vec2 fragCoord, int frame) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+
+    init();
 
     time = 1.0;
     time = iTime;
