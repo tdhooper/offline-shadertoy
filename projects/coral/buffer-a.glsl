@@ -304,38 +304,36 @@ p.y += .3;
         anim *= t * t * 5.;
     
         float d2 = length(p * vec3(1,1,1)) - scl * 5.;
+        vec3 col2 = vec3(0);
         
         float e = mix(4., 3., t)*.666;
         
-        float a = (atan(p.y, p.z) / PI) * .5 + .5;
-        float w = (dot(normalize(p), vec3(1,0,0)));
-        float ridge = sin(a * PI * 2. * 5. * e) * .5 + .5;
-        ridge *= (sin(w * 2. * e * PI - PI * .5) * .5 + .5) * smoothstep(1., .9, abs(w));
+        //float a = (atan(p.y, p.z) / PI) * .5 + .5;
+        //float w = (dot(normalize(p), vec3(1,0,0)));
+        //float ridge = sin(a * PI * 2. * 5. * e) * .5 + .5;
+        //ridge *= (sin(w * 2. * e * PI - PI * .5) * .5 + .5) * smoothstep(1., .9, abs(w));
 
+        if (d2 < .5)
+        {
+            vec3 sp = normalize(sfold(p, .00005));
+            float subd = mix(4., 2., t);
+            vec3 point = geodesicTri(sp, subd);
+            float ridge = smoothstep(1. - .03 / subd, 1.005, dot(sp, point));
+
+            ridge *= sqrt(t);
+
+            d2 -= (ridge * 2. - 1.) * 2. * scl / e;
+
+            float ridgestep = smoothstep(.3, .8, ridge);
+
+            //ridgestep = 0.;
+
+            col2 = spectrum((t * t) * .2 + .15 + ridgestep * .1);
+            col2 *= 1. + ridgestep * 1.;
+            col2 *= t*t;
+            col2 *= mix(.5, 1., ridge);
+        }
         
-    vec3 sp = normalize(sfold(p, .00005));
-    float subd = mix(4., 2., t);
-    vec3 point = geodesicTri(sp, subd);
-
-    ridge = smoothstep(1. - .03 / subd, 1.005, dot(sp, point));
-
-        ridge *= sqrt(t);
-
-
-        d2 -= (ridge * 2. - 1.) * 2. * scl / e;
-
-        float ridgestep = smoothstep(.3, .8, ridge);
-
-        //ridgestep = 0.;
-
-        vec3 col2 = spectrum((t * t) * .2 + .15 + ridgestep * .1);
-        
-//col2 *= ridge;
-
-        col2 *= 1. + ridgestep * 1.;
-        col2 *= t*t;
-        col2 *= mix(.5, 1., ridge);
-
         vec4 dcol2 = vec4(d2, col2);
     
         dcol = smin(dcol, dcol2, 4. * scl);
