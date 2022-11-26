@@ -341,12 +341,21 @@ Model map(vec3 p) {
         #else
             float v = 1.;
             float f = mix(16., 11., t);
-            v *= sin(dot(normalize(p), normalize(vec3(1,0,-sqrt2i))) * f + PI * .5);
-            v *= sin(dot(normalize(p), normalize(vec3(-1,0,-sqrt2i))) * f + PI * .5);
-            v *= sin(dot(normalize(p), normalize(vec3(0,1,sqrt2i))) * f + PI * .5);
-            v *= sin(dot(normalize(p), normalize(vec3(0,-1,sqrt2i))) * f + PI * .5);
-            float ridge = v * .5 + .5;
-            ridge = mix(ridge, ridge * ridge, .25);
+            //v *= sin(dot(normalize(p), normalize(vec3(1,0,-sqrt2i))) * f + PI * .5);
+            //v *= sin(dot(normalize(p), normalize(vec3(-1,0,-sqrt2i))) * f + PI * .5);
+            //v *= sin(dot(normalize(p), normalize(vec3(0,1,sqrt2i))) * f + PI * .5);
+            //v *= sin(dot(normalize(p), normalize(vec3(0,-1,sqrt2i))) * f + PI * .5);
+            f = 10.;
+        v *= sin(dot(normalize(p), normalize(vec3(0, PHI, 1))) * f + PI * .5);
+        v *= sin(dot(normalize(p), normalize(vec3(0, -PHI, 1))) * f + PI * .5);
+        v *= sin(dot(normalize(p), normalize(vec3(1, 0, PHI))) * f + PI * .5);
+        v *= sin(dot(normalize(p), normalize(vec3(-1, 0, PHI))) * f + PI * .5);
+        v *= sin(dot(normalize(p), normalize(vec3(PHI, 1, 0))) * f + PI * .5);
+        v *= sin(dot(normalize(p), normalize(vec3(-PHI, 1, 0))) * f + PI * .5);
+            v *= 2.;
+            
+            float ridge = -v * .5 + .5;
+            //ridge = mix(ridge, ridge * ridge, .25);
             ridge *= sqrt(t);
             d2 -= (ridge * 2. - 1.) * 3. * scl / e;
             float ridgestep = smoothstep(.3, .8, ridge);
