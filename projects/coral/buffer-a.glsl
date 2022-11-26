@@ -267,10 +267,14 @@ vec4 smin( vec4 a, vec4 b, float k )
 
 const float PHI = 1.61803398875;
 
+#define sqrt2i 0.7071067811865475
+
+
 Model map(vec3 p) {
 
-vec3 pp = p;
-p.y += .3;
+
+    vec3 pp = p;
+    p.y += .3;
     
     pR(p.xz, .3);
     pR(p.yz, .4);
@@ -313,6 +317,7 @@ p.y += .3;
         //float ridge = sin(a * PI * 2. * 5. * e) * .5 + .5;
         //ridge *= (sin(w * 2. * e * PI - PI * .5) * .5 + .5) * smoothstep(1., .9, abs(w));
 
+        #if 0
         if (d2 < .5)
         {
             vec3 sp = normalize(sfold(p, .00005));
@@ -333,6 +338,24 @@ p.y += .3;
             col2 *= t*t;
             col2 *= mix(.5, 1., ridge);
         }
+        #else
+            float v = 1.;
+            float f = mix(16., 11., t);
+            v *= sin(dot(normalize(p), normalize(vec3(1,0,-sqrt2i))) * f + PI * .5);
+            v *= sin(dot(normalize(p), normalize(vec3(-1,0,-sqrt2i))) * f + PI * .5);
+            v *= sin(dot(normalize(p), normalize(vec3(0,1,sqrt2i))) * f + PI * .5);
+            v *= sin(dot(normalize(p), normalize(vec3(0,-1,sqrt2i))) * f + PI * .5);
+            float ridge = v * .5 + .5;
+            ridge = mix(ridge, ridge * ridge, .25);
+            ridge *= sqrt(t);
+            d2 -= (ridge * 2. - 1.) * 3. * scl / e;
+            float ridgestep = smoothstep(.3, .8, ridge);
+            col2 = spectrum((t * t) * .2 + .15 + ridgestep * .1);
+            col2 *= 1. + ridgestep * 1.;
+            col2 *= t*t;
+            col2 *= mix(.5, 1., ridge);
+
+        #endif
         
         vec4 dcol2 = vec4(d2, col2);
     
