@@ -1,4 +1,4 @@
-// framebuffer drawcount: 1, tile: 1
+// framebuffer drawcount: 6, tile: 1
 
 precision highp float;
 
@@ -26,7 +26,7 @@ void mainImage(out vec4 a, in vec2 b);
 void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
-//#define ANIMATE
+#define ANIMATE
 #define SSS
 #define DOF
 //#define PREVIEW
@@ -46,6 +46,13 @@ float hash12(vec2 p)
 	vec3 p3  = fract(vec3(p.xyx) * .1031);
     p3 += dot(p3, p3.yzx + 33.33);
     return fract((p3.x + p3.y) * p3.z);
+}
+
+vec3 hash31(float p)
+{
+   vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973));
+   p3 += dot(p3, p3.yzx+33.33);
+   return fract((p3.xxy+p3.yzz)*p3.zyx); 
 }
 
 // iq https://www.shadertoy.com/view/tl23Rm
@@ -158,10 +165,16 @@ vec2 pick3(vec2 a, vec2 b, vec2 c, float u) {
 	return mix(mix(a, b, step(0.3, v)), c, step(0.6, v));
 }
 
-vec2 closestHex(vec2 p) {
+vec4 pick3(vec4 a, vec4 b, vec4 c, float u) {
+	float v = fract(u * 0.3333333333333);
+	return mix(mix(a, b, step(0.3, v)), c, step(0.6, v));
+}
+
+vec2 closestHex(vec2 p, float separate) {
     p = cart2tri * p;
 	vec2 pi = floor(p);
 	vec2 pf = fract(p);
+    /*
 	vec2 nn = pick3(
         vec2(0, 0),
         vec2(1, 1),
@@ -170,6 +183,19 @@ vec2 closestHex(vec2 p) {
     );
 	vec2 hex = mix(nn.xy, nn.yx, step(pf.x, pf.y)) + pi;
     hex = tri2cart * hex;
+    */
+
+	vec4 nn = pick3(vec4(0.0, 0.0, 2.0,  1.0),
+					vec4(1.0, 1.0, 0.0, -1.0),
+					vec4(1.0, 0.0, 0.0,  1.0),
+					pi.x + pi.y);
+	
+	vec4 ab = ( mix(nn, nn.yxwz, step(pf.x, pf.y)) +
+			 vec4(pi, pi) );
+
+    vec2 hex = mix(ab.xy, ab.zw, separate * .5);
+    hex = tri2cart * hex;
+
     return hex;
 }
 
@@ -195,11 +221,11 @@ vec3 faceToSphere(vec2 facePoint) {
 const float edgeLength = 1. / ((sqrt(3.) / 12.) * (3. + sqrt(5.)));
 const float faceRadius = (1./6.) * sqrt(3.) * edgeLength;
 
-vec3 geodesicTri(vec3 p, float subdivisions) {
+vec3 geodesicTri(vec3 p, float subdivisions, float separate) {
 	float uvScale = subdivisions / faceRadius;
     vec2 uv = icosahedronFaceCoordinates(p);
     uvScale /= 1.3333;
-    vec2 closest = closestHex(uv * uvScale); 
+    vec2 closest = closestHex(uv * uvScale, separate); 
     return faceToSphere(closest / uvScale);
 }
 
@@ -268,7 +294,7 @@ vec4 smin( vec4 a, vec4 b, float k )
 const float PHI = 1.61803398875;
 
 #define sqrt2i 0.7071067811865475
-
+#define sqrt38 0.6123724356957945
 
 Model map(vec3 p) {
 
@@ -317,17 +343,44 @@ Model map(vec3 p) {
         //float ridge = sin(a * PI * 2. * 5. * e) * .5 + .5;
         //ridge *= (sin(w * 2. * e * PI - PI * .5) * .5 + .5) * smoothstep(1., .9, abs(w));
 
-        #if 0
-        if (d2 < .5)
+        #if 1
+        if (d2 < 5. * scl)
         {
-            vec3 sp = normalize(sfold(p, .00005));
             float subd = mix(4., 2., t);
-            vec3 point = geodesicTri(sp, subd);
+
+            float f = 3. * subd;
+            float k = t * 2. + p.x * 2. - iTime;
+            vec3 np = normalize(p);
+            vec3 vv = sin(vec3(
+                dot(np, vec3(1,0,0)),
+                dot(np, vec3(0,1,0)),
+                dot(np, vec3(0,0,1))
+            ) * f + PI * .5);
+            float v = vv.x * vv.y * vv.z;
+
+            //v += sin(k) * .5;
+
+            float separate = .2 + v * .2;
+
+            separate += sin(k) * .15;
+
+            vec3 sp = normalize(sfold(p, .00005));
+            vec3 point = geodesicTri(sp, subd, separate);
             float ridge = smoothstep(1. - .03 / subd, 1.005, dot(sp, point));
 
-            ridge *= sqrt(t);
 
-            d2 -= (ridge * 2. - 1.) * 2. * scl / e;
+
+
+            ridge = smoothstep(.23, .0, length(sp - point) * subd);
+
+
+            ridge *= sqrt(t);
+          
+            d2 -= v * .2;
+            ridge -= v * .5;
+
+            d2 -= (ridge * 2. - 1.) * 1.2 * scl / e * (.8 + v * .2);
+            
 
             float ridgestep = smoothstep(.3, .8, ridge);
 
@@ -337,6 +390,10 @@ Model map(vec3 p) {
             col2 *= 1. + ridgestep * 1.;
             col2 *= t*t;
             col2 *= mix(.5, 1., ridge);
+
+            //col2 = vec3(v * .5 + .5);
+            //col2 = vec3(fract(ridge));
+
         }
         #else
             float v = 1.;
@@ -346,12 +403,12 @@ Model map(vec3 p) {
             //v *= sin(dot(normalize(p), normalize(vec3(0,1,sqrt2i))) * f + PI * .5);
             //v *= sin(dot(normalize(p), normalize(vec3(0,-1,sqrt2i))) * f + PI * .5);
             f = 10.;
-        v *= sin(dot(normalize(p), normalize(vec3(0, PHI, 1))) * f + PI * .5);
-        v *= sin(dot(normalize(p), normalize(vec3(0, -PHI, 1))) * f + PI * .5);
-        v *= sin(dot(normalize(p), normalize(vec3(1, 0, PHI))) * f + PI * .5);
-        v *= sin(dot(normalize(p), normalize(vec3(-1, 0, PHI))) * f + PI * .5);
-        v *= sin(dot(normalize(p), normalize(vec3(PHI, 1, 0))) * f + PI * .5);
-        v *= sin(dot(normalize(p), normalize(vec3(-PHI, 1, 0))) * f + PI * .5);
+        v *= sin(dot(normalize(p), normalize(vec3(0, PHI, 1))) * f + PI * .5 + iTime + pp.x * 4.);
+        v *= sin(dot(normalize(p), normalize(vec3(0, -PHI, 1))) * f + PI * .5 + iTime + pp.x * 4.);
+        v *= sin(dot(normalize(p), normalize(vec3(1, 0, PHI))) * f + PI * .5 + iTime + pp.x * 4.);
+        v *= sin(dot(normalize(p), normalize(vec3(-1, 0, PHI))) * f + PI * .5 + iTime + pp.x * 4.);
+        v *= sin(dot(normalize(p), normalize(vec3(PHI, 1, 0))) * f + PI * .5 + iTime + pp.x * 4.);
+        v *= sin(dot(normalize(p), normalize(vec3(-PHI, 1, 0))) * f + PI * .5 + iTime + pp.x * 4.);
             v *= 2.;
             
             float ridge = -v * .5 + .5;
@@ -363,6 +420,7 @@ Model map(vec3 p) {
             col2 *= 1. + ridgestep * 1.;
             col2 *= t*t;
             col2 *= mix(.5, 1., ridge);
+
 
         #endif
         
@@ -626,7 +684,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     mat3 camMat = mat3(-uu, vv, ww);
 
 
-    #if 1
+    #if 0
         vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
         vec3 origin = camPos;
     #else
@@ -737,8 +795,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     init();
 
-    time = 1.0;
+    time = 1.3;
     time = iTime;
+    time = 3.730;
 
     vec4 col = draw(fragCoord, iFrame);
 
