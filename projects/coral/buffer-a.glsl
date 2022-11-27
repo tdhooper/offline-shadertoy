@@ -387,7 +387,7 @@ Model map(vec3 p) {
 
             //ridgestep = 0.;
 
-            col2 = spectrum((t * t) * .2 + .15 + ridgestep * .1);
+            col2 = spectrum(.15 + ((t * t) * .2 + ridgestep * .1) * 1.4 - .08);
             col2 *= 1. + ridgestep * 1.;
             col2 *= t*t;
             col2 *= mix(.5, 1., ridge);
@@ -689,16 +689,20 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 vv = normalize(cross(ww,uu));
     mat3 camMat = mat3(-uu, vv, ww);
 
+    vec3 rayDir, origin;
 
-    #if 0
-        vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
-        vec3 origin = camPos;
-    #else
+
+    //if (fract(p.y * 20.) > .5)
+    if (false)
+    {
+        rayDir = normalize(camMat * vec3(p.xy, focalLength));
+        origin = camPos;
+    } else {
         camMat = inverse(mat3(vView));
-        vec3 origin = eye;
-        vec3 rayDir = normalize(camMat * vec3(p.x * fov, p.y * fov, -1.));
-      //  focalLength *= (fov * 6.);
-    #endif
+        origin = eye;
+        rayDir = normalize(camMat * vec3(p.x * fov, p.y * fov, -1.));
+        focalLength = (1. / fov);
+    }
 
     #ifdef DOF
     float fpd = .31 * focalLength;
@@ -801,9 +805,9 @@ vec4 draw(vec2 fragCoord, int frame) {
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
     }
 
-    float fogAmount = 1.0 - exp( -pathLength*.1 );
+    float fogAmount = 1.0 - exp( -pathLength*.3 );
 
-    col = mix(col, vec3(.05,.03,.2) * .5, fogAmount);
+    //col = mix(col, vec3(.01,.03,.2) * .25 + .01, fogAmount);
 
     return vec4(col, 1);
 }
