@@ -1,4 +1,4 @@
-// framebuffer drawcount: 6, tile: 1
+// framebuffer drawcount: 1, tile: 1
 
 precision highp float;
 
@@ -344,7 +344,8 @@ Model map(vec3 p) {
         //ridge *= (sin(w * 2. * e * PI - PI * .5) * .5 + .5) * smoothstep(1., .9, abs(w));
 
         #if 1
-        if (d2 < 5. * scl)
+        if (d2 < .5)
+        //if (d2 < 5. * scl)
         {
             float subd = mix(4., 2., t);
 
@@ -489,6 +490,8 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 }
 
 
+
+
 vec3 sunPos = normalize(vec3(-.5,.5,-.25)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
 vec3 sunColor = vec3(8.10,6.00,4.20) * 4.5;
@@ -502,27 +505,30 @@ vec3 env(vec3 dir, bool includeSun) {
 struct Hit {
     Model model;
     vec3 pos;
+    float rayLength;
 };
 
 Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
 
-    vec3 rayPosition;
+    vec3 rayPosition = origin;
     float rayLength, dist = 0.;
     Model model;
 
-    for (int i = 0; i < 400; i++) {
+    for (int i = 0; i < 200; i++) {
         rayPosition = origin + rayDirection * rayLength;
         model = map(rayPosition);
         rayLength += model.d * understep;
 
-        if (model.d < .0002) break;
+        float t = .0002;
+
+        if (model.d < t) break;
 
         if (rayLength > maxDist) {
             model.id = 0;
             break;
         }
     }
-    return Hit(model, rayPosition);
+    return Hit(model, rayPosition, rayLength);
 }
 
 
@@ -581,7 +587,7 @@ Hit walkOnSpheres(vec3 origin, vec3 normal, float startdepth, inout vec2 seed) {
         
         origin += dir * abs(model.d);
     }
-    return Hit(model, origin);
+    return Hit(model, origin, 0.);
 }
 
 vec3 sampleDirect(Hit hit, vec3 nor, vec3 throughput, inout vec2 seed) {
@@ -691,6 +697,7 @@ vec4 draw(vec2 fragCoord, int frame) {
         camMat = inverse(mat3(vView));
         vec3 origin = eye;
         vec3 rayDir = normalize(camMat * vec3(p.x * fov, p.y * fov, -1.));
+      //  focalLength *= (fov * 6.);
     #endif
 
     #ifdef DOF
@@ -706,6 +713,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 throughput = vec3(1);
     vec3 bgCol = skyColor;
     bool doSpecular = true;
+    float pathLength = 0.;
 
     #ifndef PREVIEW
         const int MAX_BOUNCE = 3;
@@ -715,8 +723,13 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
-        hit = march(origin, rayDir, 10., .5);
-   
+        hit = march(origin, rayDir, 3., 1.);
+
+        //if (bounce == 0)
+        {
+        pathLength += hit.rayLength;
+        }
+
         if (hit.model.id == 0)
         {
             if (bounce > 0 && ! doSpecular)
@@ -787,6 +800,10 @@ vec4 draw(vec2 fragCoord, int frame) {
         // offset from sufrace https://www.shadertoy.com/view/lsXGzH
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
     }
+
+    float fogAmount = 1.0 - exp( -pathLength*.1 );
+
+    col = mix(col, vec3(.05,.03,.2) * .5, fogAmount);
 
     return vec4(col, 1);
 }
