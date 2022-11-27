@@ -386,10 +386,9 @@ Model map(vec3 p) {
             float ridgestep = smoothstep(.3, .8, ridge);
 
             //ridgestep = 0.;
-
-            col2 = spectrum(.15 + ((t * t) * .2 + ridgestep * .1) * 1.4 - .08);
+            col2 = spectrum(((t * t) * .2 + ridgestep * .1) + .15);
             col2 *= 1. + ridgestep * 1.;
-            col2 *= t*t;
+            col2 *= t * t;
             col2 *= mix(.5, 1., ridge);
 
             //col2 = vec3(v * .5 + .5);
@@ -492,14 +491,14 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 
 
 
-vec3 sunPos = normalize(vec3(-.5,.5,-.25)) * 100.;
+vec3 sunPos = normalize(vec3(-.0,1.5,-.0)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
 vec3 sunColor = vec3(8.10,6.00,4.20) * 4.5;
 
 
 vec3 env(vec3 dir, bool includeSun) {
-    vec3 col = mix(vec3(.5,.7,1) * .0, vec3(.5,.7,1) * 1., smoothstep(-.2, .2, dir.y));
-    return col * .6;
+    vec3 col = mix(vec3(0), skyColor, smoothstep(-.2, .2, dir.y));
+    return col;
 }
 
 struct Hit {
@@ -705,7 +704,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     }
 
     #ifdef DOF
-    float fpd = .31 * focalLength;
+    float fpd = .23 * focalLength;
     vec3 fp = origin + rayDir * fpd;
     origin = origin + camMat * vec3(rndunit2(seed), 0.) * .075;
     rayDir = normalize(fp - origin);
@@ -729,11 +728,6 @@ vec4 draw(vec2 fragCoord, int frame) {
    
         hit = march(origin, rayDir, 3., 1.);
 
-        //if (bounce == 0)
-        {
-        pathLength += hit.rayLength;
-        }
-
         if (hit.model.id == 0)
         {
             if (bounce > 0 && ! doSpecular)
@@ -756,7 +750,9 @@ vec4 draw(vec2 fragCoord, int frame) {
         
         if ( ! doSpecular) {
             // update the colorMultiplier
-            throughput *= material.albedo;
+
+            float fogAmount = 1.0 - exp( -hit.rayLength * .4 );
+            throughput *= mix(material.albedo, vec3(.01,.03,.2) * .125, fogAmount);
         }
 
         if (doSSS) {
@@ -804,10 +800,6 @@ vec4 draw(vec2 fragCoord, int frame) {
         // offset from sufrace https://www.shadertoy.com/view/lsXGzH
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
     }
-
-    float fogAmount = 1.0 - exp( -pathLength*.3 );
-
-    //col = mix(col, vec3(.01,.03,.2) * .25 + .01, fogAmount);
 
     return vec4(col, 1);
 }
