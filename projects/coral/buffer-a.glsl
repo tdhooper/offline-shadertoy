@@ -491,9 +491,9 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 
 
 
-vec3 sunPos = normalize(vec3(-.0,1.5,-.0)) * 100.;
+vec3 sunPos = normalize(vec3(-.5,1.5,-.2)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
-vec3 sunColor = vec3(8.10,6.00,4.20) * 4.5;
+vec3 sunColor = vec3(10.10,6.00,4.20) * 5.5;
 
 
 vec3 env(vec3 dir, bool includeSun) {
@@ -704,7 +704,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     }
 
     #ifdef DOF
-    float fpd = .23 * focalLength;
+    float fpd = .275 * focalLength;
     vec3 fp = origin + rayDir * fpd;
     origin = origin + camMat * vec3(rndunit2(seed), 0.) * .075;
     rayDir = normalize(fp - origin);
