@@ -327,14 +327,19 @@ Model map(vec3 p) {
 
         //vec2 anim = sin(iTime * vec2(1., 2.) + (t * (vec2(2., 1.) + vec2(0., 1.)) * PI * 2.));
     
-        vec2 anim = sin(time * .5 - e * .5 + PI * -4. + vec2(0,.25) * PI) * (t * 1.);
+        float at = 4.440;
+        vec2 anim = sin(at * .5 - e * .5 + PI * -4. + vec2(0,.25) * PI) * (t * 1.);
         //anim *= 0.;
-        anim += sin(time * (1. + PHI) - e * .5 + t * PI * 5. + vec2(0,.25) * PI) * .2 * (t * t * 5.);
+        anim += sin(at * (1. + PHI) - e * .5 + t * PI * 5. + vec2(0,.25) * PI) * .2 * (t * t * 5.);
+
+        anim += sin(time * PI * 2. + t * PI * 15. + vec2(.5,.25) * PI) * .05 * (1. - t);
 
         anim *= t * t * 5.;
     
         float d2 = length(p * vec3(1,1,1)) - scl * 5.;
         vec3 col2 = vec3(0);
+
+        d2 += sin(time * PI * 6. + t * t * 10.) * .01;
         
         float e = mix(4., 3., t)*.666;
         
@@ -350,8 +355,7 @@ Model map(vec3 p) {
             float subd = mix(4., 2., t);
 
             float f = 3. * subd;
-            float kk = pp.z * 2. + p.z * 4. - iTime * -5.;
-            float k = sin(kk);
+            float k = sin(pp.z * -2. + dot(p, vec3(-.5,0,1)) * 4. + time * PI * 2.);
             vec3 np = normalize(p);
             vec3 vv = sin(vec3(
                 dot(np, vec3(1,0,0)),
@@ -815,8 +819,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     init();
 
     time = 1.3;
-    time = iTime;
-    time = 3.730;
+    time = fract(iTime);
+    //time = 3.730;
 
     vec4 col = draw(fragCoord, iFrame);
 
