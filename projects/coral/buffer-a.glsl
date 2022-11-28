@@ -350,7 +350,8 @@ Model map(vec3 p) {
             float subd = mix(4., 2., t);
 
             float f = 3. * subd;
-            float k = t * 2. + p.x * 2. - iTime;
+            float kk = pp.z * 2. + p.z * 4. - iTime * -5.;
+            float k = sin(kk);
             vec3 np = normalize(p);
             vec3 vv = sin(vec3(
                 dot(np, vec3(1,0,0)),
@@ -359,16 +360,17 @@ Model map(vec3 p) {
             ) * f + PI * .5);
             float v = vv.x * vv.y * vv.z;
 
-            //v += sin(k) * .5;
-
-            float separate = .2 + v * .2;
-
-            separate += sin(k) * .15;
+            //v += k * .5;
 
             vec3 sp = normalize(sfold(p, .00005));
+
+            //k = (step(0.0, sin(sp.x * 10. + iTime)) * 2. - 1.);
+
+            float separate = .2 + v * .2;
+            separate += k * .15;
+
             vec3 point = geodesicTri(sp, subd, separate);
             float ridge = smoothstep(1. - .03 / subd, 1.005, dot(sp, point));
-
 
 
 
@@ -383,16 +385,18 @@ Model map(vec3 p) {
             d2 -= (ridge * 2. - 1.) * 1.2 * scl / e * (.8 + v * .2);
             
 
-            float ridgestep = smoothstep(.3, .8, ridge);
+            float ridgestep = ridge;
 
             //ridgestep = 0.;
             col2 = spectrum(((t * t) * .2 + ridgestep * .1) + .15);
-            col2 *= 1. + ridgestep * 1.;
+            col2 *= 1. + ridgestep * mix(.5, 1.5, k * .5 + .5);
             col2 *= t * t;
             col2 *= mix(.5, 1., ridge);
 
             //col2 = vec3(v * .5 + .5);
             //col2 = vec3(fract(ridge));
+
+            //col2 = vec3(k);
 
         }
         #else
@@ -420,6 +424,8 @@ Model map(vec3 p) {
             col2 *= 1. + ridgestep * 1.;
             col2 *= t*t;
             col2 *= mix(.5, 1., ridge);
+
+            
 
 
         #endif
