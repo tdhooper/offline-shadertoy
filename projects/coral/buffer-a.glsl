@@ -880,7 +880,8 @@ vec4 draw(vec2 fragCoord, int frame) {
     #ifdef DOF
     float fpd = .275 * focalLength;
     vec3 fp = origin + rayDir * fpd;
-    origin = origin + camMat * vec3(rndunit2(seed), 0.) * .075;
+    vec2 off = rndunit2(seed);
+    origin = origin + camMat * vec3(off, 0.) * .075;
     rayDir = normalize(fp - origin);
     #endif
 
@@ -895,6 +896,10 @@ vec4 draw(vec2 fragCoord, int frame) {
     col = mix(col, dust.rgb, dust.a);
 
     //col = vec3(1) * depth * .1;
+
+    float lo = length(off);
+    col *= mix(vec3(1,1,0), vec3(0,0,1), lo * lo * lo) * 2.;
+    //col *= spectrum(lo * lo) * 1.5;
 
     return vec4(col, 1);
 }
