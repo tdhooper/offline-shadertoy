@@ -485,6 +485,72 @@ Model map(vec3 p) {
     return Model(d, p, col, 1);
 }
 
+
+//========================================================
+// Dust
+//========================================================
+
+vec3 sunPos = normalize(vec3(-.5,1.5,-.2)) * 100.;
+vec3 skyColor = vec3(0.50,0.70,1.00);
+vec3 sunColor = vec3(10.10,6.00,4.20) * 5.5;
+
+
+vec3 hash33(vec3 p3)
+{
+	p3 = fract(p3 * vec3(.1031, .1030, .0973));
+    p3 += dot(p3, p3.yxz+33.33);
+    return fract((p3.xxy + p3.yxx)*p3.zyx);
+}
+float hash13(vec3 p3)
+{
+	p3  = fract(p3 * .1031);
+    p3 += dot(p3, p3.zyx + 31.32);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+vec4 traceDust(vec3 ro, vec3 rd, float depth) {
+    float scl = 20.;
+
+    ro *= scl;
+
+    vec3 p = floor(ro + rd * .0) + .5;
+
+	vec3 dRd = 1./abs(rd); // 1./max(abs(rd), vec3(.0001));
+	vec3 srd = sign(rd);
+    vec3 side = dRd*(srd*(p - ro) + .5);
+    
+    vec3 mask = vec3(0);
+	
+    float d = 0.;    
+    
+	for (int i = 0; i < 60; i++) {		
+        vec3 coord = floor(p);
+        vec3 c = coord + .5;
+
+        if (distance(ro, coord) / scl >= depth) {
+            break;
+        }
+        
+        vec3 h = hash33(coord);
+        float r = mix(.0, .025, hash13(h));
+        c += (h * 2. - 1.) * (.5 - r);
+
+        mask = step(side, side.yzx)*(1. - step(side.zxy, side));
+		side += mask*dRd;
+		p += mask*srd;
+
+        if (i > 0)
+        {
+            float dd = distance(c, ro + rd * dot(rd, c - ro));
+            float dc = distance(ro, c) / scl;
+            float fogFalloff = exp(-dc * .4);
+            d += step(dd, r) * .25 * fogFalloff;
+        }
+    }
+    
+    return vec4(mix(sunColor * .02, skyColor, .75), d);// * mix(sunColor * .02, skyColor, .75) * 2.;
+}
+
 //========================================================
 // Rendering
 //========================================================
@@ -501,9 +567,6 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 
 
 
-vec3 sunPos = normalize(vec3(-.5,1.5,-.2)) * 100.;
-vec3 skyColor = vec3(0.50,0.70,1.00);
-vec3 sunColor = vec3(10.10,6.00,4.20) * 5.5;
 
 
 vec3 env(vec3 dir, bool includeSun) {
@@ -670,55 +733,8 @@ vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, inout vec2 se
     return col;
 }
 
-//const float sqrt3 = 1.7320508075688772;
-
-// main path tracing loop, based on yx's
-// https://www.shadertoy.com/view/ts2cWm
-// with a bit of demofox's
-// https://www.shadertoy.com/view/WsBBR3
-vec4 draw(vec2 fragCoord, int frame) {
-
-    vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
-    
-    p *= .85;
-
-    vec2 seed = hash22(fragCoord + (float(frame)) * sqrt3);
-    
-    // jitter for antialiasing
-    p += 2. * (seed - .5) / iResolution.xy;
-
+vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
     vec3 col = vec3(0);
-
-    float focalLength = 6.;
-    vec3 camPos = vec3(0,0,.4) * focalLength * 1.;
-    vec3 camTar = vec3(0);
-    
-    vec3 ww = normalize(camTar - camPos);
-    vec3 uu = normalize(cross(vec3(0,1,0),ww));
-    vec3 vv = normalize(cross(ww,uu));
-    mat3 camMat = mat3(-uu, vv, ww);
-
-    vec3 rayDir, origin;
-
-
-    //if (fract(p.y * 20.) > .5)
-    if (false)
-    {
-        rayDir = normalize(camMat * vec3(p.xy, focalLength));
-        origin = camPos;
-    } else {
-        camMat = inverse(mat3(vView));
-        origin = eye;
-        rayDir = normalize(camMat * vec3(p.x * fov, p.y * fov, -1.));
-        focalLength = (1. / fov);
-    }
-
-    #ifdef DOF
-    float fpd = .275 * focalLength;
-    vec3 fp = origin + rayDir * fpd;
-    origin = origin + camMat * vec3(rndunit2(seed), 0.) * .075;
-    rayDir = normalize(fp - origin);
-    #endif
 
     Hit hit;
     vec3 nor, ref;
@@ -738,10 +754,15 @@ vec4 draw(vec2 fragCoord, int frame) {
    
         hit = march(origin, rayDir, 3., 1.);
 
+        if (bounce == 0) {
+            depth = hit.rayLength;
+        }
+
         if (hit.model.id == 0)
         {
             if (bounce > 0 && ! doSpecular)
                 col += env(rayDir, doSpecular) * throughput;
+            depth = 1e12;
             break;
         }
 
@@ -810,6 +831,70 @@ vec4 draw(vec2 fragCoord, int frame) {
         // offset from sufrace https://www.shadertoy.com/view/lsXGzH
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
     }
+
+    return col;
+}
+
+//const float sqrt3 = 1.7320508075688772;
+
+// main path tracing loop, based on yx's
+// https://www.shadertoy.com/view/ts2cWm
+// with a bit of demofox's
+// https://www.shadertoy.com/view/WsBBR3
+vec4 draw(vec2 fragCoord, int frame) {
+
+    vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
+    
+    p *= .85;
+
+    vec2 seed = hash22(fragCoord + (float(frame)) * sqrt3);
+    
+    // jitter for antialiasing
+    p += 2. * (seed - .5) / iResolution.xy;
+
+
+    float focalLength = 6.;
+    vec3 camPos = vec3(0,0,.4) * focalLength * 1.;
+    vec3 camTar = vec3(0);
+    
+    vec3 ww = normalize(camTar - camPos);
+    vec3 uu = normalize(cross(vec3(0,1,0),ww));
+    vec3 vv = normalize(cross(ww,uu));
+    mat3 camMat = mat3(-uu, vv, ww);
+
+    vec3 rayDir, origin;
+
+
+    //if (fract(p.y * 20.) > .5)
+    if (false)
+    {
+        rayDir = normalize(camMat * vec3(p.xy, focalLength));
+        origin = camPos;
+    } else {
+        camMat = inverse(mat3(vView));
+        origin = eye;
+        rayDir = normalize(camMat * vec3(p.x * fov, p.y * fov, -1.));
+        focalLength = (1. / fov);
+    }
+
+    #ifdef DOF
+    float fpd = .275 * focalLength;
+    vec3 fp = origin + rayDir * fpd;
+    origin = origin + camMat * vec3(rndunit2(seed), 0.) * .075;
+    rayDir = normalize(fp - origin);
+    #endif
+
+    vec3 col = vec3(0);
+    
+    float depth = 0.;
+
+    col = traceGeo(origin, rayDir, seed, depth);    
+
+    vec4 dust = traceDust(origin, rayDir, depth);
+
+    col = mix(col, dust.rgb, dust.a);
+
+    //col = vec3(1) * depth * .1;
 
     return vec4(col, 1);
 }

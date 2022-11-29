@@ -16,8 +16,8 @@ const regl = require('regl')({
     'ext_shader_texture_lod',
     'webgl_color_buffer_float',
   ],
-  //pixelRatio: .5,
-  pixelRatio: 1,
+  pixelRatio: .5,
+  //pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
