@@ -513,7 +513,7 @@ vec4 traceDust(vec3 ro, vec3 rd, float depth) {
 
     ro *= scl;
 
-    vec3 p = floor(ro + rd * .0) + .5;
+    vec3 p = floor(ro + rd * 5.) + .5;
 
 	vec3 dRd = 1./abs(rd); // 1./max(abs(rd), vec3(.0001));
 	vec3 srd = sign(rd);
@@ -532,7 +532,7 @@ vec4 traceDust(vec3 ro, vec3 rd, float depth) {
         }
         
         vec3 h = hash33(coord);
-        float r = mix(.0, .025, hash13(h));
+        float r = mix(.0, .03, pow(hash13(h), 3.));
         c += (h * 2. - 1.) * (.5 - r);
 
         mask = step(side, side.yzx)*(1. - step(side.zxy, side));
@@ -548,7 +548,7 @@ vec4 traceDust(vec3 ro, vec3 rd, float depth) {
         }
     }
     
-    return vec4(mix(sunColor * .02, skyColor, .75), d);// * mix(sunColor * .02, skyColor, .75) * 2.;
+    return vec4(skyColor, d);// * mix(sunColor * .02, skyColor, .75) * 2.;
 }
 
 //========================================================
@@ -740,7 +740,7 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
     vec3 nor, ref;
     Material material;
     vec3 throughput = vec3(1);
-    vec3 bgCol = skyColor;
+    vec3 bgCol = vec3(.01,.03,.2) * .15;
     bool doSpecular = true;
     float pathLength = 0.;
 
@@ -760,8 +760,11 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
 
         if (hit.model.id == 0)
         {
-            if (bounce > 0 && ! doSpecular)
+            if (bounce > 0 && ! doSpecular) {
                 col += env(rayDir, doSpecular) * throughput;
+            } else {
+                col = bgCol;
+            }
             depth = 1e12;
             break;
         }
@@ -783,7 +786,7 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
             // update the colorMultiplier
 
             float fogAmount = 1.0 - exp( -hit.rayLength * .4 );
-            throughput *= mix(material.albedo, vec3(.01,.03,.2) * .125, fogAmount);
+            throughput *= mix(material.albedo, bgCol, fogAmount);
         }
 
         if (doSSS) {
