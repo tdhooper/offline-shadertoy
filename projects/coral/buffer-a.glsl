@@ -525,15 +525,22 @@ vec4 traceDust(vec3 ro, vec3 rd, float depth) {
     
 	for (int i = 0; i < 60; i++) {		
         vec3 coord = floor(p);
+
         vec3 c = coord + .5;
 
         if (distance(ro, coord) / scl >= depth) {
             break;
         }
         
-        vec3 h = hash33(coord);
+        vec3 hc = coord;
+        vec3 h = hash33(hc);
         float r = mix(.0, .03, pow(hash13(h), 3.));
-        c += (h * 2. - 1.) * (.5 - r);
+        float w = .1;
+        c += (h * 2. - 1.) * (.5 - r - w);
+
+        vec3 n = vec3(.5,0,.25);
+        float a = time * PI * 2. + dot(hc, n) * .5;
+        c += vec3(cos(a), sin(-a) * .5, cos(a)) * w * sin((hc.z + PI * .9) * .2);
 
         mask = step(side, side.yzx)*(1. - step(side.zxy, side));
 		side += mask*dRd;
