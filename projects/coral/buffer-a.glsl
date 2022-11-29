@@ -383,8 +383,8 @@ Model map(vec3 p) {
 
             ridge *= sqrt(t);
           
-            d2 -= v * .2;
-            ridge -= v * .5;
+            d2 -= v * .05;
+            ridge -= v * .333;
 
             d2 -= (ridge * 2. - 1.) * 1.2 * scl / e * (.8 + v * .2);
             
@@ -392,8 +392,8 @@ Model map(vec3 p) {
             float ridgestep = ridge;
 
             //ridgestep = 0.;
-            col2 = spectrum(((t * t) * .2 + ridgestep * .1) + .15);
-            col2 *= 1. + ridgestep * mix(.5, 1.5, k * .5 + .5);
+            col2 = spectrum(((t * t) * .2 + ridgestep * .11) + .14);
+            col2 *= 1. + ridgestep * mix(.5, 2., k * .5 + .5);
             col2 *= t * t;
             col2 *= mix(.5, 1., ridge);
 
@@ -884,7 +884,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     float fpd = .275 * focalLength;
     vec3 fp = origin + rayDir * fpd;
     vec2 off = rndunit2(seed);
-    origin = origin + camMat * vec3(off, 0.) * .075;
+    origin = origin + camMat * vec3(off, 0.) * .15;
     rayDir = normalize(fp - origin);
     #endif
 
@@ -901,7 +901,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     //col = vec3(1) * depth * .1;
 
     float lo = length(off);
-    col *= mix(vec3(1,1,0), vec3(0,0,1), lo * lo * lo) * 2.;
+    col *= mix(vec3(1,1,0), vec3(0,0,1), lo * lo) * 2.;
     //col *= spectrum(lo * lo) * 1.5;
 
     return vec4(col, 1);
