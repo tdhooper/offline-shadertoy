@@ -801,7 +801,7 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
             origin = hit.pos;
             
             seed = hash22(seed);
-            hit = walkOnSpheres(origin, nor, .1, seed);
+            hit = walkOnSpheres(origin, nor, .075, seed);
             nor = calcNormal(hit.pos);
 
             float extinctionDist = distance(origin, hit.pos) * 10.;
