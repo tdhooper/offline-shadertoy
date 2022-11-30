@@ -372,6 +372,7 @@ Model map(vec3 p) {
 
             float separate = .2 + v * .2;
             separate += k * .15;
+            separate += .2;
 
             vec3 point = geodesicTri(sp, subd, separate);
             float ridge = smoothstep(1. - .03 / subd, 1.005, dot(sp, point));
@@ -392,8 +393,8 @@ Model map(vec3 p) {
             float ridgestep = ridge;
 
             //ridgestep = 0.;
-            col2 = spectrum(((t * t * t) * .4 + ridgestep * .1) - .03) * .5;
-            col2 *= 1. + ridgestep * mix(.5, 2., k * .5 + .5) * 3.;
+            col2 = spectrum(((t * t * t) * .4 + ridgestep * .1) - .03) * .66;
+            col2 *= 1. + ridgestep * mix(.5, 2., k * .5 + .5) * 2.;
             col2 *= t * t;
             col2 *= mix(.5, 1., ridge);
 
@@ -556,7 +557,7 @@ vec4 traceDust(vec3 ro, vec3 rd, float depth) {
         }
     }
     
-    return vec4(skyColor, d);// * mix(sunColor * .02, skyColor, .75) * 2.;
+    return vec4(skyColor * skyColor, d);// * mix(sunColor * .02, skyColor, .75) * 2.;
 }
 
 //========================================================
@@ -908,10 +909,11 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     //col = vec3(1) * depth * .1;
 
-    
+    #ifdef DOF
     float lo = length(off);
     col = mix(col, col * mix(vec3(1,1,0), vec3(0,0,1), lo * lo) * 2., .5);
     //col *= spectrum(lo * lo) * 1.5;
+    #endif
 
     return vec4(col, 1);
 }
