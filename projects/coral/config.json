@@ -1,5 +1,5 @@
 {
-  "id": "coral-12",
+  "id": "coral-13",
   "camera": {
     "rotation": [
       -0.06765668839216232,
@@ -132,10 +132,10 @@
   },
   "fov": 4,
   "capture": {
-    "fps": 30,
-    "seconds": 12,
-    "width": 2160,
-    "height": 2700,
-    "startFrame": 276
+    "fps": 60,
+    "seconds": 1,
+    "width": 600,
+    "height": 600,
+    "startFrame": 0
   }
 }
