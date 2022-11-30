@@ -1,4 +1,4 @@
-// framebuffer drawcount: 1, tile: 1
+// framebuffer drawcount: 40, tile: 1
 
 precision highp float;
 
@@ -491,8 +491,9 @@ Model map(vec3 p) {
 //========================================================
 
 vec3 sunPos = normalize(vec3(-.5,1.5,-.2)) * 100.;
+//vec3 sunPos = normalize(vec3(-1.5,1.5,-.7)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
-vec3 sunColor = vec3(10.10,6.00,4.20) * 5.5;
+vec3 sunColor = vec3(10.10,6.00,4.20) * 5.;
 
 
 vec3 hash33(vec3 p3)
@@ -888,7 +889,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     }
 
     #ifdef DOF
-    float fpd = .275 * focalLength;
+    float fpd = .277 * focalLength;
     vec3 fp = origin + rayDir * fpd;
     vec2 off = rndunit2(seed);
     origin = origin + camMat * vec3(off, 0.) * .15;
@@ -897,7 +898,7 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     vec3 col = vec3(0);
     
-    float depth = 0.;
+    float depth = 1e12;
 
     col = traceGeo(origin, rayDir, seed, depth);    
 
@@ -907,8 +908,9 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     //col = vec3(1) * depth * .1;
 
+    
     float lo = length(off);
-    col *= mix(vec3(1,1,0), vec3(0,0,1), lo * lo) * 2.;
+    col = mix(col, col * mix(vec3(1,1,0), vec3(0,0,1), lo * lo) * 2., .5);
     //col *= spectrum(lo * lo) * 1.5;
 
     return vec4(col, 1);
