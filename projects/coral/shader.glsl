@@ -57,11 +57,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
   bool a = uv.x > .5;
   a = true;
 
-    vec3 uGain = vec3(.01 * vec3(15,-15,-15)) + .1;
-    vec3 uLift = vec3(.0,.0025,-.005) * .5 + .005;
+    vec3 uGain = vec3(.01 * vec3(15,-15,-15)) + .15;
+    vec3 uLift = vec3(.0,.0025,-.005) * .5 + .0075;
     vec3 uOffset = vec3(-.005 * vec3(1,2,8)) * .5;
     vec3 uGamma = vec3(1./2.2);
-    float uTemperature = 45.;
+    float uTemperature = 55.;
     col *= vec3(1.0) / colorFromKelvin(uTemperature);
     if (a) col = pow(max(vec3(0.0), col * (1.0 + uGain - uLift) + uLift + uOffset), max(vec3(0.0), 1.0 - uGamma));
     col = aces(col);

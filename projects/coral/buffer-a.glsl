@@ -930,7 +930,7 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     #ifdef DOF
     float lo = length(off);
-    col = mix(col, col * mix(vec3(1,1,0), vec3(0,0,1), lo * lo) * 2., .5);
+    col = mix(col, col * mix(vec3(1,1,0), vec3(0,0,1), lo * lo) * 2., .666);
     //col *= spectrum(lo * lo) * 1.5;
     #endif
 
