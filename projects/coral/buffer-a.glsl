@@ -749,7 +749,7 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
     vec3 nor, ref;
     Material material;
     vec3 throughput = vec3(1);
-    vec3 bgCol = vec3(.01,.03,.2) * .15;
+    vec3 bgCol = vec3(.01,.01,.2) * .15;
     bool doSpecular = true;
     float pathLength = 0.;
 
