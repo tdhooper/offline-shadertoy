@@ -1,4 +1,4 @@
-// framebuffer drawcount: 40, tile: 1
+// framebuffer drawcount: 150, tile: 1
 
 precision highp float;
 
@@ -332,14 +332,14 @@ Model map(vec3 p) {
         //anim *= 0.;
         anim += sin(at * (1. + PHI) - e * .5 + t * PI * 5. + vec2(0,.25) * PI) * .2 * (t * t * 5.);
 
-        anim += sin(time * PI * 2. + t * PI * 15. + vec2(.5,.25) * PI) * .05 * (1. - t);
+        anim += sin(time * PI * 2. + t * PI * 15. + vec2(.5,.25) * PI) * .1 * (1. - t);
 
         anim *= t * t * 5.;
     
         float d2 = length(p * vec3(1,1,1)) - scl * 5.;
         vec3 col2 = vec3(0);
 
-        d2 += sin(time * PI * 6. + t * t * 10.) * .01;
+        d2 += sin(time * PI * 6. + t * t * 10.) * .015;
         
         float e = mix(4., 3., t)*.666;
         
@@ -355,7 +355,7 @@ Model map(vec3 p) {
             float subd = mix(4., 2., t);
 
             float f = 3. * subd;
-            float k = sin(pp.z * -2. + dot(p, vec3(-.5,0,1)) * 4. + time * PI * 2.);
+            float k = sin(length(sin(pp * 5.)) * -10. + dot(p + sin(p * 6.) * 3., vec3(-.0,.5,0)) * 1. + time * PI * 2.);
             vec3 np = normalize(p);
             vec3 vv = sin(vec3(
                 dot(np, vec3(1,0,0)),
@@ -847,6 +847,19 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
     return col;
 }
 
+mat3 rotX(float a) {
+    return mat3(1,0,0, 0,cos(a),-sin(a), 0,sin(a),cos(a));
+}
+
+mat3 rotY(float a) {
+    return mat3(cos(a),0,sin(a), 0,1,0, -sin(a),0,cos(a));
+}
+
+mat3 rotZ(float a) {
+    return mat3(cos(a),-sin(a),0, sin(a),cos(a),0, 0,0,1);
+}
+
+
 //const float sqrt3 = 1.7320508075688772;
 
 // main path tracing loop, based on yx's
@@ -885,9 +898,15 @@ vec4 draw(vec2 fragCoord, int frame) {
     } else {
         camMat = inverse(mat3(vView));
         origin = eye;
+
+        //origin += camMat * vec3(sin(time * PI * 2.), cos(time * PI * 2.), 0) * .001;
+        //camMat *= rotX(sin(time * PI * 4.) * -.001) * rotY(cos(time * PI * 2.) * -.0005);
+
+
         rayDir = normalize(camMat * vec3(p.x * fov, p.y * fov, -1.));
         focalLength = (1. / fov);
     }
+
 
     #ifdef DOF
     float fpd = .277 * focalLength;
