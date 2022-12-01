@@ -393,7 +393,7 @@ Model map(vec3 p) {
             float ridgestep = ridge;
 
             //ridgestep = 0.;
-            col2 = spectrum(((t * t * t) * .4 + ridgestep * .1) - .03) * .66;
+            col2 = spectrum(((t * t * t) * .3 + ridgestep * .175) - .00) * .66;
             col2 *= 1. + ridgestep * mix(.5, 2., k * .5 + .5) * 2.;
             col2 *= t * t;
             col2 *= mix(.5, 1., ridge);
