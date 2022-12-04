@@ -1,4 +1,4 @@
-// framebuffer drawcount: 5, tile: 1
+// framebuffer drawcount: 1, tile: 1
 
 precision highp float;
 
@@ -383,7 +383,7 @@ float offs = scl * 7.;
             float separate = .2 + v * .2;
             separate += k * .15;
             separate += .2;
-
+            
             vec3 gt = geodesicTri(sp, subd, separate);
 
            // t = 1.;
@@ -414,7 +414,7 @@ float offs = scl * 7.;
             col2 = mix(col2, mix(spectrum(1.3 + .175), vec3(1), .5) * 3., ridgestep);
             col2 *= ts * ts;
             col2 *= mix(.5, 1., ridge);
-            col2 = mix(col2, vec3(0), inside);
+            //col2 = mix(col2, vec3(0), inside);
 
             //col2 = vec3(v * .5 + .5);
             //col2 = vec3(fract(ridge));
@@ -505,7 +505,7 @@ float offs = scl * 7.;
 vec3 sunPos = normalize(vec3(-.5,1.5,-.2)) * 100.;
 //vec3 sunPos = normalize(vec3(-1.5,1.5,-.7)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
-vec3 sunColor = vec3(10.10,6.00,4.20) * 5.;
+vec3 sunColor = vec3(8.10,6.00,4.20) * 6.;
 
 
 vec3 hash33(vec3 p3)
@@ -760,7 +760,7 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
     vec3 nor, ref;
     Material material;
     vec3 throughput = vec3(1);
-    vec3 bgCol = vec3(.01,.01,.2) * .15;
+    vec3 bgCol = vec3(.00,.04,.2) * .15;
     bool doSpecular = true;
     float pathLength = 0.;
 
