@@ -295,13 +295,11 @@ const float PHI = 1.61803398875;
 #define sqrt2i 0.7071067811865475
 #define sqrt38 0.6123724356957945
 
-
 Model map(vec3 p) {
 
 
     vec3 pp = p;
     p.y += .3;
-    
     
     pR(p.xz, .3);
     pR(p.yz, .4);
@@ -320,35 +318,29 @@ Model map(vec3 p) {
     float scl = 1.;
     vec4 dcol = vec4(1e20,0.0,0.0,0.0);
 
-
-
     float e = p.x * 1.;
     
     for (int i = 0; i < iter; i++) {
-
-
-float offs = scl * 7.;
-        
-        
-
-        float t = float(i) / max(1., float(iter - 1));
+    
+        float t = float(i) / float(iter - 1);
 
         //vec2 anim = sin(iTime * vec2(1., 2.) + (t * (vec2(2., 1.) + vec2(0., 1.)) * PI * 2.));
     
+        float at = 4.440;
+        vec2 anim = sin(at * .5 - e * .5 + PI * -4. + vec2(0,.25) * PI) * (t * 1.);
+        //anim *= 0.;
+        anim += sin(at * (1. + PHI) - e * .5 + t * PI * 5. + vec2(0,.25) * PI) * .2 * (t * t * 5.);
+
+        anim += sin(time * PI * 2. + t * PI * 15. + vec2(.5,.25) * PI) * .1 * (1. - t);
+
+        anim *= t * t * 5.;
     
-        vec3 dp = p;
-        if (i > 0)
-        {
-         //   p.x = mix(p.x, min(p.x + offs, 0.), step(p.x, 0.));
-        }
-
         float d2 = length(p * vec3(1,1,1)) - scl * 5.;
-        p = dp;
-
         vec3 col2 = vec3(0);
 
         d2 += sin(time * PI * 6. + t * t * 10.) * .015;
         
+        float e = mix(4., 3., t)*.666;
         
         //float a = (atan(p.y, p.z) / PI) * .5 + .5;
         //float w = (dot(normalize(p), vec3(1,0,0)));
@@ -413,6 +405,33 @@ float offs = scl * 7.;
             //col2 = vec3(k);
 
         }
+        #else
+            float v = 1.;
+            float f = mix(16., 11., t);
+            //v *= sin(dot(normalize(p), normalize(vec3(1,0,-sqrt2i))) * f + PI * .5);
+            //v *= sin(dot(normalize(p), normalize(vec3(-1,0,-sqrt2i))) * f + PI * .5);
+            //v *= sin(dot(normalize(p), normalize(vec3(0,1,sqrt2i))) * f + PI * .5);
+            //v *= sin(dot(normalize(p), normalize(vec3(0,-1,sqrt2i))) * f + PI * .5);
+            f = 10.;
+        v *= sin(dot(normalize(p), normalize(vec3(0, PHI, 1))) * f + PI * .5 + iTime + pp.x * 4.);
+        v *= sin(dot(normalize(p), normalize(vec3(0, -PHI, 1))) * f + PI * .5 + iTime + pp.x * 4.);
+        v *= sin(dot(normalize(p), normalize(vec3(1, 0, PHI))) * f + PI * .5 + iTime + pp.x * 4.);
+        v *= sin(dot(normalize(p), normalize(vec3(-1, 0, PHI))) * f + PI * .5 + iTime + pp.x * 4.);
+        v *= sin(dot(normalize(p), normalize(vec3(PHI, 1, 0))) * f + PI * .5 + iTime + pp.x * 4.);
+        v *= sin(dot(normalize(p), normalize(vec3(-PHI, 1, 0))) * f + PI * .5 + iTime + pp.x * 4.);
+            v *= 2.;
+            
+            float ridge = -v * .5 + .5;
+            //ridge = mix(ridge, ridge * ridge, .25);
+            ridge *= sqrt(t);
+            d2 -= (ridge * 2. - 1.) * 3. * scl / e;
+            float ridgestep = smoothstep(.3, .8, ridge);
+            col2 = spectrum((t * t) * .2 + .15 + ridgestep * .1);
+            col2 *= 1. + ridgestep * 1.;
+            col2 *= t*t;
+            col2 *= mix(.5, 1., ridge);
+
+            
 
 
         #endif
@@ -421,40 +440,20 @@ float offs = scl * 7.;
     
         dcol = smin(dcol, dcol2, 4. * scl);
 
-
-        
-        if (i > 0)
+        //if (i < 10)
         {
-        
-        float t = float(i - 1) / max(1., float(iter - 1));
-        float e = mix(4., 3., t)*.666;
-
-        float at = 4.440;
-        vec2 anim = sin(at * .5 - e * .5 + PI * -4. + vec2(0,.25) * PI) * (t * 1.);
-        //anim *= 0.;
-        anim += sin(at * (1. + PHI) - e * .5 + t * PI * 5. + vec2(0,.25) * PI) * .2 * (t * t * 5.);
-
-        anim += sin(time * PI * 2. + t * PI * 15. + vec2(.5,.25) * PI) * .1 * (1. - t);
-
-        anim *= t * t * 5.;
-        
-        float fi = float(i - 1);
-        pR(p.xy, anim.x * .05 + PI * (.17 + mod(fi, 3.) * .2) * sign(mod(fi, 2.) - .5));
-        pR(p.xz, anim.y * .05 + PI * (.17 + mod(fi, 3.) * .2) * sign(mod(fi, 2.) - .5));
+            p.x = sabs(p.x,0.005*scl);
         }
-
-        p.x = sabs(p.x,0.005*scl);
-
-        p.x -= offs;
-
-/*
-        float fi = float(i);
-        pR(p.xy, anim.x * .05 + PI * (.17 + mod(fi, 3.) * .2) * sign(mod(fi, 2.) - .5));
-        pR(p.xz, anim.y * .05 + PI * (.17 + mod(fi, 3.) * .2) * sign(mod(fi, 2.) - .5));
-  */      
+        
+        p.x -= scl * (7.);
+        
         //pR(p.xy, PI * (1.3 + rnd.x * .1));
         //pR(p.xz, PI * (1.3 + rnd.y * .1));
 
+        float fi = float(i);
+
+        pR(p.xy, anim.x * .05 + PI * (.17 + mod(fi, 3.) * .2) * sign(mod(fi, 2.) - .5));
+        pR(p.xz, anim.y * .05 + PI * (.17 + mod(fi, 3.) * .2) * sign(mod(fi, 2.) - .5));
 
 
         scl *= mix(.85, .88, t);
@@ -763,7 +762,7 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
-        hit = march(origin, rayDir, 6., 1.);
+        hit = march(origin, rayDir, 3., 1.);
 
         if (bounce == 0) {
             depth = hit.rayLength;
