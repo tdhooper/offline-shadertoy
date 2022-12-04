@@ -1,4 +1,4 @@
-// framebuffer drawcount: 150, tile: 1
+// framebuffer drawcount: 1, tile: 1
 
 precision highp float;
 
@@ -27,9 +27,9 @@ void main() {
     mainImage(gl_FragColor, gl_FragCoord.xy);
 }
 #define ANIMATE
-#define SSS
-#define DOF
-//#define PREVIEW
+//#define SSS
+//#define DOF
+#define PREVIEW
 
 // Dave_Hoskins https://www.shadertoy.com/view/4djSRW
 vec2 hash22(vec2 p)
@@ -170,7 +170,7 @@ vec4 pick3(vec4 a, vec4 b, vec4 c, float u) {
 	return mix(mix(a, b, step(0.3, v)), c, step(0.6, v));
 }
 
-vec2 closestHex(vec2 p, float separate) {
+vec4 closestHex(vec2 p, float separate) {
     p = cart2tri * p;
 	vec2 pi = floor(p);
 	vec2 pf = fract(p);
@@ -193,10 +193,12 @@ vec2 closestHex(vec2 p, float separate) {
 	vec4 ab = ( mix(nn, nn.yxwz, step(pf.x, pf.y)) +
 			 vec4(pi, pi) );
 
-    vec2 hex = mix(ab.xy, ab.zw, separate * .5);
-    hex = tri2cart * hex;
+    vec2 hexA = mix(ab.xy, ab.zw, separate * .5);
+    vec2 hexB = ab.xy;
+    hexA = tri2cart * hexA;
+    hexB = tri2cart * hexB;
 
-    return hex;
+    return vec4(hexA, hexB);
 }
 
 
@@ -225,14 +227,11 @@ vec3 geodesicTri(vec3 p, float subdivisions, float separate) {
 	float uvScale = subdivisions / faceRadius;
     vec2 uv = icosahedronFaceCoordinates(p);
     uvScale /= 1.3333;
-    vec2 closest = closestHex(uv * uvScale, separate); 
-    return faceToSphere(closest / uvScale);
+    vec4 closest = closestHex(uv * uvScale, separate) / uvScale; 
+    float ridge = smoothstep(.23, .0, length(uv - closest.xy) * subdivisions);
+    float inside = smoothstep(.2, .19, length(uv - closest.zw) * subdivisions);
+    return vec3(ridge, max(0., inside - smoothstep(.25, 1., ridge)), 0.);
 }
-
-
-
-
-
 
 
 float time;
@@ -349,10 +348,10 @@ Model map(vec3 p) {
         //ridge *= (sin(w * 2. * e * PI - PI * .5) * .5 + .5) * smoothstep(1., .9, abs(w));
 
         #if 1
-        if (d2 < .5)
-        //if (d2 < 5. * scl)
+        //if (d2 < .5)
+        if (d2 < 5. * scl)
         {
-            float subd = mix(4., 2., t);
+            float subd = ceil(12. * (scl));
 
             float f = 3. * subd;
             float k = sin(length(sin(pp * 5.)) * -10. + dot(p + sin(p * 6.) * 3., vec3(-.0,.5,0)) * 1. + time * PI * 2.);
@@ -370,24 +369,25 @@ Model map(vec3 p) {
 
             //k = (step(0.0, sin(sp.x * 10. + iTime)) * 2. - 1.);
 
+            v = .5;
+            k = 0.;
+
             float separate = .2 + v * .2;
             separate += k * .15;
             separate += .2;
 
-            vec3 point = geodesicTri(sp, subd, separate);
-            float ridge = smoothstep(1. - .03 / subd, 1.005, dot(sp, point));
+            vec3 gt = geodesicTri(sp, subd, separate);
 
+            t = 1.;
 
-
-            ridge = smoothstep(.23, .0, length(sp - point) * subd);
-
-
+            float ridge = gt.x;
+            float inside = gt.y;
             ridge *= sqrt(t);
           
             d2 -= v * .05;
             ridge -= v * .333;
 
-            d2 -= (ridge * 2. - 1.) * 1.2 * scl / e * (.8 + v * .2);
+            d2 -= (ridge * 2. - 1.) * .05 * (.8 + v * .2);
             
 
             float ridgestep = ridge;
@@ -397,6 +397,7 @@ Model map(vec3 p) {
             col2 *= 1. + ridgestep * mix(.5, 2., k * .5 + .5) * 2.;
             col2 *= t * t;
             col2 *= mix(.5, 1., ridge);
+            col2 = mix(col2, vec3(0), inside);
 
             //col2 = vec3(v * .5 + .5);
             //col2 = vec3(fract(ridge));
@@ -441,7 +442,7 @@ Model map(vec3 p) {
 
         //if (i < 10)
         {
-            p.x = sabs(p.x,0.1*scl);
+            p.x = sabs(p.x,0.005*scl);
         }
         
         p.x -= scl * (7.);
