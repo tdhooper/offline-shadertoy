@@ -1,4 +1,4 @@
-// framebuffer drawcount: 1, tile: 1
+// framebuffer drawcount: 5, tile: 1
 
 precision highp float;
 
@@ -349,12 +349,12 @@ Model map(vec3 p) {
 
         #if 1
         //if (d2 < .5)
-        if (d2 < 5. * scl)
+        if (d2 < 3.5 * scl)
         {
             float subd = ceil(12. * (scl));
 
             float f = 3. * subd;
-            float k = sin(length(sin(pp * 5.)) * -10. + dot(p + sin(p * 6.) * 3., vec3(-.0,.5,0)) * 1. + time * PI * 2.);
+            float k = sin(length(sin(pp * 5.)) * -10. + dot(p + sin(p * 6.) * 0., vec3(-.0,.5,0)) * 1. + time * PI * 2.);
             vec3 np = normalize(p);
             vec3 vv = sin(vec3(
                 dot(np, vec3(1,0,0)),
@@ -369,8 +369,8 @@ Model map(vec3 p) {
 
             //k = (step(0.0, sin(sp.x * 10. + iTime)) * 2. - 1.);
 
-            v = .5;
-            k = 0.;
+  //          v = .5;
+//            k = 0.;
 
             float separate = .2 + v * .2;
             separate += k * .15;
@@ -378,7 +378,7 @@ Model map(vec3 p) {
 
             vec3 gt = geodesicTri(sp, subd, separate);
 
-            t = 1.;
+           // t = 1.;
 
             float ridge = gt.x;
             float inside = gt.y;
@@ -393,7 +393,8 @@ Model map(vec3 p) {
             float ridgestep = ridge;
 
             //ridgestep = 0.;
-            col2 = spectrum(((t * t * t) * .3 + ridgestep * .175) - .00) * .66;
+            col2 = spectrum((t * t) * 1.3);
+            col2 = mix(col2, spectrum(1.3 + .175), ridgestep);
             col2 *= 1. + ridgestep * mix(.5, 2., k * .5 + .5) * 2.;
             col2 *= t * t;
             col2 *= mix(.5, 1., ridge);
@@ -923,9 +924,11 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     col = traceGeo(origin, rayDir, seed, depth);    
 
+    #ifndef PREVIEW
     vec4 dust = traceDust(origin, rayDir, depth);
 
     col = mix(col, dust.rgb, dust.a);
+    #endif
 
     //col = vec3(1) * depth * .1;
 
