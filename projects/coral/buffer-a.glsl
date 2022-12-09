@@ -454,7 +454,7 @@ Model map(vec3 p) {
 
         //if (i < 10)
         {
-            p.x = sabs(p.x,0.1*scl);
+            p.x = sabs(p.x,0.01*scl);
         }
         
         p.x -= scl * (7.);
