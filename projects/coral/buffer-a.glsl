@@ -1,4 +1,4 @@
-// framebuffer drawcount: 1, tile: 1
+// framebuffer drawcount: 2, tile: 1
 
 precision highp float;
 
@@ -265,8 +265,8 @@ struct Model {
 Material shadeModel(Model model, inout vec3 nor) {
     //return Material(model.albedo, .15, .3, true);
 
-    vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
-    float flush = smoothstep(-1.75, -.0, model.albedo.x);
+//    vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
+  //  float flush = smoothstep(-1.75, -.0, model.albedo.x);
     //skin += mix(vec3(-.6,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
     //skin *= vec3(1.1,.8,.7);
     //skin = clamp(skin, vec3(0,0,0), vec3(1,1,1));
@@ -274,7 +274,7 @@ Material shadeModel(Model model, inout vec3 nor) {
     #ifdef SSS
     sss = true;
     #endif
-    return Material(mix(skin, model.albedo, .8), .0, 1., sss);
+    return Material(model.albedo, .0, 1., sss);
 }
 
 
@@ -366,7 +366,7 @@ Model map(vec3 p) {
             float subd = mix(4., 2., t);
 
             float f = 3. * subd;
-            float k = sin(length(sin(pp * 5.)) * -10. + dot(p + sin(p * 6.) * 3., vec3(-.0,.5,0)) * 1. + time * PI * 2.);
+            float k = sin(length(sin(pp * 5.)) * -10. + dot(p + sin(p * 6.) * 3., vec3(-.0,.5,0)) * .666 + time * PI * 2.);
             vec3 np = normalize(p);
             vec3 vv = sin(vec3(
                 dot(np, vec3(1,0,0)),
@@ -411,10 +411,15 @@ Model map(vec3 p) {
             //col2 *= clamp(1. - (smoothstep(.7, .71, bump) - smoothstep(.4, .5, ridge)) * srt, 0., 1.);
             col2 *= 1. + bump * .5;
 
+            vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
+            col2 = mix(skin, col2, .8);
+
             //col2 = vec3(v * .5 + .5);
             //col2 = vec3(fract(ridge));
 
-            //col2 = vec3(k);
+            //vec3 colb = vec3(1) * mix(1., 1.3, bump) * t * t;
+            //col2 = mix(col2, colb, step(.95, t));
+
 
         }
         #else
@@ -935,9 +940,10 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     col = traceGeo(origin, rayDir, seed, depth);    
 
+    #ifndef PREVIEW
     vec4 dust = traceDust(origin, rayDir, depth);
-
     col = mix(col, dust.rgb, dust.a);
+    #endif
 
     //col = vec3(1) * depth * .1;
 
