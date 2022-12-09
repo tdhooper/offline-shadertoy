@@ -198,13 +198,17 @@ vec3 closestHex(vec2 p, float separate) {
 
     vec2 hexA = tri2cart * ab.xy;
     vec2 hexB = tri2cart * mix(ab.xy, ab.zw, separate * .5);
+    //vec2 hexC = tri2cart * ab.zw;
 
     p = pp;
 
-    float bump = smoothstep(1., .0, length(p - hexA) / 2.);
+    float bump = smoothstep(1., .0, length(p - hexA));
     float ridge = smoothstep(.46, .0, length(p - hexB));
+    
 
-    return vec3(ridge, bump, 0);
+    //float foo = 1. + step(.1, abs(length(p - hexC) - 1.2)) * .5;
+
+    return vec3(ridge, bump, 0.);
 }
 
 
@@ -383,15 +387,18 @@ Model map(vec3 p) {
 
             vec3 gt = geodesicTri(sp, subd, separate);
             float ridge = gt.x;
+            float bump = gt.y;
 
 
-
-            ridge *= sqrt(t);
+            float srt = sqrt(t);
+            ridge *= srt;
+            bump *= srt;
           
             d2 -= v * .05;
             ridge -= v * .333;
 
-            d2 -= (ridge * 2. - 1.) * 1.2 * scl / e * (.8 + v * .2);
+            d2 -= (bump * 2. - 1.) * 1. * scl / e * (.8 + v * .2);
+            d2 -= (ridge * 2. - 1.) * .25 * scl / e * (.8 + v * .2);
             
 
             float ridgestep = ridge;
@@ -401,6 +408,8 @@ Model map(vec3 p) {
             col2 *= 1. + ridgestep * mix(.5, 2., k * .5 + .5) * 2.;
             col2 *= t * t;
             col2 *= mix(.5, 1., ridge);
+            //col2 *= clamp(1. - (smoothstep(.7, .71, bump) - smoothstep(.4, .5, ridge)) * srt, 0., 1.);
+            col2 *= 1. + bump * .5;
 
             //col2 = vec3(v * .5 + .5);
             //col2 = vec3(fract(ridge));
