@@ -336,6 +336,15 @@ Model map(vec3 p) {
     
         float t = float(i) / float(iter - 1);
 
+        float offs = scl * 7.;
+        
+        float ts = float(i) + .5;
+        if (i > 0)
+        {
+            ts += (p.x - offs) / offs / 1.25;
+        }
+        ts /= max(1., float(iter - 1));
+
         //vec2 anim = sin(iTime * vec2(1., 2.) + (t * (vec2(2., 1.) + vec2(0., 1.)) * PI * 2.));
     
         float at = 4.440;
@@ -350,7 +359,7 @@ Model map(vec3 p) {
         float d2 = length(p * vec3(1,1,1)) - scl * 5.;
         vec3 col2 = vec3(0);
 
-        d2 += sin(time * PI * 6. + t * t * 10.) * .015;
+        d2 += sin(time * PI * 6. + ts * ts * 10.) * .015;
         
         float e = mix(4., 3., t)*.666;
         
@@ -366,7 +375,8 @@ Model map(vec3 p) {
             float subd = mix(4., 2., t);
 
             float f = 3. * subd;
-            float k = sin(length(sin(pp * 5.)) * -10. + dot(p + sin(p * 6.) * 3., vec3(-.0,.5,0)) * .666 + time * PI * 2.);
+            //float k = sin(length(sin(pp * 5.)) * -10. + dot(p + sin(p * 6.) * 3., vec3(-.0,.5,0)) * .666 + time * PI * 2.);
+            float k = sin(length(sin(pp * 5. + 0.)) * -10. + sin(ts * ts * -30.) * .666 + time * PI * 2.);
             vec3 np = normalize(p);
             vec3 vv = sin(vec3(
                 dot(np, vec3(1,0,0)),
