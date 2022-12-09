@@ -170,7 +170,10 @@ vec4 pick3(vec4 a, vec4 b, vec4 c, float u) {
 	return mix(mix(a, b, step(0.3, v)), c, step(0.6, v));
 }
 
-vec2 closestHex(vec2 p, float separate) {
+vec3 closestHex(vec2 p, float separate) {
+
+    vec2 pp = p;
+
     p = cart2tri * p;
 	vec2 pi = floor(p);
 	vec2 pf = fract(p);
@@ -193,10 +196,15 @@ vec2 closestHex(vec2 p, float separate) {
 	vec4 ab = ( mix(nn, nn.yxwz, step(pf.x, pf.y)) +
 			 vec4(pi, pi) );
 
-    vec2 hex = mix(ab.xy, ab.zw, separate * .5);
-    hex = tri2cart * hex;
+    vec2 hexA = tri2cart * ab.xy;
+    vec2 hexB = tri2cart * mix(ab.xy, ab.zw, separate * .5);
 
-    return hex;
+    p = pp;
+
+    float bump = smoothstep(1., .0, length(p - hexA) / 2.);
+    float ridge = smoothstep(.46, .0, length(p - hexB));
+
+    return vec3(ridge, bump, 0);
 }
 
 
@@ -225,8 +233,7 @@ vec3 geodesicTri(vec3 p, float subdivisions, float separate) {
 	float uvScale = subdivisions / faceRadius;
     vec2 uv = icosahedronFaceCoordinates(p);
     uvScale /= 1.3333;
-    vec2 closest = closestHex(uv * uvScale, separate); 
-    return faceToSphere(closest / uvScale);
+    return closestHex(uv * uvScale, separate); 
 }
 
 
@@ -374,12 +381,9 @@ Model map(vec3 p) {
             separate += k * .15;
             separate += .2;
 
-            vec3 point = geodesicTri(sp, subd, separate);
-            float ridge = smoothstep(1. - .03 / subd, 1.005, dot(sp, point));
+            vec3 gt = geodesicTri(sp, subd, separate);
+            float ridge = gt.x;
 
-
-
-            ridge = smoothstep(.23, .0, length(sp - point) * subd);
 
 
             ridge *= sqrt(t);
