@@ -292,14 +292,20 @@ float sabs( float x, float k )
     return sqrt(x*x+k);
 }
 
+struct Mdl {
+    float d;
+    vec3 col;
+    float t;
+};
+
 // https://iquilezles.org/articles/smin/
-vec4 smin( vec4 a, vec4 b, float k )
+Mdl smin( Mdl a, Mdl b, float k )
 {
-    float h = max( k-abs(a.x-b.x), 0.0 )/k;
+    float h = max( k-abs(a.d-b.d), 0.0 )/k;
     float m = h*h*0.5;
     float s = m*k*0.5;
-    vec2 r = (a.x<b.x) ? vec2(a.x,m) : vec2(b.x,1.0-m);
-    return vec4(r.x-s, mix( a.yzw, b.yzw, r.y ) );
+    vec2 r = (a.d<b.d) ? vec2(a.d,m) : vec2(b.d,1.0-m);
+    return Mdl(r.x-s, mix( a.col, b.col, r.y ), mix( a.t, b.t, r.y ) );
 }
 
 const float PHI = 1.61803398875;
@@ -328,10 +334,13 @@ Model map(vec3 p) {
     
     const int iter = 15;    
     float scl = 1.;
-    vec4 dcol = vec4(1e20,0.0,0.0,0.0);
+    Mdl mdl = Mdl(1e20, vec3(0), 0.);
 
     float e = p.x * 1.;
-    
+
+    float fi = 0.;
+    vec2 anim = vec2(0.);
+
     for (int i = 0; i < iter; i++) {
     
         float t = float(i) / float(iter - 1);
@@ -341,14 +350,19 @@ Model map(vec3 p) {
         float ts = float(i) + .5;
         if (i > 0)
         {
-            ts += (p.x - offs) / offs / 1.25;
+            vec3 pe = p;
+            pR(pe.xz, (anim.y * .05 + PI * (.17 + mod(fi, 3.) * .2) * sign(mod(fi, 2.) - .5)) * -1.);
+            pR(pe.xy, (anim.x * .05 + PI * (.17 + mod(fi, 3.) * .2) * sign(mod(fi, 2.) - .5)) * -1.);
+            
+
+            ts += (pe.x - offs) / offs / 1.25;
         }
         ts /= max(1., float(iter - 1));
 
         //vec2 anim = sin(iTime * vec2(1., 2.) + (t * (vec2(2., 1.) + vec2(0., 1.)) * PI * 2.));
     
         float at = 4.440;
-        vec2 anim = sin(at * .5 - e * .5 + PI * -4. + vec2(0,.25) * PI) * (t * 1.);
+        anim = sin(at * .5 - e * .5 + PI * -4. + vec2(0,.25) * PI) * (t * 1.);
         //anim *= 0.;
         anim += sin(at * (1. + PHI) - e * .5 + t * PI * 5. + vec2(0,.25) * PI) * .2 * (t * t * 5.);
 
@@ -360,7 +374,7 @@ Model map(vec3 p) {
         vec3 col2 = vec3(0);
 
         d2 += sin(time * PI * 6. + ts * ts * 10.) * .015;
-        
+
         float e = mix(4., 3., t)*.666;
         
         //float a = (atan(p.y, p.z) / PI) * .5 + .5;
@@ -369,8 +383,8 @@ Model map(vec3 p) {
         //ridge *= (sin(w * 2. * e * PI - PI * .5) * .5 + .5) * smoothstep(1., .9, abs(w));
 
         #if 1
-        if (d2 < .5)
-        //if (d2 < 5. * scl)
+        //if (d2 < .5)
+        if (d2 < 5. * scl)
         {
             float subd = mix(4., 2., t);
 
@@ -463,9 +477,9 @@ Model map(vec3 p) {
 
         #endif
         
-        vec4 dcol2 = vec4(d2, col2);
+        Mdl mdl2 = Mdl(d2, col2, ts);
     
-        dcol = smin(dcol, dcol2, 4. * scl);
+        mdl = smin(mdl, mdl2, 4. * scl);
 
         //if (i < 10)
         {
@@ -477,7 +491,7 @@ Model map(vec3 p) {
         //pR(p.xy, PI * (1.3 + rnd.x * .1));
         //pR(p.xz, PI * (1.3 + rnd.y * .1));
 
-        float fi = float(i);
+        fi = float(i);
 
         pR(p.xy, anim.x * .05 + PI * (.17 + mod(fi, 3.) * .2) * sign(mod(fi, 2.) - .5));
         pR(p.xz, anim.y * .05 + PI * (.17 + mod(fi, 3.) * .2) * sign(mod(fi, 2.) - .5));
@@ -497,9 +511,13 @@ Model map(vec3 p) {
     //d = length(p) * pow(scale, -float(iter));
 //d -= .2;
 
-    d = dcol.x;
+    d = mdl.d;
     
-    col = dcol.yzw;
+    col = mdl.col;
+    
+    //d += sin(time * PI * 6. + mdl.t * mdl.t * 10.) * .015;
+    //col = vec3(1) * sin(time * PI * 6. + mdl.t * mdl.t * 10.) * .5 + .5;
+
     
     //d += .6;
     //col = spectrum(dcol.y * -.03 + .3 + smoothstep(.14, .16, d - .2) * .05);
