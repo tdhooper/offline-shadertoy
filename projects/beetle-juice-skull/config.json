@@ -1,0 +1,10 @@
+{
+    "id": "beetle-juice-skull",
+    "capture": {
+      "fps": 30,
+      "seconds": 2,
+      "width": 800,
+      "height": 800,
+      "startFrame": 0
+    }
+  }
