@@ -50,7 +50,8 @@ const main = require('./main.js');
 // kleinian-loop
 // ifs-zoom
 // coral
+// beetle-juice-skull
 
-const project = LOADPROJECT('coral');
+const project = LOADPROJECT('beetle-juice-skull');
 
 main(project);
