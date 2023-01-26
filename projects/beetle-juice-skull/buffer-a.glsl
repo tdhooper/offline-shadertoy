@@ -1,9 +1,15 @@
+// framebuffer drawcount: 20, tile: 1
+
 precision highp float;
 
 uniform vec2 iResolution;
 uniform vec2 iOffset;
 uniform float iGlobalTime;
 uniform vec4 iMouse;
+uniform int iFrame;
+
+uniform sampler2D previousSample; // buffer-a.glsl filter: linear
+uniform float drawIndex;
 
 uniform sampler2D volumeData; // volume-generate.glsl filter: linear wrap: clamp
 uniform vec2 volumeDataSize;
@@ -418,11 +424,22 @@ float range(float vmin, float vmax, float value) {
   return clamp((value - vmin) / (vmax - vmin), 0., 1.);
 }
 
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
+const float sqrt3 = 1.7320508075688772;
+
+// Dave_Hoskins https://www.shadertoy.com/view/4djSRW
+vec2 hash22(vec2 p)
 {
-    float duration = 2.;
-    time = mod(iTime / duration, 1.);
-    
+    p += 1.61803398875; // fix artifacts when reseeding
+	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
+    p3 += dot(p3, p3.yzx+33.33);
+    return fract((p3.xx+p3.yz)*p3.zy);
+}
+
+vec4 draw(vec2 fragCoord, int frame)
+{
+
+    vec2 seed = hash22(fragCoord + (float(frame)) * sqrt3);
+
     #ifndef DARK_MODE
         envOrientation = sphericalMatrix(((vec2(81.5, 119) / vec2(187)) * 2. - 1.) * 2.);
     #else
@@ -430,6 +447,9 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     #endif
 
     vec2 uv = (2. * fragCoord - iResolution.xy) / iResolution.y;
+
+    // jitter for antialiasing
+    uv += 2. * (seed - .5) / iResolution.xy;
 
     Hit hit, firstHit;
     vec2 res;
@@ -454,6 +474,11 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     firstLen = firstHit.len;
 
     float steps = 0.;
+
+    seed = hash22(seed);
+    float rand = seed.x;
+
+    //float rand = texture2D(iChannel0, (fragCoord + floor(iTime * 60.) * 10.) / iChannel0Size.xy).r;
     
     for (float disperse = 0.; disperse < MAX_DISPERSE; disperse++) {
         invert = 1.;
@@ -464,7 +489,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         extinctionDist = 0.;
         wavelength = disperse / MAX_DISPERSE;
-		float rand = texture2D(iChannel0, (fragCoord + floor(iTime * 60.) * 10.) / iChannel0Size.xy).r;
         wavelength += (rand * 2. - 1.) * (.5 / MAX_DISPERSE);
         wavelength = mix(-.5/5., 1. - .5/5., mod(wavelength, 1.));
         
@@ -539,5 +563,21 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     
     //col = mix(col, bgCol * .5, (1.0 - exp2(-0.005 * pow(firstLen - 7., 3.))) * .5);
         
-    fragColor = vec4(col, range(0., 13., firstLen));
+    return vec4(col, range(0., 13., firstLen));
+}
+
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+
+    float duration = 2.;
+    time = mod(iTime / duration, 1.);
+
+    vec4 col = draw(fragCoord, iFrame);
+
+    if (drawIndex > 0.) {
+        vec4 lastCol = texture2D(previousSample, fragCoord.xy / iResolution.xy);
+        col = mix(lastCol, col, 1. / (drawIndex + 1.));
+    }
+    
+    fragColor = col;
 }
