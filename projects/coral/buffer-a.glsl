@@ -1,4 +1,4 @@
-// framebuffer drawcount: 2, tile: 1
+// framebuffer drawcount: 400, tile: 2
 
 precision highp float;
 
@@ -800,7 +800,7 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
     float pathLength = 0.;
 
     #ifndef PREVIEW
-        const int MAX_BOUNCE = 3;
+        const int MAX_BOUNCE = 4;
     #else
         const int MAX_BOUNCE = 1;
     #endif
