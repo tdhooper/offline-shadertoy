@@ -1,313 +1,61 @@
 precision highp float;
 
-uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
-uniform vec2 iChannel0Size;
-// uniform float iTime;
+uniform sampler2D iChannel0; // buffer-b.glsl filter: linear wrap: clamp
 
-varying vec3 eye;
-varying vec3 dir;
+#ifdef GL_ES
+precision mediump float;
+#endif
 
-
-float round(float t) { return floor(t + 0.5); }
-vec2 round(vec2 t) { return floor(t + 0.5); }
-
-void pR2(inout vec2 p, float a) {
-    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+vec3 aces(vec3 x) {
+  const float a = 2.51;
+  const float b = 0.03;
+  const float c = 2.43;
+  const float d = 0.59;
+  const float e = 0.14;
+  return clamp((x * (a * x + b)) / (x * (c * x + d) + e), 0.0, 1.0);
 }
 
-// Transform xyz coordinate in range -1,-1,-1 to 1,1,1
-// to texture uv and channel
-vec3 spaceToTex(vec3 p, vec2 size, float warp) {
+#define sat(x) clamp(x,0.,1.)
 
-    p = clamp(p, -1., 1.);
-
-    // p.x = mix(0., sin(p.x * 2.) * 10., .1);
-    
-    // p *= 1.3;
-    // p.z -= .3;
-
-    p = p * .5 + .5; // range 0:1
-
-    // p.x = sin(p.x * 5.) / 2.;
-
-    vec2 sub = texSubdivisions;
-    vec2 subSize = floor(size / sub);
-
-    // uv = clamp(uv, 0., 1.);
-
-    // Work out the z index
-    float zRange = sub.x * sub.y * 4. - 1.;
-
-    float i = round(p.z * zRange);
-
-    //return vec3(i/zRange);
-
-    // return vec3(mod(i, sub.x)/sub.x);
-    // translate uv into the micro offset in the z block
-    vec2 coord = p.xy * subSize;
-
-    // Work out the macro offset for the xy block from the z block
-    coord += vec2(
-        mod(i, sub.x),
-        mod(floor(i / sub.x), sub.y)
-    ) * subSize;
-
-    // FUCK WITH IT...
-
-    float tt = fract(iTime);
-
-    vec2 c2 = coord;
-
-    //coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
-    //coord *= mix(1., tan(coord.x*10./coord.y*5. + tt * PI * 1.), .02 / 100.);
-    //coord *= mix(1., tan(coord.y/10. + tt * PI), .002);
-    coord *= mix(1., tan((coord.x*coord.y)/9000. - tt * PI), .002);
-    //coord *= mix(1., sin(coord.x/coord.y*40. - tt * PI * 2.), .001);
-
-    coord = mix(c2, coord, warp * 8.);
-
-    float c = floor(i / (sub.x * sub.y));
-    vec3 uvc = vec3(coord / size, c);
-
-
-    float f = 1500.;
-    uvc.xy += tt / f;
-    uvc.xy = mix(uvc.xy, round(uvc.xy * vec2(f)) / vec2(f), .5);
-    uvc.xy -= tt / f;
-    // pR2(uvc.xy, .015);
-
-
-
-    return uvc;
-}
-
-float range(float vmin, float vmax, float value) {
-  return clamp((value - vmin) / (vmax - vmin), 0., 1.);
-}
-
-float pickIndex(vec4 v, int i) {
-    if (i == 0) return v.r;
-    if (i == 1) return v.g;
-    if (i == 2) return v.b;
-    if (i == 3) return v.a;
-}
-
-
-
-float mapTex(sampler2D tex, vec3 p, vec2 size) {
-    p = p;
-    // stop x bleeding into the next cell as it's the mirror cut
-    #ifdef MIRROR
-        p.x = clamp(p.x, -.95, .95);
-    #endif
-    vec2 sub = texSubdivisions;
-    float zRange = sub.x * sub.y * 4. - 1.;
-    float z = p.z * .5 + .5; // range 0:1
-    float zFloor = (floor(z * zRange) / zRange) * 2. - 1.;
-    float zCeil = (ceil(z * zRange) / zRange) * 2. - 1.;
-    float warp = smoothstep(.3, .7, p.y * .5 + .5);
-    warp = pow(warp, 4.);
-    vec3 uvcA = spaceToTex(vec3(p.xy, zFloor), size, warp);
-    vec3 uvcB = spaceToTex(vec3(p.xy, zCeil), size, warp);
-    float a = pickIndex(texture2D(tex, uvcA.xy), int(uvcA.z));
-    float b = pickIndex(texture2D(tex, uvcB.xy), int(uvcB.z));
-    // return a;
-    float d = mix(a, b, range(zFloor, zCeil, p.z));
-    //d -= warp * .05;
-    return d;
-}
-
-// filter: nearest, linear, mipmap
-// wrap: clamp, repeat
-
-// Fork of "tdhpr-sdf-volume-head" by tdhooper. https://shadertoy.com/view/wlXGWN
-// 2019-04-27 01:52:35
-
-// Fork of "tdhpr-sdf-volume-2" by tdhooper. https://shadertoy.com/view/wtXGWN
-// 2019-04-27 01:11:30
-
-// Fork of "tdhpr-sdf-volume" by tdhooper. https://shadertoy.com/view/wtX3D4
-// 2019-04-27 01:06:42
-
-
-float vmax(vec2 v) {
-    return max(v.x, v.y);
-}
-
-float vmax(vec3 v) {
-    return max(max(v.x, v.y), v.z);
-}
-
-float vmin(vec3 v) {
-    return min(min(v.x, v.y), v.z);
-}
-
-float vmin(vec2 v) {
-    return min(v.x, v.y);
-}
-
-float fBox(vec3 p, vec3 b) {
-    vec3 d = abs(p) - b;
-    return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
-}
-
-void pR(inout vec2 p, float a) {
-    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
-}
-
-float mHead(vec3 p) {
-    vec3 pa = p;
-    float bound = fBox(p, vec3(.45,.65,.6));
-    #ifdef MIRROR
-        p.x = -abs(p.x);
-    #endif
-    p += OFFSET / SCALE;
-    bound = fBox(p, 1./SCALE);
-    //return bound;
-    if (bound > .01) {
-        // return bound;
-    }
-    //p.x = -abs(p.x);
-    //p += OFFSET / SCALE;
-    p *= SCALE;
-    float d = mapTex(iChannel0, p, iChannel0Size);
-    //return min(d, max(bound, pa.x));
-    return d;
-    return min(d, bound + .02);
-}
-
-float map(vec3 p) {
-    // return length(p) - .5;
-    p.y -= .15;
-    //pR(p.yz, .2);
-    // pR(p.xz, iTime/2. + .4);
-    // pR(p.yz, iTime/2. + .4);
-    float d = mHead(p);
-   // d = mix(d, fBox(p, vec3(.7)), sin(iTime) * .5+ .5);
-    return d;
-  //  vec2 uv = spaceToTex(p);
-//    return texture2D(iChannel0, uv).r;
-    return length(p) - .5;
-}
-
-bool isDebug = false;
-
-float mapDebug(vec3 p) {
-    float d = map(p);
-    return d;
-    float r = min(abs(p.z), min(abs(p.x), abs(p.y-.05))) - .001;
-    if (r < d) {
-        isDebug = true;
-        return r;
-    } else {
-        isDebug = false;
-    }
-    return d;
-
-}
-
-const int NORMAL_STEPS = 6;
-vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3(.0005,0,0);
-    vec3 nor = vec3(0);
-    float invert = 1.;
-    for (int i = 0; i < NORMAL_STEPS; i++){
-        nor += map(pos + eps * invert) * eps * invert;
-        eps = eps.zxy;
-        invert *= -1.;
-    }
-    // pR(nor.xz, 1.);
-    return normalize(nor);
-}
-
-
-vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
-    return a + b*cos( 6.28318*(c*t+d) );
-}
-
-vec3 spectrum(float n) {
-    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
-}
-
-
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
+// from http://www.tannerhelland.com/4435/convert-temperature-rgb-algorithm-code/
+vec3 colorFromKelvin(float temperature) // photographic temperature values are between 15 to 150
 {
-    vec2 p = (-iResolution.xy + 2. * fragCoord.xy) / iResolution.y;
-    // vec4 last = texture2D(iChannel0, fragCoord.xy/iResolution.xy);
-    // fragColor = last;
-    // return;
-    // if (last.x != 0.) {
-    //     fragColor = last;
-    //     return;
-    // }
-    // fragColor = vec4(vec3(1,0,0), 1.);
-    // return;
-    // vec3 space = texToSpace(fragCoord.xy, 0, iResolution);
-    // // fragColor = vec4(space, 1); return;
-    // // if (p.x < .9) {fragColor = vec4(spectrum(1.), 1); return;}
-    // // fragColor = vec4(spectrum(space.z * .5 + .5), 1); return;
-
-    // vec3 tex = spaceToTex(space, iResolution);
-    // tex.b /= 4.;
-    // // fragColor = vec4(vec3(step(tex.x, iTime)), 1); return;
-    // // fragColor = vec4(vec3(tex.z), 1); return;
-    // fragColor = vec4(vec3(tex), 1); return;
-    // // fragColor = vec4(spectrum(tex.z), 1); return;
-
-
-    // vec3 camPos = vec3(0,.05,3.2) * .5;
-    // vec3 rayDirection = normalize(vec3(p + vec2(0,-0),-4));
-
-    // float r2 = .0;//iTime;
-    // pR(camPos.yz, r2);
-    // pR(rayDirection.yz, r2);
-
-    // float r = .5;//iTime + .7;
-    // pR(camPos.xz, r);
-    // pR(rayDirection.xz, r);
-
-    vec3 camPos = eye;
-    vec3 rayDirection = dir;
-
-    vec3 rayPosition = camPos;
-    float rayLength = 0.;
-    float dist = 0.;
-    bool bg = false;
-    vec3 col = vec3(.15,.05,.15) * 0.;
-
-    for (int i = 0; i < 300; i++) {
-        rayLength += dist;
-        rayPosition = camPos + rayDirection * rayLength;
-        dist = mapDebug(rayPosition);
-
-        if (abs(dist) < .001) {
-            break;
-        }
-        
-        if (rayLength > 10.) {
-            bg = true;
-            break;
-        }
+    float r, g, b;
+    if(temperature <= 66.0)
+    {
+        r = 1.0;
+        g = sat((99.4708025861 * log(temperature) - 161.1195681661) / 255.0);
+        if(temperature < 19.0)
+            b = 0.0;
+        else
+            b = sat((138.5177312231 * log(temperature - 10.0) - 305.0447927307) / 255.0);
     }
-    
-    if ( ! bg) {
-        vec3 n = calcNormal(rayPosition);
-        col = n * .5 + .5;
-
-        //col = vec3(.1) + clamp(dot(n, normalize(vec3(-1,1,1))), 0., 1.);
-        
-        if (isDebug) {
-            float d = map(rayPosition);
-            col = vec3(mod(d * 10., 1.));
-        }
+    else
+    {
+        r = sat((329.698727446 / 255.0) * pow(temperature - 60.0, -0.1332047592));
+        g = sat((288.1221695283  / 255.0) * pow(temperature - 60.0, -0.0755148492));
+        b = 1.0;
     }
-    
-  //  col = vec3(spaceToTex(vec3(-1,-1,-.7)), 0.);
+    return vec3(r, g, b);
+}
 
-    //vec2 uv = fragCoord.xy / iResolution.xy;
-    //vec3 ps = texToSpace(uv)[3].xyz;
-    //col = abs(ps);
-    //col = vec3(texture2D(iChannel0, uv).a);
+// colour grading from tropical trevor's scripts
+// https://github.com/trevorvanhoof/ColorGrading
+float Luma(vec3 color) { return dot(color, vec3(0.2126, 0.7152, 0.0722)); }
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    vec2 uv = fragCoord.xy / iResolution.xy;
+    vec3 col = texture2D(iChannel0, uv).rgb;
+
+    vec3 uGain = vec3(.01 * vec3(15,-15,-15)) + .15;
+    vec3 uLift = vec3(.0,.0025,-.005) * .5 + .0075;
+    vec3 uOffset = vec3(-.005 * vec3(1,2,8)) * .5;
+    vec3 uGamma = vec3(1./2.2);
+    float uTemperature = 55.;
+    //col *= vec3(1.0) / colorFromKelvin(uTemperature);
+//    if (a) col = pow(max(vec3(0.0), col * (1.0 + uGain - uLift) + uLift + uOffset), max(vec3(0.0), 1.0 - uGamma));
+    col = aces(col);
+    col = pow( col, vec3(1./2.2) );
     
-    fragColor = vec4(col,1.0);
+    fragColor = vec4(col, 1);
 }
