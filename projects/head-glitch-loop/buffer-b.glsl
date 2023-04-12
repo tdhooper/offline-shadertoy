@@ -86,16 +86,16 @@ vec3 spaceToTex(vec3 p, vec2 size, float warp, out float warped) {
 
     vec2 c2 = coord;
 
-    //coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
+    coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
     //coord *= mix(1., tan(coord.x*10./coord.y*5. + tt * PI * 1.), .02 / 100.);
-    //coord *= mix(1., tan(coord.y/10. + tt * PI), .002);
+    //coord *= mix(1., tan(coord.y/16. + tt * PI), .001);
     //coord *= mix(1., tan((coord.x*coord.y)/9000. - tt * PI), .0005);
     //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
-    coord *= mix(1., sin(coord.y/coord.x*200. - tt * PI * 2.), .002);
+    //coord *= mix(1., sin(coord.y/coord.x*200. - tt * PI * 2.), .002);
 
     coord = mix(c2, coord, warp * 8.);
 
-    //coord = mix(c2, coord, 3.);
+    //coord = mix(c2, coord, 2.);
 
     warped = distance(c2, coord);
 
@@ -225,7 +225,9 @@ Material shadeModel(Model model, inout vec3 nor) {
     sss = true;
     #endif
 
-    vec3 col = mix(model.albedo, nor * .5 + .5, model.uvw.x);
+    vec3 col = mix(model.albedo, nor * .5 + .5, min(model.uvw.x, 1.));
+
+    col *= 1. + min(max(model.uvw.x - 1., 0.) * .25, 0.5) * .5;
 
     return Material(col, .0, 1., sss);
 }
@@ -250,9 +252,7 @@ Model map(vec3 p) {
    // d = mix(d, fBox(p, vec3(.7)), sin(iTime) * .5+ .5);
     //d = length(p) - .5;
 
-    float warped =  min(max(warpedA, warpedB)/3., 1.);
-
-    vec3 col = mix(vec3(1), vec3(1,0,0), warped);
+    float warped = max(warpedA, warpedB)/3.;
     return Model(d, vec3(warped, 0, 0), vec3(.5), 1);
 
 
