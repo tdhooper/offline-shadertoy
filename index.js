@@ -51,7 +51,8 @@ const main = require('./main.js');
 // ifs-zoom
 // coral
 // beetle-juice-skull
+// head-glitch-loop
 
-const project = LOADPROJECT('beetle-juice-skull');
+const project = LOADPROJECT('head-glitch-loop');
 
 main(project);
