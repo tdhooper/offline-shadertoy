@@ -1,13 +1,10 @@
 
-// framebuffer drawcount: 1, tile: 1
-// filter: nearest, linear, mipmap
-// wrap: clamp, repeat
-
+// framebuffer drawcount: 10, tile: 1
 
 precision highp float;
 
-uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
-uniform vec2 iChannel0Size;
+uniform sampler2D sdfData; // buffer-a.glsl filter: linear wrap: clamp
+uniform vec2 sdfDataSize;
 
 uniform mat4 cameraMatrix;
 uniform vec3 cameraPosition;
@@ -87,9 +84,9 @@ vec3 spaceToTex(vec3 p, vec2 size, float warp, out float warped) {
     vec2 c2 = coord;
 
     coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
-    //coord *= mix(1., tan(coord.x*10./coord.y*5. + tt * PI * 1.), .02 / 100.);
+    //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002);
     //coord *= mix(1., tan(coord.y/16. + tt * PI), .001);
-    //coord *= mix(1., tan((coord.x*coord.y)/9000. - tt * PI), .0005);
+    //coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005);
     //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
     //coord *= mix(1., sin(coord.y/coord.x*200. - tt * PI * 2.), .002);
 
@@ -192,7 +189,7 @@ float mHead(vec3 p) {
     //p.x = -abs(p.x);
     //p += OFFSET / SCALE;
     p *= SCALE;
-    float d = mapTex(iChannel0, p, iChannel0Size);
+    float d = mapTex(sdfData, p, sdfDataSize);
     //return min(d, max(bound, pa.x));
     return d;
     return min(d, bound + .02);

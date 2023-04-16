@@ -1,10 +1,6 @@
-// framebuffer size: 1300x1300
+// framebuffer size: 1300x1300, firstpassonly
 
 precision highp float;
-
-uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
-uniform vec2 iChannel0Size;
-uniform bool firstPass;
 
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
@@ -518,11 +514,6 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     vec2 coord = fragCoord.xy;
     vec2 size = iResolution;
     vec2 uv = coord / size;
-    
-    if ( ! firstPass) {
-        fragColor = texture2D(iChannel0, uv);
-        return;
-    }
     
     vec3 p0 = texToSpace(coord, size)[0].xyz;
     vec3 p1 = texToSpace(coord, size)[1].xyz;
