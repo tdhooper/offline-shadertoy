@@ -1,5 +1,5 @@
 
-// framebuffer drawcount: 10, tile: 1
+// framebuffer drawcount: 1, tile: 1
 
 precision highp float;
 
@@ -83,12 +83,12 @@ vec3 spaceToTex(vec3 p, vec2 size, float warp, out float warped) {
 
     vec2 c2 = coord;
 
-    coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
+    //coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
     //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002);
     //coord *= mix(1., tan(coord.y/16. + tt * PI), .001);
     //coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005);
     //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
-    //coord *= mix(1., sin(coord.y/coord.x*200. - tt * PI * 2.), .002);
+    coord *= mix(1., sin(coord.y/coord.x*200. - tt * PI * 2.), .002);
 
     coord = mix(c2, coord, warp * 8.);
 
@@ -125,6 +125,8 @@ float pickIndex(vec4 v, int i) {
 float warpedA;
 float warpedB;
 
+vec3 lookupDebug;
+
 float mapTex(sampler2D tex, vec3 p, vec2 size) {
     p = p;
     // stop x bleeding into the next cell as it's the mirror cut
@@ -144,6 +146,7 @@ float mapTex(sampler2D tex, vec3 p, vec2 size) {
     float b = pickIndex(texture2D(tex, uvcB.xy), int(uvcB.z));
     // return a;
     float d = mix(a, b, range(zFloor, zCeil, p.z));
+    lookupDebug = mix(uvcA, uvcB, range(zFloor, zCeil, p.z));
     //d -= warp * .05;
     return d;
 }
@@ -250,7 +253,9 @@ Model map(vec3 p) {
     //d = length(p) - .5;
 
     float warped = max(warpedA, warpedB)/3.;
-    return Model(d, vec3(warped, 0, 0), vec3(.5), 1);
+    vec3 col = vec3(.5);
+    //col = lookupDebug.zzz/4.;
+    return Model(d, vec3(warped, 0, 0), col, 1);
 
 
     //return d;
@@ -627,7 +632,7 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
-        hit = march(origin, rayDir, 3., 1.);
+        hit = march(origin, rayDir, 4., 1.);
 
         if (bounce == 0) {
             depth = hit.rayLength;
@@ -776,10 +781,10 @@ vec4 draw(vec2 fragCoord, int frame) {
 
 
     #ifdef DOF
-    float fpd = .277 * focalLength;
+    float fpd = .82 * focalLength;
     vec3 fp = origin + rayDir * fpd;
     vec2 off = rndunit2(seed);
-    origin = origin + camMat * vec3(off, 0.) * .15;
+    origin = origin + camMat * vec3(off, 0.) * .05;
     rayDir = normalize(fp - origin);
     #endif
 

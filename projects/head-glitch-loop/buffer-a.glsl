@@ -1,4 +1,4 @@
-// framebuffer size: 1300x1300, firstpassonly
+// framebuffer size: 2048x2048, firstpassonly
 
 precision highp float;
 

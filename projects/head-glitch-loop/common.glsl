@@ -21,7 +21,7 @@ vec2 texSubdivisions = vec2(10,3);
 #define SCALE (vec3(4.1/2.,1.73,1.75) * .6)
 
 // #define OFFSET vec3(.95, .094, -.088)
-#define OFFSET vec3(0, .094, -.088)
+#define OFFSET vec3(0, .094, -.1)
 
 
 
