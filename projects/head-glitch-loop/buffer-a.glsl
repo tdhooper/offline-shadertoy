@@ -502,6 +502,12 @@ float mHead(vec3 p) {
 }
 
 float map(vec3 p) {
+    #ifdef ORDER_ZXY
+        p = p.zxy;
+    #endif
+    #ifdef ORDER_XZY
+        p = p.xzy;
+    #endif
     p -= OFFSET;
     p /= SCALE;
     return mHead(p);

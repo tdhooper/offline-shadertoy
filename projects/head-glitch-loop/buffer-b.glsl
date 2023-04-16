@@ -1,5 +1,5 @@
 
-// framebuffer drawcount: 1, tile: 1
+// framebuffer drawcount: 4, tile: 1
 
 precision highp float;
 
@@ -127,7 +127,7 @@ float warpedB;
 
 vec3 lookupDebug;
 
-float mapTex(sampler2D tex, vec3 p, vec2 size) {
+float mapTex(sampler2D tex, vec3 p, vec2 size, float warp) {
     p = p;
     // stop x bleeding into the next cell as it's the mirror cut
     #ifdef MIRROR
@@ -138,8 +138,6 @@ float mapTex(sampler2D tex, vec3 p, vec2 size) {
     float z = p.z * .5 + .5; // range 0:1
     float zFloor = (floor(z * zRange) / zRange) * 2. - 1.;
     float zCeil = (ceil(z * zRange) / zRange) * 2. - 1.;
-    float warp = smoothstep(.1, .8, p.y * .5 + .5);
-    warp = pow(warp, 4.);
     vec3 uvcA = spaceToTex(vec3(p.xy, zFloor), size, warp, warpedA);
     vec3 uvcB = spaceToTex(vec3(p.xy, zCeil), size, warp, warpedB);
     float a = pickIndex(texture2D(tex, uvcA.xy), int(uvcA.z));
@@ -178,6 +176,10 @@ void pR(inout vec2 p, float a) {
 }
 
 float mHead(vec3 p) {
+    
+    float warp = smoothstep(.068, .744, p.y * .5 + .5);
+    warp = pow(warp, 4.);
+
     vec3 pa = p;
     float bound = fBox(p, vec3(.45,.65,.6));
     #ifdef MIRROR
@@ -192,7 +194,13 @@ float mHead(vec3 p) {
     //p.x = -abs(p.x);
     //p += OFFSET / SCALE;
     p *= SCALE;
-    float d = mapTex(sdfData, p, sdfDataSize);
+    #ifdef ORDER_XZY
+        p = p.xzy;
+    #endif
+    #ifdef ORDER_ZXY
+        p = p.yzx;
+    #endif
+    float d = mapTex(sdfData, p, sdfDataSize, warp);
     //return min(d, max(bound, pa.x));
     return d;
     return min(d, bound + .02);
@@ -228,6 +236,8 @@ Material shadeModel(Model model, inout vec3 nor) {
     vec3 col = mix(model.albedo, nor * .5 + .5, min(model.uvw.x, 1.));
 
     col *= 1. + min(max(model.uvw.x - 1., 0.) * .25, 0.5) * .5;
+
+    //col = mix(vec3(.5), vec3(1,0,0), fract(model.uvw.x));
 
     return Material(col, .0, 1., sss);
 }

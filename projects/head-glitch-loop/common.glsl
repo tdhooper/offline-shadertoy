@@ -23,7 +23,8 @@ vec2 texSubdivisions = vec2(10,3);
 // #define OFFSET vec3(.95, .094, -.088)
 #define OFFSET vec3(0, .094, -.1)
 
-
+//#define ORDER_ZXY
+//#define ORDER_XZY
 
 // #define SCALE vec3(1)
 // #define OFFSET vec3(0)
