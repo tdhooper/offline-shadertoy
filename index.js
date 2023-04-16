@@ -52,7 +52,8 @@ const main = require('./main.js');
 // coral
 // beetle-juice-skull
 // head-glitch-loop
+// multipass-debug
 
-const project = LOADPROJECT('head-glitch-loop');
+const project = LOADPROJECT('multipass-debug');
 
 main(project);
