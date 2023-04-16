@@ -133,7 +133,8 @@ module.exports = (project) => {
       }
 
       function attachDependencies() {
-        node.dependencies.forEach((dep) => {
+        for (let i = node.dependencies.length - 1; i >= 0; i--) {
+          let dep = node.dependencies[i];
           let depBuffer = dep.node == node ? dep.node.lastBuffer : dep.node.buffer
           const texture = depBuffer.color[0]._texture;
           gl.activeTexture(gl.TEXTURE0);
@@ -162,7 +163,7 @@ module.exports = (project) => {
           const s = {};
           s[dep.uniform] = depBuffer;
           Object.assign(state, s);
-        });
+        }
       }
 
       function swapPingPong() {
