@@ -1,11 +1,11 @@
-// framebuffer drawcount: 2
+// framebuffer drawcount: 5
 
 precision highp float;
 
 uniform vec2 iResolution;
 uniform mat4 cameraMatrix;
-uniform sampler2D dataBuffer; // buffer-a.glsl filter: linear
 uniform sampler2D previousSample; // buffer-b.glsl filter: linear
+uniform sampler2D dataBuffer; // buffer-a.glsl filter: nearest
 uniform float drawIndex;
 uniform int iFrame;
 uniform float iTime;
@@ -36,7 +36,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 col = vec4(vec3(hash22((uv + float(iFrame)) * 1000.).x), 1);
 
     if (uv.x < .5 && uv.y < .5) {
-        col = texture2D(dataBuffer, uv * 2.);
+        col = mix(col, texture2D(dataBuffer, uv / .5), .5);
     }
 
     if (drawIndex > 0.) {

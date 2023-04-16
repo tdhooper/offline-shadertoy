@@ -15,8 +15,13 @@ precision mediump float;
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
+    uv -= .666 * .25;
+    uv /= .666;
     vec4 sample = texture2D(iChannel0, uv);
     vec3 col = sample.rgb;
+    if (max(uv.x, uv.y) > 1. || min(uv.x, uv.y) < 0.) {
+        col = vec3(0);
+    }
     col = pow( col, vec3(0.4545) );
     fragColor = vec4(col, 1);    
 }

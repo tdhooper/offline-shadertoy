@@ -1,4 +1,4 @@
-// framebuffer firstpassonly
+// framebuffer size: 2x2 firstpassonly
 
 precision highp float;
 
@@ -23,6 +23,6 @@ void main() {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
-    uv = fract(uv * 3.);
+    //uv = fract(uv * 3.);
     fragColor = vec4(uv, 0, 1);
 }
