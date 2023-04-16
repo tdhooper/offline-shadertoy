@@ -17,7 +17,7 @@ const regl = require('regl')({
     'webgl_color_buffer_float',
   ],
   //pixelRatio: .5,
-  pixelRatio: 2,
+  pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },

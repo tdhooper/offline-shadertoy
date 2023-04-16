@@ -54,6 +54,6 @@ const main = require('./main.js');
 // head-glitch-loop
 // multipass-debug
 
-const project = LOADPROJECT('multipass-debug');
+const project = LOADPROJECT('head-glitch-loop');
 
 main(project);
