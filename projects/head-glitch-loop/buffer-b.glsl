@@ -1,5 +1,5 @@
 
-// framebuffer drawcount: 4, tile: 1
+// framebuffer drawcount: 8, tile: 1
 
 precision highp float;
 
@@ -23,15 +23,11 @@ varying mat4 vView;
 #pragma glslify: inverse = require(glsl-inverse)
 
 #define ANIMATE
-#define SSS
 //#define DOF
+#define SSS
 //#define PREVIEW
 
-
 float time;
-
-
-
 
 float round(float t) { return floor(t + 0.5); }
 vec2 round(vec2 t) { return floor(t + 0.5); }
@@ -40,34 +36,48 @@ void pR2(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
+float debugG;
+float SECTION;
+
+vec2 distort(vec2 coord) {
+    float tt = fract(iTime * .2);
+
+
+    if (SECTION < .5) {
+    coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
+    } else if (SECTION < 1.5) {
+    //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002);
+    coord *= mix(1., sin(coord.y/coord.x*200. - tt * PI * 2.), .002);
+    } else if (SECTION < 2.5) {
+    coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005);
+    }
+
+    //coord *= mix(1., tan(coord.y/16. + tt * PI), .001);
+    //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
+    
+
+    return coord;
+
+}
+
+
+
 // Transform xyz coordinate in range -1,-1,-1 to 1,1,1
 // to texture uv and channel
 vec3 spaceToTex(vec3 p, vec2 size, float warp, out float warped) {
 
     p = clamp(p, -1., 1.);
 
-    // p.x = mix(0., sin(p.x * 2.) * 10., .1);
-    
-    // p *= 1.3;
-    // p.z -= .3;
-
     p = p * .5 + .5; // range 0:1
-
-    // p.x = sin(p.x * 5.) / 2.;
 
     vec2 sub = texSubdivisions;
     vec2 subSize = floor(size / sub);
-
-    // uv = clamp(uv, 0., 1.);
 
     // Work out the z index
     float zRange = sub.x * sub.y * 4. - 1.;
 
     float i = round(p.z * zRange);
 
-    //return vec3(i/zRange);
-
-    // return vec3(mod(i, sub.x)/sub.x);
     // translate uv into the micro offset in the z block
     vec2 coord = p.xy * subSize;
 
@@ -78,35 +88,14 @@ vec3 spaceToTex(vec3 p, vec2 size, float warp, out float warped) {
     ) * subSize;
 
     // FUCK WITH IT...
-
-    float tt = fract(iTime);
-
-    vec2 c2 = coord;
-
-    //coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
-    //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002);
-    //coord *= mix(1., tan(coord.y/16. + tt * PI), .001);
-    //coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005);
-    //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
-    coord *= mix(1., sin(coord.y/coord.x*200. - tt * PI * 2.), .002);
-
-    coord = mix(c2, coord, warp * 8.);
-
-    //coord = mix(c2, coord, 2.);
-
-    warped = distance(c2, coord);
+    vec2 coord2 = distort(coord);
+    coord2 = mix(coord, coord2, warp * 8.);
+    //coord2 = mix(coord, coord2, 2.);
+    warped = distance(coord, coord2);
+    coord = coord2;
 
     float c = floor(i / (sub.x * sub.y));
     vec3 uvc = vec3(coord / size, c);
-
-
-    float f = 1500.;
-    uvc.xy += tt / f;
-   // uvc.xy = mix(uvc.xy, round(uvc.xy * vec2(f)) / vec2(f), .5);
-    uvc.xy -= tt / f;
-    // pR2(uvc.xy, .015);
-
-
 
     return uvc;
 }
@@ -122,13 +111,18 @@ float pickIndex(vec4 v, int i) {
     if (i == 3) return v.a;
 }
 
-float warpedA;
-float warpedB;
-
 vec3 lookupDebug;
 
-float mapTex(sampler2D tex, vec3 p, vec2 size, float warp) {
+float mapTex(sampler2D tex, vec3 p, vec2 size, float warp, out float warped) {
     p = p;
+
+    vec3 cg = floor(p * 4. * vec3(.5,1.,.5));
+    cg.z += floor(iTime);;
+    float g = mod(cg.x + cg.y + cg.z, 3.);
+    debugG = g;
+    SECTION = g;
+    SECTION = 0.;
+
     // stop x bleeding into the next cell as it's the mirror cut
     #ifdef MIRROR
         p.x = clamp(p.x, -.95, .95);
@@ -138,13 +132,16 @@ float mapTex(sampler2D tex, vec3 p, vec2 size, float warp) {
     float z = p.z * .5 + .5; // range 0:1
     float zFloor = (floor(z * zRange) / zRange) * 2. - 1.;
     float zCeil = (ceil(z * zRange) / zRange) * 2. - 1.;
+    float warpedA, warpedB;
     vec3 uvcA = spaceToTex(vec3(p.xy, zFloor), size, warp, warpedA);
     vec3 uvcB = spaceToTex(vec3(p.xy, zCeil), size, warp, warpedB);
     float a = pickIndex(texture2D(tex, uvcA.xy), int(uvcA.z));
     float b = pickIndex(texture2D(tex, uvcB.xy), int(uvcB.z));
     // return a;
-    float d = mix(a, b, range(zFloor, zCeil, p.z));
-    lookupDebug = mix(uvcA, uvcB, range(zFloor, zCeil, p.z));
+    float t = range(zFloor, zCeil, p.z);
+    float d = mix(a, b, t);
+    lookupDebug = mix(uvcA, uvcB, t);
+    warped = mix(warpedA, warpedB, t);
     //d -= warp * .05;
     return d;
 }
@@ -175,7 +172,7 @@ void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
 }
 
-float mHead(vec3 p) {
+float mHead(vec3 p, out float warped) {
     
     float warp = smoothstep(.068, .744, p.y * .5 + .5);
     warp = pow(warp, 4.);
@@ -194,13 +191,16 @@ float mHead(vec3 p) {
     //p.x = -abs(p.x);
     //p += OFFSET / SCALE;
     p *= SCALE;
+    #ifdef ORDER_YZX
+        p = p.zxy;
+    #endif
     #ifdef ORDER_XZY
         p = p.xzy;
     #endif
     #ifdef ORDER_ZXY
         p = p.yzx;
     #endif
-    float d = mapTex(sdfData, p, sdfDataSize, warp);
+    float d = mapTex(sdfData, p, sdfDataSize, warp, warped);
     //return min(d, max(bound, pa.x));
     return d;
     return min(d, bound + .02);
@@ -221,24 +221,14 @@ struct Model {
 };
 
 Material shadeModel(Model model, inout vec3 nor) {
-    //return Material(model.albedo, .15, .3, true);
-
-//    vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
-  //  float flush = smoothstep(-1.75, -.0, model.albedo.x);
-    //skin += mix(vec3(-.6,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
-    //skin *= vec3(1.1,.8,.7);
-    //skin = clamp(skin, vec3(0,0,0), vec3(1,1,1));
     bool sss = false;
     #ifdef SSS
     sss = true;
     #endif
-
+    // normal in warped areas
     vec3 col = mix(model.albedo, nor * .5 + .5, min(model.uvw.x, 1.));
-
+    // brighten really warped bits
     col *= 1. + min(max(model.uvw.x - 1., 0.) * .25, 0.5) * .5;
-
-    //col = mix(vec3(.5), vec3(1,0,0), fract(model.uvw.x));
-
     return Material(col, .0, 1., sss);
 }
 
@@ -253,152 +243,12 @@ vec3 spectrum(float n) {
 
 
 Model map(vec3 p) {
-    // return length(p) - .5;
     p.y -= .15;
-    //pR(p.yz, .2);
-    // pR(p.xz, iTime/2. + .4);
-    // pR(p.yz, iTime/2. + .4);
-    float d = mHead(p);
-   // d = mix(d, fBox(p, vec3(.7)), sin(iTime) * .5+ .5);
-    //d = length(p) - .5;
-
-    float warped = max(warpedA, warpedB)/3.;
+    float warped;
+    float d = mHead(p, warped);
     vec3 col = vec3(.5);
-    //col = lookupDebug.zzz/4.;
     return Model(d, vec3(warped, 0, 0), col, 1);
-
-
-    //return d;
-  //  vec2 uv = spaceToTex(p);
-//    return texture2D(iChannel0, uv).r;
-    //return length(p) - .5;
 }
-/*
-bool isDebug = false;
-
-float mapDebug(vec3 p) {
-    float d = map(p);
-    return d;
-    float r = min(abs(p.z), min(abs(p.x), abs(p.y-.05))) - .001;
-    if (r < d) {
-        isDebug = true;
-        return r;
-    } else {
-        isDebug = false;
-    }
-    return d;
-
-}
-
-const int NORMAL_STEPS = 6;
-vec3 calcNormal(vec3 pos){
-    vec3 eps = vec3(.0005,0,0);
-    vec3 nor = vec3(0);
-    float invert = 1.;
-    for (int i = 0; i < NORMAL_STEPS; i++){
-        nor += map(pos + eps * invert) * eps * invert;
-        eps = eps.zxy;
-        invert *= -1.;
-    }
-    // pR(nor.xz, 1.);
-    return normalize(nor);
-}
-
-
-
-void mainImage( out vec4 fragColor, in vec2 fragCoord )
-{
-    vec2 p = (-iResolution.xy + 2. * fragCoord.xy) / iResolution.y;
-    // vec4 last = texture2D(iChannel0, fragCoord.xy/iResolution.xy);
-    // fragColor = last;
-    // return;
-    // if (last.x != 0.) {
-    //     fragColor = last;
-    //     return;
-    // }
-    // fragColor = vec4(vec3(1,0,0), 1.);
-    // return;
-    // vec3 space = texToSpace(fragCoord.xy, 0, iResolution);
-    // // fragColor = vec4(space, 1); return;
-    // // if (p.x < .9) {fragColor = vec4(spectrum(1.), 1); return;}
-    // // fragColor = vec4(spectrum(space.z * .5 + .5), 1); return;
-
-    // vec3 tex = spaceToTex(space, iResolution);
-    // tex.b /= 4.;
-    // // fragColor = vec4(vec3(step(tex.x, iTime)), 1); return;
-    // // fragColor = vec4(vec3(tex.z), 1); return;
-    // fragColor = vec4(vec3(tex), 1); return;
-    // // fragColor = vec4(spectrum(tex.z), 1); return;
-
-
-    // vec3 camPos = vec3(0,.05,3.2) * .5;
-    // vec3 rayDirection = normalize(vec3(p + vec2(0,-0),-4));
-
-    // float r2 = .0;//iTime;
-    // pR(camPos.yz, r2);
-    // pR(rayDirection.yz, r2);
-
-    // float r = .5;//iTime + .7;
-    // pR(camPos.xz, r);
-    // pR(rayDirection.xz, r);
-
-    vec3 camPos = eye;
-    vec3 rayDirection = dir;
-
-    vec3 rayPosition = camPos;
-    float rayLength = 0.;
-    float dist = 0.;
-    bool bg = false;
-    vec3 col = vec3(.15,.05,.15) * 0.;
-
-    for (int i = 0; i < 300; i++) {
-        rayLength += dist;
-        rayPosition = camPos + rayDirection * rayLength;
-        dist = mapDebug(rayPosition);
-
-        if (abs(dist) < .001) {
-            break;
-        }
-        
-        if (rayLength > 10.) {
-            bg = true;
-            break;
-        }
-    }
-    
-    if ( ! bg) {
-        vec3 n = calcNormal(rayPosition);
-        col = n * .5 + .5;
-
-        //col = vec3(.1) + clamp(dot(n, normalize(vec3(-1,1,1))), 0., 1.);
-        
-        if (isDebug) {
-            float d = map(rayPosition);
-            col = vec3(mod(d * 10., 1.));
-        }
-    }
-    
-  //  col = vec3(spaceToTex(vec3(-1,-1,-.7)), 0.);
-
-    //vec2 uv = fragCoord.xy / iResolution.xy;
-    //vec3 ps = texToSpace(uv)[3].xyz;
-    //col = abs(ps);
-    //col = vec3(texture2D(iChannel0, uv).a);
-    
-    fragColor = vec4(col,1.0);
-}
-
-*/
-
-
-
-
-
-
-
-
-
-
 
 
 // Dave_Hoskins https://www.shadertoy.com/view/4djSRW
