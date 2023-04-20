@@ -24,8 +24,8 @@ varying mat4 vView;
 
 #define ANIMATE
 //#define DOF
-//#define SSS
-#define PREVIEW
+#define SSS
+//#define PREVIEW
 
 float time;
 
@@ -39,21 +39,45 @@ void pR2(inout vec2 p, float a) {
 float debugG;
 float SECTION;
 float SECTION_T;
+vec3 RAMPS;
 
 vec2 distort(vec2 coord) {    
     float tt = pow(SECTION_T, .01) * 30.;
+    tt = SECTION_T;
 
-    if (SECTION < .5) {
-        tt = -tt;
-        coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
-    } else if (SECTION < 1.5) {
-        //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002);
-        coord *= mix(1., sin(coord.y/coord.x*200. - tt * PI * 2.), .002);
-    } else if (SECTION < 2.5) {
-        coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005);
-    }
+    float mxA = sin((time - .25) * PI * 2.) * .5 + .5;
+    float mxB = sin((time - .25 + .333) * PI * 2.) * .5 + .5;
+    float mxC = sin((time - .25 + .666) * PI * 2.) * .5 + .5;
 
-    //coord *= mix(1., tan(coord.y/16. + tt * PI), .001);
+    mxA = RAMPS.x;
+    mxC = RAMPS.y;
+    mxB = RAMPS.z;
+
+    coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005 * pow(mxC, 10.));
+
+
+    //coord *= mix(1., tan(coord.y/6. + tt * PI), .001 * pow(mxC, 10.));
+
+
+    tt = -tt;
+    coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), (.04 / 100.) * mxB);
+
+
+    coord *= mix(1., sin((coord.y + tt * PI * 2. * 10.)/coord.x*200. + tt * PI * 2.), .002 * mxA);
+
+    
+    
+    // if (SECTION < .5) {
+    //     tt = -tt;
+    //     coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
+    // } else if (SECTION < 1.5) {
+    //     //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002);
+    //     coord *= mix(1., sin((coord.y - tt * PI * 2. * 10.)/coord.x*200. - tt * PI * 2.), .002);
+    // } else if (SECTION < 2.5) {
+    //     coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005);
+    // }
+
+    
     //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
     
 
@@ -90,7 +114,7 @@ vec3 spaceToTex(vec3 p, vec2 size, float warp, out float warped) {
 
     // FUCK WITH IT...
     vec2 coord2 = distort(coord);
-    coord2 = mix(coord, coord2, warp * 8.);
+    coord2 = mix(coord, coord2, warp);
     //coord2 = mix(coord, coord2, 2.);
     warped = distance(coord, coord2);
     coord = coord2;
@@ -181,8 +205,28 @@ vec3 erot(vec3 p, vec3 ax, float ro) {
 
 float mHead(vec3 p, out float warped) {
     
-    float warp = smoothstep(.068, .744, p.y * .5 + .5);
-    warp = pow(warp, 4.);
+    float yramp = smoothstep(.068, .744, p.y * .5 + .5); 
+    float warp = pow(yramp, 4.) * 8.;
+    float wave = ((
+        sin(p.y * 10. - time * PI * 2. * 1. * 3.)
+        * sin(p.z * 30.)
+        * sin(p.x * 30.)
+    ) * .5 + .5);
+    //wave = step(wave, .5);
+    //warp = mix(wave * .2, pow(yramp, 4.) * mix(5., 8., time), pow(yramp, 4.));
+    //warp *= mix(1., wave, 1. - pow(yramp, 2.));
+    warp *= .66;
+    warp += wave * .2;
+    //warp = 1.;
+    //warp += pow(wave, 4.) * 5.;
+
+    RAMPS = pow(vec3(
+        sin((p.y * .5 + time + .0 - .25) * PI * 2.),
+        sin((p.y * .5 + time + .5 - .25) * PI * 2.),
+        sin((p.y * 2. + time * 3. + .666 - .25) * PI * 2.)
+    ) * .5 + .5, vec3(1.));
+    //warp = .5;
+
 
     vec3 pa = p;
     float bound = fBox(p, vec3(.45,.65,.6));
@@ -607,7 +651,7 @@ const float sqrt3 = 1.7320508075688772;
 // https://www.shadertoy.com/view/WsBBR3
 vec4 draw(vec2 fragCoord, int frame) {
 
-    vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
+    vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.x;
     
     p *= .85;
 
@@ -623,14 +667,23 @@ vec4 draw(vec2 fragCoord, int frame) {
     float camTilt = 0.;
 
 
-    if (SECTION < .5) {
+    // if (SECTION < .5) {
         camPos = vec3(1.5,.8,3) * .85;
         camTar = vec3(0,.1,0);
-        camPos = erot(camPos, vec3(0,1,0), -SECTION_T * .3 + .2);
-        camPos *= pow(.8, SECTION_T);
-    } else if (SECTION < 1.5) {
-    } else if (SECTION < 2.5) {
-    }
+    //    camPos = erot(camPos, vec3(0,1,0), -SECTION_T * .4 + .2);
+    //    camPos *= pow(.7, SECTION_T);
+    // } else if (SECTION < 1.5) {
+    //     camPos = vec3(0,-.3,1.5);
+    //     camTar = vec3(0,.1,0);
+    //     camPos = erot(camPos, vec3(1,0,0), -SECTION_T * .4 + .0);
+    //     camPos *= pow(1.4, SECTION_T);
+    //     focalLength = 4.;
+    // } else if (SECTION < 2.5) {
+    //     camPos = vec3(1.5,.8,3) * .85;
+    //     camTar = vec3(0,.1,0);
+    //     camPos = erot(camPos, vec3(0,1,0), -SECTION_T * .4 + .2);
+    //     camPos *= pow(.7, SECTION_T);
+    // }
 
 
     
@@ -691,7 +744,8 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 
     time = 1.3;
-    time = fract((iTime * .5) / 3.) * 3.;
+    float sections = 3.;
+    time = fract((iTime * .5) / sections) * sections;
     //time = 3.730;
 
     SECTION = floor(time);
