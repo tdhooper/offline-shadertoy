@@ -24,8 +24,8 @@ varying mat4 vView;
 
 #define ANIMATE
 //#define DOF
-#define SSS
-//#define PREVIEW
+//#define SSS
+#define PREVIEW
 
 float time;
 
@@ -38,18 +38,19 @@ void pR2(inout vec2 p, float a) {
 
 float debugG;
 float SECTION;
+float SECTION_T;
 
-vec2 distort(vec2 coord) {
-    float tt = fract(iTime * .2);
-
+vec2 distort(vec2 coord) {    
+    float tt = pow(SECTION_T, .01) * 30.;
 
     if (SECTION < .5) {
-    coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
+        tt = -tt;
+        coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
     } else if (SECTION < 1.5) {
-    //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002);
-    coord *= mix(1., sin(coord.y/coord.x*200. - tt * PI * 2.), .002);
+        //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002);
+        coord *= mix(1., sin(coord.y/coord.x*200. - tt * PI * 2.), .002);
     } else if (SECTION < 2.5) {
-    coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005);
+        coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005);
     }
 
     //coord *= mix(1., tan(coord.y/16. + tt * PI), .001);
@@ -116,12 +117,12 @@ vec3 lookupDebug;
 float mapTex(sampler2D tex, vec3 p, vec2 size, float warp, out float warped) {
     p = p;
 
-    vec3 cg = floor(p * 4. * vec3(.5,1.,.5));
-    cg.z += floor(iTime);;
-    float g = mod(cg.x + cg.y + cg.z, 3.);
-    debugG = g;
-    SECTION = g;
-    SECTION = 0.;
+    // vec3 cg = floor(p * 4. * vec3(.5,1.,.5));
+    // cg.z += floor(iTime);;
+    // float g = mod(cg.x + cg.y + cg.z, 3.);
+    // debugG = g;
+    // SECTION = g;
+    // SECTION = 0.;
 
     // stop x bleeding into the next cell as it's the mirror cut
     #ifdef MIRROR
@@ -170,6 +171,12 @@ float fBox(vec3 p, vec3 b) {
 
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+// Rotate around axis
+// blackle https://suricrasia.online/demoscene/functions/
+vec3 erot(vec3 p, vec3 ax, float ro) {
+  return mix(dot(ax, p)*ax, p, cos(ro)) + cross(ax,p)*sin(ro);
 }
 
 float mHead(vec3 p, out float warped) {
@@ -610,9 +617,22 @@ vec4 draw(vec2 fragCoord, int frame) {
     p += 2. * (seed - .5) / iResolution.xy;
 
 
-    float focalLength = 6.;
+    float focalLength = 3.1;
     vec3 camPos = vec3(0,0,.4) * focalLength * 1.;
     vec3 camTar = vec3(0);
+    float camTilt = 0.;
+
+
+    if (SECTION < .5) {
+        camPos = vec3(1.5,.8,3) * .85;
+        camTar = vec3(0,.1,0);
+        camPos = erot(camPos, vec3(0,1,0), -SECTION_T * .3 + .2);
+        camPos *= pow(.8, SECTION_T);
+    } else if (SECTION < 1.5) {
+    } else if (SECTION < 2.5) {
+    }
+
+
     
     vec3 ww = normalize(camTar - camPos);
     vec3 uu = normalize(cross(vec3(0,1,0),ww));
@@ -621,9 +641,8 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     vec3 rayDir, origin;
 
-
     //if (fract(p.y * 20.) > .5)
-    if (false)
+    if (true)
     {
         rayDir = normalize(camMat * vec3(p.xy, focalLength));
         origin = camPos;
@@ -638,6 +657,9 @@ vec4 draw(vec2 fragCoord, int frame) {
         rayDir = normalize(camMat * vec3(p.x * fov, p.y * fov, -1.));
         focalLength = (1. / fov);
     }
+
+    // define 
+
 
 
     #ifdef DOF
@@ -669,8 +691,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
 
     time = 1.3;
-    time = fract(iTime);
+    time = fract((iTime * .5) / 3.) * 3.;
     //time = 3.730;
+
+    SECTION = floor(time);
+    SECTION_T = fract(time);
 
     vec4 col = draw(fragCoord, iFrame);
 
