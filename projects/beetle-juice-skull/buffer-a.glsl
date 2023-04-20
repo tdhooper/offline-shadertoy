@@ -1,4 +1,4 @@
-// framebuffer drawcount: 40, tile: 1
+// framebuffer drawcount: 240, tile: 1
 
 precision highp float;
 
@@ -378,7 +378,7 @@ Hit march(vec3 origin, vec3 rayDir, float invert, float maxDist, float understep
     
    // understep *= .2;
 
-    for (float i = 0.; i < 1500.; i++) {
+    for (int i = 0; i < 1500; i++) {
         len += dist * understep;
         p = origin + len * rayDir;
         candidate = map(p);
