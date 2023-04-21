@@ -43,28 +43,26 @@ vec3 RAMPS;
 
 vec2 distort(vec2 coord) {    
     float tt = pow(SECTION_T, .01) * 30.;
-    tt = SECTION_T;
+    tt = SECTION_T * 2.;
 
     float mxA = sin((time - .25) * PI * 2.) * .5 + .5;
     float mxB = sin((time - .25 + .333) * PI * 2.) * .5 + .5;
     float mxC = sin((time - .25 + .666) * PI * 2.) * .5 + .5;
 
     mxA = RAMPS.x;
-    mxC = RAMPS.y;
-    mxB = RAMPS.z;
+    mxB = RAMPS.y;
+    mxC = RAMPS.z;
 
-    coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005 * pow(mxC, 10.));
+    //coord *= mix(1., sin((coord.y - tt * PI * 2. * 10.)/coord.x*200. - tt * PI * 2.), .002 * mxA * .75);
 
+    //coord *= mix(1., tan(coord.y*10./coord.x*5. - tt * PI), (.04 / 100.) * mxB * 1.5);
 
-    //coord *= mix(1., tan(coord.y/6. + tt * PI), .001 * pow(mxC, 10.));
+    //coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005 * pow(mxC, 10.));
+    //coord *= mix(1., tan(coord.y/16. + tt * PI), .001 * pow(mxC, 10.));
+    //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
+    //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002 * mxC);
 
-
-    tt = -tt;
-    coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), (.04 / 100.) * mxB);
-
-
-    coord *= mix(1., sin((coord.y + tt * PI * 2. * 10.)/coord.x*200. + tt * PI * 2.), .002 * mxA);
-
+    coord *= mix(1., tan((coord.x*coord.y)/mix(2750.,3000.,SECTION_T) + SECTION_T * PI * 15.), .0005);
     
     
     // if (SECTION < .5) {
@@ -90,7 +88,6 @@ vec2 distort(vec2 coord) {
 // Transform xyz coordinate in range -1,-1,-1 to 1,1,1
 // to texture uv and channel
 vec3 spaceToTex(vec3 p, vec2 size, float warp, out float warped) {
-
     p = clamp(p, -1., 1.);
 
     p = p * .5 + .5; // range 0:1
@@ -136,41 +133,6 @@ float pickIndex(vec4 v, int i) {
     if (i == 3) return v.a;
 }
 
-vec3 lookupDebug;
-
-float mapTex(sampler2D tex, vec3 p, vec2 size, float warp, out float warped) {
-    p = p;
-
-    // vec3 cg = floor(p * 4. * vec3(.5,1.,.5));
-    // cg.z += floor(iTime);;
-    // float g = mod(cg.x + cg.y + cg.z, 3.);
-    // debugG = g;
-    // SECTION = g;
-    // SECTION = 0.;
-
-    // stop x bleeding into the next cell as it's the mirror cut
-    #ifdef MIRROR
-        p.x = clamp(p.x, -.95, .95);
-    #endif
-    vec2 sub = texSubdivisions;
-    float zRange = sub.x * sub.y * 4. - 1.;
-    float z = p.z * .5 + .5; // range 0:1
-    float zFloor = (floor(z * zRange) / zRange) * 2. - 1.;
-    float zCeil = (ceil(z * zRange) / zRange) * 2. - 1.;
-    float warpedA, warpedB;
-    vec3 uvcA = spaceToTex(vec3(p.xy, zFloor), size, warp, warpedA);
-    vec3 uvcB = spaceToTex(vec3(p.xy, zCeil), size, warp, warpedB);
-    float a = pickIndex(texture2D(tex, uvcA.xy), int(uvcA.z));
-    float b = pickIndex(texture2D(tex, uvcB.xy), int(uvcB.z));
-    // return a;
-    float t = range(zFloor, zCeil, p.z);
-    float d = mix(a, b, t);
-    lookupDebug = mix(uvcA, uvcB, t);
-    warped = mix(warpedA, warpedB, t);
-    //d -= warp * .05;
-    return d;
-}
-
 
 float vmax(vec2 v) {
     return max(v.x, v.y);
@@ -203,9 +165,169 @@ vec3 erot(vec3 p, vec3 ax, float ro) {
   return mix(dot(ax, p)*ax, p, cos(ro)) + cross(ax,p)*sin(ro);
 }
 
-float mHead(vec3 p, out float warped) {
+
+
+vec3 lookupDebug;
+
+struct Model {
+    float d;
+    vec3 uvw;
+    vec3 albedo;
+    int id;
+};
+
+Model mixModel(Model a, Model b, float t) {
+    return Model(
+        mix(a.d, b.d, t),
+        mix(a.uvw, b.uvw, t),
+        mix(a.albedo, b.albedo, t),
+        t < .5 ? a.id : b.id
+    );
+}
+
+/*
+float ellip(vec3 p, vec3 s) {
+    float r = vmin(s);
+    p *= r / s;
+    return length(p) - r;
+}
+
+float ellip(vec2 p, vec2 s) {
+    float r = vmin(s);
+    p *= r / s;
+    return length(p) - r;
+}
+
+float smin(float a, float b, float k){
+    float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
+    return (1. - f) * a + f  * b - f * (1. - f) * k;
+}
+
+float smax(float a, float b, float k) {
+    return -smin(-a, -b, k);
+}
+
+float mouthCol(vec3 p) {
+    pR(p.yz, -.1);
+    p.x = abs(p.x);
+
+    vec3 pp = p;
+
+    float d = 1e12;
+
+    p += vec3(-.0,.29,-.29);
+    pR(p.yz, -.3);
+    d = smin(d, ellip(p, vec3(.13,.15,.1)), .18);
+
+    p = pp;
+    p += vec3(0,.37,-.4);
+    d = smin(d, ellip(p, vec3(.03,.03,.02) * .5), .1);
+
+    p = pp;
+    p += vec3(-.09,.37,-.31);
+    d = smin(d, ellip(p, vec3(.04)), .18);
+
+    // bottom lip
+    p = pp;
+    p += vec3(0,.455,-.455);
+    p.z += smoothstep(.0, .2, p.x) * .05;
+    float lb = mix(.035, .03, smoothstep(.05, .15, length(p)));
+    vec3 ls = vec3(.055,.028,.022) * 1.25;
+    float w = .192;
+    vec2 pl2 = vec2(p.x, length(p.yz * vec2(.79,1)));
+    float bottomlip = length(pl2 + vec2(0,w-ls.z)) - w;
+    bottomlip = smax(bottomlip, length(pl2 - vec2(0,w-ls.z)) - w, .055);
+    d = smin(d, bottomlip, lb);
+    
+    // top lip
+    p = pp;
+    p += vec3(0,.38,-.45);
+    pR(p.xz, -.3);
+    ls = vec3(.065,.03,.05);
+    w = ls.x * (-log(ls.y/ls.x) + 1.);
+    vec3 pl = p * vec3(.78,1,1);
+    float toplip = length(pl + vec3(0,w-ls.y,0)) - w;
+    toplip = smax(toplip, length(pl - vec3(0,w-ls.y,0)) - w, .065);
+    p = pp;
+    p += vec3(0,.33,-.45);
+    pR(p.yz, .7);
+    float cut;
+    cut = dot(p, normalize(vec3(.5,.25,0))) - .056;
+    float dip = smin(
+        dot(p, normalize(vec3(-.5,.5,0))) + .005,
+        dot(p, normalize(vec3(.5,.5,0))) + .005,
+        .025
+    );
+    cut = smax(cut, dip, .04);
+    cut = smax(cut, p.x - .1, .05);
+    toplip = smax(toplip, cut, .02);
+
+    d = smin(d, toplip, .07);
+
+    return d;
+}
+*/
+
+
+Model mapEyes(vec3 p) {
+    pR(p.yz, -.1);
+    p.x = abs(p.x);
+    p += vec3(-.165,.0715,-.346);
+    float d = length(p) - .088;
+    return Model(d, vec3(0, 1, 0), vec3(3), 1);
+}
+
+Model sampleVolume(sampler2D tex, vec3 uvw) {
+    float d = pickIndex(texture2D(tex, uvw.xy), int(uvw.z));
+    return Model(d, vec3(0, 0, 0), vec3(.5), 1);
+}
+
+Model mapTexZ(sampler2D tex, vec3 p, vec2 size, float warp) {
+
+    float warped;
+    vec3 uvw = spaceToTex(p, size, warp, warped);
+    Model model = sampleVolume(tex, uvw);
+
+    p = texToSpace(uvw.xy * size, int(uvw.z), size);
+    p -= OFFSET;
+    p /= SCALE;
+    Model model2 = mapEyes(p);
+
+    //float c = mouthCol(p);
+    //model.albedo.x = sin(c * 1000.) * .5 + .5;
+    //model.albedo.y *= step(0., c);
+
+    if (model2.d < model.d) {
+        model = model2;
+    }
+    model.uvw.x = warped;
+    return model;
+}
+
+Model mapTex(sampler2D tex, vec3 p, vec2 size, float warp) {
+    p = p;
+    // stop x bleeding into the next cell as it's the mirror cut
+    #ifdef MIRROR
+        p.x = clamp(p.x, -.95, .95);
+    #endif
+    vec2 sub = texSubdivisions;
+    float zRange = sub.x * sub.y * 4. - 1.;
+    float z = p.z * .5 + .5; // range 0:1
+    float zFloor = (floor(z * zRange) / zRange) * 2. - 1.;
+    float zCeil = (ceil(z * zRange) / zRange) * 2. - 1.;
+    Model a = mapTexZ(tex, vec3(p.xy, zFloor), size, warp);
+    Model b = mapTexZ(tex, vec3(p.xy, zCeil), size, warp);
+    float t = range(zFloor, zCeil, p.z);
+    Model m = mixModel(a, b, t);
+    return m;
+}
+
+
+
+Model mHead(vec3 p, out float warped) {
     
     float yramp = smoothstep(.068, .744, p.y * .5 + .5); 
+    //yramp = sin(p.y * 4. - time * PI * 2.) * .5 + .5;
     float warp = pow(yramp, 4.) * 8.;
     float wave = ((
         sin(p.y * 10. - time * PI * 2. * 1. * 3.)
@@ -215,18 +337,22 @@ float mHead(vec3 p, out float warped) {
     //wave = step(wave, .5);
     //warp = mix(wave * .2, pow(yramp, 4.) * mix(5., 8., time), pow(yramp, 4.));
     //warp *= mix(1., wave, 1. - pow(yramp, 2.));
-    warp *= .66;
-    warp += wave * .2;
+    
+    //warp *= .66;
+    //warp += wave * .2;
+
     //warp = 1.;
     //warp += pow(wave, 4.) * 5.;
 
+    float sz = 16.;
     RAMPS = pow(vec3(
-        sin((p.y * .5 + time + .0 - .25) * PI * 2.),
-        sin((p.y * .5 + time + .5 - .25) * PI * 2.),
-        sin((p.y * 2. + time * 3. + .666 - .25) * PI * 2.)
-    ) * .5 + .5, vec3(1.));
+        sin((p.y / sz + time + .0 - .25) * PI * 2.),
+        sin((p.y / sz + time + .333 - .25) * PI * 2.),
+        sin((p.y / sz + time + .666 - .25) * PI * 2.)
+    ) * .5 + .5, vec3(3.));
     //warp = .5;
-
+    //RAMPS.z *= 0.;
+//RAMPS = vec3(0,0,1);
 
     vec3 pa = p;
     float bound = fBox(p, vec3(.45,.65,.6));
@@ -251,10 +377,7 @@ float mHead(vec3 p, out float warped) {
     #ifdef ORDER_ZXY
         p = p.yzx;
     #endif
-    float d = mapTex(sdfData, p, sdfDataSize, warp, warped);
-    //return min(d, max(bound, pa.x));
-    return d;
-    return min(d, bound + .02);
+    return mapTex(sdfData, p, sdfDataSize, warp);
 }
 
 struct Material {
@@ -264,22 +387,17 @@ struct Material {
     bool sss;
 };
 
-struct Model {
-    float d;
-    vec3 uvw;
-    vec3 albedo;
-    int id;
-};
-
 Material shadeModel(Model model, inout vec3 nor) {
     bool sss = false;
     #ifdef SSS
     sss = true;
     #endif
+    float eyes = model.uvw.y;
     // normal in warped areas
     vec3 col = mix(model.albedo, nor * .5 + .5, min(model.uvw.x, 1.));
     // brighten really warped bits
-    col *= 1. + min(max(model.uvw.x - 1., 0.) * .25, 0.5) * .5;
+    col *= 1. + min(max(model.uvw.x - 1., 0.) * .25, 0.5) * .25;
+    col = mix(col, model.albedo, eyes);
     return Material(col, .0, 1., sss);
 }
 
@@ -296,9 +414,9 @@ vec3 spectrum(float n) {
 Model map(vec3 p) {
     p.y -= .15;
     float warped;
-    float d = mHead(p, warped);
-    vec3 col = vec3(.5);
-    return Model(d, vec3(warped, 0, 0), col, 1);
+    return mHead(p, warped);
+    //vec3 col = vec3(.5);
+    //return Model(d, vec3(warped, 0, 0), col, 1);
 }
 
 
@@ -695,7 +813,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 rayDir, origin;
 
     //if (fract(p.y * 20.) > .5)
-    if (true)
+    if (false)
     {
         rayDir = normalize(camMat * vec3(p.xy, focalLength));
         origin = camPos;
@@ -745,7 +863,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     time = 1.3;
     float sections = 3.;
-    time = fract((iTime * .5) / sections) * sections;
+    time = fract((iTime * .25) / sections) * sections;
     //time = 3.730;
 
     SECTION = floor(time);
