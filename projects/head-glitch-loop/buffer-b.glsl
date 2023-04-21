@@ -786,8 +786,15 @@ vec4 draw(vec2 fragCoord, int frame) {
 
 
     // if (SECTION < .5) {
-        camPos = vec3(1.5,.8,3) * .85;
-        camTar = vec3(0,.1,0);
+
+//        camPos = vec3(1.5,.8,3) * .85;
+//        camTar = vec3(0,.1,0);
+
+        camPos = vec3(.54,-.4,1.3)* .99;
+        camTar = vec3(-.26,.23,0);
+        camTilt = -.15;
+
+
     //    camPos = erot(camPos, vec3(0,1,0), -SECTION_T * .4 + .2);
     //    camPos *= pow(.7, SECTION_T);
     // } else if (SECTION < 1.5) {
@@ -806,14 +813,14 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     
     vec3 ww = normalize(camTar - camPos);
-    vec3 uu = normalize(cross(vec3(0,1,0),ww));
+    vec3 uu = normalize(cross(erot(vec3(0,1,0), ww, camTilt),ww));
     vec3 vv = normalize(cross(ww,uu));
     mat3 camMat = mat3(-uu, vv, ww);
 
     vec3 rayDir, origin;
 
     //if (fract(p.y * 20.) > .5)
-    if (false)
+    if (true)
     {
         rayDir = normalize(camMat * vec3(p.xy, focalLength));
         origin = camPos;
