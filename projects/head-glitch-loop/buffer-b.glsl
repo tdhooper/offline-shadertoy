@@ -1,5 +1,5 @@
 
-// framebuffer drawcount: 1, tile: 1
+// framebuffer drawcount: 8, tile: 1
 
 precision highp float;
 
@@ -62,18 +62,18 @@ vec2 distort(vec2 coord) {
     //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
     //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002 * mxC);
 
-    coord *= mix(1., tan((coord.x*coord.y)/mix(2750.,3000.,SECTION_T) + SECTION_T * PI * 15.), .0005);
     
     
-    // if (SECTION < .5) {
-    //     tt = -tt;
-    //     coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
-    // } else if (SECTION < 1.5) {
-    //     //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002);
-    //     coord *= mix(1., sin((coord.y - tt * PI * 2. * 10.)/coord.x*200. - tt * PI * 2.), .002);
-    // } else if (SECTION < 2.5) {
-    //     coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005);
-    // }
+    if (SECTION < .5) {
+        tt = -tt;
+        coord *= mix(1., tan(coord.y*10./coord.x*5. + tt * PI), .04 / 100.);
+    } else if (SECTION < 1.5) {
+        //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002);
+        coord *= mix(1., sin((coord.y - tt * PI * 2. * 10.)/coord.x*200. - tt * PI * 2.), .002);
+    } else if (SECTION < 2.5) {
+        // coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005);
+        coord *= mix(1., tan((coord.x*coord.y)/mix(2750.,3000.,1.-SECTION_T) - SECTION_T * PI * 15.), .0005);
+    }
 
     
     //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
@@ -412,6 +412,12 @@ vec3 spectrum(float n) {
 
 
 Model map(vec3 p) {
+
+    if (SECTION < .5) {
+    } else if (SECTION < 1.5) {        
+    } else {
+        p = erot(p, normalize(vec3(1,0,0)), (SECTION_T - .75) * .05);
+    }
     p.y -= .15;
     float warped;
     return mHead(p, warped);
@@ -806,32 +812,30 @@ vec4 draw(vec2 fragCoord, int frame) {
     float camTilt = 0.;
 
 
-    // if (SECTION < .5) {
-
-    //    camPos = vec3(1.5,.8,3) * .85;
-    //    camTar = vec3(0,.1,0);
-
-        camPos = vec3(.54,-.4,1.3)* .99;
-        camTar = vec3(-.26,.23,0);
+    if (SECTION < .5) {
+       camPos = vec3(1.5,.8,3) * 1.2;
+       camTar = vec3(0,.1,0);
+       camPos = erot(camPos, vec3(0,1,0), -SECTION_T * .4 + .2);
+       camPos *= pow(.7, SECTION_T);
+    } else if (SECTION < 1.5) {
+       camPos = vec3(1.5,.8,3) * 1.2;
+       camTar = vec3(0,.1,0);
+       camPos = erot(camPos, vec3(0,1,0), -SECTION_T * .4 + .2);
+       camPos *= pow(.7, SECTION_T);
+        // camPos = vec3(0,-.3,1.5);
+        // camTar = vec3(0,.1,0);
+        // camPos = erot(camPos, vec3(1,0,0), -SECTION_T * .4 + .0);
+        // camPos *= pow(1.4, SECTION_T);
+        // focalLength = 4.;
+    } else {
+        camPos = vec3(.54,-.4,1.3) * 1.3;
+        camTar = vec3(-.26,.2,0);
         camTilt = -.15;
-
-
-    //    camPos = erot(camPos, vec3(0,1,0), -SECTION_T * .4 + .2);
-    //    camPos *= pow(.7, SECTION_T);
-    // } else if (SECTION < 1.5) {
-    //     camPos = vec3(0,-.3,1.5);
-    //     camTar = vec3(0,.1,0);
-    //     camPos = erot(camPos, vec3(1,0,0), -SECTION_T * .4 + .0);
-    //     camPos *= pow(1.4, SECTION_T);
-    //     focalLength = 4.;
-    // } else if (SECTION < 2.5) {
-    //     camPos = vec3(1.5,.8,3) * .85;
-    //     camTar = vec3(0,.1,0);
-    //     camPos = erot(camPos, vec3(0,1,0), -SECTION_T * .4 + .2);
-    //     camPos *= pow(.7, SECTION_T);
-    // }
-
-
+        vec3 offset = vec3(SECTION_T * -.045,0,0);
+        camPos += offset;
+        camTar += offset;
+        camPos *= pow(.9, SECTION_T);
+    }
     
     vec3 ww = normalize(camTar - camPos);
     vec3 uu = normalize(cross(erot(vec3(0,1,0), ww, camTilt),ww));
@@ -896,6 +900,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     SECTION = floor(time);
     SECTION_T = fract(time);
+   // SECTION = 1.;
 
     vec4 col = draw(fragCoord, iFrame);
 
