@@ -515,6 +515,7 @@ module.exports = (project) => {
         }
         requestAnimationFrame(tick);
       });
+      regl.poll();
     })(performance.now());
   }
 

@@ -1,5 +1,5 @@
 
-// framebuffer drawcount: 8, tile: 1
+// framebuffer drawcount: 1, tile: 1
 
 precision highp float;
 
@@ -769,9 +769,30 @@ const float sqrt3 = 1.7320508075688772;
 // https://www.shadertoy.com/view/WsBBR3
 vec4 draw(vec2 fragCoord, int frame) {
 
-    vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.x;
+    vec2 p = (-iResolution.xy + 2.* fragCoord);
     
-    p *= .85;
+    float sRatio = iResolution.x / iResolution.y;
+    float ratio = 9./16.;
+
+    if (ratio / sRatio < 1.) {
+        p /= iResolution.y;
+        //p /= ratio;
+        //if (abs(p.x) > 1.) {
+        if (abs(p.x) > ratio) {
+            return vec4(0);
+        }
+    } else {
+        p /= iResolution.x;
+        p *= ratio;
+        //if (abs(p.y) > 1./ratio) {
+        if (abs(p.y) > 1.) {
+            return vec4(0);
+        }
+    }
+
+
+    //p *= 1.2;
+
 
     vec2 seed = hash22(fragCoord + (float(frame)) * sqrt3);
     
@@ -787,8 +808,8 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     // if (SECTION < .5) {
 
-//        camPos = vec3(1.5,.8,3) * .85;
-//        camTar = vec3(0,.1,0);
+    //    camPos = vec3(1.5,.8,3) * .85;
+    //    camTar = vec3(0,.1,0);
 
         camPos = vec3(.54,-.4,1.3)* .99;
         camTar = vec3(-.26,.23,0);
