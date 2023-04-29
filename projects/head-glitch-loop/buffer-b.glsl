@@ -26,6 +26,7 @@ varying mat4 vView;
 //#define DOF
 #define SSS
 //#define PREVIEW
+//#define DEBUG_WAVE
 
 #define ANIM2
 
@@ -353,19 +354,22 @@ Model mHead(vec3 p) {
     //wave *= 2.;
     //wave = 0.;
 
-    float wavesn = (-snoise(p * 1.5 -2.) * .5 + .5) * 1.;
+    float wavesn = (-snoise(p * .5 -15.) * .5 + .5) * 1.;
 
     float db = length(p - vec3(0,.2,.5)) - .01;
 
    //wave = snoise(p * 5.);
      wave = sin(length(p + distort * .0 - vec3(0,.2,.5)) * 20. - time * PI * 2. * 2.);
+     //wave = (length(p + distort * .0 - vec3(0,.2,.5)) * 20.);
    // wave *= .5;
     //wave = mix(w2, wave, .5);
     //wave = step(wave, 0.);
     wave *= smoothstep(.25, 0., db);
 
-    wave += wavesn;
 
+
+    wavesn = length(p - vec3(.3,-.3,.1)) * .9;
+    wave += wavesn;
 
     wave = wave * .5 + .5;
     //wave *= .5;
@@ -388,7 +392,7 @@ Model mHead(vec3 p) {
     // )) * .5 + .5, vec4(6.));
 
 
-    //RAMPS = vec4(wave);
+    //RAMPS = vec4(wavesn);
 
     //wave = step(wave, .5);
 
@@ -450,7 +454,7 @@ Material shadeModel(Model model, inout vec3 nor) {
     col = mix(col, model.albedo, eyes);
 
     #ifdef DEBUG_WAVE
-    col = mix(vec3(.5), vec3(1,0,0), RAMPS.x);
+    col = RAMPS.xyz;
     #endif
 
     return Material(col, 0., 1., .033);
