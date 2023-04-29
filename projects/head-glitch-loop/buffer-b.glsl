@@ -121,11 +121,17 @@ vec4 RAMPS;
 vec2 distort(vec2 coord) {    
     float tt = pow(SECTION_T, .01) * 30.;
     tt = SECTION_T * 2.;
-//return coord;
+
+    #ifdef DEBUG_WAVE
+    return coord;
+    #endif
+    
     #ifdef ANIM2
+    tt = time;
 //RAMPS = vec4(1);
-    coord *= mix(1., tan((coord.x*coord.y)/3000. - tt * PI), .0005 * pow(RAMPS.w, 1.));      
-    coord *= mix(1., sin((coord.y - tt * PI * 2. * 10.)/coord.x*200. - tt * PI * 2.), .002 * RAMPS.y);
+
+    coord *= mix(1., tan((coord.x*coord.y)/3000. - tt * PI), .0005 * pow(RAMPS.y, 1.));
+    coord *= mix(1., sin((coord.y)/coord.x*200. - tt * PI * 2.), .002 * RAMPS.w);
     coord *= mix(1., tan(coord.y*10./coord.x*5. - tt * PI), (.04 / 100.) * RAMPS.z * 1.5);
     coord *= mix(1., tan(coord.x*15./coord.y*15. + tt * PI * 1.), .0002 * RAMPS.x);
     
@@ -334,18 +340,37 @@ Model mHead(vec3 p) {
     //warp = 1.;
     //warp += pow(wave, 4.) * 5.;
 
-    vec3 pw = p * 8.;
+    vec3 pw = p * 20.;
     pw -= time * PI * 2.;
 
-    wave = ((
+    float distort = ((
         sin(pw.x)
         * sin(pw.y)
         * sin(pw.z)
     ) * .5 + .5) * 1.;
 
-    wave = snoise(p * 1.5 -1.) * .5 + .5;
+    //wave = snoise(p * 1.5 -1.);
     //wave *= 2.;
     //wave = 0.;
+
+    float wavesn = (-snoise(p * 1.5 -2.) * .5 + .5) * 1.;
+
+    float db = length(p - vec3(0,.2,.5)) - .01;
+
+   //wave = snoise(p * 5.);
+     wave = sin(length(p + distort * .0 - vec3(0,.2,.5)) * 20. - time * PI * 2. * 2.);
+   // wave *= .5;
+    //wave = mix(w2, wave, .5);
+    //wave = step(wave, 0.);
+    wave *= smoothstep(.25, 0., db);
+
+    wave += wavesn;
+
+
+    wave = wave * .5 + .5;
+    //wave *= .5;
+
+    
 
     float sz = 16.;
     RAMPS = pow(vec4(
@@ -354,6 +379,14 @@ Model mHead(vec3 p) {
         sin((p.y / sz + time + .5 - .25 - wave) * PI * 2.),
         sin((p.y / sz + time + .75 - .25 - wave) * PI * 2.)
     ) * .5 + .5, vec4(6.));
+
+
+    // RAMPS = pow(vec4(sin(
+    //     (length(p + distort * .1 - vec3(0,.2,.5)) * 12.)
+    //     + vec4(0, .25, .5, .75) * PI * 2.
+    //     - time * PI * 2. * 2.
+    // )) * .5 + .5, vec4(6.));
+
 
     //RAMPS = vec4(wave);
 
@@ -387,7 +420,12 @@ Model mHead(vec3 p) {
     #ifdef ORDER_ZXY
         p = p.yzx;
     #endif
-    return mapTex(sdfData, p, sdfDataSize, warp);
+    Model m = mapTex(sdfData, p, sdfDataSize, warp);
+
+   // m.d = min(m.d, db);
+
+    return m;
+
 }
 
 struct Material {
@@ -410,7 +448,11 @@ Material shadeModel(Model model, inout vec3 nor) {
     // brighten really warped bits
     col *= 1. + min(max(warped - 1., 0.) * .25, 0.5) * .33;
     col = mix(col, model.albedo, eyes);
-//col = mix(vec3(.5), vec3(1,0,0), RAMPS.x);
+
+    #ifdef DEBUG_WAVE
+    col = mix(vec3(.5), vec3(1,0,0), RAMPS.x);
+    #endif
+
     return Material(col, 0., 1., .033);
 }
 
@@ -927,6 +969,10 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     float sections = 3.;
     time = fract((iTime * .25) / sections) * sections;
     //time = 3.730;
+
+    #ifdef ANIM2
+    time = fract(iTime / 4.);
+    #endif
 
     SECTION = floor(time);
     SECTION_T = fract(time);
