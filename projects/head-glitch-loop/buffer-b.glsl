@@ -27,6 +27,8 @@ varying mat4 vView;
 #define SSS
 //#define PREVIEW
 
+#define ANIM2
+
 float time;
 
 float round(float t) { return floor(t + 0.5); }
@@ -39,30 +41,25 @@ void pR2(inout vec2 p, float a) {
 float debugG;
 float SECTION;
 float SECTION_T;
-vec3 RAMPS;
+vec4 RAMPS;
 
 vec2 distort(vec2 coord) {    
     float tt = pow(SECTION_T, .01) * 30.;
     tt = SECTION_T * 2.;
 
-    float mxA = sin((time - .25) * PI * 2.) * .5 + .5;
-    float mxB = sin((time - .25 + .333) * PI * 2.) * .5 + .5;
-    float mxC = sin((time - .25 + .666) * PI * 2.) * .5 + .5;
+    #ifdef ANIM2
 
-    mxA = RAMPS.x;
-    mxB = RAMPS.y;
-    mxC = RAMPS.z;
+    coord *= mix(1., tan((coord.x*coord.y)/3000. - tt * PI), .0005 * pow(RAMPS.w, 1.));      
+    coord *= mix(1., sin((coord.y - tt * PI * 2. * 10.)/coord.x*200. - tt * PI * 2.), .002 * RAMPS.y);
+    coord *= mix(1., tan(coord.y*10./coord.x*5. - tt * PI), (.04 / 100.) * RAMPS.z * 1.5);
+    coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002 * RAMPS.x);
+    
 
-    //coord *= mix(1., sin((coord.y - tt * PI * 2. * 10.)/coord.x*200. - tt * PI * 2.), .002 * mxA * .75);
-
-    //coord *= mix(1., tan(coord.y*10./coord.x*5. - tt * PI), (.04 / 100.) * mxB * 1.5);
-
-    //coord *= mix(1., tan((coord.x*coord.y)/2000. - tt * PI), .0005 * pow(mxC, 10.));
     //coord *= mix(1., tan(coord.y/16. + tt * PI), .001 * pow(mxC, 10.));
     //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
-    //coord *= mix(1., tan(coord.x*15./coord.y*5. + tt * PI * 1.), .0002 * mxC);
 
-    
+
+    #else
     
     if (SECTION < .5) {
         tt = -tt;
@@ -75,6 +72,7 @@ vec2 distort(vec2 coord) {
         coord *= mix(1., tan((coord.x*coord.y)/mix(2750.,3000.,1.-SECTION_T) - SECTION_T * PI * 15.), .0005);
     }
 
+    #endif
     
     //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
     
@@ -185,89 +183,6 @@ Model mixModel(Model a, Model b, float t) {
     );
 }
 
-/*
-float ellip(vec3 p, vec3 s) {
-    float r = vmin(s);
-    p *= r / s;
-    return length(p) - r;
-}
-
-float ellip(vec2 p, vec2 s) {
-    float r = vmin(s);
-    p *= r / s;
-    return length(p) - r;
-}
-
-float smin(float a, float b, float k){
-    float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
-    return (1. - f) * a + f  * b - f * (1. - f) * k;
-}
-
-float smax(float a, float b, float k) {
-    return -smin(-a, -b, k);
-}
-
-float mouthCol(vec3 p) {
-    pR(p.yz, -.1);
-    p.x = abs(p.x);
-
-    vec3 pp = p;
-
-    float d = 1e12;
-
-    p += vec3(-.0,.29,-.29);
-    pR(p.yz, -.3);
-    d = smin(d, ellip(p, vec3(.13,.15,.1)), .18);
-
-    p = pp;
-    p += vec3(0,.37,-.4);
-    d = smin(d, ellip(p, vec3(.03,.03,.02) * .5), .1);
-
-    p = pp;
-    p += vec3(-.09,.37,-.31);
-    d = smin(d, ellip(p, vec3(.04)), .18);
-
-    // bottom lip
-    p = pp;
-    p += vec3(0,.455,-.455);
-    p.z += smoothstep(.0, .2, p.x) * .05;
-    float lb = mix(.035, .03, smoothstep(.05, .15, length(p)));
-    vec3 ls = vec3(.055,.028,.022) * 1.25;
-    float w = .192;
-    vec2 pl2 = vec2(p.x, length(p.yz * vec2(.79,1)));
-    float bottomlip = length(pl2 + vec2(0,w-ls.z)) - w;
-    bottomlip = smax(bottomlip, length(pl2 - vec2(0,w-ls.z)) - w, .055);
-    d = smin(d, bottomlip, lb);
-    
-    // top lip
-    p = pp;
-    p += vec3(0,.38,-.45);
-    pR(p.xz, -.3);
-    ls = vec3(.065,.03,.05);
-    w = ls.x * (-log(ls.y/ls.x) + 1.);
-    vec3 pl = p * vec3(.78,1,1);
-    float toplip = length(pl + vec3(0,w-ls.y,0)) - w;
-    toplip = smax(toplip, length(pl - vec3(0,w-ls.y,0)) - w, .065);
-    p = pp;
-    p += vec3(0,.33,-.45);
-    pR(p.yz, .7);
-    float cut;
-    cut = dot(p, normalize(vec3(.5,.25,0))) - .056;
-    float dip = smin(
-        dot(p, normalize(vec3(-.5,.5,0))) + .005,
-        dot(p, normalize(vec3(.5,.5,0))) + .005,
-        .025
-    );
-    cut = smax(cut, dip, .04);
-    cut = smax(cut, p.x - .1, .05);
-    toplip = smax(toplip, cut, .02);
-
-    d = smin(d, toplip, .07);
-
-    return d;
-}
-*/
-
 
 Model mapEyes(vec3 p) {
     pR(p.yz, -.1);
@@ -324,7 +239,7 @@ Model mapTex(sampler2D tex, vec3 p, vec2 size, float warp) {
 
 
 
-Model mHead(vec3 p, out float warped) {
+Model mHead(vec3 p) {
     
     float yramp = smoothstep(.068, .744, p.y * .5 + .5); 
     //yramp = sin(p.y * 4. - time * PI * 2.) * .5 + .5;
@@ -344,12 +259,26 @@ Model mHead(vec3 p, out float warped) {
     //warp = 1.;
     //warp += pow(wave, 4.) * 5.;
 
+    vec3 pw = p * 8.;
+    pw -= time * PI * 2.;
+
+    wave = ((
+        sin(pw.x)
+        * sin(pw.y)
+        * sin(pw.z)
+    ) * .5 + .5) * 1.;
+
     float sz = 16.;
-    RAMPS = pow(vec3(
-        sin((p.y / sz + time + .0 - .25) * PI * 2.),
-        sin((p.y / sz + time + .333 - .25) * PI * 2.),
-        sin((p.y / sz + time + .666 - .25) * PI * 2.)
-    ) * .5 + .5, vec3(3.));
+    RAMPS = pow(vec4(
+        sin((p.y / sz + time + .0 - .25 - wave) * PI * 2.),
+        sin((p.y / sz + time + .25 - .25 - wave) * PI * 2.),
+        sin((p.y / sz + time + .5 - .25 - wave) * PI * 2.),
+        sin((p.y / sz + time + .75 - .25 - wave) * PI * 2.)
+    ) * .5 + .5, vec4(6.));
+
+    //wave = step(wave, .5);
+
+    //RAMPS = vec4(wave);
     //warp = .5;
     //RAMPS.z *= 0.;
 //RAMPS = vec3(0,0,1);
@@ -384,24 +313,23 @@ struct Material {
     vec3 albedo;
     float specular;
     float roughness;
-    bool sss;
+    float sss;
 };
 
 Material shadeModel(Model model, inout vec3 nor) {
-    bool sss = false;
-    #ifdef SSS
-    sss = true;
-    #endif
     float eyes = model.uvw.y;
 
     vec3 volcol = clamp(nor * .5 + .5, vec3(0), vec3(1));
 
+    float warped = model.uvw.x;
+
     // normal in warped areas
-    vec3 col = mix(model.albedo, volcol, clamp(model.uvw.x, 0., 1.));
+    vec3 col = mix(model.albedo, volcol, clamp(warped, 0., 1.));
     // brighten really warped bits
-    col *= 1. + min(max(model.uvw.x - 1., 0.) * .25, 0.5) * .25;
+    col *= 1. + min(max(warped - 1., 0.) * .25, 0.5) * .25;
     col = mix(col, model.albedo, eyes);
-    return Material(col, .0, 1., sss);
+
+    return Material(col, 0., 1., .033);
 }
 
 
@@ -416,14 +344,19 @@ vec3 spectrum(float n) {
 
 Model map(vec3 p) {
 
+    #ifndef ANIM2
     if (SECTION < .5) {
     } else if (SECTION < 1.5) {        
     } else {
         p = erot(p, normalize(vec3(1,0,0)), (SECTION_T - .75) * .05);
     }
+    #else
+    pR(p.yz, sin(time * PI * 2. - PI/ 2.) * .033);
+    #endif
+
+
     p.y -= .15;
-    float warped;
-    return mHead(p, warped);
+    return mHead(p);
     //vec3 col = vec3(.5);
     //return Model(d, vec3(warped, 0, 0), col, 1);
 }
@@ -694,11 +627,15 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
         seed = hash22(seed);
         doSpecular = hash12(seed) < material.specular;
         
-        bool doSSS = material.sss && bounce < 1 && ! doSpecular;
+        #ifdef SSS
+        bool doSSS = material.sss > 0. && bounce < 1 && ! doSpecular;
         if (doSSS) {
             seed = hash22(seed);
             doSSS = hash12(seed) < .8;
         }
+        #else
+        bool sss = false;
+        #endif
         
         if ( ! doSpecular) {
             // update the colorMultiplier
@@ -707,12 +644,13 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
             //throughput *= mix(material.albedo, bgCol, fogAmount);
             throughput *= material.albedo;
         }
-
+        
+        #ifdef SSS
         if (doSSS) {
             origin = hit.pos;
             
             seed = hash22(seed);
-            hit = walkOnSpheres(origin, nor, .033, seed);
+            hit = walkOnSpheres(origin, nor, material.sss, seed);
             nor = calcNormal(hit.pos);
 
             float extinctionDist = distance(origin, hit.pos) * 10.;
@@ -723,7 +661,8 @@ vec3 traceGeo(vec3 origin, vec3 rayDir, vec2 seed, out float depth) {
             extinction = clamp(extinction, vec3(0), vec3(1));
             throughput *= extinction;
         }
-
+        #endif
+        
         // Calculate diffuse ray direction
         seed = hash22(seed);
         vec3 diffuseRayDir = getSampleBiased(nor, 1., seed);
@@ -780,6 +719,10 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     vec2 p = (-iResolution.xy + 2.* fragCoord);
     
+#ifdef ANIM2
+    p /= iResolution.y;
+    p *= .6;
+#else
     float sRatio = iResolution.x / iResolution.y;
     float ratio = 9./16.;
 
@@ -798,9 +741,9 @@ vec4 draw(vec2 fragCoord, int frame) {
             return vec4(0);
         }
     }
+#endif
 
 
-    //p *= 1.2;
 
 
     vec2 seed = hash22(fragCoord + (float(frame)) * sqrt3);
@@ -813,8 +756,10 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 camPos = vec3(0,0,.4) * focalLength * 1.;
     vec3 camTar = vec3(0);
     float camTilt = 0.;
+    camPos = vec3(1.5,.8,3) * 1.2;
+    camTar = vec3(0,.1,0);
 
-
+    #ifndef ANIM2
     if (SECTION < .5) {
        camPos = vec3(1.5,.8,3) * 1.2;
        camTar = vec3(0,.1,0);
@@ -839,6 +784,7 @@ vec4 draw(vec2 fragCoord, int frame) {
         camTar += offset;
         camPos *= pow(.9, SECTION_T);
     }
+    #endif
     
     vec3 ww = normalize(camTar - camPos);
     vec3 uu = normalize(cross(erot(vec3(0,1,0), ww, camTilt),ww));
@@ -894,7 +840,6 @@ vec4 draw(vec2 fragCoord, int frame) {
 }
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
-
 
     time = 1.3;
     float sections = 3.;

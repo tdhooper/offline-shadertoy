@@ -406,9 +406,9 @@ float mHead(vec3 p) {
     // eyeball
     p = pp;
     p += vec3(-.165,.0715,-.346);
-    float eyeball = length(p) - .088;
+    float eyeball = length(p) - .088 + .01;
     if (isMap) isEye = eyeball < d;
-    //d = min(d, eyeball);
+    d = min(d, eyeball);
 
     // tear duct
     p = pp;
