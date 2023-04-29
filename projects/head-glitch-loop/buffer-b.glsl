@@ -393,8 +393,11 @@ Material shadeModel(Model model, inout vec3 nor) {
     sss = true;
     #endif
     float eyes = model.uvw.y;
+
+    vec3 volcol = clamp(nor * .5 + .5, vec3(0), vec3(1));
+
     // normal in warped areas
-    vec3 col = mix(model.albedo, nor * .5 + .5, min(model.uvw.x, 1.));
+    vec3 col = mix(model.albedo, volcol, clamp(model.uvw.x, 0., 1.));
     // brighten really warped bits
     col *= 1. + min(max(model.uvw.x - 1., 0.) * .25, 0.5) * .25;
     col = mix(col, model.albedo, eyes);
