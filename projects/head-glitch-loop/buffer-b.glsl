@@ -1,5 +1,5 @@
 
-// framebuffer drawcount: 8, tile: 1
+// framebuffer drawcount: 10, tile: 1
 
 precision highp float;
 
@@ -128,17 +128,23 @@ vec2 distort(vec2 coord) {
     #endif
     
     #ifdef ANIM2
-    tt = time;
+    tt = time * 8.;
 //RAMPS = vec4(1);
 
+    //coord *= mix(1., tan(coord.y *coord.x * .00015 - tt * PI * .5), .001 * RAMPS.y);
     coord *= mix(1., tan((coord.x*coord.y)/3000. - tt * PI), .0005 * pow(RAMPS.y, 1.));
     coord *= mix(1., sin((coord.y)/coord.x*200. - tt * PI * 2.), .002 * RAMPS.w);
-    coord *= mix(1., tan(coord.y*10./coord.x*5. - tt * PI), (.04 / 100.) * RAMPS.z * 1.5);
-    coord *= mix(1., tan(coord.x*15./coord.y*15. + tt * PI * 1.), .0002 * RAMPS.x);
+    coord *= mix(1., tan(coord.y*10./coord.x*5. - tt * PI * .25), (.04 / 100.) * RAMPS.z * 1.5);
+    coord *= mix(1., tan(coord.x*15./coord.y*15. + tt * PI * .5), .0002 * RAMPS.x);
     
-
-    //coord *= mix(1., tan(coord.y/16. + tt * PI), .001 * pow(mxC, 10.));
-    //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2.), .002);
+    //coord *= mix(1., sin((coord.y-coord.x)*.37 - tt * PI * 2.), .0009 * RAMPS.x);
+    
+    
+    
+    
+    //coord *= mix(1., tan(coord.y * .1 - tt * PI * .5), .001 * RAMPS.x);
+    //coord *= mix(1., tan(coord.y * mix(coord.x, 1., .999) * .1 - tt * PI * .5), .001 * RAMPS.x);
+    //coord *= mix(1., sin(coord.x/coord.y*50. - tt * PI * 2. * .5), .002 * RAMPS.x);
 
 
     #else
@@ -359,12 +365,13 @@ Model mHead(vec3 p) {
     float db = length(p - vec3(0,.2,.5)) - .01;
 
    //wave = snoise(p * 5.);
-     wave = sin(length(p + distort * .0 - vec3(0,.2,.5)) * 20. - time * PI * 2. * 2.);
+     wave = sin(length(p + distort * .0 - vec3(0,.2,.5)) * 10. - time * PI * 2. * 1.);
      //wave = (length(p + distort * .0 - vec3(0,.2,.5)) * 20.);
    // wave *= .5;
     //wave = mix(w2, wave, .5);
     //wave = step(wave, 0.);
     wave *= smoothstep(.25, 0., db);
+    wave *= 0.;
 
 
 

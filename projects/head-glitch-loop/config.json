@@ -1,5 +1,5 @@
 {
-  "id": "headglitchloop-04",
+  "id": "headglitchloop-05",
   "camera": {
     "rotation": [
       0.10623811185359955,
@@ -72,5 +72,12 @@
     1066
   ],
   "debugPlane": {},
-  "fov": 1.5915494309189535
+  "fov": 1.5915494309189535,
+  "capture": {
+    "fps": 20,
+    "seconds": 4,
+    "width": 1080,
+    "height": 1080,
+    "startFrame": 0
+  }
 }
