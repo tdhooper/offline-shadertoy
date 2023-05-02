@@ -74,10 +74,10 @@
   "debugPlane": {},
   "fov": 1.5915494309189535,
   "capture": {
-    "fps": 20,
+    "fps": 24,
     "seconds": 4,
-    "width": 1080,
-    "height": 1080,
+    "width": 2160,
+    "height": 2160,
     "startFrame": 0
   }
 }
