@@ -413,6 +413,55 @@ module.exports = (project) => {
     });
   };
 
+  const drawNodes = (
+    nodeIndex,
+    nodeDrawIndex,
+    tileIndex,
+    state,
+    done
+  ) => {
+    if (nodeIndex >= renderNodes.length) {
+      done();
+      return;
+    }
+
+    let node = renderNodes[nodeIndex];
+
+    let initialDrawIndex = state.drawIndex;
+    if (node.drawCount) {
+      state.drawIndex = initialDrawIndex * node.drawCount + nodeDrawIndex;
+    }
+    state.tileIndex = tileIndex;
+
+    drawNode(node, state);
+
+    state.drawIndex = initialDrawIndex;
+
+    if ( ! node.tile) {
+      nodeDrawIndex += 1;
+    } else {
+      tileIndex += 1;
+      if (tileIndex >= node.tile * node.tile) {
+        tileIndex = 0;
+        nodeDrawIndex += 1;
+      }
+    }
+    if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
+      //console.clear();
+      nodeIndex += 1;
+      nodeDrawIndex = 0;
+      tileIndex = 0;
+    }
+
+    if (DO_CAPTURE) {
+      requestAnimationFrame(() => {
+        drawNodes(nodeIndex, nodeDrawIndex, tileIndex, state, done);
+      });
+    } else {
+      drawNodes(nodeIndex, nodeDrawIndex, tileIndex, state, done);
+    }
+  }
+
   const draw = (force, done) => {
     camera.tick();
     scrubber.update();
@@ -427,53 +476,7 @@ module.exports = (project) => {
       let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
       state.frame = frame++;
 
-      let drawIndex = state.drawIndex;
-
-      let nodeIndex = 0;
-      let node;
-
-      let tileIndex = 0;
-      let nodeDrawIndex = 0;
-
-      (function next () {
-        
-        if (nodeIndex >= renderNodes.length) {
-          done();
-          return;
-        }
-        node = renderNodes[nodeIndex];
-        if (node.drawCount) {
-          state.drawIndex = drawIndex * node.drawCount + nodeDrawIndex;
-        } else {
-          state.drawIndex = drawIndex;
-        }
-        state.tileIndex = tileIndex;
-
-        drawNode(node, state);
-
-        if ( ! node.tile) {
-          nodeDrawIndex += 1;
-        } else {
-          tileIndex += 1;
-          if (tileIndex >= node.tile * node.tile) {
-            tileIndex = 0;
-            nodeDrawIndex += 1;
-          }
-        }
-        if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
-          //console.clear();
-          nodeIndex += 1;
-          nodeDrawIndex = 0;
-          tileIndex = 0;
-        }
-        
-        if (DO_CAPTURE) {
-          requestAnimationFrame(next);
-        } else {
-          next();
-        }
-
-      })();
+      drawNodes(0, 0, 0, state, done);
 
       firstPass = false;
     } else {
