@@ -19,7 +19,7 @@ const model2 = mat4.create();
 mat4.scale(model2, model2, [-1,1,1]);
 mat4.multiply(model2, model2, model);
 
-function init(drawRaymarch, renderNodes, uniforms) {
+function createDraw(uniforms, setupProjectionView) {
   const uu = Object.assign({}, uniforms);
   uu.model = regl.prop('model');
   uu.albedo = regl.prop('albedo');
@@ -29,6 +29,9 @@ function init(drawRaymarch, renderNodes, uniforms) {
     height: 1024,
     depthTexture: true,
   });
+
+  uniforms.uDepth = buffer.depthStencil;
+  uniforms.uSource = buffer;
 
   const drawPolygons = global.regl({
     // primitive: 'lines',
@@ -68,39 +71,20 @@ function init(drawRaymarch, renderNodes, uniforms) {
     framebuffer: buffer,
   });
 
-  const setup = global.regl({
-    uniforms: {
-      uDepth: buffer.depthStencil,
-      uSource: buffer,
-    },
-  });
-
-  return function draw(state, context) {
+  return function draw(state, drawShader) {
     global.regl.clear({
       color: [0, 0, 0, 1],
       depth: 1,
       framebuffer: buffer,
     });
 
-    if (
-      buffer.width !== context.viewportWidth
-      || buffer.height !== context.viewportHeight
-    ) {
-      buffer.resize(context.viewportWidth, context.viewportHeight);
-    }
-
-    drawPolygons(Object.assign({model: model, albedo: [1,1,1]}, state));
-    // drawPolygons(Object.assign({model: model2, albedo: [1,1,1]}, state));
-
-    setup(state, (context) => {
-      drawRaymarch(state, () => {
-        renderNodes.forEach((node) => {
-          node.draw(state);
-        });
-      });
+    setupProjectionView(state, (context) => {
+      drawPolygons(Object.assign({model: model, albedo: [1,1,1]}, state));
+      // drawPolygons(Object.assign({model: model2, albedo: [1,1,1]}, state));
     });
+
+    drawShader();
   };
 }
 
-module.exports = init;
-// module.exports = function(){};
+module.exports = createDraw;

@@ -54,6 +54,6 @@ const main = require('./main.js');
 // head-glitch-loop
 // multipass-debug
 
-const project = LOADPROJECT('rays-and-polygons');
+const project = LOADPROJECT('skull');
 
 main(project);

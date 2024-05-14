@@ -249,6 +249,11 @@ module.exports = (project) => {
   const controls = defaultState && defaultState.controls
     ? createControls(defaultState.controls, uniforms) : null;
 
+  let projectDraw;
+  if (project.createDraw) {
+    projectDraw = project.createDraw(uniforms, setupProjectionView);
+  }
+
   const drawRaymarch = regl({
     vert: glslify('./quad.vert'),
     frag,
@@ -292,11 +297,6 @@ module.exports = (project) => {
       },
     }
   });
-
-  let projectDraw;
-  if (project.createDraw) {
-    projectDraw = project.createDraw(uniforms, setupProjectionView);
-  }
 
   const camera = createCamera(canvas, {
     position: [0, 0, 5],
