@@ -5,7 +5,7 @@ const { mat4 } = require('gl-matrix');
 // 1 x 1 x 1 Box
 const mesh = createCube();
 
-const init = function(drawRaymarch, renderNodes, uniforms) {
+const createDraw = function(uniforms, setupProjectionView) {
 
   const drawPolygons = global.regl({
     vert: `
@@ -30,22 +30,15 @@ const init = function(drawRaymarch, renderNodes, uniforms) {
       normal: mesh.normals,
     },
     elements: mesh.cells,
-    uniforms: {
-      // model: function(context, props) {
-      //   return mat4.fromTranslation([], props.camera.position);
-      // }
-      model: mat4.identity([]),
-    },
+    uniforms: uniforms,
   });
 
-  return function draw(state, context) {
-    drawPolygons(state);
-    drawRaymarch(state, () => {
-      renderNodes.forEach((node) => {
-        node.draw(state);
-      });
+  return function draw(state, drawShader) {
+    setupProjectionView(state, (context) => {
+      drawPolygons(state);
     });
+    drawShader();
   };
 };
 
-module.exports = init;
+module.exports = createDraw;

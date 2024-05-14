@@ -37,7 +37,7 @@ module.exports = () => {
 
     const drawFile = `projects/${name}/draw.js`;
     if (fs.existsSync(drawFile)) {
-      project.draw = '__REQUIRE_DRAW__';
+      project.createDraw = '__REQUIRE_DRAW__';
       this.emit('file', path.join(__dirname, drawFile));
     }
 

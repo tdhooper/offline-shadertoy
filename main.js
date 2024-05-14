@@ -212,7 +212,7 @@ module.exports = (project) => {
 
   const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
 
-  const setup = regl({
+  const setupProjectionView = regl({
     uniforms: {
       projection: ({ viewportWidth, viewportHeight }) => mat4.perspective(
         [],
@@ -294,8 +294,8 @@ module.exports = (project) => {
   });
 
   let projectDraw;
-  if (project.draw) {
-    projectDraw = project.draw(drawRaymarch, renderNodes, uniforms);
+  if (project.createDraw) {
+    projectDraw = project.createDraw(uniforms, setupProjectionView);
   }
 
   const camera = createCamera(canvas, {
@@ -404,7 +404,7 @@ module.exports = (project) => {
     state.frame += state.drawIndex;
     //document.title = node.name + ' ' + state.drawIndex;
     //console.log(node.name, state.drawIndex, node.drawCount);
-    setup(state, (context) => {
+    setupProjectionView(state, (context) => {
       resizeBuffers(context.drawingBufferWidth, context.drawingBufferHeight);
       //resizeBuffers(context.viewportWidth, context.viewportHeight);
       drawRaymarch(state, () => {
@@ -414,11 +414,11 @@ module.exports = (project) => {
   };
 
   const drawNodes = (
+    state,
+    done,
     nodeIndex,
     nodeDrawIndex,
-    tileIndex,
-    state,
-    done
+    tileIndex
   ) => {
     if (nodeIndex >= renderNodes.length) {
       done();
@@ -455,10 +455,10 @@ module.exports = (project) => {
 
     if (DO_CAPTURE) {
       requestAnimationFrame(() => {
-        drawNodes(nodeIndex, nodeDrawIndex, tileIndex, state, done);
+        drawNodes(state, done, nodeIndex, nodeDrawIndex, tileIndex);
       });
     } else {
-      drawNodes(nodeIndex, nodeDrawIndex, tileIndex, state, done);
+      drawNodes(state, done, nodeIndex, nodeDrawIndex, tileIndex);
     }
   }
 
@@ -476,7 +476,13 @@ module.exports = (project) => {
       let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
       state.frame = frame++;
 
-      drawNodes(0, 0, 0, state, done);
+      if (projectDraw) {
+        projectDraw(state, () => {
+          drawNodes(state, done, 0, 0, 0);
+        })
+      } else {
+        drawNodes(state, done, 0, 0, 0);
+      }
 
       firstPass = false;
     } else {
