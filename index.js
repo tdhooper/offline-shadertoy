@@ -55,8 +55,8 @@ const main = require('./main.js');
 // multipass-debug
 // menger-zoom
 // stereo-subgrid-colour-blurry
+// gizmo
 
-
-const project = LOADPROJECT('menger-zoom');
+const project = LOADPROJECT('gizmo');
 
 main(project);

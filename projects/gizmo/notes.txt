@@ -1,0 +1,25 @@
+in code, we pick a place we want a gizmo to transform a 3d position
+
+picking any point might not be transformed by the gizmo - as it might be inside a branch
+
+try this
+
+1. render a low-res viewpoort, with depth
+2. apply a transformation
+3. find changed pixels
+4. pick a changed pixel
+5. use depth to project into 3d
+
+
+we want to build a basis matrix for this gizmo
+
+we want to find the origin relative to the gizmo
+
+find the origin through gradient descent... pick points around the starting point, run them through the function, and see which direction is closer to the origin.. move our starting point in that direction, repeat
+
+to find the axes, do the same but for the local unit coordinates (1,0,0), (0,1,0), (0,0,1)
+
+this will give us 4 points in world space
+
+
+steps: 
