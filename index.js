@@ -53,7 +53,8 @@ const main = require('./main.js');
 // beetle-juice-skull
 // head-glitch-loop
 // multipass-debug
+// stereo-subgrid-colour
 
-const project = LOADPROJECT('skull');
+const project = LOADPROJECT('stereo-subgrid-colour');
 
 main(project);
