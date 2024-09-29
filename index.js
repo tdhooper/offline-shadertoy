@@ -54,7 +54,9 @@ const main = require('./main.js');
 // head-glitch-loop
 // multipass-debug
 // stereo-subgrid-colour
+// stereo-subgrid-colour-blurry
 
-const project = LOADPROJECT('stereo-subgrid-colour');
+
+const project = LOADPROJECT('stereo-subgrid-colour-blurry');
 
 main(project);
