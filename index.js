@@ -53,10 +53,10 @@ const main = require('./main.js');
 // beetle-juice-skull
 // head-glitch-loop
 // multipass-debug
-// stereo-subgrid-colour
+// menger-zoom
 // stereo-subgrid-colour-blurry
 
 
-const project = LOADPROJECT('stereo-subgrid-colour-blurry');
+const project = LOADPROJECT('menger-zoom');
 
 main(project);
