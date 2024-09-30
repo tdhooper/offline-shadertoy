@@ -6,11 +6,17 @@ void GIZMO(vec3 p) {
 
 float map(vec3 p) {
 
-    p -= 1.;
+    float d = 1e12;
+
+    d = min(d, length(p) - .5);
+
+    p -= vec3(0, 1, -2);
 
     GIZMO(p);
 
-    return length(p) - .5;
+    d = min(d, length(p) - .25);
+
+    return d;
 }
 
 #pragma glslify: export(map)

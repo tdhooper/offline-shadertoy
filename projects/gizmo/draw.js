@@ -1,5 +1,5 @@
 const createCube = require('primitive-cube');
-const { mat4 } = require('gl-matrix');
+const { mat4, vec3 } = require('gl-matrix');
 const glslify = require('glslify');
 
 function offsetCells(cells, offset) {
@@ -39,17 +39,128 @@ const mesh = mergeMeshes([
   createCube(.1, .1, 2),
 ]);
 
-const model = mat4.create();
-mat4.rotateX(model, model, -.38);
-mat4.rotateY(model, model, .56);
-mat4.rotateZ(model, model, .01);
-mat4.translate(model, model, [.222,-.5,.15]);
-//mat4.scale(model, model, [50, 50, 50]);
+const evalGizmoResults = regl.framebuffer({
+  width: 10,
+  height: 1,
+  colorType: 'float',
+});
+
+var evalGizmoPositions = regl.buffer({
+  usage: 'dynamic',
+  type: 'float',
+  length: 1,
+})
+
+const configureEvalGizmos = (positions) => {
+  // Update input buffer data
+  evalGizmoPositions({
+    data: positions.map((x, i) => [x[0], x[1], x[2], i])
+  });
+  
+  // Set results framebuffer size
+  if (evalGizmoResults.width != positions.length) {
+    evalGizmoResults.resize(positions.length, 1);
+  }
+
+  // Clear results buffer
+  regl.clear({
+    color: [0,0,0,1],
+    depth: 1,
+    stencil: 0,
+    framebuffer: evalGizmoResults,
+  });
+}
+
+const drawEvalGizmo = regl({
+  vert: glslify('./eval-gizmo.vert'),
+  frag: glslify('./eval-gizmo.frag'),
+  attributes: {
+    position: evalGizmoPositions,
+  },
+  count: regl.prop('count'),
+  primitive: 'points',
+  uniforms: {
+    count: regl.prop('count'),
+  },
+  framebuffer: evalGizmoResults,
+});
+
+/*
+    pick 6 points in pairs of positive/negative cardinal directions around the starting point
+    run them through Map - up until the code point we placed the gizmo
+    given the line formed by each pair, find the closest point on the line to (0,0,0)
+    do an inverse interpolation with this point on the line, to get a new starting coordinate value
+    run the routine again with the new starting point
+    stop when the closest point to (0,0,0) on each line is within some distance
+    OPTIONAL: apply a scaling factor at each step so we don't overshoot
+*/
+
+const inverseLerpOrigin = (a, b) => {
+  let direction = vec3.create();
+  vec3.subtract(direction, b, a);
+  return (-vec3.dot(direction, b) - vec3.dot(direction, a)) / 2;
+}
+
+const findOrigin = () => {
+
+  let searchPoint = vec3.create(0, 0, 0);
+  let searchRadius = .5;
+
+  let positions = [
+    vec3.create(),
+    vec3.create(),
+    vec3.create(),
+    vec3.create(),
+    vec3.create(),
+    vec3.create(),
+  ];
+
+  vec3.add(positions[0], searchPoint, [-searchRadius, 0, 0]),
+  vec3.add(positions[1], searchPoint, [searchRadius, 0, 0]),
+  vec3.add(positions[2], searchPoint, [0, -searchRadius, 0]),
+  vec3.add(positions[3], searchPoint, [0, searchRadius, 0]),
+  vec3.add(positions[4], searchPoint, [0, 0, -searchRadius]),
+  vec3.add(positions[5], searchPoint, [0, 0, searchRadius]),
+
+  configureEvalGizmos(positions);
+  
+  drawEvalGizmo({
+    count: positions.length
+  });
+
+  var bytes = new Float32Array(6 * 4);
+
+  regl.read({
+    framebuffer: evalGizmoResults,
+    data: bytes,
+  });
+
+  let x = inverseLerpOrigin(
+    new Float32Array(bytes.buffer, 0 * 16, 3),
+    new Float32Array(bytes.buffer, 1 * 16, 3)
+  ) / searchRadius / 2;
+
+  let y = inverseLerpOrigin(
+    new Float32Array(bytes.buffer, 2 * 16, 3),
+    new Float32Array(bytes.buffer, 3 * 16, 3)
+  ) / searchRadius / 2;
+
+  let z = inverseLerpOrigin(
+    new Float32Array(bytes.buffer, 4 * 16, 3),
+    new Float32Array(bytes.buffer, 5 * 16, 3)
+  ) / searchRadius / 2;
+
+  //console.log(x, y, z);
+
+  return [x, y, z];
+}
 
 const createDraw = function(uniforms, setupProjectionView) {
 
   const polyUniforms = Object.assign({}, uniforms);
-  polyUniforms.model = model;
+  polyUniforms.model = regl.prop('model');
+
+  const model = mat4.create();
 
   const drawPolygons = global.regl({
     vert: `
@@ -77,50 +188,15 @@ const createDraw = function(uniforms, setupProjectionView) {
     uniforms: polyUniforms,
   });
 
-  const evalPositions = [
-    [1, 0, 0],
-    [0, 1, 0],
-    [0, 0, 1],
-    [10, 11, 12],
-    [13, 14, 15],
-    [16, 17, 18],
-  ];
-
-  const evalGizmoResults = regl.framebuffer({
-    width: evalPositions.length,
-    height: 1,
-    colorType: 'float',
-  }); 
-  
-  const drawEvalGizmo = regl({
-    vert: glslify('./eval-gizmo.vert'),
-    frag: glslify('./eval-gizmo.frag'),
-    attributes: {
-      position: evalPositions,
-      index: Array(evalPositions.length).fill().map((x, i) => i),
-    },
-    count: evalPositions.length,
-    primitive: 'points',
-    uniforms: {
-      count: evalPositions.length,
-    },
-    framebuffer: evalGizmoResults,
-  });
-
-  uniforms['evalGizmoResults'] = evalGizmoResults;
-
   return function draw(state, drawShader) {
+    let origin = findOrigin();
+    mat4.fromTranslation(model, origin);
+
     setupProjectionView(state, (context) => {
+      state.model = model;
       drawPolygons(state);
     });
-    drawEvalGizmo();
-
-    var pixels = regl.read({
-      framebuffer: evalGizmoResults
-    })
-
-    console.log(pixels);
-
+    
     drawShader();
   };
 };
