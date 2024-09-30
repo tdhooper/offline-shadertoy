@@ -154,14 +154,57 @@ const findOrigin = () => {
   drawEvalGizmo({
     count: positions.length
   });
-  console.log(
-    regl.read({
-      framebuffer: evalGizmoResults,
-    })
-  );
+  let test = regl.read({
+    framebuffer: evalGizmoResults,
+  });
+  //console.log(test);
   //console.log(x, y, z);
 
   return [x, y, z];
+}
+
+const findJacobian = (origin) => {
+
+  let searchPoint = origin;
+  let searchRadius = .001;
+
+  let positions = [
+    vec3.create(),
+    vec3.create(),
+    vec3.create(),
+  ];
+
+  vec3.add(positions[0], searchPoint, [searchRadius, 0, 0]),
+  vec3.add(positions[1], searchPoint, [0, searchRadius, 0]),
+  vec3.add(positions[2], searchPoint, [0, 0, searchRadius]),
+
+  configureEvalGizmos(positions);
+  
+  drawEvalGizmo({
+    count: positions.length
+  });
+
+  var bytes = new Float32Array(positions.length * 4);
+
+  regl.read({
+    framebuffer: evalGizmoResults,
+    data: bytes,
+  });
+
+  let x = new Float32Array(bytes.buffer, 0 * 16, 3);
+  let y = new Float32Array(bytes.buffer, 1 * 16, 3);
+  let z = new Float32Array(bytes.buffer, 2 * 16, 3);
+
+  x = vec3.scale(x, x, 1 / searchRadius);
+  y = vec3.scale(y, y, 1 / searchRadius);
+  z = vec3.scale(z, z, 1 / searchRadius);
+
+  return mat4.fromValues(
+    x[0], x[1], x[2], 0,
+    y[0], y[1], y[2], 0,
+    z[0], z[1], z[2], 0,
+    0, 0, 0, 1,
+  );
 }
 
 const createDraw = function(uniforms, setupProjectionView) {
@@ -199,7 +242,12 @@ const createDraw = function(uniforms, setupProjectionView) {
 
   return function draw(state, drawShader) {
     let origin = findOrigin();
+    let jacobian = findJacobian(origin);
+    
+    mat4.invert(jacobian, jacobian);
+
     mat4.fromTranslation(model, origin);
+    mat4.multiply(model, model, jacobian);
 
     setupProjectionView(state, (context) => {
       state.model = model;
