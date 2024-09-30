@@ -4,17 +4,25 @@ uniform mat4 projection;
 varying vec3 eye;
 varying vec3 dir;
 varying vec3 cameraForward;
+uniform int iFrame;
 
 #pragma glslify: map = require(./map.glsl)
 
-vec3 calcNormal(vec3 p) {
-  vec3 eps = vec3(.001,0,0);
-  vec3 n = vec3(
-    map(p + eps.xyy) - map(p - eps.xyy),
-    map(p + eps.yxy) - map(p - eps.yxy),
-    map(p + eps.yyx) - map(p - eps.yyx)
-  );
-  return normalize(n);
+
+
+const int NORMAL_STEPS = 6;
+vec3 calcNormal(vec3 pos){
+    vec3 eps = vec3(.0005,0,0);
+    vec3 nor = vec3(0);
+    float invert = 1.;
+    vec3 npos;
+    for (int i = 0; i < NORMAL_STEPS; i++){
+        npos = pos + eps * invert;
+        nor += map(npos) * eps * invert;
+        eps = eps.zxy;
+        invert *= -1.;
+    }
+    return normalize(nor);
 }
 
 const float ITER = 50.;

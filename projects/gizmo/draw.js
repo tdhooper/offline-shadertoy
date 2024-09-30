@@ -150,6 +150,15 @@ const findOrigin = () => {
     new Float32Array(bytes.buffer, 5 * 16, 3)
   ) / searchRadius / 2;
 
+  configureEvalGizmos([[x, y, z]]);
+  drawEvalGizmo({
+    count: positions.length
+  });
+  console.log(
+    regl.read({
+      framebuffer: evalGizmoResults,
+    })
+  );
   //console.log(x, y, z);
 
   return [x, y, z];
