@@ -95,10 +95,15 @@ const drawEvalGizmo = regl({
     OPTIONAL: apply a scaling factor at each step so we don't overshoot
 */
 
-const inverseLerpOrigin = (a, b) => {
+const inverseLerpOrigin = (a, b, searchRadius) => {
   let direction = vec3.create();
   vec3.subtract(direction, b, a);
-  return (-vec3.dot(direction, b) - vec3.dot(direction, a)) / 2;
+  let t = (-vec3.dot(direction, b) - vec3.dot(direction, a));
+  let len = vec3.length(direction);
+  let scl = (searchRadius * 2) / len;
+  t *= scl * scl;
+  t /= searchRadius * 4;
+  return t;
 }
 
 const findOrigin = () => {
@@ -137,18 +142,21 @@ const findOrigin = () => {
 
   let x = inverseLerpOrigin(
     new Float32Array(bytes.buffer, 0 * 16, 3),
-    new Float32Array(bytes.buffer, 1 * 16, 3)
-  ) / searchRadius / 2;
+    new Float32Array(bytes.buffer, 1 * 16, 3),
+    searchRadius
+  );
 
   let y = inverseLerpOrigin(
     new Float32Array(bytes.buffer, 2 * 16, 3),
-    new Float32Array(bytes.buffer, 3 * 16, 3)
-  ) / searchRadius / 2;
+    new Float32Array(bytes.buffer, 3 * 16, 3),
+    searchRadius
+  );
 
   let z = inverseLerpOrigin(
     new Float32Array(bytes.buffer, 4 * 16, 3),
-    new Float32Array(bytes.buffer, 5 * 16, 3)
-  ) / searchRadius / 2;
+    new Float32Array(bytes.buffer, 5 * 16, 3),
+    searchRadius
+  );
 
   configureEvalGizmos([[x, y, z]]);
   drawEvalGizmo({
@@ -157,7 +165,7 @@ const findOrigin = () => {
   let test = regl.read({
     framebuffer: evalGizmoResults,
   });
-  //console.log(test);
+  console.log(test);
   //console.log(x, y, z);
 
   return [x, y, z];
@@ -166,7 +174,7 @@ const findOrigin = () => {
 const findJacobian = (origin) => {
 
   let searchPoint = origin;
-  let searchRadius = .001;
+  let searchRadius = 1/2;
 
   let positions = [
     vec3.create(),
@@ -198,6 +206,8 @@ const findJacobian = (origin) => {
   x = vec3.scale(x, x, 1 / searchRadius);
   y = vec3.scale(y, y, 1 / searchRadius);
   z = vec3.scale(z, z, 1 / searchRadius);
+
+  //console.log(x, y, z);
 
   return mat4.fromValues(
     x[0], x[1], x[2], 0,

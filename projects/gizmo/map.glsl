@@ -86,14 +86,17 @@ float map(vec3 p) {
 
     d = min(d, fBox(p, vec3(.5)));
 
-    p -= vec3(0, 1, -2);
+    p -= vec3(1, .5, -.25);
     pR(p.xy, -.2);
     pR(p.xz, .8);
     pR(p.yz, .4);
 
+    float scl = .5;
+    p /= scl;
+
     GIZMO(p);
 
-    d = min(d, fBox(p, vec3(.25)));
+    d = min(d, fBox(p, vec3(.5)) * scl);
 
     return d;
 }
