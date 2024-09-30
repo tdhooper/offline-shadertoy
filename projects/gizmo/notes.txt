@@ -1,4 +1,4 @@
-in code, we pick a place we want a gizmo to transform a 3d position
+in our Map function, we pick a code point we want a gizmo to transform a 3d position
 
 picking any point might not be transformed by the gizmo - as it might be inside a branch
 
@@ -13,13 +13,53 @@ try this
 
 we want to build a basis matrix for this gizmo
 
-we want to find the origin relative to the gizmo
+we want to find the transformation origin for the gizmo
 
-find the origin through gradient descent... pick points around the starting point, run them through the function, and see which direction is closer to the origin.. move our starting point in that direction, repeat
+find the origin through gradient descent
+    pick 6 points in pairs of positive/negative cardinal directions around the starting point
+    run them through Map - up until the code point we placed the gizmo
+    given the line formed by each pair, find the closest point on the line to (0,0,0)
+    do an inverse interpolation with this point on the line, to get a new starting coordinate value
+    run the routine again with the new starting point
+    stop when the closest point to (0,0,0) on each line is within some distance
+    OPTIONAL: apply a scaling factor at each step so we don't overshoot
 
-to find the axes, do the same but for the local unit coordinates (1,0,0), (0,1,0), (0,0,1)
+to find the axes, calculate the jacobian for this point
+    pick small offsets in x,y,z
+    transform them through Map, and divide the resulting coordinate by the offset amount
+    use each of these coords as axes in a basis matrix
 
-this will give us 4 points in world space
+How to get the new value for P at any code point?
+    have some global value that gets written by the inserted code
+    use a single pixel texture with the same shader loaded
+    we can evaluate several points at once when calculating axes
 
 
-steps: 
+Program Design
+
+prototype:
+
+* Write gizmo(p) in code, which:
+    * transforms p, according to some uniforms
+    * writes the transformed value of p to some global value, gizmo_p2
+* When gizmo is being used, copy the shader program, and replace the main function with
+  something that outputs gizmo_p2 as a colour
+* fnd the orgin as described above
+* render a sphere mesh at the found point
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
