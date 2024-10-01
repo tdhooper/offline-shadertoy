@@ -217,6 +217,31 @@ const findJacobian = (origin) => {
   );
 }
 
+
+const save = () => {
+  fetch('/save-gizmo', {
+    method : "POST",
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body : JSON.stringify({
+      'foo': 2,
+    })
+  }).then(
+      response => response.text() // .json(), etc.
+      // same as function(response) {return response.text();}
+  ).then(
+      html => console.log(html)
+  );
+}
+
+const saveButton = document.createElement('button');
+saveButton.textContent = 'Save';
+saveButton.classList.add('gizmo-save-button');
+saveButton.addEventListener('click', save);
+document.body.appendChild(saveButton);
+
+
 const createDraw = function(uniforms, setupProjectionView) {
 
   const polyUniforms = Object.assign({}, uniforms);

@@ -31,6 +31,7 @@
     "glslify": "^7.0.0",
     "glslify-import": "^3.1.0",
     "hotkeys-js": "^3.6.2",
+    "is-empty": "^1.2.0",
     "is-power-of-two": "^1.0.0",
     "key-pressed": "0.0.1",
     "mouse-change": "^1.4.0",

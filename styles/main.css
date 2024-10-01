@@ -67,3 +67,9 @@ body:hover .stats {
     background-repeat: no-repeat;
     opacity: .0;
 }
+
+.gizmo-save-button {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+}
