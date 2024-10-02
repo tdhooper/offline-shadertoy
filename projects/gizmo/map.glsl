@@ -1,7 +1,10 @@
+uniform mat4 gizmoAdjustmentMatrix;
+
 vec3 GIZMO_LOCAL_P;
 
-void GIZMO(vec3 p) {
+void GIZMO(inout vec3 p) {
     GIZMO_LOCAL_P = p;
+    p = (gizmoAdjustmentMatrix * vec4(p, 1)).xyz;
 }
 
 
@@ -96,7 +99,7 @@ float map(vec3 p) {
 
     GIZMO(p);
 
-    d = min(d, fBox(p, vec3(.5)) * scl);
+    d = smin(d, fBox(p, vec3(.5)) * scl, .5);
 
     return d;
 }
