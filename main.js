@@ -458,10 +458,19 @@ module.exports = (project) => {
     }
   }
 
-  
+  let draw;
   let projectDraw;
+  let projectDrawRequestDraw = (force, done) => {
+    if (draw) {
+      draw(force, done);
+    }
+  };
+  
+  if (project.createDraw) {
+    projectDraw = project.createDraw(uniforms, setupProjectionView, projectDrawRequestDraw, camera);
+  }
 
-  const draw = (force, done) => {
+  draw = (force, done) => {
     camera.tick();
     scrubber.update();
     let stateChanged = stateStore.update(['accumulateControl']);
@@ -489,9 +498,6 @@ module.exports = (project) => {
     }
   };
 
-  if (project.createDraw) {
-    projectDraw = project.createDraw(uniforms, setupProjectionView, draw, camera);
-  }
 
 
 

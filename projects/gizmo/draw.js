@@ -231,12 +231,7 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera) {
   scene.add( controlObject );
 
   control = new TransformControls( threeCamera, regl._gl.canvas );
-  let firstChange = true;
   control.addEventListener( 'change', () => {
-    if (firstChange) {
-      firstChange = false;
-      return;
-    }
     draw(true, () => {})
   } );
   control.addEventListener( 'dragging-changed', function ( event ) {
