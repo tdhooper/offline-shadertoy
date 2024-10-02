@@ -2,6 +2,7 @@ const createCube = require('primitive-cube');
 const { mat4, vec3, quat } = require('gl-matrix');
 const glslify = require('glslify');
 const THREE = require('three');
+const { TransformControls } = require('./TransformControls');
 
 function offsetCells(cells, offset) {
   return cells.map(function(cell) {
@@ -244,14 +245,13 @@ saveButton.classList.add('gizmo-save-button');
 saveButton.addEventListener('click', save);
 document.body.appendChild(saveButton);
 
-const cameraRotation = quat.create();
 const cameraMatrix = new THREE.Matrix4();
+const controlObjectMatrix = new THREE.Matrix4();
 
-const createDraw = function(uniforms, setupProjectionView) {
+const createDraw = function(uniforms, setupProjectionView, draw, camera) {
 
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.01, 1000 );
-  //camera.matrixAutoUpdate = false;
+  const threeCamera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.01, 1000 );
 
   const renderer = new THREE.WebGLRenderer({
     context: regl._gl,
@@ -259,14 +259,45 @@ const createDraw = function(uniforms, setupProjectionView) {
   });
   renderer.autoClear = false;
   regl._refresh();
-  //renderer.setSize( window.innerWidth, window.innerHeight );
-  //document.body.appendChild( renderer.domElement );
   
-  const geometry = new THREE.BoxGeometry( 2.5, .9, .9 );
-  const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
-  const cube = new THREE.Mesh( geometry, material );
-  scene.add( cube );
+  const geometry = new THREE.BoxGeometry( 1.1, 1.1, 1.1 );
+  const material = new THREE.MeshBasicMaterial( {
+    color: 0x00ff00,
+    depthTest: false,
+    depthWrite: false,
+    fog: false,
+    toneMapped: false,
+    transparent: true
+  } );
+ material.opacity = 0.15;
+
+
+  //const controlObject = new THREE.Object3D();
+  const controlObject = new THREE.Mesh(geometry, material);
+  scene.add( controlObject );
+
+  control = new TransformControls( threeCamera, regl._gl.canvas );
+  let firstChange = true;
+  control.addEventListener( 'change', () => {
+    if (firstChange) {
+      firstChange = false;
+      return;
+    }
+    draw(true, () => {})
+  } );
+  control.addEventListener( 'dragging-changed', function ( event ) {
+    camera.moveEnabled = ! event.value;
+  } );
+  control.attach( controlObject );
+  control.setMode( 'translate' );
   
+  scene.add( control );
+  
+
+
+
+
+
   const polyUniforms = Object.assign({}, uniforms);
   polyUniforms.model = regl.prop('model');
 
@@ -298,35 +329,42 @@ const createDraw = function(uniforms, setupProjectionView) {
     uniforms: polyUniforms,
   });
 
+  let resetGizmo = true;
+
   return function draw(state, drawShader) {
-    
+
     cameraMatrix.fromArray(state.cameraMatrix);
     cameraMatrix.invert();
-    cameraMatrix.decompose(camera.position, camera.quaternion, camera.scale);
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.setFocalLength((state.cameraFov * camera.filmGauge / camera.aspect));
-    camera.updateProjectionMatrix();
+    cameraMatrix.decompose(threeCamera.position, threeCamera.quaternion, threeCamera.scale);
+    threeCamera.aspect = window.innerWidth / window.innerHeight;
+    threeCamera.setFocalLength((state.cameraFov * threeCamera.filmGauge / threeCamera.aspect));
+    threeCamera.updateProjectionMatrix();
 
-    let origin = findOrigin();
-    let jacobian = findJacobian(origin);
-    
-    mat4.invert(jacobian, jacobian);
+    if (resetGizmo) {
+      let origin = findOrigin();
+      let jacobian = findJacobian(origin);
+      mat4.invert(jacobian, jacobian);
+      mat4.fromTranslation(model, origin);
+      mat4.multiply(model, model, jacobian);
 
-    mat4.fromTranslation(model, origin);
-    mat4.multiply(model, model, jacobian);
+      controlObjectMatrix.fromArray(model);
+      controlObjectMatrix.decompose(controlObject.position, controlObject.quaternion, controlObject.scale);
+      control.setSpace('local');
 
-    setupProjectionView(state, (context) => {
-      state.model = model;
-      drawPolygons(state);
-    });
+      resetGizmo = false;
+    }
 
-    renderer.resetState();
-    renderer.render( scene, camera );
-    regl._refresh();
-
+    //setupProjectionView(state, (context) => {
+    //  state.model = model;
+    //  drawPolygons(state);
+    //});
     
     drawShader();
     
+    renderer.resetState();
+    renderer.render( scene, threeCamera );
+    regl._refresh();
+
   };
 };
 

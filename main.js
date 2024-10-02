@@ -249,11 +249,6 @@ module.exports = (project) => {
   const controls = defaultState && defaultState.controls
     ? createControls(defaultState.controls, uniforms) : null;
 
-  let projectDraw;
-  if (project.createDraw) {
-    projectDraw = project.createDraw(uniforms, setupProjectionView);
-  }
-
   const drawRaymarch = regl({
     vert: glslify('./quad.vert'),
     frag,
@@ -463,6 +458,9 @@ module.exports = (project) => {
     }
   }
 
+  
+  let projectDraw;
+
   const draw = (force, done) => {
     camera.tick();
     scrubber.update();
@@ -490,6 +488,11 @@ module.exports = (project) => {
       done();
     }
   };
+
+  if (project.createDraw) {
+    projectDraw = project.createDraw(uniforms, setupProjectionView, draw, camera);
+  }
+
 
 
   // let i = -1;
