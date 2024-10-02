@@ -214,10 +214,10 @@ module.exports = (project) => {
 
   const setupProjectionView = regl({
     uniforms: {
-      projection: ({ viewportWidth, viewportHeight }) => mat4.perspective(
+      projection: (context, props) => mat4.perspective(
         [],
-        1 / fov,
-        viewportWidth / viewportHeight,
+        1 / props.cameraFov,
+        context.viewportWidth / context.viewportHeight,
         0.01,
         1000
       ),
@@ -334,6 +334,7 @@ module.exports = (project) => {
       view: camera.view(),
       cameraMatrix: camera.view(),
       cameraPosition: camera.position,
+      cameraFov: fov,
       timer: timer.serialize(),
       accumulateControl: accumulateControl.serialize(),
       mouse,

@@ -1,6 +1,7 @@
 const createCube = require('primitive-cube');
-const { mat4, vec3 } = require('gl-matrix');
+const { mat4, vec3, quat } = require('gl-matrix');
 const glslify = require('glslify');
+const THREE = require('three');
 
 function offsetCells(cells, offset) {
   return cells.map(function(cell) {
@@ -158,6 +159,7 @@ const findOrigin = () => {
     searchRadius
   );
 
+  /*
   configureEvalGizmos([[x, y, z]]);
   drawEvalGizmo({
     count: positions.length
@@ -166,6 +168,7 @@ const findOrigin = () => {
     framebuffer: evalGizmoResults,
   });
   console.log(test);
+  */
   //console.log(x, y, z);
 
   return [x, y, z];
@@ -241,9 +244,29 @@ saveButton.classList.add('gizmo-save-button');
 saveButton.addEventListener('click', save);
 document.body.appendChild(saveButton);
 
+const cameraRotation = quat.create();
+const cameraMatrix = new THREE.Matrix4();
 
 const createDraw = function(uniforms, setupProjectionView) {
 
+  const scene = new THREE.Scene();
+  const camera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.01, 1000 );
+  //camera.matrixAutoUpdate = false;
+
+  const renderer = new THREE.WebGLRenderer({
+    context: regl._gl,
+    preserveDrawingBuffer: true,
+  });
+  renderer.autoClear = false;
+  regl._refresh();
+  //renderer.setSize( window.innerWidth, window.innerHeight );
+  //document.body.appendChild( renderer.domElement );
+  
+  const geometry = new THREE.BoxGeometry( 2.5, .9, .9 );
+  const material = new THREE.MeshBasicMaterial( { color: 0x00ff00 } );
+  const cube = new THREE.Mesh( geometry, material );
+  scene.add( cube );
+  
   const polyUniforms = Object.assign({}, uniforms);
   polyUniforms.model = regl.prop('model');
 
@@ -276,6 +299,14 @@ const createDraw = function(uniforms, setupProjectionView) {
   });
 
   return function draw(state, drawShader) {
+    
+    cameraMatrix.fromArray(state.cameraMatrix);
+    cameraMatrix.invert();
+    cameraMatrix.decompose(camera.position, camera.quaternion, camera.scale);
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.setFocalLength((state.cameraFov * camera.filmGauge / camera.aspect));
+    camera.updateProjectionMatrix();
+
     let origin = findOrigin();
     let jacobian = findJacobian(origin);
     
@@ -288,8 +319,14 @@ const createDraw = function(uniforms, setupProjectionView) {
       state.model = model;
       drawPolygons(state);
     });
+
+    renderer.resetState();
+    renderer.render( scene, camera );
+    regl._refresh();
+
     
     drawShader();
+    
   };
 };
 
