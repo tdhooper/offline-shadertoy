@@ -7,8 +7,9 @@ void GIZMO(inout vec3 p) {
     p = (gizmoAdjustmentMatrix * vec4(p, 1)).xyz;
 }
 
-
-
+void GIZMO_TRANSFORM(inout vec3 p, mat4 m) {
+    p = (m * vec4(p, 1)).xyz;
+}
 
 #define saturate(x) clamp(x, 0., 1.)
 
@@ -84,6 +85,7 @@ float fBox(vec3 p, vec3 b) {
 
 float map(vec3 p) {
     
+    GIZMO(p);
 
     float d = 1e12;
 

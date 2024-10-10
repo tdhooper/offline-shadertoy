@@ -18,7 +18,10 @@ module.exports = () => {
       if (['shader', 'frag'].indexOf(filename) !== -1) {
         filename = 'main';
       }
-      acc[filename] = glslify(file);
+      acc[filename] = {
+        file: file,
+        glsl: glslify(file),
+      };
       this.emit('file', path.join(__dirname, file)); // watch file
       return acc;
     }, {});

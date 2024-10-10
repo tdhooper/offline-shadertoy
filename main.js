@@ -16,8 +16,8 @@ const regl = require('regl')({
     'ext_shader_texture_lod',
     'webgl_color_buffer_float',
   ],
-  //pixelRatio: .5,
-  pixelRatio: 1,
+  pixelRatio: .5,
+  //pixelRatio: 1,
   attributes: {
     preserveDrawingBuffer: true,
   },
@@ -45,7 +45,7 @@ module.exports = (project) => {
   if (shaders.common) {
     Object.entries(shaders).forEach(([name, shader]) => {
       if (name !== 'common') {
-        shaders[name] = `${shaders.common}\n\n${shader}`;
+        shader.glsl = `${shaders.common}\n\n${shader.glsl}`;
       }
     });
   }
@@ -55,7 +55,7 @@ module.exports = (project) => {
     events.emit('draw');
   }
 
-  const frag = shaders.main;
+  const frag = shaders.main.glsl;
 
   const stats = new Stats();
   stats.showPanel(0);
@@ -467,7 +467,13 @@ module.exports = (project) => {
   };
   
   if (project.createDraw) {
-    projectDraw = project.createDraw(uniforms, setupProjectionView, projectDrawRequestDraw, camera);
+    projectDraw = project.createDraw(
+      uniforms,
+      setupProjectionView,
+      projectDrawRequestDraw,
+      camera,
+      project,
+    );
   }
 
   draw = (force, done) => {
