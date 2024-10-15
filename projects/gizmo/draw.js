@@ -201,13 +201,13 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
 
   const findGizmoTransforms = () => {
     let origins = findOrigins();
-    let originA = origins[1];
-    let originB = origins[0];
+    let originA = origins[0];
+    let originB = origins[1];
     
     let jacobians = findJacobians(origins);
     let jacobianA = jacobians[0];
     let jacobianB = jacobians[1];
-    
+
     mat4.invert(jacobianA, jacobianA);
     mat4.invert(jacobianB, jacobianB);
     
@@ -221,15 +221,15 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
 
     return {
       initial: trsA,
-      adjusted: trsB,
+      combined: trsB,
     };
   }
 
   const save = () => {
-    mat4.invert(combinedAdjustmentMatrix, transforms.adjusted);
-    mat4.multiply(combinedAdjustmentMatrix, combinedAdjustmentMatrix, transforms.initial);
+    mat4.invert(combinedAdjustmentMatrix, transforms.combined);
+    mat4.multiply(combinedAdjustmentMatrix, combinedAdjustmentMatrix, transforms.initial);    
     mat4.multiply(combinedAdjustmentMatrix, combinedAdjustmentMatrix, gizmoAdjustmentMatrix);
-    
+
     fetch('/save-gizmo', {
       method : "POST",
       headers: {
@@ -306,9 +306,9 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
 
     if (resetGizmo) {
       transforms = findGizmoTransforms();
-      mat4.invert(inverseModel, transforms.adjusted);
+      mat4.invert(inverseModel, transforms.combined);
 
-      controlObjectMatrix.fromArray(transforms.adjusted);
+      controlObjectMatrix.fromArray(transforms.combined);
       controlObjectMatrix.decompose(controlObject.position, controlObject.quaternion, controlObject.scale);
       control.setSpace('local');
 

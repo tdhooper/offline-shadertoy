@@ -7,7 +7,7 @@ uniform sampler2D evalGizmoPositions;
 void main() {
   vec3 position = texture2D(evalGizmoPositions, vec2(gl_FragCoord.x, gl_FragCoord.y) / evalGizmoPositionsResolution).rgb;
   map(position);
-  if (gl_FragCoord.y > 1.) {
+  if (gl_FragCoord.y < 1.) {
     gl_FragColor = vec4(GIZMO_LOCAL_P, 0);
   } else {
     gl_FragColor = vec4(GIZMO_LOCAL_P2, 0);
