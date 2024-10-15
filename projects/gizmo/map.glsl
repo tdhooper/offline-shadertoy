@@ -1,14 +1,19 @@
 uniform mat4 gizmoAdjustmentMatrix;
 
 vec3 GIZMO_LOCAL_P;
+vec3 GIZMO_LOCAL_P2;
 
-void GIZMO(inout vec3 p) {
+void GIZMO(inout vec3 p, mat4 m) {
     GIZMO_LOCAL_P = p;
+    p = (m * vec4(p, 1)).xyz;
+    GIZMO_LOCAL_P2 = p;
     p = (gizmoAdjustmentMatrix * vec4(p, 1)).xyz;
 }
 
-void GIZMO_TRANSFORM(inout vec3 p, mat4 m) {
-    p = (m * vec4(p, 1)).xyz;
+void GIZMO(inout vec3 p) {
+    GIZMO_LOCAL_P = p;
+    GIZMO_LOCAL_P2 = p;
+    p = (gizmoAdjustmentMatrix * vec4(p, 1)).xyz;
 }
 
 #define saturate(x) clamp(x, 0., 1.)
@@ -85,8 +90,6 @@ float fBox(vec3 p, vec3 b) {
 
 float map(vec3 p) {
     
-    GIZMO(p);
-
     float d = 1e12;
 
     d = min(d, fBox(p, vec3(.5)));
@@ -99,7 +102,7 @@ float map(vec3 p) {
     float scl = .5;
     p /= scl;
 
-    GIZMO(p);
+GIZMO(p, mat4(1.0000420808792114,0.00007718510460108519,-0.000029137088858988136,0,0.00003767923408304341,1.0000700950622559,-0.000026215095203951932,0,-0.000011497474588395562,-0.000020516934455372393,1.0000078678131104,0,0.050561077892780304,-0.17443862557411194,0.05476408824324608,1));
 
     d = smin(d, fBox(p, vec3(.5)) * scl, .5);
 

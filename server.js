@@ -60,7 +60,7 @@ router.post('/save-gizmo', function(req, res) {
     return;
   }
 
-  const reGizo = /GIZMO[\s\n]*\(([^)]+)\)[\s\n]*[;,\,]/g;
+  const reGizo = /GIZMO[\s\n]*\(([^,)]*?)(,[^{]*?\)?)?\)\s?[;,\,]/gd;
   const matrixGlsl = `mat4(${matrix.join(',')})`
 
   files.forEach(file => {
@@ -68,16 +68,25 @@ router.post('/save-gizmo', function(req, res) {
     let match;
     let replacements = [];
     while((match = reGizo.exec(source)) !== null) {
-      replacements.push({
-        index: match.index,
-        p: match[1],
-      })
+      console.log(match);
+      if (match.indices[2] == undefined) {
+        replacements.push({
+          start: match.indices[1][1],
+          end: match.indices[1][1],
+        });
+      } else {
+        replacements.push({
+          start: match.indices[2][0],
+          end: match.indices[2][1],
+        });
+      }
     }
     if (replacements.length > 0) {
       replacements.reverse();
       replacements.forEach(replacement => {
-        const insert = `GIZMO_TRANSFORM(${replacement.p}, ${matrixGlsl});\n`;
-        source = source.slice(0, replacement.index) + insert + source.slice(replacement.index);
+        console.log(replacement);
+        const insert = `, ${matrixGlsl}`;
+        source = source.slice(0, replacement.start) + insert + source.slice(replacement.end);
       });
       fs.writeFileSync(file, source);
     }
