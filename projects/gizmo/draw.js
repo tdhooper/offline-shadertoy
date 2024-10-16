@@ -1,4 +1,4 @@
-const { mat4, vec3 } = require('gl-matrix');
+const { mat4, vec3, quat } = require('gl-matrix');
 const glslify = require('glslify');
 const THREE = require('three');
 const { TransformControls } = require('./TransformControls');
@@ -80,148 +80,86 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
     return t;
   }
 
-  const findOrigins = () => {
+  // given two coordinates in world-space
+  // and their corresponding local space-coordinates
+  // find the local-space origin, and return it in world space 
+  const inverseLerpOrigin2 = (worldA, worldB, localA, localB) => {
+    let direction = vec3.create();
+    vec3.subtract(direction, b, a);
+    let t = (-vec3.dot(direction, b) - vec3.dot(direction, a));
+    let len = vec3.length(direction);
+    let scl = (searchRadius * 2) / len;
+    t *= scl * scl;
+    t /= searchRadius * 4;
+    return t;
+  }
 
-    let searchPoint = vec3.create(0, 0, 0);
-    let searchRadius = .5;
+  const vec3FromArray = (array, index) => {
+    return new Float32Array(array.buffer, index * 16, 3);
+  }
+
+  const findGizmoTransforms = () => {
+
+    let world = mat4.create();
+    mat4.fromRotationTranslationScale(
+      world,
+      quat.create(),
+      vec3.create(),
+      vec3.fromValues(1, 1, 1)
+    );
+    let inverseWorld = mat4.create();
+    mat4.invert(inverseWorld, world);
 
     let positions = [
-      vec3.create(),
-      vec3.create(),
-      vec3.create(),
-      vec3.create(),
-      vec3.create(),
-      vec3.create(),
+      vec3.fromValues(1, 0, 0),
+      vec3.fromValues(0, 1, 0),
+      vec3.fromValues(0, 0, 1),
+      vec3.fromValues(0, 0, 0),
     ];
 
-    vec3.add(positions[0], searchPoint, [-searchRadius, 0, 0]),
-    vec3.add(positions[1], searchPoint, [searchRadius, 0, 0]),
-    vec3.add(positions[2], searchPoint, [0, -searchRadius, 0]),
-    vec3.add(positions[3], searchPoint, [0, searchRadius, 0]),
-    vec3.add(positions[4], searchPoint, [0, 0, -searchRadius]),
-    vec3.add(positions[5], searchPoint, [0, 0, searchRadius]),
+    positions.forEach(position => {
+      vec3.transformMat4(position, position, world);
+    });
 
     configureEvalGizmos([positions, positions]);
     drawEvalGizmo();
 
-    var bytes = new Float32Array(6 * 4 * 2);
+    var bytes = new Float32Array(4 * 4 * 2);
 
     regl.read({
       framebuffer: evalGizmoResults,
       data: bytes,
     });
 
-    let origins = [];
+    let transforms = [];
 
     for (let i = 0; i < 2; i++) {
-      
-      let offset = 6 * 16 * i;
+      let offset = 4 * i;
 
-      let x = inverseLerpOrigin(
-        new Float32Array(bytes.buffer, 0 * 16 + offset, 3),
-        new Float32Array(bytes.buffer, 1 * 16 + offset, 3),
-        searchRadius
-      );
-  
-      let y = inverseLerpOrigin(
-        new Float32Array(bytes.buffer, 2 * 16 + offset, 3),
-        new Float32Array(bytes.buffer, 3 * 16 + offset, 3),
-        searchRadius
-      );
-  
-      let z = inverseLerpOrigin(
-        new Float32Array(bytes.buffer, 4 * 16 + offset, 3),
-        new Float32Array(bytes.buffer, 5 * 16 + offset, 3),
-        searchRadius
-      );
+      let x = vec3FromArray(bytes, 0 + offset);
+      let y = vec3FromArray(bytes, 1 + offset);
+      let z = vec3FromArray(bytes, 2 + offset);
+      let o = vec3FromArray(bytes, 3 + offset);
 
-      origins.push([x, y, z]);  
-    }
-    
-    return origins;
-  }
+      vec3.sub(x, x, o);
+      vec3.sub(y, y, o);
+      vec3.sub(z, z, o);
 
-  const findJacobians = (origins) => {
-
-    let searchRadius = 1/2;
-
-    let positionsA = [
-      vec3.create(),
-      vec3.create(),
-      vec3.create(),
-    ];
-
-    let positionsB = [
-      vec3.create(),
-      vec3.create(),
-      vec3.create(),
-    ];
-
-    vec3.add(positionsA[0], origins[0], [searchRadius, 0, 0]),
-    vec3.add(positionsA[1], origins[0], [0, searchRadius, 0]),
-    vec3.add(positionsA[2], origins[0], [0, 0, searchRadius]),
-    
-    vec3.add(positionsB[0], origins[1], [searchRadius, 0, 0]),
-    vec3.add(positionsB[1], origins[1], [0, searchRadius, 0]),
-    vec3.add(positionsB[2], origins[1], [0, 0, searchRadius]),
-
-    configureEvalGizmos([positionsA, positionsB]);
-    drawEvalGizmo();
-
-    var bytes = new Float32Array(positionsA.length * 4 * 2);
-
-    regl.read({
-      framebuffer: evalGizmoResults,
-      data: bytes,
-    });
-
-    let jacobians = [];
-
-    for (let i = 0; i < 2; i++) {
-      let offset = 3 * 16 * i;
-
-      let x = new Float32Array(bytes.buffer, 0 * 16 + offset, 3);
-      let y = new Float32Array(bytes.buffer, 1 * 16 + offset, 3);
-      let z = new Float32Array(bytes.buffer, 2 * 16 + offset, 3);
-  
-      x = vec3.scale(x, x, 1 / searchRadius);
-      y = vec3.scale(y, y, 1 / searchRadius);
-      z = vec3.scale(z, z, 1 / searchRadius);
-    
-      jacobians.push(mat4.fromValues(
+      let local = mat4.fromValues(
         x[0], x[1], x[2], 0,
         y[0], y[1], y[2], 0,
         z[0], z[1], z[2], 0,
-        0, 0, 0, 1,
-      ));
+        o[0], o[1], o[2], 1,
+      );
+
+      mat4.multiply(local, inverseWorld, local);
+      mat4.invert(local, local);
+      transforms.push(local);
     }
 
-    return jacobians;
-  }
-
-  const findGizmoTransforms = () => {
-    let origins = findOrigins();
-    let originA = origins[0];
-    let originB = origins[1];
-    
-    let jacobians = findJacobians(origins);
-    let jacobianA = jacobians[0];
-    let jacobianB = jacobians[1];
-
-    mat4.invert(jacobianA, jacobianA);
-    mat4.invert(jacobianB, jacobianB);
-    
-    const trsA = mat4.create();
-    mat4.fromTranslation(trsA, originA);
-    mat4.multiply(trsA, trsA, jacobianA);
-
-    const trsB = mat4.create();
-    mat4.fromTranslation(trsB, originB);
-    mat4.multiply(trsB, trsB, jacobianB);
-
     return {
-      initial: trsA,
-      combined: trsB,
+      initial: transforms[0],
+      combined: transforms[1],
     };
   }
 
@@ -292,7 +230,7 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
   scene.add( control );
   
   let transforms;
-  const inverseModel = mat4.create();
+  const inverseCombined = mat4.create();
   let resetGizmo = true;
 
   return function draw(state, drawShader) {
@@ -306,7 +244,7 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
 
     if (resetGizmo) {
       transforms = findGizmoTransforms();
-      mat4.invert(inverseModel, transforms.combined);
+      mat4.invert(inverseCombined, transforms.combined);
 
       controlObjectMatrix.fromArray(transforms.combined);
       controlObjectMatrix.decompose(controlObject.position, controlObject.quaternion, controlObject.scale);
@@ -314,11 +252,10 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
 
       resetGizmo = false;
     } else {
-      mat4.multiply(gizmoAdjustmentMatrix, inverseModel, controlObject.matrixWorld.toArray())
+      mat4.multiply(gizmoAdjustmentMatrix, inverseCombined, controlObject.matrixWorld.toArray())
       mat4.invert(gizmoAdjustmentMatrix, gizmoAdjustmentMatrix);
     }
 
-    
     state.gizmoAdjustmentMatrix = gizmoAdjustmentMatrix;
     setupGizmoUniforms(state, () => {
       drawShader();
