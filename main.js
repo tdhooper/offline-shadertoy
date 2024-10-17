@@ -6,22 +6,7 @@ const DO_CAPTURE = false;
 const EventEmitter = require('events');
 const Stats = require('stats.js');
 const glslify = require('glslify');
-const regl = require('regl')({
-  extensions: [
-    'webgl_depth_texture',
-    'ext_frag_depth',
-    'oes_standard_derivatives',
-    'oes_texture_float',
-    'oes_texture_float_linear',
-    'ext_shader_texture_lod',
-    'webgl_color_buffer_float',
-  ],
-  pixelRatio: .5,
-  //pixelRatio: 1,
-  attributes: {
-    preserveDrawingBuffer: true,
-  },
-});
+const createRegl = require('regl');
 const { mat4 } = require('gl-matrix');
 const webFramesCapture = require('web-frames-capture');
 const createMouse = require('./lib/mouse');
@@ -36,6 +21,33 @@ const textureUniforms = require('./lib/textures');
 
 var dbt = performance.now();
 
+const canvases = document.createElement('div');
+canvases.style.position = 'absolute';
+canvases.style.width = window.innerWidth + 'px';
+canvases.style.height = window.innerHeight + 'px';
+window.addEventListener('resize', () => {
+  canvases.style.width = window.innerWidth + 'px';
+  canvases.style.height = window.innerHeight + 'px';
+});
+document.body.appendChild(canvases);
+
+const regl = createRegl({
+  container: canvases,
+  extensions: [
+    'webgl_depth_texture',
+    'ext_frag_depth',
+    'oes_standard_derivatives',
+    'oes_texture_float',
+    'oes_texture_float_linear',
+    'ext_shader_texture_lod',
+    'webgl_color_buffer_float',
+  ],
+  pixelRatio: .5,
+  //pixelRatio: 1,
+  attributes: {
+    preserveDrawingBuffer: true,
+  },
+})
 global.regl = regl;
 
 module.exports = (project) => {
@@ -64,6 +76,7 @@ module.exports = (project) => {
 
   const canvas = regl._gl.canvas;
   const gl = regl._gl;
+  canvas.style.position = 'absolute';
 
   const renderNodes = buildRenderNodes(shaders);
   let firstPass = true;
@@ -293,7 +306,7 @@ module.exports = (project) => {
     }
   });
 
-  const camera = createCamera(canvas, {
+  const camera = createCamera(canvases, {
     position: [0, 0, 5],
     positionSpeed: 10,
     rotationSpeed: .1
@@ -310,7 +323,7 @@ module.exports = (project) => {
     };
   };
 
-  const mouse = createMouse(canvas);
+  const mouse = createMouse(canvases);
 
   const timer = new Timer();
 

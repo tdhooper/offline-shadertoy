@@ -273,13 +273,15 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
 
   const scene = new THREE.Scene();
   const threeCamera = new THREE.PerspectiveCamera( 75, window.innerWidth / window.innerHeight, 0.01, 1000 );
-
   const renderer = new THREE.WebGLRenderer({
-    context: regl._gl,
-    preserveDrawingBuffer: true,
+    alpha: true
   });
-  renderer.autoClear = false;
-  regl._refresh();
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  regl._gl.canvas.after(renderer.domElement);
+  renderer.domElement.style.position = 'absolute';
+  window.addEventListener('resize', () => {
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
   
   const geometry = new THREE.BoxGeometry( 0, 0, 0 );
   const material = new THREE.MeshBasicMaterial( {
@@ -289,7 +291,7 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
   const controlObject = new THREE.Mesh(geometry, material);
   scene.add( controlObject );
 
-  control = new TransformControls( threeCamera, regl._gl.canvas );
+  control = new TransformControls( threeCamera, renderer.domElement );
   control.addEventListener( 'change', () => {
     draw(true, () => {})
   } );
@@ -336,10 +338,7 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
       drawShader();
     });
 
-    renderer.resetState();
     renderer.render( scene, threeCamera );
-    regl._refresh();
-
   };
 };
 
