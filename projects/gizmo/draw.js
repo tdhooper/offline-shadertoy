@@ -98,48 +98,55 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
     return new Float32Array(array.buffer, index * 16, 3);
   }
 
-  const findGizmoTransforms = () => {
+  const findOriginTransformsFromSourcePoints = (points) => {
 
-    let world = mat4.create();
-    mat4.fromRotationTranslationScale(
-      world,
-      quat.create(),
-      vec3.create(),
-      vec3.fromValues(1, 1, 1)
-    );
-    let inverseWorld = mat4.create();
-    mat4.invert(inverseWorld, world);
-
-    let positions = [
-      vec3.fromValues(1, 0, 0),
-      vec3.fromValues(0, 1, 0),
-      vec3.fromValues(0, 0, 1),
-      vec3.fromValues(0, 0, 0),
-    ];
-
-    positions.forEach(position => {
-      vec3.transformMat4(position, position, world);
+    let worldMatrices = points.map(point => {
+      let world = mat4.create();
+      mat4.fromRotationTranslationScale(
+        world,
+        quat.create(),
+        point,
+        vec3.fromValues(1, 1, 1)
+      );
+      return world;
     });
+
+    let positions = worldMatrices.reduce((acc, world) => {
+
+      let positions = [
+        vec3.fromValues(1, 0, 0),
+        vec3.fromValues(0, 1, 0),
+        vec3.fromValues(0, 0, 1),
+        vec3.fromValues(0, 0, 0),
+      ];
+
+      positions.forEach(position => {
+        vec3.transformMat4(position, position, world);
+      });
+
+      return acc.concat(positions);
+    }, []);
 
     configureEvalGizmos([positions, positions]);
     drawEvalGizmo();
 
-    var bytes = new Float32Array(4 * 4 * 2);
+    let count = worldMatrices.length;
+    var bytes = new Float32Array(count * 4 * 2 * 4);
 
     regl.read({
       framebuffer: evalGizmoResults,
       data: bytes,
     });
 
-    let transforms = [];
+    let initialTransforms = [];
+    let combinedTransforms = [];
 
-    for (let i = 0; i < 2; i++) {
-      let offset = 4 * i;
+    for (let i = 0; i < count * 2; i++) {
 
-      let x = vec3FromArray(bytes, 0 + offset);
-      let y = vec3FromArray(bytes, 1 + offset);
-      let z = vec3FromArray(bytes, 2 + offset);
-      let o = vec3FromArray(bytes, 3 + offset);
+      let x = vec3FromArray(bytes, i * 4 + 0);
+      let y = vec3FromArray(bytes, i * 4 + 1);
+      let z = vec3FromArray(bytes, i * 4 + 2);
+      let o = vec3FromArray(bytes, i * 4 + 3);
 
       vec3.sub(x, x, o);
       vec3.sub(y, y, o);
@@ -152,14 +159,60 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
         o[0], o[1], o[2], 1,
       );
 
-      mat4.multiply(local, inverseWorld, local);
+      let inverseWorld = mat4.create();
+      mat4.invert(inverseWorld, worldMatrices[i % count]);
+      mat4.multiply(local, local, inverseWorld);
       mat4.invert(local, local);
-      transforms.push(local);
+
+      if (i < count) {
+        initialTransforms.push(local);
+      } else {
+        combinedTransforms.push(local);
+      }
     }
 
     return {
-      initial: transforms[0],
-      combined: transforms[1],
+      initial: initialTransforms,
+      combined: combinedTransforms,
+    };
+  }
+
+  const findGizmoTransforms = () => {
+    let points = [
+      vec3.fromValues( 0,  0,  0),
+      vec3.fromValues( 1,  1,  1),
+      vec3.fromValues( 1,  1, -1),
+      vec3.fromValues( 1, -1,  1),
+      vec3.fromValues( 1, -1, -1),
+      vec3.fromValues(-1,  1,  1),
+      vec3.fromValues(-1,  1, -1),
+      vec3.fromValues(-1, -1,  1),
+      vec3.fromValues(-1, -1, -1),
+    ]
+
+    let transforms = findOriginTransformsFromSourcePoints(points);
+
+    let lowestScore = Infinity;
+    let lowestScoreIndex = 0;
+    let difference = mat4.create();
+
+    transforms.initial.forEach((transform, i) => {
+
+      let score = transforms.initial.reduce((totalScore, otherTransform) => {
+        mat4.subtract(difference, transform, otherTransform);
+        let differenceScore = difference.reduce((acc, value) => {return acc + Math.abs(value)}, 0);
+        return totalScore + differenceScore;
+      }, 0);
+
+      if (score < lowestScore) {
+        lowestScore = score;
+        lowestScoreIndex = i;
+      }
+    });
+
+    return {
+      initial: transforms.initial[lowestScoreIndex], 
+      combined: transforms.combined[lowestScoreIndex],
     };
   }
 
