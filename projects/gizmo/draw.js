@@ -106,7 +106,7 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
         world,
         quat.create(),
         point,
-        vec3.fromValues(1, 1, 1)
+        vec3.fromValues(.01, .01, .01)
       );
       return world;
     });
