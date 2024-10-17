@@ -302,9 +302,9 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
     }
   });
   control.attach( controlObject );
+  const gizmo = control.getHelper();
+  scene.add( gizmo );
   control.setMode( 'translate' );
-  
-  scene.add( control );
   
   let transforms;
   const inverseCombined = mat4.create();
