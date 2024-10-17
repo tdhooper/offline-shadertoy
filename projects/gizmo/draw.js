@@ -178,6 +178,26 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
   }
 
   const findGizmoTransforms = () => {
+/*
+    let points = [
+      vec3.fromValues( 0,  0,  0),
+    ];
+
+    let size = 10;
+    let count = 10;
+    for (let x = 0; x < count; x++) {
+      for (let y = 0; y < count; y++) {
+        for (let z = 0; z < count; z++) {
+          points.push(vec3.fromValues(
+            (x / (count - 1)) * size - size / 2,
+            (y / (count - 1)) * size - size / 2,
+            (z / (count - 1)) * size - size / 2,
+          ))
+        }
+      }
+    }
+    */
+
     let points = [
       vec3.fromValues( 0,  0,  0),
       vec3.fromValues( 1,  1,  1),
@@ -209,6 +229,8 @@ const createDraw = function(uniforms, setupProjectionView, draw, camera, project
         lowestScoreIndex = i;
       }
     });
+
+    //console.log(lowestScore);
 
     return {
       initial: transforms.initial[lowestScoreIndex], 
