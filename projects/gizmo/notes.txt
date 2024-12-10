@@ -48,6 +48,21 @@ prototype:
 * render a sphere mesh at the found point
 
 
+Making it Generic
+
+How do we instrument any shader?
+
+* User creates a `float GIZMO_MAP(p)` method that calls their global map
+* Find the multipass render node that includes the GIZMO_MAP function
+* Copy the render node, and set a new shader:
+    * Rename the main() function to GIZMO_MAIN
+    * Insert our own main() function, that runs GIZMO_MAIN (it might have setup code)
+    * Insert GIZMO functions and uniforms
+    * Call the GIZMO_MAP function with P values, and return as FragColor
+
+
+steps:  
+* 
 
 https://eliemichel.github.io/SdfManipulation/
 

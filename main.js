@@ -17,7 +17,9 @@ const Timer = require('./lib/timer');
 const AccumulateControl = require('./lib/accumulate');
 const createControls = require('./lib/uniform-controls');
 const buildRenderNodes = require('./lib/multipass');
+const bindBuffer = require('./lib/bind-buffer');
 const textureUniforms = require('./lib/textures');
+const libGizmo = require('./lib/gizmo');
 
 var dbt = performance.now();
 
@@ -62,6 +64,10 @@ module.exports = (project) => {
     });
   }
 
+  Object.entries(shaders).forEach(([name, shader]) => {
+    shader = libGizmo.preprocessShader(shader);
+  });
+
   const events = new EventEmitter();
   function triggerDraw() {
     events.emit('draw');
@@ -80,6 +86,42 @@ module.exports = (project) => {
 
   const renderNodes = buildRenderNodes(shaders);
   let firstPass = true;
+
+  function attachDependencies(node, state) {
+    for (let i = node.dependencies.length - 1; i >= 0; i--) {
+      let dep = node.dependencies[i];
+      let depBuffer = dep.node == node ? dep.node.lastBuffer : dep.node.buffer;
+      const texture = depBuffer.color[0]._texture;
+      bindBuffer(texture, dep.filter, dep.wrap);
+      const s = {};
+      s[dep.uniform] = depBuffer;
+      Object.assign(state, s);
+    }
+  }
+
+  function swapPingPong(node) {
+    if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
+      const lastBuffer = node.buffer;
+      node.buffer = node.lastBuffer;
+      node.lastBuffer = lastBuffer;
+    }
+  };
+
+  function clearTarget(node) {
+    regl.clear({
+      color: [0, 0, 0, 1],
+      depth: 1,
+      framebuffer: node.buffer,
+    });
+  }
+
+  function setTarget(node, state) {
+    if ( ! node.final) {
+      Object.assign(state, {
+        framebuffer: node.buffer,
+      });
+    }
+  }
 
   renderNodes.forEach((node, i) => {
     node.buffer = regl.framebuffer({
@@ -137,93 +179,23 @@ module.exports = (project) => {
       },
     });
 
-    node.draw = (state) => {
-      // Don't mutate the original state
-      state = Object.assign({}, state);
-
-      if (node.firstPassOnly && ! firstPass) {
-        return;
-      }
-
-      function attachDependencies() {
-        for (let i = node.dependencies.length - 1; i >= 0; i--) {
-          let dep = node.dependencies[i];
-          let depBuffer = dep.node == node ? dep.node.lastBuffer : dep.node.buffer
-          const texture = depBuffer.color[0]._texture;
-          gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(texture.target, texture.texture);
-          if (dep.filter === 'nearest') {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
-          } else if (dep.filter === 'mipmap') {
-            gl.generateMipmap(gl.TEXTURE_2D);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-          } else {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+    node.draw = (state, body) => {
+      setupProjectionView(state, () => {
+        drawRaymarch(state, () => {
+          attachDependencies(node, state);
+          if (DO_CAPTURE)
+          {
+            console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
           }
-          if (dep.wrap === 'repeat') {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.REPEAT);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.REPEAT);
-          } else if (dep.wrap === 'mirror') {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.MIRRORED_REPEAT);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.MIRRORED_REPEAT);
-          } else {
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-            gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-          }
-          const s = {};
-          s[dep.uniform] = depBuffer;
-          Object.assign(state, s);
-        }
-      }
-
-      function swapPingPong() {
-        if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
-          const lastBuffer = node.buffer;
-          node.buffer = node.lastBuffer;
-          node.lastBuffer = lastBuffer;
-        }
-      };
-
-      function clearTarget() {
-        regl.clear({
-          color: [0, 0, 0, 1],
-          depth: 1,
-          framebuffer: node.buffer,
+          nodeCommand(state, body);
         });
-      }
-      
-      function setTarget() {
-        if (i !== renderNodes.length - 1) {
-          Object.assign(state, {
-            framebuffer: node.buffer,
-          });
-        }
-      }
-
-      if (state.tileIndex == 0) {
-       // console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount);
-
-        swapPingPong();
-        clearTarget();
-      }
-
-      attachDependencies();
-      setTarget();
-
-      if (DO_CAPTURE)
-      {
-        console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
-      }
-      
-      nodeCommand(state);
-      gl.finish();      
-    };
+      });
+    }
   });
 
   const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
+
+  const setupContext = regl({});
 
   const setupProjectionView = regl({
     uniforms: {
@@ -258,6 +230,16 @@ module.exports = (project) => {
       return mouseProp;
     },
   };
+
+  const camera = createCamera(canvases, {
+    position: [0, 0, 5],
+    positionSpeed: 10,
+    rotationSpeed: .1
+  });
+
+  window.camera = camera;
+
+  const gizmo = libGizmo.createGizmo(camera, renderNodes, uniforms);
 
   const controls = defaultState && defaultState.controls
     ? createControls(defaultState.controls, uniforms) : null;
@@ -306,14 +288,6 @@ module.exports = (project) => {
     }
   });
 
-  const camera = createCamera(canvases, {
-    position: [0, 0, 5],
-    positionSpeed: 10,
-    rotationSpeed: .1
-  });
-
-  window.camera = camera;
-
   let debugPlane = {};
 
   window.dropDebugPlane = () => {
@@ -352,6 +326,9 @@ module.exports = (project) => {
     };
     if (controls) {
       state.controls = controls.toState();
+    }
+    if (gizmo) {
+      Object.assign(state, gizmo.toState());
     }
     return state;
   };
@@ -410,16 +387,31 @@ module.exports = (project) => {
   }
 
   const drawNode = (node, state) => {
-    state.frame += state.drawIndex;
+
+    if (node.firstPassOnly && ! firstPass) {
+      return;
+    }
+
+    // Don't mutate the original state
+    state = Object.assign({}, state);
+
+    if (state.tileIndex == 0) {
+      // console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount);
+      swapPingPong(node);
+      clearTarget(node);
+    }
+
+    setTarget(node, state);
+
     //document.title = node.name + ' ' + state.drawIndex;
     //console.log(node.name, state.drawIndex, node.drawCount);
-    setupProjectionView(state, (context) => {
+    setupContext(state, (context) => {
       resizeBuffers(context.drawingBufferWidth, context.drawingBufferHeight);
-      //resizeBuffers(context.viewportWidth, context.viewportHeight);
-      drawRaymarch(state, () => {
-        node.draw(state);
-      });
+      // call gimo.setUniforms here?
+      node.draw(state);
     });
+
+    gl.finish();
   };
 
   const drawNodes = (
@@ -441,6 +433,7 @@ module.exports = (project) => {
       state.drawIndex = initialDrawIndex * node.drawCount + nodeDrawIndex;
     }
     state.tileIndex = tileIndex;
+    state.frame += state.drawIndex;
 
     drawNode(node, state);
 
@@ -489,11 +482,11 @@ module.exports = (project) => {
     );
   }
 
+
   draw = (force, done) => {
     camera.tick();
     scrubber.update();
     let stateChanged = stateStore.update(['accumulateControl']);
-
     if (stateChanged || force || accumulateControl.accumulate) {
       regl.clear({
         color: [0, 0, 0, 1],
@@ -510,6 +503,8 @@ module.exports = (project) => {
       } else {
         drawNodes(state, done, 0, 0, 0);
       }
+
+      gizmo.update(state);
 
       firstPass = false;
     } else {

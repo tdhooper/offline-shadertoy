@@ -8,7 +8,9 @@ uniform int iFrame;
 
 #pragma glslify: map = require(./map.glsl)
 
-
+float GIZMO_MAP(vec3 p) {
+    return map(p);
+}
 
 const int NORMAL_STEPS = 6;
 vec3 calcNormal(vec3 pos){

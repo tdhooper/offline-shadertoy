@@ -1,22 +1,3 @@
-uniform mat4 gizmoAdjustmentMatrix;
-
-vec3 GIZMO_LOCAL_P;
-vec3 GIZMO_LOCAL_P2;
-
-void GIZMO(inout vec3 p, mat4 m) {
-    GIZMO_LOCAL_P = p;
-    p = (m * vec4(p, 1)).xyz;
-    GIZMO_LOCAL_P2 = p;
-    p = (gizmoAdjustmentMatrix * vec4(p, 1)).xyz;
-}
-
-void GIZMO(inout vec3 p) {
-    GIZMO_LOCAL_P = p;
-    GIZMO_LOCAL_P2 = p;
-    p = (gizmoAdjustmentMatrix * vec4(p, 1)).xyz;
-}
-
-
 
 #define PI 3.1415926
 
