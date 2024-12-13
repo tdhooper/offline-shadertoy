@@ -231,7 +231,9 @@ module.exports = (project) => {
     },
   };
 
-  const camera = createCamera(canvases, {
+  const mouse = createMouse(canvases);
+
+  const camera = createCamera(mouse, {
     position: [0, 0, 5],
     positionSpeed: 10,
     rotationSpeed: .1
@@ -239,7 +241,8 @@ module.exports = (project) => {
 
   window.camera = camera;
 
-  const gizmo = libGizmo.createGizmo(camera, renderNodes, uniforms);
+
+  const gizmo = libGizmo.createGizmo(camera, mouse, renderNodes, uniforms);
 
   const controls = defaultState && defaultState.controls
     ? createControls(defaultState.controls, uniforms) : null;
@@ -297,8 +300,6 @@ module.exports = (project) => {
     };
   };
 
-  const mouse = createMouse(canvases);
-
   const timer = new Timer();
 
   const controlsContainer = document.createElement('div');
@@ -320,7 +321,7 @@ module.exports = (project) => {
       cameraFov: fov,
       timer: timer.serialize(),
       accumulateControl: accumulateControl.serialize(),
-      mouse,
+      mouse: mouse.toState(),
       screenQuad,
       r: [canvas.width, canvas.height],
       debugPlane,
@@ -341,10 +342,7 @@ module.exports = (project) => {
       camera.fromState(state.cameraMatrix);
     }
     if (state.mouse) {
-      mouse[0] = state.mouse[0];
-      mouse[1] = state.mouse[1];
-      mouse[2] = state.mouse[2];
-      mouse[3] = state.mouse[3];
+      mouse.fromState(state.mouse);
     }
     if (state.timer) {
       timer.fromObject(state.timer);
