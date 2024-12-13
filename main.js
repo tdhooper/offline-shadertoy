@@ -303,6 +303,7 @@ module.exports = (project) => {
 
   const controlsContainer = document.createElement('div');
   controlsContainer.classList.add('controls');
+  controlsContainer.classList.add('scrubber-controls');
   document.body.appendChild(controlsContainer);
 
   const scrubber = createScrubber(controlsContainer, timer);

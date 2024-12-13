@@ -9,14 +9,24 @@ body {
 }
 
 .controls {
+    padding: 5px 10px;
+    background: black;
+    opacity: 0;
+}
+
+.scrubber-controls {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 5px 10px;
     display: flex;
-    background: black;
-    opacity: 0;
+}
+
+.gizmo-controls {
+    position: fixed;
+    top: 100px;
+    left: 0;
+    display: flex;
 }
 
 /* canvas {
