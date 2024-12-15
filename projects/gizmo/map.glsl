@@ -185,7 +185,6 @@ cushionsz = vec3(isofasz.x / 2. + .001, .01, sofasz.z - .018);
     p.x -= isofasz.x / 2.;
     p.z -= sofasz.z - cushionsz.z * 2. + .005;
     vary += pReflect(p, normalize(vec3(0,-.66,1)), 0.);
-        GIZMO(p);
     p.y += cushionsz.y;
     p.z -= cushionsz.z - .004;
 
@@ -246,7 +245,6 @@ float map(vec3 p) {
 //return fSofa(p / 10.) * 10.;
 
     float d = 1e12;
-
     p.x -= .2;
     p.x = abs(p.x);
     
@@ -264,9 +262,10 @@ float map(vec3 p) {
     p.x -= .4;
     pR(p.xy, -1.);
 
-    GIZMO(p);
-
-    d = smin(d, fBox(p, vec3(.5)) * scl, .5);
+    for (int i = 0; i < 12; i++) {
+        d = min(d, fBox(p, vec3(.5)) * scl);
+        scl /= GIZMO(p, mat4(1.3410111665725708,0.39692896604537964,0.5756540298461914,0,-0.6229883432388306,1.243593454360962,0.5938217043876648,0,-0.3175000250339508,-0.7636698484420776,1.2662067413330078,0,-1.4620275497436523,0.06706993281841278,-0.5810590982437134,1));
+    }
 
     return d;
 }
