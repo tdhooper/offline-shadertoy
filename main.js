@@ -504,9 +504,11 @@ module.exports = (project) => {
       }
 
       gizmo.update(state);
+      gizmo.render();
 
       firstPass = false;
     } else {
+      gizmo.render();
       done();
     }
   };
