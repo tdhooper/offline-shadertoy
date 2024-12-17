@@ -19,7 +19,7 @@ const createControls = require('./lib/uniform-controls');
 const buildRenderNodes = require('./lib/multipass');
 const bindBuffer = require('./lib/bind-buffer');
 const textureUniforms = require('./lib/textures');
-const libGizmo = require('./lib/gizmo');
+const Gizmo = require('./lib/gizmo');
 
 var dbt = performance.now();
 
@@ -64,9 +64,9 @@ module.exports = (project) => {
     });
   }
 
-  Object.entries(shaders).forEach(([name, shader]) => {
-    shader = libGizmo.preprocessShader(shader);
-  });
+  let gizmo = new Gizmo();
+  
+  gizmo.preprocessShaders(Object.values(shaders));
 
   const events = new EventEmitter();
   function triggerDraw() {
@@ -242,7 +242,7 @@ module.exports = (project) => {
   window.camera = camera;
 
 
-  const gizmo = libGizmo.createGizmo(camera, mouse, renderNodes, uniforms);
+  gizmo.initialise(camera, mouse, renderNodes, uniforms);
 
   const controls = defaultState && defaultState.controls
     ? createControls(defaultState.controls, uniforms) : null;
