@@ -56,7 +56,8 @@ const main = require('./main.js');
 // menger-zoom
 // stereo-subgrid-colour-blurry
 // gizmo
+// skinfract-gizmo
 
-const project = LOADPROJECT('gizmo');
+const project = LOADPROJECT('skinfract-gizmo');
 
 main(project);

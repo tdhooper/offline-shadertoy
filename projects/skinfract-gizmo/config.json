@@ -1,0 +1,112 @@
+{
+  "id": "skinfract51",
+  "capture": {
+    "fps": 30,
+    "seconds": 6,
+    "width": 1600,
+    "height": 1600
+  },
+  "camera": {
+    "rotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "position": [
+      0,
+      0,
+      2.4
+    ]
+  },
+  "fov": 4,
+  "timer": {
+    "running": false,
+    "elapsed": 16530
+  },
+  "accumulateControl": {
+    "accumulate": false
+  },
+  "mouse": [
+    691,
+    680,
+    false,
+    0
+  ],
+  "r": [
+    1070,
+    1071
+  ],
+  "controls": {
+    "closed": true,
+    "rotPhaseX": {
+      "type": "range",
+      "controller": 11,
+      "step": 0.0005,
+      "min": 0,
+      "max": 1,
+      "value": 0.591
+    },
+    "rotPhaseY": {
+      "type": "range",
+      "controller": 12,
+      "step": 0.0005,
+      "min": 0,
+      "max": 1,
+      "value": 0.366
+    },
+    "rotPhaseZ": {
+      "type": "range",
+      "controller": 13,
+      "step": 0.0005,
+      "min": 0,
+      "max": 1,
+      "value": 0.5005000000000001
+    },
+    "animPhaseX": {
+      "type": "range",
+      "controller": 14,
+      "step": 0.005,
+      "min": -1,
+      "max": 1,
+      "value": -0.42
+    },
+    "animPhaseY": {
+      "type": "range",
+      "controller": 15,
+      "step": 0.005,
+      "min": -1,
+      "max": 1,
+      "value": 0.33
+    },
+    "animPhaseZ": {
+      "type": "range",
+      "controller": 16,
+      "step": 0.005,
+      "min": -1,
+      "max": 1,
+      "value": 0
+    },
+    "offsetX": {
+      "type": "range",
+      "step": 0.005,
+      "min": 0,
+      "max": 1,
+      "value": 0.66
+    },
+    "offsetY": {
+      "type": "range",
+      "step": 0.005,
+      "min": 0,
+      "max": 1,
+      "value": 0.37
+    },
+    "offsetZ": {
+      "type": "range",
+      "step": 0.005,
+      "min": 0,
+      "max": 1,
+      "value": 0.18
+    }
+  }
+}
