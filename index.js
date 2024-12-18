@@ -57,7 +57,8 @@ const main = require('./main.js');
 // stereo-subgrid-colour-blurry
 // gizmo
 // skinfract-gizmo
+// skinbox
 
-const project = LOADPROJECT('skinfract-gizmo');
+const project = LOADPROJECT('gizmo');
 
 main(project);

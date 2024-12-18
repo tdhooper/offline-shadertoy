@@ -238,9 +238,25 @@ cushionsz = vec3(isofasz.x / 2. + .001, .01, sofasz.z - .018);
 }
 
 
-
-
 float map(vec3 p) {
+    
+    float d = 1e12;
+
+
+    p = abs(p);
+    p.xy = p.x < p.y ? p.yx : p.xy;
+    p.xz = p.x < p.z ? p.zx : p.xz;
+
+    p.x -= 1.;
+
+    GIZMO(p);
+    
+    d = length(p) - .5;
+
+    return d;
+}
+
+float map2(vec3 p) {
     
 //return fSofa(p / 10.) * 10.;
 
