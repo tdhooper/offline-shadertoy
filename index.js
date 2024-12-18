@@ -59,6 +59,6 @@ const main = require('./main.js');
 // skinfract-gizmo
 // skinbox
 
-const project = LOADPROJECT('skinbox');
+const project = LOADPROJECT('gizmo');
 
 main(project);
