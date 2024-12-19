@@ -1,11 +1,4 @@
 
-float transformTRS(inout vec3 p, vec3 t, vec4 r, vec3 s) {
-    p += t;
-    p = mix(dot(r.xyz,p)*r.xyz, p, cos(r.w))+sin(r.w)*cross(r.xyz,p);
-    p /= s;
-    return min(s.x, min(s.y, s.z));
-}
-
 #define PI 3.1415926
 
 // HG_SDF
@@ -244,16 +237,17 @@ cushionsz = vec3(isofasz.x / 2. + .001, .01, sofasz.z - .018);
     return d2;
 }
 
-float mapx(vec3 p) {
+float map(vec3 p) {
     
     float d = 1e12;
 
     float scl = 1.;
 
-    scl *= transformTRS(p, vec3(0,1,0), vec4(0,0,1,1), vec3(1.5,.5,1));
-    //GIZMO(p);
-    
-    d = min(d, fBox(p, vec3(.5)) * scl);
+    for (int i = 0; i < 3; i++) {
+        d = min(d, fBox(p, vec3(.5)) * scl);
+        scl *= egTransform(p, vec3(-1,.2,.5), vec4(0,0,1,1), vec3(.8,.8,.8));
+        //GIZMO(p);
+    }
 
     return d;
 }
@@ -269,14 +263,14 @@ float map3(vec3 p) {
 
     p.x -= 1.;
 
-    GIZMO(p);
+    //GIZMO(p);
     
     d = length(p) - .5;
 
     return d;
 }
 
-float map(vec3 p) {
+float map2(vec3 p) {
     
 //return fSofa(p / 10.) * 10.;
 
@@ -300,7 +294,7 @@ float map(vec3 p) {
 
     for (int i = 0; i < 12; i++) {
         d = min(d, fBox(p, vec3(.5)) * scl);
-        scl *= GIZMO(p, mat4(1.3410111665725708,0.39692896604537964,0.5756540298461914,0,-0.6229883432388306,1.243593454360962,0.5938217043876648,0,-0.3175000250339508,-0.7636698484420776,1.2662067413330078,0,-1.4620275497436523,0.06706993281841278,-0.5810590982437134,1));
+        //scl *= GIZMO(p, mat4(1.3410111665725708,0.39692896604537964,0.5756540298461914,0,-0.6229883432388306,1.243593454360962,0.5938217043876648,0,-0.3175000250339508,-0.7636698484420776,1.2662067413330078,0,-1.4620275497436523,0.06706993281841278,-0.5810590982437134,1));
     }
 
     return d;
