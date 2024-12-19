@@ -30,9 +30,7 @@ router.post('/save-gizmo', function(req, res) {
   }
 
   let files = req.body.files;
-  let gizmoAdjustmentT = req.body.gizmoAdjustmentT;
-  let gizmoAdjustmentR = req.body.gizmoAdjustmentR;
-  let gizmoAdjustmentS = req.body.gizmoAdjustmentS;
+  let gizmoAdjustment = req.body.gizmoAdjustment;
 
   if (empty(files)) {
     res.statusCode = 500;
@@ -40,7 +38,7 @@ router.post('/save-gizmo', function(req, res) {
     return;
   }
 
-  if (empty(gizmoAdjustmentT) || empty(gizmoAdjustmentR) || empty(gizmoAdjustmentS)) {
+  if (empty(gizmoAdjustment)) {
     res.statusCode = 500;
     res.end('No matrix specified');
     return;
@@ -62,7 +60,7 @@ router.post('/save-gizmo', function(req, res) {
     return;
   }
 
-  const transformArgsGlsl = `vec3(${gizmoAdjustmentT.join(',')}), vec4(${gizmoAdjustmentR.join(',')}), vec3(${gizmoAdjustmentS.join(',')})`;
+  const transformArgsGlsl = `vec3(${gizmoAdjustment.t.join(',')}), vec4(${gizmoAdjustment.r.join(',')}), vec3(${gizmoAdjustment.s.join(',')})`;
 
   // this doesn't cope with comments or macros
   let findClosingBracket = (source, startIndex) => {
