@@ -60,7 +60,16 @@ router.post('/save-gizmo', function(req, res) {
     return;
   }
 
-  const transformArgsGlsl = `vec3(${gizmoAdjustment.t.join(',')}), vec4(${gizmoAdjustment.r.join(',')}), vec3(${gizmoAdjustment.s.join(',')})`;
+  let roundVec = (vec, dp) => {
+    let r = Math.pow(10, dp);
+    return vec.map(v => { return Math.round(v * r) / r });
+  }
+
+  const transformArgsGlsl = ([
+    `vec3(${roundVec(gizmoAdjustment.t, 7).join(',')})`,
+    `vec4(${roundVec(gizmoAdjustment.r, 7).join(',')})`,
+    `vec3(${roundVec(gizmoAdjustment.s, 7).join(',')})`,
+  ]).join(', ');
 
   // this doesn't cope with comments or macros
   let findClosingBracket = (source, startIndex) => {
