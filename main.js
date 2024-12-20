@@ -59,7 +59,7 @@ module.exports = (project) => {
   if (shaders.common) {
     Object.entries(shaders).forEach(([name, shader]) => {
       if (name !== 'common') {
-        shader.glsl = `${shaders.common}\n\n${shader.glsl}`;
+        shader.glsl = `${shaders.common.glsl}\n\n${shader.glsl}`;
       }
     });
   }
