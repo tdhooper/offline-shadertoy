@@ -100,7 +100,7 @@ async function createServer() {
     }
   })
 
-  app.post('/save-gizmo', saveGizmo);
+  app.post('/save-gizmo', saveGizmo(vite));
 
   server.listen(5173)
 
