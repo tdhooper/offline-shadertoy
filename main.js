@@ -18,7 +18,7 @@ import createControls from './lib/uniform-controls';
 import buildRenderNodes from './lib/multipass';
 import bindBuffer from './lib/bind-buffer';
 import textureUniforms from './lib/textures';
-import Gizmo from './lib/gizmo';
+import Gizmo from './lib/gizmo/gizmo';
 import quadVertShader from './quad.vert';
 
 var dbt = performance.now();
