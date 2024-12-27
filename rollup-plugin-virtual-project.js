@@ -35,6 +35,7 @@ export default function virtualProject() {
             file: file,
             glsl: glslify(file, {basedir: './'}),
           };
+          this.addWatchFile(path.join(absoluteDir, _file));
           //this.emit('file', path.join(__dirname, file)); // watch file
           return acc;
         }, {});
@@ -46,6 +47,7 @@ export default function virtualProject() {
         if (fs.existsSync(configFile)) {
           config = fs.readFileSync(configFile, 'utf8');
           config = JSON.parse(config);
+          this.addWatchFile(path.join(absoluteDir, 'config.json'));
           //this.emit('file', path.join(__dirname, configFile));
         }
 
@@ -53,6 +55,9 @@ export default function virtualProject() {
 
         const drawFile = `${relativeDir}/draw.js`;
         let hasDrawFile = fs.existsSync(drawFile);
+        if (hasDrawFile) {
+          this.addWatchFile(path.join(absoluteDir, 'draw.js'));
+        }
 
         let moduleSource = [];
 
