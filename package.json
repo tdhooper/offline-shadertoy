@@ -4,11 +4,11 @@
   "version": "2.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node server-vite",
+    "dev": "node server",
     "build": "npm run build:client && npm run build:server",
     "build:client": "vite build --outDir dist/client",
     "build:server": "vite build --ssr src/entry-server.js --outDir dist/server",
-    "preview": "cross-env NODE_ENV=production node server-vite"
+    "preview": "cross-env NODE_ENV=production node server"
   },
   "dependencies": {
     "clone-deep": "^4.0.1",
