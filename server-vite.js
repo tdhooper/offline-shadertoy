@@ -6,6 +6,8 @@ import { fileURLToPath } from 'node:url'
 import express from 'express'
 import https from 'https'
 import { createServer as createViteServer } from 'vite'
+import saveGizmo from './save-gizmo.js'
+import bodyParser from 'body-parser'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -33,6 +35,10 @@ async function createServer() {
   // reference (with a new internal stack of Vite and plugin-injected
   // middlewares). The following is valid even after restarts.
   app.use(vite.middlewares)
+
+  app.use(bodyParser.json({
+    limit: 1024 * 1024
+  }))
 
   app.use('/projects/:project', async (req, res, next) => {
     const url = req.originalUrl
@@ -93,6 +99,8 @@ async function createServer() {
       next(e)
     }
   })
+
+  app.post('/save-gizmo', saveGizmo);
 
   server.listen(5173)
 

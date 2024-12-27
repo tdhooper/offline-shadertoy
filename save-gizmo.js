@@ -1,27 +1,10 @@
-const budo = require('budo');
-const bodyParser = require('body-parser');
-const empty = require('is-empty');
-const Router = require('router');
-const fs = require('node:fs');
-const path = require('path');
+import empty from 'is-empty';
+import fs from 'node:fs';
+import path from 'path';
 
-var router = Router();
+export default async function saveGizmo(req, res, next) {
 
-budo('./index.js', {
-  live: true,
-  stream: process.stdout,
-  ssl: true,
-  css: '/styles/main.css',
-  middleware: [
-    bodyParser.json({
-      limit: 1024 * 1024
-    }),
-    router
-  ]
-});
-
-
-router.post('/save-gizmo', function(req, res) {
+  res.set({ 'Content-Type': 'text/html' });
 
   if (empty(req.body)) {
     res.statusCode = 500;
@@ -119,10 +102,4 @@ router.post('/save-gizmo', function(req, res) {
 
   res.statusCode = 200;
   res.end('Success');
-});
-
-router.use(function (err, req, res, next) {
-  console.log(err.message);
-  res.statusCode = 500;
-  res.end('Error');
-})
+};
