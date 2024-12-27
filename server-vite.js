@@ -39,11 +39,45 @@ async function createServer() {
   
     try {
       let html = fs.readFileSync(
-        path.resolve(__dirname, 'index.html'),
+        path.resolve(__dirname, 'project.html'),
         'utf-8',
       )
 
       html = html.replace(`<!--ssr-project-name-->`, req.params.project)
+
+      // Apply Vite HTML transforms. This injects the Vite HMR client,
+      // and also applies HTML transforms from Vite plugins, e.g. global
+      // preambles from @vitejs/plugin-react
+      html = await vite.transformIndexHtml(url, html)
+
+      // Send the rendered HTML back.
+      res.status(200).set({ 'Content-Type': 'text/html' }).end(html)
+    } catch (e) {
+      // If an error is caught, let Vite fix the stack trace so it maps back
+      // to your actual source code.
+      vite.ssrFixStacktrace(e)
+      next(e)
+    }
+  })
+
+  app.get('/', async (req, res, next) => {
+    const url = req.originalUrl
+  
+    try {
+      let html = fs.readFileSync(
+        path.resolve(__dirname, 'index.html'),
+        'utf-8',
+      )
+
+      const projectsList = fs.readdirSync(
+        path.resolve(__dirname, 'projects'),
+        {withFileTypes: true}
+      )
+        .filter(dirent => dirent.isDirectory())
+        .map(dirent => `<li><a href="/projects/${dirent.name}">${dirent.name}</a></li>\n`)
+        .join('');
+
+      html = html.replace(`<!--ssr-projects-list-->`, projectsList)
 
       // Apply Vite HTML transforms. This injects the Vite HMR client,
       // and also applies HTML transforms from Vite plugins, e.g. global

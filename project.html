@@ -1,0 +1,18 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" type="text/css" href="/styles/main.css">
+    <title>Offline Shadertoy</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script type="module">
+      import project from '/projects/<!--ssr-project-name-->/virtual-project'
+      import main from '/main.js'
+
+      main(project);
+    </script>
+  </body>
+</html>
