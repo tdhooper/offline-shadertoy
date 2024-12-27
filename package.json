@@ -1,18 +1,19 @@
 {
-  "name": "test",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "name": "tdhooper-offline-shadertoy",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "dev": "node server-vite",
+    "build": "npm run build:client && npm run build:server",
+    "build:client": "vite build --outDir dist/client",
+    "build:server": "vite build --ssr src/entry-server.js --outDir dist/server",
+    "preview": "cross-env NODE_ENV=production node server-vite"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
-    "brfs": "^2.0.2",
-    "budo": "^11.6.3",
+    "compression": "^1.7.5",
+    "express": "^5.0.1",
+    "sirv": "^3.0.0",
     "clone-deep": "^4.0.1",
     "dat.gui": "^0.7.0",
     "deepmerge": "^2.1.0",
@@ -28,7 +29,7 @@
     "glsl-solid-wireframe": "^1.0.1",
     "glsl-tone-map": "^1.0.0",
     "glsl-transpose": "^1.0.0",
-    "glslify": "^7.0.0",
+    "glslify": "^7.1.1",
     "glslify-import": "^3.1.0",
     "hotkeys-js": "^3.6.2",
     "is-empty": "^1.2.0",
@@ -46,16 +47,13 @@
     "web-frames-capture": "github:tdhooper/web-frames-capture#feature/cli",
     "webmidi": "^2.5.1"
   },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "vite": "^6.0.1"
+  },
   "glslify": {
     "transform": [
       "glslify-import"
-    ]
-  },
-  "browserify": {
-    "transform": [
-      "./project-transform",
-      "brfs",
-      "glslify"
     ]
   }
 }
