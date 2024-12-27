@@ -3,23 +3,23 @@
 
 const DO_CAPTURE = false;
 
-const EventEmitter = require('events');
-const Stats = require('stats.js');
-const glslify = require('glslify');
-const createRegl = require('regl');
-const { mat4 } = require('gl-matrix');
-const webFramesCapture = require('web-frames-capture');
-const createMouse = require('./lib/mouse');
-const createCamera = require('./lib/camera');
-const StateStore = require('./lib/state-store');
-const createScrubber = require('./lib/scrubber');
-const Timer = require('./lib/timer');
-const AccumulateControl = require('./lib/accumulate');
-const createControls = require('./lib/uniform-controls');
-const buildRenderNodes = require('./lib/multipass');
-const bindBuffer = require('./lib/bind-buffer');
-const textureUniforms = require('./lib/textures');
-const Gizmo = require('./lib/gizmo');
+import EventEmitter from 'events';
+import Stats from 'stats.js';
+import createRegl from 'regl';
+import { mat4 } from 'gl-matrix';
+import webFramesCapture from 'web-frames-capture';
+import createMouse from './lib/mouse';
+import createCamera from './lib/camera';
+import StateStore from './lib/state-store';
+import createScrubber from './lib/scrubber';
+import Timer from './lib/timer';
+import AccumulateControl from './lib/accumulate';
+import createControls from './lib/uniform-controls';
+import buildRenderNodes from './lib/multipass';
+import bindBuffer from './lib/bind-buffer';
+import textureUniforms from './lib/textures';
+import Gizmo from './lib/gizmo';
+import quadVertShader from './quad.vert';
 
 var dbt = performance.now();
 
@@ -50,9 +50,9 @@ const regl = createRegl({
     preserveDrawingBuffer: true,
   },
 })
-global.regl = regl;
+window.regl = regl;
 
-module.exports = (project) => {
+export default function main(project) {
   const defaultState = project.config || null;
   const shaders = Object.assign({}, project.shaders);
 
@@ -248,7 +248,7 @@ module.exports = (project) => {
     ? createControls(defaultState.controls, uniforms) : null;
 
   const drawRaymarch = regl({
-    vert: glslify('./quad.vert'),
+    vert: quadVertShader,
     frag,
     attributes: {
       position: [
