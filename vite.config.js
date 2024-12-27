@@ -5,5 +5,11 @@ export default {
   plugins: [virtualProject(), glslify()],
   define: {
     process: '({browser: true})',
+  },
+  server: {
+    hmr: {
+        host: "localhost",
+        protocol: "ws",
+    },
   }
 }
