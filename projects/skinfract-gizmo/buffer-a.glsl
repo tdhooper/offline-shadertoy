@@ -1,3 +1,4 @@
+
 // framebuffer drawcount: 1
 
 precision highp float;
@@ -124,7 +125,17 @@ struct Model {
     int id;
 };
 
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
 Material shadeModel(Model model, inout vec3 nor) {
+    //return Material(spectrum(abs(model.albedo.x) / 1.75), .15, .3, false);
     vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
     float flush = smoothstep(-1.75, -.0, model.albedo.x);
     skin += mix(vec3(-.6,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
@@ -137,9 +148,58 @@ Material shadeModel(Model model, inout vec3 nor) {
     return Material(skin, .15, .3, sss);
 }
 
+// IFS from Connor Bell (macbooktall)
+Model mapOriginal(vec3 p) {
+
+    p.y += .12;
+    pR(p.yz, .75);
+
+    float s = .3;
+    p /= s;
+
+    vec3 pp = p;
+
+    float scale = startScale;
+
+    const int iterations = 20;
+
+    float l = 0.;
+    float len = length(p) * spaceAnimFreq*2.;
+
+    float phase = time * PI * 2. + len * -5.0;
+
+    vec3 rotPhase = vec3(guiRotPhaseX, guiRotPhaseY, guiRotPhaseZ) * PI * 2.;
+    vec3 animPhase = vec3(guiAnimPhaseX, guiAnimPhaseY, guiAnimPhaseZ) * PI * 2.;
+    vec3 offset = vec3(guiOffsetX, guiOffsetY, guiOffsetZ);
+
+    vec3 anim = len + rotPhase + sin(phase + animPhase) * animAmp;
+ //anim = rotPhase;
+    float orbitTrap = 1e20;
+    for (int i=0; i<iterations; i++) {
+        p.xz = abs(p.zx);
+        p = p * scale - offset;
+        pR(p.xz, anim.x);
+        pR(p.yz, anim.y);
+        pR(p.xy, anim.z);
+        orbitTrap = min(orbitTrap, length(p)-scale);
+    }
+
+    float d = length(p) * pow(scale, -float(iterations));
+
+    p = pp;
+    d = smax(d, -(length(p * vec3(1,1,.75)) - .4), .1);
+
+    d *= s;
+
+
+    return Model(d, p, vec3(orbitTrap), 1);
+}
+
 
 // IFS from Connor Bell (macbooktall)
 Model map(vec3 p) {
+
+    Model m2 = mapOriginal(p);
 
     p.y += .12;
     pR(p.yz, .75);
@@ -164,25 +224,40 @@ Model map(vec3 p) {
 
 
     vec3 anim = len + rotPhase + sin(phase + animPhase) * animAmp;
- 
+    
+    vec3 animAdditive = len + sin(phase + animPhase) * animAmp;
+
+    // convert to matrix
+
+
+    //anim += .1;
     float orbitTrap = 1e20;
     for (int i=0; i<iterations; i++) {
         p.xz = abs(p.xz);
-        p = p * scale;
-        GIZMO(p, mat4(0.5838679671287537,0.7183218002319336,-0.37823978066444397,0,0.7210683822631836,-0.24497275054454803,0.6481397151947021,0,0.3728514015674591,-0.6510986089706421,-0.6611501574516296,0,-0.06198504567146301,-0.47814249992370605,1.1301722526550293,1));
-        //pR(p.xz, anim.x);
-        //pR(p.yz, anim.y);
-        //pR(p.xy, anim.z);
-        orbitTrap = min(orbitTrap, length(p)-scale);
+        scale *= gmTransform(p, offset, vec4(0.810416043861541,-0.5338526710716723,0.24130304896840715,1.008795906828008), vec3(1./startScale));
+        orbitTrap = min(orbitTrap, length(p)-(startScale));
+
+        //p.xz = abs(p.zx);
+        //p = p * scale - offset;
+        //gmxTransform(p, vec3(0,0,0), vec4(0.810416043861541,-0.5338526710716723,0.24130304896840715,1.008795906828008), vec3(1,1,1));
+        //pR(p.xz, animAdditive.x);
+        //pR(p.yz, animAdditive.y);
+        //pR(p.xy, animAdditive.z);
+        //orbitTrap = min(orbitTrap, length(p)-scale);
     }
 
-    float d = length(p) * pow(scale, -float(iterations));
+//    float d = length(p) * pow(scale, -float(iterations));
+
+    float d = length(p) * scale;
 
     p = pp;
     //d = smax(d, -(length(p * vec3(1,1,.75)) - .4), .1);
 
     d *= s;
 
+    if (m2.d < d) {
+     //   return m2;
+    }
 
     return Model(d, p, vec3(orbitTrap), 1);
 
