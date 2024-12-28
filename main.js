@@ -18,8 +18,6 @@ import createControls from './lib/uniform-controls';
 import buildRenderNodes from './lib/multipass';
 import textureUniforms from './lib/textures';
 import Gizmo from './lib/gizmo/gizmo';
-import quadVertShader from './quad.vert';
-import quadVertShaderWebGL2 from './quad-webgl2.vert';
 import createContext from 'pex-context';
 
 var dbt = performance.now();
@@ -44,8 +42,6 @@ export default function main(project) {
 
   let webgl2 = Object.values(shaders).some(shader => shader.glsl.indexOf('#version 300 es') !== -1);
 
-  const vert = webgl2 ? quadVertShaderWebGL2 : quadVertShader;
-
   const ctx = createContext({
     type: webgl2 ? 'webgl2' : 'webgl',
     pixelRatio: .5,
@@ -53,6 +49,8 @@ export default function main(project) {
   });
   ctx.gl.getExtension("EXT_frag_depth");
   canvases.appendChild(ctx.gl.canvas);
+
+  //ctx.debug(true);
 
   window.ctx = ctx;
 
@@ -176,7 +174,7 @@ export default function main(project) {
 
     const nodeCommand = {
       pipeline: ctx.pipeline({
-        vert: vert,
+        vert: node.vert,
         frag: node.shader,
         depthTest: true,
       }),
