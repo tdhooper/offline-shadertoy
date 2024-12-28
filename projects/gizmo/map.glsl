@@ -245,7 +245,7 @@ float map(vec3 p) {
 
     for (int i = 0; i < 3; i++) {
         d = min(d, fBox(p, vec3(.5)) * scl);
-        scl *= egTransform(p, vec3(1,-0.2,-0.5), vec4(0,1,0,1), vec3(0.8,0.8,0.8));
+        scl *= gmTransform(p, vec3(1,-0.2,-0.5), vec4(0,1,0,1), vec3(0.8,0.8,0.8));
         //GIZMO(p);
     }
 

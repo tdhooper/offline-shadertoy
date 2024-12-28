@@ -1,6 +1,7 @@
 import empty from 'is-empty';
 import fs from 'node:fs';
 import path from 'path';
+import gizmoShaderModifier from './lib/gizmo/gizmo-shader-modifier.js'
 
 export default function saveGizmo(vite) {
   
@@ -56,38 +57,6 @@ export default function saveGizmo(vite) {
       `vec3(${roundVec(gizmoAdjustment.s, 7).join(',')})`,
     ]).join(', ');
 
-    // this doesn't cope with comments or macros
-    let findClosingBracket = (source, startIndex) => {
-      let counter = 0;
-      let index = startIndex;
-      while (index < source.length) {
-        let char = source.charAt(index);
-        if (char == "(") {
-          counter++;
-        }
-        if (char == ")") {
-          counter--;
-        }
-        if (counter < 0) {
-          return index;
-        }
-        index++;
-      }
-      return startIndex;
-    }
-
-    let findReplacements = (source) => {
-      let reMethod = /egTransform[\s\n]*\([^,)]*/g;
-      let match;
-      let replacements = [];
-      while((match = reMethod.exec(source)) !== null) {
-        let start = reMethod.lastIndex;
-        let end = findClosingBracket(source, start);
-        replacements.push({start, end});
-      }
-      return replacements;
-    }
-
     let writeFile = async (file, content) => {
       // Stop watching the file so the page doesn't reload when we write to it
       await vite.watcher.unwatch(path.resolve(file));
@@ -105,16 +74,18 @@ export default function saveGizmo(vite) {
 
     files.forEach(file => {
       let source = fs.readFileSync(file, 'utf8');
-      let replacements = findReplacements(source);
-      if (replacements.length > 0) {
-        replacements.reverse();
-        replacements.forEach(replacement => {
-          console.log(replacement);
-          const insert = `, ${transformArgsGlsl}`;
-          source = source.slice(0, replacement.start) + insert + source.slice(replacement.end);
-        });
-
-        writeFile(file, source);
+      if (gizmoShaderModifier.usesTransformMethod(source)) {
+        let result;
+        let updated = false;
+        result = gizmoShaderModifier.addTransformMethodIfMissing(source);
+        source = result.source;
+        updated = updated || result.updated;
+        result = gizmoShaderModifier.replaceTransformCallArguments(source, transformArgsGlsl);
+        source = result.source;
+        updated = updated || result.updated;
+        if (updated) {
+          writeFile(file, source);
+        }
       }
     });
 
