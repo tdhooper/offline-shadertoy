@@ -5,7 +5,7 @@ const DO_CAPTURE = false;
 
 import EventEmitter from 'events';
 import Stats from 'stats.js';
-import createRegl from 'regl';
+import createRegl from './lib/regl';
 import { mat4 } from 'gl-matrix';
 import webFramesCapture from 'web-frames-capture';
 import createMouse from './lib/mouse';
@@ -127,13 +127,13 @@ export default function main(project) {
     node.buffer = regl.framebuffer({
       width: 300,
       height: 300,
-      colorType: 'float',
+      pixelFormat: 'RGBA32F',
     });
     if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
       node.lastBuffer = regl.framebuffer({
         width: 300,
         height: 300,
-        colorType: 'float',
+        pixelFormat: 'RGBA32F',
       });
     }
     const nodeUniforms = {
@@ -156,6 +156,7 @@ export default function main(project) {
 
     const nodeCommand = regl({
       frag: node.shader,
+      vert: quadVertShader,
       uniforms: nodeUniforms,
       framebuffer: regl.prop('framebuffer'),
       scissor: {
@@ -187,7 +188,7 @@ export default function main(project) {
           {
             console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
           }
-          nodeCommand(state, body);
+          nodeCommand(state, null, body);
         });
       });
     }
