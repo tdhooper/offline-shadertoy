@@ -180,7 +180,7 @@ export default function main(project) {
       },
     });
 
-    node.draw = (state, body) => {
+    node.draw = (state, body, done) => {
       setupProjectionView(state, () => {
         drawRaymarch(state, () => {
           attachDependencies(node, state);
@@ -188,7 +188,7 @@ export default function main(project) {
           {
             console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
           }
-          nodeCommand(state, null, body);
+          nodeCommand(state, body, done);
         });
       });
     }
