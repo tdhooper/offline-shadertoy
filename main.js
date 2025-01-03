@@ -91,10 +91,10 @@ export default function main(project) {
     for (let i = node.dependencies.length - 1; i >= 0; i--) {
       let dep = node.dependencies[i];
       let depBuffer = dep.node == node ? dep.node.lastBuffer : dep.node.buffer;
-      const texture = depBuffer.color[0]._texture;
-      bindBuffer(texture, dep.filter, dep.wrap);
+      let texture = depBuffer.passCmd.framebuffer.color[0].texture;
+      //bindBuffer(texture, dep.filter, dep.wrap);
       const s = {};
-      s[dep.uniform] = depBuffer;
+      s[dep.uniform] = texture;
       Object.assign(state, s);
     }
   }
@@ -108,11 +108,18 @@ export default function main(project) {
   };
 
   function clearTarget(node) {
-    regl.clear({
-      color: [0, 0, 0, 1],
-      depth: 1,
-      framebuffer: node.buffer,
-    });
+    if ( ! node.final) {
+      regl.clear({
+        color: [0, 0, 0, 1],
+        depth: 1,
+        framebuffer: node.buffer,
+      });
+    } else {
+      regl.clear({
+        color: [0, 0, 0, 1],
+        depth: 1,
+      });
+    }
   }
 
   function setTarget(node, state) {
@@ -125,15 +132,15 @@ export default function main(project) {
 
   renderNodes.forEach((node, i) => {
     node.buffer = regl.framebuffer({
-      width: 300,
-      height: 300,
-      pixelFormat: 'RGBA32F',
+      width: regl.ctx.gl.drawingBufferWidth,
+      height: regl.ctx.gl.drawingBufferHeight,
+      pixelFormat: regl.ctx.PixelFormat.RGBA32F,
     });
     if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
       node.lastBuffer = regl.framebuffer({
-        width: 300,
-        height: 300,
-        pixelFormat: 'RGBA32F',
+        width: regl.ctx.gl.drawingBufferWidth,
+        height: regl.ctx.gl.drawingBufferHeight,
+        pixelFormat: regl.ctx.PixelFormat.RGBA32F,
       });
     }
     const nodeUniforms = {
@@ -377,7 +384,7 @@ export default function main(project) {
       if (node.size) {
         [width, height] = node.size;
       }
-      if (node.buffer.width !== width || node.buffer.height !== height) {
+      if (node.buffer.size().width !== width || node.buffer.size().height !== height) {
         node.buffer.resize(width, height);
         if (node.lastBuffer) {
           node.lastBuffer.resize(width, height);
@@ -406,7 +413,6 @@ export default function main(project) {
     //document.title = node.name + ' ' + state.drawIndex;
     //console.log(node.name, state.drawIndex, node.drawCount);
     setupContext(state, (context) => {
-      resizeBuffers(context.drawingBufferWidth, context.drawingBufferHeight);
       // call gimo.setUniforms here?
       node.draw(state);
     });
@@ -421,6 +427,13 @@ export default function main(project) {
     nodeDrawIndex,
     tileIndex
   ) => {
+
+    if (nodeIndex == 0 && tileIndex == 0 && nodeDrawIndex == 0) {
+      setupContext(state, (context) => {
+        resizeBuffers(context.drawingBufferWidth, context.drawingBufferHeight);
+      });
+    }
+
     if (nodeIndex >= renderNodes.length) {
       done();
       return;
@@ -488,10 +501,6 @@ export default function main(project) {
     scrubber.update();
     let stateChanged = stateStore.update(['accumulateControl']);
     if (stateChanged || force || accumulateControl.accumulate) {
-      regl.clear({
-        color: [0, 0, 0, 1],
-        depth: 1,
-      });
 
       let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
       state.frame = frame++;
