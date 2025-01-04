@@ -1,10 +1,9 @@
-const fs = require('fs');
-const { mat4 } = require('gl-matrix');
-const parseOBJ = require('parse-wavefront-obj');
-const glslify = require('glslify');
+import fs from 'fs';
+import { mat4 } from 'gl-matrix';
+import parseOBJ from 'parse-wavefront-obj';
+import glslify from 'glslify';
+import meshData from './skull.obj?raw';
 
-
-const meshData = fs.readFileSync('projects/skull/skull.obj');
 var mesh = parseOBJ(meshData);
 
 const model = mat4.create();
@@ -27,13 +26,14 @@ function createDraw(uniforms, setupProjectionView) {
   const buffer = regl.framebuffer({
     width: 1024,
     height: 1024,
+    pixelFormat: regl.ctx.PixelFormat.RGBA32F,
     depthTexture: true,
   });
 
-  uniforms.uDepth = buffer.depthStencil;
-  uniforms.uSource = buffer;
+  uniforms.uDepth = buffer.passCmd.framebuffer.depth.texture;
+  uniforms.uSource = buffer.passCmd.framebuffer.color[0].texture;
 
-  const drawPolygons = global.regl({
+  const drawPolygons = regl({
     // primitive: 'lines',
     vert: `
       precision mediump float;
@@ -72,7 +72,15 @@ function createDraw(uniforms, setupProjectionView) {
   });
 
   return function draw(state, drawShader) {
-    global.regl.clear({
+
+    if (
+      buffer.size().width !== regl.ctx.gl.drawingBufferWidth
+      || buffer.size().height !== regl.ctx.gl.drawingBufferHeight
+    ) {
+      buffer.resize(regl.ctx.gl.drawingBufferWidth, regl.ctx.gl.drawingBufferHeight);
+    }
+
+    regl.clear({
       color: [0, 0, 0, 1],
       depth: 1,
       framebuffer: buffer,
@@ -87,4 +95,4 @@ function createDraw(uniforms, setupProjectionView) {
   };
 }
 
-module.exports = createDraw;
+export default createDraw;
