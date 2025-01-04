@@ -158,8 +158,11 @@ export default function main(project) {
     Object.assign(nodeUniforms, textureUniforms(regl, node.shader, triggerDraw));
 
     const nodeCommand = regl({
-      frag: node.shader,
-      vert: quadVertShader,
+      pipeline: ctx.pipeline({
+        vert: quadVertShader,
+        frag: node.shader,
+        depthTest: true,
+      }),
       uniforms: nodeUniforms,
       framebuffer: regl.prop('framebuffer'),
       scissor: (context, props) => {
@@ -244,8 +247,6 @@ export default function main(project) {
     ? createControls(defaultState.controls, uniforms) : null;
 
   const drawRaymarch = regl({
-    vert: quadVertShader,
-    frag,
     attributes: {
       position: ctx.vertexBuffer([
         [-2, 0],
