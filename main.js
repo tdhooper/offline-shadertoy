@@ -51,6 +51,7 @@ const regl = createRegl({
   },
 })
 window.regl = regl;
+window.ctx = regl.ctx;
 
 export default function main(project) {
   const defaultState = project.config || null;
@@ -161,24 +162,16 @@ export default function main(project) {
       vert: quadVertShader,
       uniforms: nodeUniforms,
       framebuffer: regl.prop('framebuffer'),
-      scissor: {
-        enable: Boolean(node.tile),
-        box: (context, props) => {
-          if ( ! node.tile) {
-            return {};
-          }
-          const i = props.tileIndex;
-          const w = Math.ceil(context.framebufferWidth / node.tile);
-          const h = Math.ceil(context.framebufferHeight / node.tile);
-          const x = i % node.tile;
-          const y = Math.floor(i / node.tile);
-          return {
-            x: x * w,
-            y: y * h,
-            width: w,
-            height: h
-          };
-        },
+      scissor: (context, props) => {
+        if ( ! node.tile) {
+          return null;
+        }
+        const i = props.tileIndex;
+        const w = Math.ceil(context.framebufferWidth / node.tile);
+        const h = Math.ceil(context.framebufferHeight / node.tile);
+        const x = i % node.tile;
+        const y = Math.floor(i / node.tile);
+        return [x * w, y * h, w, h]
       },
     });
 
@@ -254,43 +247,26 @@ export default function main(project) {
     vert: quadVertShader,
     frag,
     attributes: {
-      position: [
+      position: ctx.vertexBuffer([
         [-2, 0],
         [0, -2],
         [2, 2],
-      ],
+      ]),
     },
     count: 3,
     uniforms,
-    viewport: {
-      x: function(context, props) {
-        var s = context.drawingBufferWidth;
-        if (props.screenQuad !== undefined) {
-          return props.screenQuad % 2 === 1 ? -s : 0;
-        }
-        return 0;
-      },
-      y: function(context, props) {
-        var s = context.drawingBufferHeight;
-        if (props.screenQuad !== undefined) {
-          return props.screenQuad < 2 ? -s : 0;
-        }
-        return 0;
-      },
-      width: function(context, props) {
-        var s = context.drawingBufferWidth;
-        if (props.screenQuad !== undefined) {
-          return s * 2;
-        }
-        return s;
-      },
-      height: function(context, props) {
-        var s = context.drawingBufferHeight;
-        if (props.screenQuad !== undefined) {
-          return s * 2;
-        }
-        return s;
-      },
+    viewport: (context, props) => {
+      let x = 0;
+      let y = 0;
+      let width = context.drawingBufferWidth;
+      let height = context.drawingBufferHeight;
+      if (props.screenQuad !== undefined) {
+        x = props.screenQuad % 2 === 1 ? -context.drawingBufferWidth : 0;
+        y = props.screenQuad < 2 ? -context.drawingBufferHeight : 0;
+        width = context.drawingBufferWidth * 2;
+        height = context.drawingBufferHeight * 2;
+      }
+      return [x, y, width, height];
     }
   });
 

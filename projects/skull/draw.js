@@ -63,10 +63,10 @@ function createDraw(uniforms, setupProjectionView) {
       }
     `,
     attributes: {
-      position: mesh.positions,
-      normal: mesh.vertexNormals,
+      position: ctx.vertexBuffer(mesh.positions),
+      normal: ctx.vertexBuffer(mesh.vertexNormals),
     },
-    elements: mesh.cells,
+    indices: ctx.indexBuffer(mesh.cells),
     uniforms: uu,
     framebuffer: buffer,
   });

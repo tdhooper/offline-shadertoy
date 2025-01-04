@@ -26,10 +26,10 @@ const createDraw = function(uniforms, setupProjectionView) {
       }
     `,
     attributes: {
-      position: mesh.positions,
-      normal: mesh.normals,
+      position: ctx.vertexBuffer(mesh.positions),
+      normal: ctx.vertexBuffer(mesh.normals),
     },
-    elements: mesh.cells,
+    indices: ctx.indexBuffer(mesh.cells),
     uniforms: uniforms,
   });
 
