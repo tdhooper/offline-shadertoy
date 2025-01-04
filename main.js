@@ -163,6 +163,14 @@ export default function main(project) {
         frag: node.shader,
         depthTest: true,
       }),
+      attributes: {
+        position: ctx.vertexBuffer([
+          [-2, 0],
+          [0, -2],
+          [2, 2],
+        ]),
+      },
+      count: 3,
       uniforms: nodeUniforms,
       framebuffer: regl.prop('framebuffer'),
       scissor: (context, props) => {
@@ -176,18 +184,29 @@ export default function main(project) {
         const y = Math.floor(i / node.tile);
         return [x * w, y * h, w, h]
       },
+      viewport: (context, props) => {
+        let x = 0;
+        let y = 0;
+        let width = context.drawingBufferWidth;
+        let height = context.drawingBufferHeight;
+        if (props.screenQuad !== undefined) {
+          x = props.screenQuad % 2 === 1 ? -context.drawingBufferWidth : 0;
+          y = props.screenQuad < 2 ? -context.drawingBufferHeight : 0;
+          width = context.drawingBufferWidth * 2;
+          height = context.drawingBufferHeight * 2;
+        }
+        return [x, y, width, height];
+      },
     });
 
     node.draw = (state, body, done) => {
       setupProjectionView(state, () => {
-        drawRaymarch(state, () => {
-          attachDependencies(node, state);
-          if (DO_CAPTURE)
-          {
-            console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
-          }
-          nodeCommand(state, body, done);
-        });
+        attachDependencies(node, state);
+        if (DO_CAPTURE)
+        {
+          console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
+        }
+        nodeCommand(state, body, done);
       });
     }
   });
@@ -245,31 +264,6 @@ export default function main(project) {
 
   const controls = defaultState && defaultState.controls
     ? createControls(defaultState.controls, uniforms) : null;
-
-  const drawRaymarch = regl({
-    attributes: {
-      position: ctx.vertexBuffer([
-        [-2, 0],
-        [0, -2],
-        [2, 2],
-      ]),
-    },
-    count: 3,
-    uniforms,
-    viewport: (context, props) => {
-      let x = 0;
-      let y = 0;
-      let width = context.drawingBufferWidth;
-      let height = context.drawingBufferHeight;
-      if (props.screenQuad !== undefined) {
-        x = props.screenQuad % 2 === 1 ? -context.drawingBufferWidth : 0;
-        y = props.screenQuad < 2 ? -context.drawingBufferHeight : 0;
-        width = context.drawingBufferWidth * 2;
-        height = context.drawingBufferHeight * 2;
-      }
-      return [x, y, width, height];
-    }
-  });
 
   let debugPlane = {};
 
