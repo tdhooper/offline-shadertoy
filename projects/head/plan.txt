@@ -1,0 +1,94 @@
+head
+plode
+blend
+head
+plode
+
+
+plode
+offset origin by element
+
+
+. plode
+.
+.
+.
+.
+.   . blend
+.   .
+.   .
+.   .
+.   .   
+-   -   . plode
+        .
+        .
+        .
+        .
+        .   . blend
+        .   .
+        .   .
+        .   .
+        .   .   
+        -   - 
+
+
+
+
+
+    . plode
+    .
+    .   
+    .   . blend
+    .   .
+    .   .
+    .   .
+    .   .
+=== . = - = . plode ===============
+    .       .
+    -       .   
+            .   . blend
+            .   .
+            .   .
+            .   .
+            .   .
+=========== . = - = . plode =======
+            .       .
+            -       .   
+                    .   . blend
+                    .   .
+                    .   .
+                    .   .
+                    .   .
+                    .   -   . plode
+                    .       .
+                    -       .
+
+
+
+
+// camera
+. pick hex
+. trace hex to surface position
+. offset p by hex * plode -.9
+
+. scale p ?
+. pick hex
+. trace hex to surface position
+. offset p by hex * plode 0 ?
+
+// initial plode
+. get hex center
+. trace hex to surface position
+. offset p by hex * plode -.9
+
+// head and second plode
+. scale p
+. get new hex center for new p
+. offset p by hex * plode 0
+. draw intersected head
+
+// blend second plode into second head
+. trace hex to surface position
+. offset p by hex * plode 0
+. scale p
+. draw second head, blend
