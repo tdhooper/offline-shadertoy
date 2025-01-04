@@ -114,11 +114,6 @@ export default function main(project) {
         depth: 1,
         framebuffer: node.buffer,
       });
-    } else {
-      regl.clear({
-        color: [0, 0, 0, 1],
-        depth: 1,
-      });
     }
   }
 
@@ -484,7 +479,7 @@ export default function main(project) {
       draw(force, done);
     }
   };
-  
+
   if (project.createDraw) {
     projectDraw = project.createDraw(
       uniforms,
@@ -501,6 +496,10 @@ export default function main(project) {
     scrubber.update();
     let stateChanged = stateStore.update(['accumulateControl']);
     if (stateChanged || force || accumulateControl.accumulate) {
+      regl.clear({
+        color: [0, 0, 0, 1],
+        depth: 1,
+      });
 
       let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
       state.frame = frame++;

@@ -1,5 +1,5 @@
-const createCube = require('primitive-cube');
-const { mat4 } = require('gl-matrix');
+import createCube from 'primitive-cube';
+import { mat4 } from 'gl-matrix';
 
 
 // 1 x 1 x 1 Box
@@ -7,7 +7,7 @@ const mesh = createCube();
 
 const createDraw = function(uniforms, setupProjectionView) {
 
-  const drawPolygons = global.regl({
+  const drawPolygons = window.regl({
     vert: `
       precision mediump float;
       attribute vec3 position, normal;
@@ -41,4 +41,4 @@ const createDraw = function(uniforms, setupProjectionView) {
   };
 };
 
-module.exports = createDraw;
+export default createDraw;

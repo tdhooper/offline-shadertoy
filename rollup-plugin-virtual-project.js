@@ -68,9 +68,7 @@ export default function virtualProject() {
         moduleSource.push(`let project = ${JSON.stringify(project)};`)
 
         if (hasDrawFile) {
-          moduleSource.push(`project.draw = draw;`);
-        } else {
-          moduleSource.push(`project.draw = null;`);
+          moduleSource.push(`project.createDraw = draw;`);
         }
 
         moduleSource.push(`export default project;`);
