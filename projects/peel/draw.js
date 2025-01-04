@@ -1,10 +1,8 @@
-const fs = require('fs');
-const { mat4 } = require('gl-matrix');
-const parseOBJ = require('parse-wavefront-obj');
-const glslify = require('glslify');
+import { mat4 } from 'gl-matrix';
+import parseOBJ from 'parse-wavefront-obj';
+import glslify from 'glslify';
+import meshData from './model2.obj?raw';
 
-
-const meshData = fs.readFileSync('projects/peel/model2.obj');
 var mesh = parseOBJ(meshData);
 
 const model = mat4.create();
@@ -14,17 +12,21 @@ mat4.rotateZ(model, model, .01);
 mat4.translate(model, model, [.222,-.5,.15]);
 mat4.scale(model, model, [50, 50, 50]);
 
-function init(drawRaymarch, uniforms) {
+const createDraw = function(uniforms, setupProjectionView) {
   const uu = Object.assign({}, uniforms);
   uu.model = model;
 
   const buffer = regl.framebuffer({
     width: 1024,
     height: 1024,
+    pixelFormat: regl.ctx.PixelFormat.RGBA32F,
     depthTexture: true,
   });
 
-  const drawPolygons = global.regl({
+  uniforms.uDepth = buffer.passCmd.framebuffer.depth.texture;
+  uniforms.uSource = buffer.passCmd.framebuffer.color[0].texture;
+
+  const drawPolygons = regl({
     // primitive: 'lines',
     vert: `
       precision mediump float;
@@ -38,6 +40,8 @@ function init(drawRaymarch, uniforms) {
     `,
     frag: glslify`
       #extension GL_OES_standard_derivatives : enable
+      //#extension GL_EXT_frag_depth : enable
+
       precision mediump float;
       uniform bool guiSplit;
       varying vec3 vnormal;
@@ -49,6 +53,7 @@ function init(drawRaymarch, uniforms) {
           color = vec3(1) * pow(clamp(dot(lig, vnormal) * .5 + .5, 0., 1.), 1./2.2);
         // }
         gl_FragColor = vec4(color, 1);
+        //gl_FragDepthEXT = fract(gl_FragCoord.x / 100.);
       }
     `,
     attributes: {
@@ -60,33 +65,27 @@ function init(drawRaymarch, uniforms) {
     framebuffer: buffer,
   });
 
-  const setup = global.regl({
-    uniforms: {
-      uDepth: buffer.depthStencil,
-      uSource: buffer,
-    },
-  });
+  return function draw(state, drawShader) {
 
-  return function draw(state, context) {
-    global.regl.clear({
+    if (
+      buffer.size().width !== regl.ctx.gl.drawingBufferWidth
+      || buffer.size().height !== regl.ctx.gl.drawingBufferHeight
+    ) {
+      buffer.resize(regl.ctx.gl.drawingBufferWidth, regl.ctx.gl.drawingBufferHeight);
+    }
+
+    regl.clear({
       color: [0, 0, 0, 1],
       depth: 1,
       framebuffer: buffer,
     });
 
-    if (
-      buffer.width !== context.viewportWidth
-      || buffer.height !== context.viewportHeight
-    ) {
-      buffer.resize(context.viewportWidth, context.viewportHeight);
-    }
-
-    drawPolygons(state);
-    setup(() => {
-      drawRaymarch(state);
+    setupProjectionView(state, (context) => {
+      drawPolygons(state);
     });
+
+    drawShader();
   };
 }
 
-module.exports = init;
-// module.exports = function(){};
+export default createDraw;
