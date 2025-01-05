@@ -17,15 +17,15 @@ const createDraw = function(uniforms) {
   const uu = Object.assign({}, uniforms);
   uu.model = model;
 
-  const buffer = pexHelpers.framebuffer({
+  const pass = pexHelpers.createPass({
     width: 1024,
     height: 1024,
     pixelFormat: ctx.PixelFormat.RGBA32F,
     depthTexture: true,
   });
 
-  uniforms.uDepth = buffer.passCmd.framebuffer.depth.texture;
-  uniforms.uSource = buffer.passCmd.framebuffer.color[0].texture;
+  uniforms.uDepth = pexHelpers.passDepth(pass);
+  uniforms.uSource = pexHelpers.passTex(pass);
 
   const drawPolygons = {
     // primitive: 'lines',
@@ -65,16 +65,16 @@ const createDraw = function(uniforms) {
     },
     indices: ctx.indexBuffer(mesh.cells),
     uniforms: uu,
-    pass: buffer.passCmd,
+    pass: pass,
   };
 
   return function draw(state, drawShader) {
 
     if (
-      buffer.size().width !== ctx.gl.drawingBufferWidth
-      || buffer.size().height !== ctx.gl.drawingBufferHeight
+      pexHelpers.passTex(pass).width !== ctx.gl.drawingBufferWidth
+      || pexHelpers.passTex(pass).size().height !== ctx.gl.drawingBufferHeight
     ) {
-      buffer.resize(ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight);
+      pexHelpers.resizePass(pass, ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight);
     }
 
     ctx.apply(pexHelpers.evalCmd(drawPolygons, state));

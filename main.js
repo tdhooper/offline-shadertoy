@@ -84,7 +84,7 @@ export default function main(project) {
     for (let i = node.dependencies.length - 1; i >= 0; i--) {
       let dep = node.dependencies[i];
       let depBuffer = dep.node == node ? dep.node.lastBuffer : dep.node.buffer;
-      let texture = depBuffer.passCmd.framebuffer.color[0].texture;
+      let texture = pexHelpers.passTex(depBuffer);
       //bindBuffer(texture, dep.filter, dep.wrap);
       const s = {};
       s[dep.uniform] = texture;
@@ -103,7 +103,7 @@ export default function main(project) {
   function setTarget(node, state) {
     if ( ! node.final) {
       Object.assign(state, {
-        framebuffer: node.buffer,
+        pass: node.buffer,
       });
     }
   }
@@ -139,13 +139,13 @@ export default function main(project) {
   };
 
   renderNodes.forEach((node, i) => {
-    node.buffer = pexHelpers.framebuffer({
+    node.buffer = pexHelpers.createPass({
       width: ctx.gl.drawingBufferWidth,
       height: ctx.gl.drawingBufferHeight,
       pixelFormat: ctx.PixelFormat.RGBA32F,
     });
     if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
-      node.lastBuffer = pexHelpers.framebuffer({
+      node.lastBuffer = pexHelpers.createPass({
         width: ctx.gl.drawingBufferWidth,
         height: ctx.gl.drawingBufferHeight,
         pixelFormat: ctx.PixelFormat.RGBA32F,
@@ -176,8 +176,8 @@ export default function main(project) {
         depthTest: true,
       }),
       pass: (context, props) => {
-        if (props.framebuffer) {
-          return props.framebuffer.passCmd;
+        if (props.pass) {
+          return props.pass;
         }
         return screenPass;
       },
@@ -334,10 +334,10 @@ export default function main(project) {
       if (node.size) {
         [width, height] = node.size;
       }
-      if (node.buffer.size().width !== width || node.buffer.size().height !== height) {
-        node.buffer.resize(width, height);
+      if (pexHelpers.passTex(node.buffer).width !== width || pexHelpers.passTex(node.buffer).height !== height) {
+        pexHelpers.resizePass(node.buffer, width, height);
         if (node.lastBuffer) {
-          node.lastBuffer.resize(width, height);
+          pexHelpers.resizePass(node.lastBuffer, width, height);
         }
       }
     });
