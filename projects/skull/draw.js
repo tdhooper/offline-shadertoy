@@ -33,7 +33,7 @@ function createDraw(uniforms) {
   uniforms.uDepth = buffer.passCmd.framebuffer.depth.texture;
   uniforms.uSource = buffer.passCmd.framebuffer.color[0].texture;
 
-  const drawPolygons = regl({
+  const drawPolygons = {
     // primitive: 'lines',
     pipeline: ctx.pipeline({
 
@@ -71,8 +71,8 @@ function createDraw(uniforms) {
     },
     indices: ctx.indexBuffer(mesh.cells),
     uniforms: uu,
-    framebuffer: buffer,
-  });
+    pass: buffer.passCmd,
+  };
 
   return function draw(state, drawShader) {
 
@@ -89,8 +89,7 @@ function createDraw(uniforms) {
       framebuffer: buffer,
     });
 
-    drawPolygons(Object.assign({model: model, albedo: [1,1,1]}, state));
-    // drawPolygons(Object.assign({model: model2, albedo: [1,1,1]}, state));
+    ctx.apply(regl.evalCmd(drawPolygons, Object.assign({model: model, albedo: [1,1,1]}, state)));
     drawShader();
   };
 }

@@ -128,6 +128,8 @@ export default function main(project) {
 
   const m4identity = mat4.identity([]);
 
+  const screenPass = ctx.pass({});
+
   const uniforms = {
     model: m4identity,
     iOffset: (context, props) => (props.offset || [0, 0]),
@@ -184,14 +186,19 @@ export default function main(project) {
       return acc;
     }, nodeUniforms);
     Object.assign(nodeUniforms, textureUniforms(regl, node.shader, triggerDraw));
-    Object.assign(nodeUniforms, uniforms);
 
-    const nodeCommand = regl({
+    const nodeCommand = {
       pipeline: ctx.pipeline({
         vert: quadVertShader,
         frag: node.shader,
         depthTest: true,
       }),
+      pass: (context, props) => {
+        if (props.framebuffer) {
+          return props.framebuffer.passCmd;
+        }
+        return screenPass;
+      },
       attributes: {
         position: ctx.vertexBuffer([
           [-2, 0],
@@ -201,7 +208,6 @@ export default function main(project) {
       },
       count: 3,
       uniforms: nodeUniforms,
-      framebuffer: regl.prop('framebuffer'),
       scissor: (context, props) => {
         if ( ! node.tile) {
           return null;
@@ -226,21 +232,24 @@ export default function main(project) {
         }
         return [x, y, width, height];
       },
-    });
+    };
 
-    node.draw = (state, body, done) => {
+    node.draw = (state, partialCmd) => {
       attachDependencies(node, state);
       if (DO_CAPTURE)
       {
         console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
       }
-      nodeCommand(state, body, done);
+      let cmds = [nodeCommand, { uniforms }];
+      if (partialCmd) {
+        cmds.push(partialCmd);
+      }
+      let cmd = regl.evalCmds(cmds, state);
+      ctx.submit(cmd);
     }
   });
 
   const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
-
-  const setupContext = regl({});
 
   const mouse = createMouse(canvases);
 
@@ -385,9 +394,7 @@ export default function main(project) {
   ) => {
 
     if (nodeIndex == 0 && tileIndex == 0 && nodeDrawIndex == 0) {
-      setupContext(state, (context) => {
-        resizeBuffers(context.drawingBufferWidth, context.drawingBufferHeight);
-      });
+      resizeBuffers(ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight);
     }
 
     if (nodeIndex >= renderNodes.length) {

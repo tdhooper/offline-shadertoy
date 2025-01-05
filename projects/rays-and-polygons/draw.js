@@ -7,7 +7,7 @@ const mesh = createCube();
 
 const createDraw = function(uniforms) {
 
-  const drawPolygons = window.regl({
+  const drawPolygons = {
     pipeline: ctx.pipeline({
       vert: `
         precision mediump float;
@@ -34,10 +34,10 @@ const createDraw = function(uniforms) {
     },
     indices: ctx.indexBuffer(mesh.cells),
     uniforms: uniforms,
-  });
+  };
 
   return function draw(state, drawShader) {
-    drawPolygons(state);
+    ctx.apply(regl.evalCmd(drawPolygons, state));
     drawShader();
   };
 };
