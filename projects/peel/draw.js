@@ -65,7 +65,7 @@ const createDraw = function(uniforms) {
     },
     indices: ctx.indexBuffer(mesh.cells),
     uniforms: uu,
-    pass: buffer.clearPassCmd,
+    pass: buffer.passCmd,
   };
 
   return function draw(state, drawShader) {

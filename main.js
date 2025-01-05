@@ -177,7 +177,7 @@ export default function main(project) {
       }),
       pass: (context, props) => {
         if (props.framebuffer) {
-          return props.framebuffer.clearPassCmd;
+          return props.framebuffer.passCmd;
         }
         return screenPass;
       },
