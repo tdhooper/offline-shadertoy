@@ -100,16 +100,6 @@ export default function main(project) {
     }
   };
 
-  function clearTarget(node) {
-    if ( ! node.final) {
-      pexHelpers.clear({
-        color: [0, 0, 0, 1],
-        depth: 1,
-        framebuffer: node.buffer,
-      });
-    }
-  }
-
   function setTarget(node, state) {
     if ( ! node.final) {
       Object.assign(state, {
@@ -187,7 +177,7 @@ export default function main(project) {
       }),
       pass: (context, props) => {
         if (props.framebuffer) {
-          return props.framebuffer.passCmd;
+          return props.framebuffer.clearPassCmd;
         }
         return screenPass;
       },
@@ -365,7 +355,6 @@ export default function main(project) {
     if (state.tileIndex == 0) {
       // console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount);
       swapPingPong(node);
-      clearTarget(node);
     }
 
     setTarget(node, state);
@@ -449,6 +438,10 @@ export default function main(project) {
     );
   }
 
+  const clearScreenCmd = ctx.pass({
+    color: [0, 0, 0, 1],
+    depth: 1,
+  });
 
   draw = (force, done) => {
     camera.tick();
@@ -456,10 +449,8 @@ export default function main(project) {
     let stateChanged = stateStore.update(['accumulateControl']);
     //console.log(stateChanged);
     if (stateChanged || force || accumulateControl.accumulate) {
-      pexHelpers.clear({
-        color: [0, 0, 0, 1],
-        depth: 1,
-      });
+
+      ctx.apply(clearScreenCmd);
 
       let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
       state.frame = frame++;

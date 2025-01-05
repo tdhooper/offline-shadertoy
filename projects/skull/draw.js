@@ -71,7 +71,7 @@ function createDraw(uniforms) {
     },
     indices: ctx.indexBuffer(mesh.cells),
     uniforms: uu,
-    pass: buffer.passCmd,
+    pass: buffer.clearPassCmd,
   };
 
   return function draw(state, drawShader) {
@@ -82,12 +82,6 @@ function createDraw(uniforms) {
     ) {
       buffer.resize(ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight);
     }
-
-    pexHelpers.clear({
-      color: [0, 0, 0, 1],
-      depth: 1,
-      framebuffer: buffer,
-    });
 
     ctx.apply(pexHelpers.evalCmd(drawPolygons, Object.assign({model: model, albedo: [1,1,1]}, state)));
     drawShader();
