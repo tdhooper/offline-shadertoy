@@ -18,7 +18,7 @@ const model2 = mat4.create();
 mat4.scale(model2, model2, [-1,1,1]);
 mat4.multiply(model2, model2, model);
 
-function createDraw(uniforms, setupProjectionView) {
+function createDraw(uniforms) {
   const uu = Object.assign({}, uniforms);
   uu.model = regl.prop('model');
   uu.albedo = regl.prop('albedo');
@@ -89,11 +89,8 @@ function createDraw(uniforms, setupProjectionView) {
       framebuffer: buffer,
     });
 
-    setupProjectionView(state, (context) => {
-      drawPolygons(Object.assign({model: model, albedo: [1,1,1]}, state));
-      // drawPolygons(Object.assign({model: model2, albedo: [1,1,1]}, state));
-    });
-
+    drawPolygons(Object.assign({model: model, albedo: [1,1,1]}, state));
+    // drawPolygons(Object.assign({model: model2, albedo: [1,1,1]}, state));
     drawShader();
   };
 }

@@ -126,6 +126,34 @@ export default function main(project) {
     }
   }
 
+  const m4identity = mat4.identity([]);
+
+  const uniforms = {
+    model: m4identity,
+    iOffset: (context, props) => (props.offset || [0, 0]),
+    cameraMatrix: regl.prop('cameraMatrix'),
+    cameraPosition: regl.prop('cameraPosition'),
+    debugPlaneMatrix: (context, props) => (props && props.debugPlane && props.debugPlane.matrix) || m4identity,
+    debugPlanePosition: (context, props) => (props && props.debugPlane && props.debugPlane.position) || [0, 0, 1],
+    iGlobalTime: (context, props) => props.timer.elapsed / 1000,
+    iTime: (context, props) => props.timer.elapsed / 1000,
+    firstPass: () => firstPass,
+    iMouse: (context, props) => {
+      const mouseProp = props.mouse.map(value => value * context.pixelRatio);
+      mouseProp[1] = context.viewportHeight - mouseProp[1];
+      //console.log(mouseProp[0] / context.viewportWidth, mouseProp[1] / context.viewportHeight);
+      return mouseProp;
+    },
+    projection: (context, props) => mat4.perspective(
+      [],
+      1 / props.cameraFov,
+      context.viewportWidth / context.viewportHeight,
+      0.01,
+      1000
+    ),
+    view: regl.prop('view'),
+  };
+
   renderNodes.forEach((node, i) => {
     node.buffer = regl.framebuffer({
       width: regl.ctx.gl.drawingBufferWidth,
@@ -156,6 +184,7 @@ export default function main(project) {
       return acc;
     }, nodeUniforms);
     Object.assign(nodeUniforms, textureUniforms(regl, node.shader, triggerDraw));
+    Object.assign(nodeUniforms, uniforms);
 
     const nodeCommand = regl({
       pipeline: ctx.pipeline({
@@ -200,54 +229,18 @@ export default function main(project) {
     });
 
     node.draw = (state, body, done) => {
-      setupProjectionView(state, () => {
-        attachDependencies(node, state);
-        if (DO_CAPTURE)
-        {
-          console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
-        }
-        nodeCommand(state, body, done);
-      });
+      attachDependencies(node, state);
+      if (DO_CAPTURE)
+      {
+        console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
+      }
+      nodeCommand(state, body, done);
     }
   });
 
   const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
 
   const setupContext = regl({});
-
-  const setupProjectionView = regl({
-    uniforms: {
-      projection: (context, props) => mat4.perspective(
-        [],
-        1 / props.cameraFov,
-        context.viewportWidth / context.viewportHeight,
-        0.01,
-        1000
-      ),
-      view: regl.prop('view'),
-    },
-  });
-
-  const m4identity = mat4.identity([]);
-
-  const uniforms = {
-    model: m4identity,
-    iOffset: (context, props) => (props.offset || [0, 0]),
-    cameraMatrix: regl.prop('cameraMatrix'),
-    cameraPosition: regl.prop('cameraPosition'),
-    debugPlaneMatrix: (context, props) => (props && props.debugPlane && props.debugPlane.matrix) || m4identity,
-    debugPlanePosition: (context, props) => (props && props.debugPlane && props.debugPlane.position) || [0, 0, 1],
-    iGlobalTime: (context, props) => props.timer.elapsed / 1000,
-    iTime: (context, props) => props.timer.elapsed / 1000,
-    firstPass: () => firstPass,
-    iMouse: (context, props) => {
-
-      const mouseProp = props.mouse.map(value => value * context.pixelRatio);
-      mouseProp[1] = context.viewportHeight - mouseProp[1];
-      //console.log(mouseProp[0] / context.viewportWidth, mouseProp[1] / context.viewportHeight);
-      return mouseProp;
-    },
-  };
 
   const mouse = createMouse(canvases);
 
@@ -378,10 +371,7 @@ export default function main(project) {
 
     //document.title = node.name + ' ' + state.drawIndex;
     //console.log(node.name, state.drawIndex, node.drawCount);
-    setupContext(state, (context) => {
-      // call gimo.setUniforms here?
-      node.draw(state);
-    });
+    node.draw(state);
 
     gl.finish();
   };
@@ -454,7 +444,6 @@ export default function main(project) {
   if (project.createDraw) {
     projectDraw = project.createDraw(
       uniforms,
-      setupProjectionView,
       projectDrawRequestDraw,
       camera,
       project,

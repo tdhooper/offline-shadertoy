@@ -12,7 +12,7 @@ mat4.rotateZ(model, model, .01);
 mat4.translate(model, model, [.222,-.5,.15]);
 mat4.scale(model, model, [50, 50, 50]);
 
-const createDraw = function(uniforms, setupProjectionView) {
+const createDraw = function(uniforms) {
   const uu = Object.assign({}, uniforms);
   uu.model = model;
 
@@ -82,10 +82,7 @@ const createDraw = function(uniforms, setupProjectionView) {
       framebuffer: buffer,
     });
 
-    setupProjectionView(state, (context) => {
-      drawPolygons(state);
-    });
-
+    drawPolygons(state);
     drawShader();
   };
 }

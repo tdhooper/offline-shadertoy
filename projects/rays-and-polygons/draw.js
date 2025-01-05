@@ -5,7 +5,7 @@ import { mat4 } from 'gl-matrix';
 // 1 x 1 x 1 Box
 const mesh = createCube();
 
-const createDraw = function(uniforms, setupProjectionView) {
+const createDraw = function(uniforms) {
 
   const drawPolygons = window.regl({
     pipeline: ctx.pipeline({
@@ -37,9 +37,7 @@ const createDraw = function(uniforms, setupProjectionView) {
   });
 
   return function draw(state, drawShader) {
-    setupProjectionView(state, (context) => {
-      drawPolygons(state);
-    });
+    drawPolygons(state);
     drawShader();
   };
 };
