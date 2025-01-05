@@ -1,8 +1,8 @@
-import fs from 'fs';
 import { mat4 } from 'gl-matrix';
 import parseOBJ from 'parse-wavefront-obj';
 import glslify from 'glslify';
 import meshData from './skull.obj?raw';
+import * as pexHelpers from '/lib/pex-helpers';
 
 var mesh = parseOBJ(meshData);
 
@@ -20,13 +20,13 @@ mat4.multiply(model2, model2, model);
 
 function createDraw(uniforms) {
   const uu = Object.assign({}, uniforms);
-  uu.model = regl.prop('model');
-  uu.albedo = regl.prop('albedo');
+  uu.model = pexHelpers.cmdProp('model');
+  uu.albedo = pexHelpers.cmdProp('albedo');
 
-  const buffer = regl.framebuffer({
+  const buffer = pexHelpers.framebuffer({
     width: 1024,
     height: 1024,
-    pixelFormat: regl.ctx.PixelFormat.RGBA32F,
+    pixelFormat: ctx.PixelFormat.RGBA32F,
     depthTexture: true,
   });
 
@@ -77,19 +77,19 @@ function createDraw(uniforms) {
   return function draw(state, drawShader) {
 
     if (
-      buffer.size().width !== regl.ctx.gl.drawingBufferWidth
-      || buffer.size().height !== regl.ctx.gl.drawingBufferHeight
+      buffer.size().width !== ctx.gl.drawingBufferWidth
+      || buffer.size().height !== ctx.gl.drawingBufferHeight
     ) {
-      buffer.resize(regl.ctx.gl.drawingBufferWidth, regl.ctx.gl.drawingBufferHeight);
+      buffer.resize(ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight);
     }
 
-    regl.clear({
+    pexHelpers.clear({
       color: [0, 0, 0, 1],
       depth: 1,
       framebuffer: buffer,
     });
 
-    ctx.apply(regl.evalCmd(drawPolygons, Object.assign({model: model, albedo: [1,1,1]}, state)));
+    ctx.apply(pexHelpers.evalCmd(drawPolygons, Object.assign({model: model, albedo: [1,1,1]}, state)));
     drawShader();
   };
 }

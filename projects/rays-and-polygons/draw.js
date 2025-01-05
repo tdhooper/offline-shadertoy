@@ -1,6 +1,5 @@
 import createCube from 'primitive-cube';
-import { mat4 } from 'gl-matrix';
-
+import * as pexHelpers from '/lib/pex-helpers';
 
 // 1 x 1 x 1 Box
 const mesh = createCube();
@@ -37,7 +36,7 @@ const createDraw = function(uniforms) {
   };
 
   return function draw(state, drawShader) {
-    ctx.apply(regl.evalCmd(drawPolygons, state));
+    ctx.apply(pexHelpers.evalCmd(drawPolygons, state));
     drawShader();
   };
 };

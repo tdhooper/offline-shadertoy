@@ -5,7 +5,7 @@ const DO_CAPTURE = false;
 
 import EventEmitter from 'events';
 import Stats from 'stats.js';
-import createRegl from './lib/regl';
+import * as pexHelpers from './lib/pex-helpers';
 import { mat4 } from 'gl-matrix';
 import webFramesCapture from 'web-frames-capture';
 import createMouse from './lib/mouse';
@@ -16,10 +16,10 @@ import Timer from './lib/timer';
 import AccumulateControl from './lib/accumulate';
 import createControls from './lib/uniform-controls';
 import buildRenderNodes from './lib/multipass';
-import bindBuffer from './lib/bind-buffer';
 import textureUniforms from './lib/textures';
 import Gizmo from './lib/gizmo/gizmo';
 import quadVertShader from './quad.vert';
+import createContext from 'pex-context';
 
 var dbt = performance.now();
 
@@ -29,25 +29,15 @@ canvases.style.width = window.innerWidth + 'px';
 canvases.style.height = window.innerHeight + 'px';
 document.body.appendChild(canvases);
 
-const regl = createRegl({
-  container: canvases,
-  extensions: [
-    'webgl_depth_texture',
-    'ext_frag_depth',
-    'oes_standard_derivatives',
-    'oes_texture_float',
-    'oes_texture_float_linear',
-    'ext_shader_texture_lod',
-    'webgl_color_buffer_float',
-  ],
+const ctx = createContext({
+  type: 'webgl',
   pixelRatio: .5,
   //pixelRatio: 1,
-  attributes: {
-    preserveDrawingBuffer: true,
-  },
-})
-window.regl = regl;
-window.ctx = regl.ctx;
+});
+ctx.gl.getExtension("EXT_frag_depth");
+canvases.appendChild(ctx.gl.canvas);
+
+window.ctx = ctx;
 
 window.addEventListener('resize', () => {
   canvases.style.width = window.innerWidth + 'px';
@@ -83,8 +73,8 @@ export default function main(project) {
   document.body.appendChild(stats.dom);
   stats.dom.classList.add('stats');
 
-  const canvas = regl._gl.canvas;
-  const gl = regl._gl;
+  const canvas = ctx.gl.canvas;
+  const gl = ctx.gl;
   canvas.style.position = 'absolute';
 
   const renderNodes = buildRenderNodes(shaders);
@@ -112,7 +102,7 @@ export default function main(project) {
 
   function clearTarget(node) {
     if ( ! node.final) {
-      regl.clear({
+      pexHelpers.clear({
         color: [0, 0, 0, 1],
         depth: 1,
         framebuffer: node.buffer,
@@ -135,8 +125,8 @@ export default function main(project) {
   const uniforms = {
     model: m4identity,
     iOffset: (context, props) => (props.offset || [0, 0]),
-    cameraMatrix: regl.prop('cameraMatrix'),
-    cameraPosition: regl.prop('cameraPosition'),
+    cameraMatrix: pexHelpers.cmdProp('cameraMatrix'),
+    cameraPosition: pexHelpers.cmdProp('cameraPosition'),
     debugPlaneMatrix: (context, props) => (props && props.debugPlane && props.debugPlane.matrix) || m4identity,
     debugPlanePosition: (context, props) => (props && props.debugPlane && props.debugPlane.position) || [0, 0, 1],
     iGlobalTime: (context, props) => props.timer.elapsed / 1000,
@@ -155,20 +145,20 @@ export default function main(project) {
       0.01,
       1000
     ),
-    view: regl.prop('view'),
+    view: pexHelpers.cmdProp('view'),
   };
 
   renderNodes.forEach((node, i) => {
-    node.buffer = regl.framebuffer({
-      width: regl.ctx.gl.drawingBufferWidth,
-      height: regl.ctx.gl.drawingBufferHeight,
-      pixelFormat: regl.ctx.PixelFormat.RGBA32F,
+    node.buffer = pexHelpers.framebuffer({
+      width: ctx.gl.drawingBufferWidth,
+      height: ctx.gl.drawingBufferHeight,
+      pixelFormat: ctx.PixelFormat.RGBA32F,
     });
     if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
-      node.lastBuffer = regl.framebuffer({
-        width: regl.ctx.gl.drawingBufferWidth,
-        height: regl.ctx.gl.drawingBufferHeight,
-        pixelFormat: regl.ctx.PixelFormat.RGBA32F,
+      node.lastBuffer = pexHelpers.framebuffer({
+        width: ctx.gl.drawingBufferWidth,
+        height: ctx.gl.drawingBufferHeight,
+        pixelFormat: ctx.PixelFormat.RGBA32F,
       });
     }
     const nodeUniforms = {
@@ -177,17 +167,17 @@ export default function main(project) {
         return props.resolution || resolution;
       },
       drawIndex: (context, props) => props.drawIndex,
-      iFrame: regl.prop('frame'),
+      iFrame: pexHelpers.cmdProp('frame'),
     };
     node.dependencies.reduce((acc, dep) => {
-      acc[dep.uniform] = regl.prop(dep.uniform);
+      acc[dep.uniform] = pexHelpers.cmdProp(dep.uniform);
       acc[dep.uniform + 'Size'] = (context, props) => [
         props[dep.uniform].width,
         props[dep.uniform].height,
       ];
       return acc;
     }, nodeUniforms);
-    Object.assign(nodeUniforms, textureUniforms(regl, node.shader, triggerDraw));
+    Object.assign(nodeUniforms, textureUniforms(ctx, node.shader, triggerDraw));
 
     const nodeCommand = {
       pipeline: ctx.pipeline({
@@ -246,7 +236,7 @@ export default function main(project) {
       if (partialCmd) {
         cmds.push(partialCmd);
       }
-      let cmd = regl.evalCmds(cmds, state);
+      let cmd = pexHelpers.evalCmds(cmds, state);
       ctx.submit(cmd);
     }
   });
@@ -466,7 +456,7 @@ export default function main(project) {
     let stateChanged = stateStore.update(['accumulateControl']);
     //console.log(stateChanged);
     if (stateChanged || force || accumulateControl.accumulate) {
-      regl.clear({
+      pexHelpers.clear({
         color: [0, 0, 0, 1],
         depth: 1,
       });
@@ -520,7 +510,7 @@ export default function main(project) {
     (function tick(t) {
       //console.log(t);
       stats.begin();
-      regl.poll();
+      pexHelpers.poll();
       draw(false, () => {
         stats.end();
         if (dbt !== undefined) {
@@ -532,10 +522,6 @@ export default function main(project) {
     })(performance.now());
   }
 
-  //let tick = regl.frame(() => draw());
-  //events.on('draw', () => draw(true));
-  
-
   const captureSetup = (width, height, done) => {
     console.log('captureSetup', width, height);
     timer.pause();
@@ -543,14 +529,14 @@ export default function main(project) {
     canvas.height = height;
     canvas.style.width = width + 'px';
     canvas.style.height = height + 'px';
-    regl.poll();
+    pexHelpers.poll();
     setTimeout(done, 1000);
   };
 
   const captureTeardown = () => {
     console.log('captureTeardown');
     screenQuad = undefined;
-    // tick = regl.frame(draw);
+    // tick = ctx.frame(draw);
   };
 
   const captureRender = (milliseconds, quad, done) => {
