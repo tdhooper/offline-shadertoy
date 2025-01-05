@@ -27,10 +27,6 @@ const canvases = document.createElement('div');
 canvases.style.position = 'absolute';
 canvases.style.width = window.innerWidth + 'px';
 canvases.style.height = window.innerHeight + 'px';
-window.addEventListener('resize', () => {
-  canvases.style.width = window.innerWidth + 'px';
-  canvases.style.height = window.innerHeight + 'px';
-});
 document.body.appendChild(canvases);
 
 const regl = createRegl({
@@ -52,6 +48,12 @@ const regl = createRegl({
 })
 window.regl = regl;
 window.ctx = regl.ctx;
+
+window.addEventListener('resize', () => {
+  canvases.style.width = window.innerWidth + 'px';
+  canvases.style.height = window.innerHeight + 'px';
+  ctx.set({ width: window.innerWidth, height: window.innerHeight });
+});
 
 export default function main(project) {
   const defaultState = project.config || null;
@@ -398,7 +400,7 @@ export default function main(project) {
     }
 
     if (nodeIndex >= renderNodes.length) {
-      done();
+      if (done) { done(); }
       return;
     }
 
@@ -462,6 +464,7 @@ export default function main(project) {
     camera.tick();
     scrubber.update();
     let stateChanged = stateStore.update(['accumulateControl']);
+    //console.log(stateChanged);
     if (stateChanged || force || accumulateControl.accumulate) {
       regl.clear({
         color: [0, 0, 0, 1],
@@ -485,7 +488,7 @@ export default function main(project) {
       firstPass = false;
     } else {
       gizmo.render();
-      done();
+      if (done) { done(); }
     }
   };
 
@@ -517,6 +520,7 @@ export default function main(project) {
     (function tick(t) {
       //console.log(t);
       stats.begin();
+      regl.poll();
       draw(false, () => {
         stats.end();
         if (dbt !== undefined) {
@@ -525,7 +529,6 @@ export default function main(project) {
         }
         requestAnimationFrame(tick);
       });
-      regl.poll();
     })(performance.now());
   }
 
