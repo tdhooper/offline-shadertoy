@@ -9,8 +9,8 @@ body {
 }
 
 .controls {
-    padding: 5px 10px;
-    background: black;
+    padding: 5px 5px;
+    background: #444;
     opacity: 0;
 }
 
@@ -24,9 +24,47 @@ body {
 
 .gizmo-controls {
     position: fixed;
-    top: 100px;
-    left: 0;
+    top: 0;
+    right: 0;
     display: flex;
+    border-bottom-left-radius: 8px;
+}
+
+.controls > * + * {
+    margin-left: 5px;
+}
+
+.controls button {
+    background-color: #111;
+    border: none;
+    color: #ccc;
+    padding: 4px 8px;
+    border-radius: 3px;
+}
+
+.controls button:hover {
+    background-color: #000;
+}
+
+.controls button:active {
+    background-color: #222;
+}
+
+.controls button:disabled {
+    color: #555;
+    background-color: #111;
+
+}
+
+
+
+.scrubber-controls > * + * {
+    margin-left: 10px;
+}
+
+.scrubber-controls input {
+    margin: 0;
+    margin-left: 10px;
 }
 
 /* canvas {
@@ -34,12 +72,11 @@ body {
 } */
 
 .playpause {
-    margin-right: 10px;
     width: 5em;
 }
 
 body:hover .controls {
-    opacity: .7;
+    opacity: .9;
 }
 
 .stats {
