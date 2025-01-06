@@ -1,0 +1,34 @@
+{
+  "id": "depth-blend",
+  "camera": {
+    "rotation": [
+      -0.18000002205371857,
+      5.8031840324401855,
+      0
+    ],
+    "position": [
+      -1.7825101779027246,
+      0,
+      1.9825322660133984
+    ]
+  },
+  "controls": {
+    "closed": true,
+    "model": {
+      "type": "toggle",
+      "value": false
+    },
+    "blend": {
+      "type": "toggle",
+      "value": false
+    },
+    "blendError": {
+      "type": "toggle",
+      "value": true
+    },
+    "split": {
+      "type": "toggle",
+      "value": false
+    }
+  }
+}
