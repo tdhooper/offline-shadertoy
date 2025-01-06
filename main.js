@@ -19,6 +19,7 @@ import buildRenderNodes from './lib/multipass';
 import textureUniforms from './lib/textures';
 import Gizmo from './lib/gizmo/gizmo';
 import quadVertShader from './quad.vert';
+import quadVertShaderWebGL2 from './quad-webgl2.vert';
 import createContext from 'pex-context';
 
 var dbt = performance.now();
@@ -28,22 +29,6 @@ canvases.style.position = 'absolute';
 canvases.style.width = window.innerWidth + 'px';
 canvases.style.height = window.innerHeight + 'px';
 document.body.appendChild(canvases);
-
-const ctx = createContext({
-  type: 'webgl',
-  pixelRatio: .5,
-  //pixelRatio: 1,
-});
-ctx.gl.getExtension("EXT_frag_depth");
-canvases.appendChild(ctx.gl.canvas);
-
-window.ctx = ctx;
-
-window.addEventListener('resize', () => {
-  canvases.style.width = window.innerWidth + 'px';
-  canvases.style.height = window.innerHeight + 'px';
-  ctx.set({ width: window.innerWidth, height: window.innerHeight });
-});
 
 export default function main(project) {
   const defaultState = project.config || null;
@@ -57,8 +42,28 @@ export default function main(project) {
     });
   }
 
+  let webgl2 = Object.values(shaders).some(shader => shader.glsl.indexOf('#version 300 es') !== -1);
+
+  const vert = webgl2 ? quadVertShaderWebGL2 : quadVertShader;
+
+  const ctx = createContext({
+    type: webgl2 ? 'webgl2' : 'webgl',
+    pixelRatio: .5,
+    //pixelRatio: 1,
+  });
+  ctx.gl.getExtension("EXT_frag_depth");
+  canvases.appendChild(ctx.gl.canvas);
+
+  window.ctx = ctx;
+
+  window.addEventListener('resize', () => {
+    canvases.style.width = window.innerWidth + 'px';
+    canvases.style.height = window.innerHeight + 'px';
+    ctx.set({ width: window.innerWidth, height: window.innerHeight });
+  });
+
   let gizmo = new Gizmo();
-  
+
   gizmo.preprocessShaders(Object.values(shaders));
 
   const events = new EventEmitter();
@@ -171,7 +176,7 @@ export default function main(project) {
 
     const nodeCommand = {
       pipeline: ctx.pipeline({
-        vert: quadVertShader,
+        vert: vert,
         frag: node.shader,
         depthTest: true,
       }),
