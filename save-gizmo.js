@@ -27,6 +27,9 @@ export default function saveGizmo(vite) {
   }
 
   const adjustmentArgsAsGlsl = (gizmoAdjustment) => {
+    if ( ! gizmoAdjustment) {
+      return false;
+    }
     return ([
       `vec3(${roundVec(gizmoAdjustment.t, 7).join(',')})`,
       `vec4(${roundVec(gizmoAdjustment.r, 7).join(',')})`,
@@ -52,16 +55,14 @@ export default function saveGizmo(vite) {
       return;
     }
 
-    let result;
-    let updated = false;
+    let result = gizmoShaderModifier.replaceTransformCallArguments(source, transformArgsGlsl);
+    let updated = result.updated;
 
-    result = gizmoShaderModifier.addTransformMethodIfMissing(source);
-    source = result.source;
-    updated = updated || result.updated;
+    if (updated) {
+      result = gizmoShaderModifier.addTransformMethodIfMissing(result.source);
+    }
 
-    result = gizmoShaderModifier.replaceTransformCallArguments(source, transformArgsGlsl);
     source = result.source;
-    updated = updated || result.updated;
 
     if (updated) {
       await writeFile(file, source);
