@@ -458,6 +458,9 @@ export default function main(project) {
       let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
       state.frame = frame++;
 
+      gizmo.update(state);
+      gizmo.render();
+
       if (projectDraw) {
         projectDraw(state, () => {
           drawNodes(state, done, 0, 0, 0);
@@ -465,9 +468,6 @@ export default function main(project) {
       } else {
         drawNodes(state, done, 0, 0, 0);
       }
-
-      gizmo.update(state);
-      gizmo.render();
 
       firstPass = false;
     } else {
