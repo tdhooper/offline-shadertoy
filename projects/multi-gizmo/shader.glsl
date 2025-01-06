@@ -26,7 +26,11 @@ float map(vec3 p) {
 
     float scl = 1.;
 
-    scl *= gmTransform(p, vec3(0,1,0), vec4(1,0,0,0), vec3(1,1,1));
+    scl *= gmTransform(p);
+
+    p.y -= 1.;
+
+    scl *= gmTransform(p);
 
     for (int i = 0; i < 3; i++) {
         d = min(d, fBox(p, vec3(.5)) * scl);
