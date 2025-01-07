@@ -10,6 +10,12 @@ uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
 uniform float drawIndex;
 uniform int iFrame;
 
+in vec3 eye;
+in vec3 dir;
+in float fov;
+in float aspect;
+in mat4 vView;
+
 out vec4 fragColor;
 
 void mainImage(out vec4 a, in vec2 b);
@@ -545,6 +551,9 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 rayDir = normalize(camMat * vec3(p.xy, 4.));
 
     vec3 origin = camPos;
+
+    origin = eye;
+    rayDir = normalize(dir);
 
     Hit hit;
     vec3 col = vec3(0);
