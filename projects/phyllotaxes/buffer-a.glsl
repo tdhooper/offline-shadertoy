@@ -515,6 +515,13 @@ vec4 shade(Hit hit) {
     return vec4(col, 1.);
 }
 
+vec2 rndunit2(vec2 seed ) {
+    vec2 h = seed * vec2(1,6.28318530718);
+    float phi = h.y;
+    float r = sqrt(h.x);
+	return r*vec2(sin(phi),cos(phi));
+}
+
 // main path tracing loop, based on yx's
 // https://www.shadertoy.com/view/ts2cWm
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
@@ -554,6 +561,11 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 
     origin = eye;
     rayDir = normalize(dir);
+
+    float fpd = length(origin) - .5;//.385 * focalLength;
+    vec3 fp = origin + rayDir * fpd;
+    origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .08;
+    rayDir = normalize(fp - origin);
 
     Hit hit;
     vec3 col = vec3(0);
