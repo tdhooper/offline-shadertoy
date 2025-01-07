@@ -246,9 +246,6 @@ export default function main(project) {
 
   window.camera = camera;
 
-
-  gizmo.initialise(camera, mouse, renderNodes, uniforms);
-
   const controls = defaultState && defaultState.controls
     ? createControls(defaultState.controls, uniforms) : null;
 
@@ -474,6 +471,11 @@ export default function main(project) {
       gizmo.render();
       if (done) { done(); }
     }
+
+    // this can be slow, so wait until we've drawn something first
+    if (!gizmo.initialised) {
+      gizmo.initialise(camera, mouse, renderNodes, uniforms);
+    }   
   };
 
 
@@ -508,7 +510,7 @@ export default function main(project) {
       draw(false, () => {
         stats.end();
         if (dbt !== undefined) {
-          //console.log('dbt', performance.now() - dbt);
+          console.log('dbt', performance.now() - dbt);
           dbt = undefined;
         }
         requestAnimationFrame(tick);
