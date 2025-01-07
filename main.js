@@ -317,7 +317,7 @@ export default function main(project) {
   window.resetCamera = function() {
     if (defaultState.camera) {
       camera.fromState(defaultState.camera);
-    } else if (state.cameraMatrix) {
+    } else if (defaultState.cameraMatrix) {
       camera.fromState(defaultState.cameraMatrix);
     }
   }
