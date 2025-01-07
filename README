@@ -2,16 +2,12 @@ Nothing special, just a harness so I can live edit shaders with glslify, and use
 
 Run with:
 
-    $ npm start
+    $ npm run dev
 
-Then open the given url in your browser
+Then open the given url in your browser, which shows a list of projects
 
-From your browser console, start and pause playback with:
+To add a new project, just copy an existing project's directory
 
-	play()
-	pause()
-	toggle()
-	
 Free-fly-camera, when used, has the controls
 
 	W - forward
@@ -19,14 +15,19 @@ Free-fly-camera, when used, has the controls
 	A - left
 	D - right
 
-	R - up
-	F - down
+	Q - down
+	E - up
 
-	Q - tilt left
-	E - tilt right
+	R - tilt right
+	F - tilt left
 
 	Mouse (click and drag) - look
 
 Reset camera and other state from your browser console with:
 
+	resetCamera()
 	resetState()
+
+Grab the current state, and make it the project default by sacing it as config.json in its project folder:
+
+	exportState()
