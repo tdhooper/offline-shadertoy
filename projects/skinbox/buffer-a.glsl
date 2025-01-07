@@ -1,3 +1,5 @@
+#version 300 es
+
 // framebuffer drawcount: 1
 
 precision highp float;
@@ -10,17 +12,18 @@ uniform int iFrame;
 uniform float iTime;
 uniform vec4 iMouse;
 
-varying vec3 eye;
-varying vec3 dir;
-varying float fov;
-varying float aspect;
-varying mat4 vView;
+in vec3 eye;
+in vec3 dir;
+in float fov;
+in float aspect;
+in mat4 vView;
 
+out vec4 fragColor;
 
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
-    mainImage(gl_FragColor, gl_FragCoord.xy);
+    mainImage(fragColor, gl_FragCoord.xy);
 }
 #define DOF
 
@@ -160,7 +163,7 @@ Model map2(vec3 p) {
 
     
     p.x -= 1.;
-    //GIZMO(p);
+    gmTransform(p);
     
     d = smax(d, -(length(p) - .6), .2);
 
@@ -185,7 +188,7 @@ Model map2(vec3 p) {
     
     float sc = 3.;
 
-    GIZMO(p);
+    gmTransform(p);
 
     vec3 p3 = p * 30.;
     pR45(p3.xy);
@@ -281,15 +284,17 @@ float GIZMO_MAP(vec3 p) {
 // Rendering
 //========================================================
 
-vec3 calcNormal( in vec3 p ) // for function f(p)
+// https://iquilezles.org/articles/normalsSDF
+vec3 calcNormal( in vec3 pos )
 {
-    const float eps = 0.0001; // or some other value
-    const vec2 h = vec2(eps,0);
-    return normalize( vec3(map(p+h.xyy).d - map(p-h.xyy).d,
-                           map(p+h.yxy).d - map(p-h.yxy).d,
-                           map(p+h.yyx).d - map(p-h.yyx).d ) );
+    vec3 n = vec3(0.0);
+    for( int i=0; i<4; i++ )
+    {
+        vec3 e = 0.05773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
+        n += e*map(pos+0.001*e).d;
+    }
+    return normalize(n);
 }
-
 
 
 vec3 sunPos = normalize(vec3(-1,1,-.75)) * 100.;
@@ -608,7 +613,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 col = draw(fragCoord, iFrame);
    
     if (drawIndex > 0.) {
-        vec4 lastCol = texture2D(previousSample, fragCoord.xy / iResolution.xy);
+        vec4 lastCol = texture(previousSample, fragCoord.xy / iResolution.xy);
         col = mix(lastCol, col, 1. / (drawIndex + 1.));
     }
     

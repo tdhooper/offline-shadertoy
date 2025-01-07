@@ -44,7 +44,7 @@ export default function main(project) {
 
   const ctx = createContext({
     type: webgl2 ? 'webgl2' : 'webgl',
-    pixelRatio: .5,
+    //pixelRatio: .5,
     //pixelRatio: 1,
   });
   ctx.gl.getExtension("EXT_frag_depth");
