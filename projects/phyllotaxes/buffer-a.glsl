@@ -177,7 +177,7 @@ Model leaf(vec3 p, vec3 cellData, BloomSpec spec) {
     float thickness = spec.thickness;
     float width = spec.width;
     float pointy = spec.pointy;
-    
+
     vec2 cell = cellData.xy;
     float cellTime = cellData.z * 2.;
     
@@ -331,20 +331,27 @@ Model map(vec3 p) {
     vec3 pp = p;
        
     pR(p.xz, .49);
+    gmTransform(p);
     model = opU(model, mBloom(p, 1, BloomSpec(2.5, vec2(-.25, 1.), 1., .85, .37, .045, 1., .6, vec3(.5))));
     
    	p = pp;
     p -= vec3(-1.1,.06,0.15);
     pR(p.xz, 8.1);
+    gmTransform(p);
     float f = dot(p, normalize(vec3(1.2,0,1)));
 	model = opU(model, mBloom(p, 2, BloomSpec(1.9, vec2(.2, 1.), 1.3, .8, .13, .03, 0., smoothstep(.5, -.1, f) * 1.0, vec3(.5))));
 
    	p = pp;
     p -= vec3(-.7,.1,.8);
     pR(p.xz, 1. + 2.6);
+    gmTransform(p);
     model = opU(model, mBloom(p, 3, BloomSpec(1.05, vec2(-.25, 1.), .45, .45, .41, .15, .5, -.5, vec3(.5))));
 
     return model;
+}
+
+float GIZMO_MAP(vec3 p) {
+    return map(p).d;
 }
 
 //========================================================
