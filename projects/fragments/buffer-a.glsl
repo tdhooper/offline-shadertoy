@@ -1,4 +1,13 @@
 #version 300 es
+precision mediump float;
+
+float gmTransform(inout vec3 p, vec3 t, vec4 r, vec3 s) {
+  p -= t;
+  p = mix(dot(r.xyz,p)*r.xyz, p, cos(-r.w))+sin(-r.w)*cross(r.xyz,p);
+  p /= s;
+  return min(s.x, min(s.y, s.z));
+}
+
 
 precision highp float;
 
@@ -238,10 +247,27 @@ float sdCrystalLoop2(vec3 size, vec3 l, vec3 p) {
 float sdCrystalField(vec3 p) {
     float d = 1e12;
     float s = .2;
-    d = sdCrystalLoop(vec3(.35, 1.6, .35), vec3(2,3,2), pLookUp(p - vec3(.8,0,-.8), vec3(.2,1,-.5), vec3(1,0,1)), 0.);
-    d = smin(d, sdCrystalOne(vec3(.13), pLookUp(p - vec3(1.8,-.15,-.3), vec3(0,1,0), vec3(1,0,-.25))), s);
-    d = smin(d, sdCrystalLoop2(vec3(.3, .35, .3), vec3(2,1,2), pLookUp(p - vec3(-.3,0,.5), vec3(-.0,1,.2), vec3(.0,0,1)) - vec3(0,-.2,0)), s);
-    d = smin(d, sdCrystalLoop(vec3(.15,1.,.15), vec3(1,3,1), pLookUp(p - vec3(-1.8,-.15,-2.3), vec3(-1,2,-.5), vec3(-1,0,-2)), 11.), s);
+    vec3 pp = p;
+    float scl = 1.;
+
+    p = pLookUp(p - vec3(.8,0,-.8), vec3(.2,1,-.5), vec3(1,0,1));
+    scl = gmTransform(p);
+    d = sdCrystalLoop(vec3(.35, 1.6, .35), vec3(2,3,2), p, 0.) * scl;
+    
+    p = pp;
+    p = pLookUp(p - vec3(1.8,-.15,-.3), vec3(0,1,0), vec3(1,0,-.25));
+    scl = gmTransform(p);
+    d = smin(d, sdCrystalOne(vec3(.13), p) * scl, s);
+    
+    p = pp;
+    p = pLookUp(p - vec3(-.3,0,.5), vec3(-.0,1,.2), vec3(.0,0,1)) - vec3(0,-.2,0);
+    scl = gmTransform(p);
+    d = smin(d, sdCrystalLoop2(vec3(.3, .35, .3), vec3(2,1,2), p) * scl, s);
+    
+    p = pp;
+    p = pLookUp(p - vec3(-1.8,-.15,-2.3), vec3(-1,2,-.5), vec3(-1,0,-2));
+    scl = gmTransform(p);
+    d = smin(d, sdCrystalLoop(vec3(.15,1.,.15), vec3(1,3,1), p, 11.) * scl, s);
     return d;
 }
 
@@ -273,6 +299,10 @@ Model map(vec3 p) {
     }
 
     return m;
+}
+
+float GIZMO_MAP(vec3 p) {
+    return map(p).d;
 }
 
 
