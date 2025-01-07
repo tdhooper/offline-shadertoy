@@ -19,6 +19,7 @@ import buildRenderNodes from './lib/multipass';
 import textureUniforms from './lib/textures';
 import Gizmo from './lib/gizmo/gizmo';
 import createContext from 'pex-context';
+import defaultConfig from './default-config.json';
 
 var dbt = performance.now();
 
@@ -29,7 +30,7 @@ canvases.style.height = window.innerHeight + 'px';
 document.body.appendChild(canvases);
 
 export default function main(project) {
-  const defaultState = project.config || null;
+  const defaultState = project.config || defaultConfig;
   const shaders = Object.assign({}, project.shaders);
 
   if (shaders.common) {
@@ -322,7 +323,7 @@ export default function main(project) {
     }
   }
 
-  const stateStore = new StateStore(toState, fromState, defaultState);
+  const stateStore = new StateStore(toState, fromState, defaultState, project.name);
 
   let frame = 0;
 

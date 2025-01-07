@@ -22,7 +22,9 @@ export default function virtualProject() {
         let absoluteDir = matches[1];
         const relativeDir = `.${absoluteDir}`;
         
-        let project = {};
+        let project = {
+          name: absoluteDir
+        };
 
         const files = fs.readdirSync(relativeDir);
         const glsl = files.filter(f => /.(glsl|frag)$/.test(f)).reduce((acc, _file) => {
