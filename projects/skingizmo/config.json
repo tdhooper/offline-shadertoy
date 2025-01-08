@@ -1,0 +1,40 @@
+{
+  "id": "skingizmo",
+  "capture": {
+    "fps": 30,
+    "seconds": 6,
+    "width": 1600,
+    "height": 1600
+  },
+  "camera": {
+    "rotation": [
+      0,
+      0,
+      0,
+      1
+    ],
+    "position": [
+      0,
+      0,
+      2.4
+    ]
+  },
+  "fov": 6,
+  "timer": {
+    "running": false,
+    "elapsed": 16530
+  },
+  "accumulateControl": {
+    "accumulate": false
+  },
+  "mouse": [
+    691,
+    680,
+    false,
+    0
+  ],
+  "r": [
+    1070,
+    1071
+  ]
+}
