@@ -6,6 +6,7 @@ import config from './vite.config.js';
 
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url))
 
+const indexTemplate = fs.readFileSync(path.resolve(__dirname, 'index.html'), 'utf-8',);
 const template = fs.readFileSync(path.resolve(__dirname, 'project.html'), 'utf-8',);
 
 // determine routes to pre-render from src/pages
@@ -39,6 +40,17 @@ for (const projectName of projectsToRender) {
   fs.writeFileSync(filePath, html)
   console.log('pre-rendered:', htmlPath)
 }
+
+// render index page
+const projectsList = projectsToRender
+  .map(name => `<li><a href="projects/${name}.html">${name}</a></li>\n`)
+  .join('');
+const html = indexTemplate.replace(`<!--ssr-projects-list-->`, projectsList)
+const htmlPath = `index.html`
+const filePath = `${tempHtmlDirAbs}/${htmlPath}`
+rollupInput[`index`] = filePath;
+htmlPaths.push(htmlPath);
+fs.writeFileSync(filePath, html);
 
 // build vite client
 await build(Object.assign(config, {
