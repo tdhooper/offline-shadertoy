@@ -1,3 +1,5 @@
+https://tdhooper.github.io/offline-shadertoy/
+
 Nothing special, just a harness so I can live edit shaders with glslify, and use the Shadertoy uniforms.
 
 Run with:
@@ -63,7 +65,7 @@ Textures can be similarly loaded:
 
 # Gizmos
 
-Transform objects in SDFs with gizmos using the `gmTransform(p)` function, see the multi-gizmo project for an example
+Transform objects in SDFs with gizmos using the `gmTransform(p)` function, see the multi-gizmo project for an example https://tdhooper.github.io/offline-shadertoy/projects/multi-gizmo
 
 You will need to add a GIZMO_MAP function that returns your SDF:
 
