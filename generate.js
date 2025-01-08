@@ -33,17 +33,18 @@ let htmlPaths = [];
 // pre-render each route...
 for (const projectName of projectsToRender) {
   const html = template.replace(`<!--ssr-project-name-->`, projectName)
-  const htmlPath = `projects/${projectName}.html`
+  const htmlPath = `projects/${projectName}/index.html`
   const filePath = `${tempHtmlDirAbs}/${htmlPath}`
   rollupInput[`projects/${projectName}`] = filePath;
   htmlPaths.push(htmlPath);
+  fs.mkdirSync(path.dirname(filePath), { recursive: true });
   fs.writeFileSync(filePath, html)
   console.log('pre-rendered:', htmlPath)
 }
 
 // render index page
 const projectsList = projectsToRender
-  .map(name => `<li><a href="projects/${name}.html">${name}</a></li>\n`)
+  .map(name => `<li><a href="projects/${name}">${name}</a></li>\n`)
   .join('');
 const html = indexTemplate.replace(`<!--ssr-projects-list-->`, projectsList)
 const htmlPath = `index.html`
@@ -62,7 +63,7 @@ await build(Object.assign(config, {
   experimental: {
     renderBuiltUrl(filename, { hostType }) {
       if (hostType == 'html') {
-        return '../' + filename;
+        return '../../' + filename;
       }
       return { relative: true };
     },
