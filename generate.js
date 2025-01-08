@@ -47,6 +47,14 @@ await build(Object.assign(config, {
       input: rollupInput,
     },
   },
+  experimental: {
+    renderBuiltUrl(filename, { hostType }) {
+      if (hostType == 'html') {
+        return '../' + filename;
+      }
+      return { relative: true };
+    },
+  },
 }));
 
 // move the generated html up a level
