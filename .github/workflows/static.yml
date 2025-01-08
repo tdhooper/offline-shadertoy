@@ -27,6 +27,7 @@ jobs:
     # Specify runner +  build & upload the static files as an artifact
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Build static site
         id: build
         uses: actions/setup-node@v4
