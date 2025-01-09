@@ -447,13 +447,15 @@ export default function main(project) {
   draw = (force, done) => {
     camera.tick();
     scrubber.update();
-    let stateChanged = stateStore.update(['accumulateControl']);
+
+    let stateChanged = stateStore.update();
+    let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
+
     //console.log(stateChanged);
     if (stateChanged || force || accumulateControl.accumulate) {
 
       ctx.apply(clearScreenCmd);
 
-      let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
       state.frame = frame++;
 
       gizmo.update(state);
