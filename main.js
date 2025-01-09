@@ -156,8 +156,6 @@ export default async function main(project) {
 
 
   let draw = (force, done) => {
-    camera.tick();
-    scrubber.update();
 
     let stateChanged = stateStore.update();
     let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
@@ -226,6 +224,13 @@ export default async function main(project) {
         requestAnimationFrame(tick);
       });
     })(performance.now());
+
+    (function guiTick(t) {
+      camera.tick();
+      scrubber.update();
+      requestAnimationFrame(guiTick);
+    })(performance.now());
+
   }
 
   /*
