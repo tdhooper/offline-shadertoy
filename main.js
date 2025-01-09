@@ -14,7 +14,7 @@ import AccumulateControl from './lib/accumulate';
 import createControls from './lib/uniform-controls';
 import Gizmo from './lib/gizmo/gizmo';
 import defaultConfig from './default-config.json';
-import createRenderer from './renderer';
+import * as Comlink from 'comlink';
 
 var dbt = performance.now();
 
@@ -24,21 +24,25 @@ canvases.style.width = window.innerWidth + 'px';
 canvases.style.height = window.innerHeight + 'px';
 document.body.appendChild(canvases);
 
+export default async function main(project) {
 
-
-export default function main(project) {
-  const defaultState = project.config || defaultConfig;
-
-  /*
   const canvas = document.createElement('canvas');
   canvas.style.position = 'absolute';
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
   canvas.style.width = window.innerWidth + 'px';
   canvas.style.height = window.innerHeight + 'px';
   canvases.appendChild(canvas);
-*/
-  //const bitmapContext = canvas.getContext("bitmaprenderer");
 
-  let gizmo = new Gizmo();
+  const worker = Comlink.wrap(new Worker(new URL('./worker.js', import.meta.url), {"type":"module"}));
+
+  const offscreenCanvas = canvas.transferControlToOffscreen();
+  await worker.start(Comlink.transfer({ project, offscreenCanvas }, [offscreenCanvas]));
+
+  let gizmo = new Gizmo(worker, canvases);
+  await gizmo.start();
+
+  const defaultState = project.config || defaultConfig;
 
   const stats = new Stats();
   stats.showPanel(0);
@@ -50,7 +54,7 @@ export default function main(project) {
 
   const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
 
-  const mouse = createMouse(document.body);
+  const mouse = createMouse(canvases);
 
   const camera = createCamera(mouse, {
     position: [0, 0, 5],
@@ -140,14 +144,12 @@ export default function main(project) {
 
   let frame = 0;
 
-  const renderer = createRenderer(project);
-  gizmo.preInitialise(renderer.gizmoWorker.gizmoCount);
-
-  
   let resize = () => {
     canvases.style.width = window.innerWidth + 'px';
     canvases.style.height = window.innerHeight + 'px';
-    renderer.resize(window.innerWidth, window.innerHeight);
+    canvas.style.width = window.innerWidth + 'px';
+    canvas.style.height = window.innerHeight + 'px';
+    worker.rendererResize(window.innerWidth, window.innerHeight);
   }
 
   window.addEventListener('resize', resize);
@@ -167,9 +169,11 @@ export default function main(project) {
 
       gizmo.update(state);
       gizmo.render();
-      renderer.draw(state, done);
+
+      worker.rendererDraw(state).then(done);
 
     } else {
+      state.frame = frame;
       gizmo.update(state);
       gizmo.render();
       if (done) { done(); }
@@ -199,6 +203,8 @@ export default function main(project) {
   //   next();          
   // })();
 
+  let gizmoInitialised = false;
+
   if ( ! DO_CAPTURE)
   {
     (function tick(t) {
@@ -210,11 +216,11 @@ export default function main(project) {
           console.log('dbt', performance.now() - dbt);
           dbt = undefined;
         }
-        
-        // this can be slow, so wait until we've drawn something first
-        // TODO: Stop spamming this when there are no gizmo functions in use
-        if (!gizmo.initialised) {
-          gizmo.initialise(camera, mouse, renderer.gizmoWorker);
+
+        // This can be slow, so wait until we've drawn something first
+        if ( ! gizmoInitialised) {
+          gizmo.initialise(camera, mouse);
+          gizmoInitialised = true;
         }
 
         requestAnimationFrame(tick);

@@ -8,9 +8,8 @@ import { mat4 } from 'gl-matrix';
 import buildRenderNodes from './lib/multipass';
 import textureUniforms from './lib/textures';
 import createContext from 'pex-context';
-import GizmoWorker from './lib/gizmo/gizmo-worker';
 
-export default function createRenderer(project) {
+export default function createRenderer(project, canvas, gizmoWorker) {
   const shaders = Object.assign({}, project.shaders);
 
   if (shaders.common) {
@@ -21,7 +20,6 @@ export default function createRenderer(project) {
     });
   }
 
-  let gizmoWorker = new GizmoWorker();
   gizmoWorker.preprocessShaders(Object.values(shaders));
 
   let webgl2 = Object.values(shaders).some(shader => shader.glsl.indexOf('#version 300 es') !== -1);
@@ -30,18 +28,17 @@ export default function createRenderer(project) {
     type: webgl2 ? 'webgl2' : 'webgl',
     //pixelRatio: .5,
     //pixelRatio: 1,
+    width: canvas.width,
+    height: canvas.height,
+    canvas: canvas,
+    element: null
   });
   
   ctx.gl.getExtension("EXT_frag_depth");
 
-  ctx.gl.canvas.style.position = 'absolute';
-  ctx.gl.canvas.style.width = window.innerWidth + 'px';
-  ctx.gl.canvas.style.height = window.innerHeight + 'px';
+  //ctx.debug(true);
 
-
-//  ctx.debug(true);
-
-  window.ctx = ctx;
+  self.ctx = ctx;
 
   const renderNodes = buildRenderNodes(shaders);
   let firstPass = true;
@@ -104,7 +101,8 @@ export default function createRenderer(project) {
     view: pexHelpers.cmdProp('view'),
   };
 
-  gizmoWorker.preprocessNodesAndUniforms(renderNodes, uniforms);
+  gizmoWorker.preprocessUniforms(uniforms);
+  gizmoWorker.preprocessRenderNodes(renderNodes);
 
   renderNodes.forEach((node, i) => {
     node.buffer = pexHelpers.createPass({
@@ -316,13 +314,11 @@ export default function createRenderer(project) {
   }
 
   let resize = (width, height) => {
-    ctx.gl.canvas.style.width = window.innerWidth + 'px';
-    ctx.gl.canvas.style.height = window.innerHeight + 'px';
     ctx.set({ width: width, height: height });
   }
 
   
   return {
-    draw, resize, gizmoWorker
+    draw, resize
   }
 };
