@@ -3,11 +3,8 @@
 
 const DO_CAPTURE = false;
 
-import EventEmitter from 'events';
 import Stats from 'stats.js';
-import * as pexHelpers from './lib/pex-helpers';
-import { mat4 } from 'gl-matrix';
-import webFramesCapture from 'web-frames-capture';
+//import webFramesCapture from 'web-frames-capture';
 import createMouse from './lib/mouse';
 import createCamera from './lib/camera';
 import StateStore from './lib/state-store';
@@ -15,11 +12,9 @@ import createScrubber from './lib/scrubber';
 import Timer from './lib/timer';
 import AccumulateControl from './lib/accumulate';
 import createControls from './lib/uniform-controls';
-import buildRenderNodes from './lib/multipass';
-import textureUniforms from './lib/textures';
-import Gizmo from './lib/gizmo/gizmo';
-import createContext from 'pex-context';
+//import Gizmo from './lib/gizmo/gizmo';
 import defaultConfig from './default-config.json';
+import createRenderer from './renderer';
 
 var dbt = performance.now();
 
@@ -29,211 +24,30 @@ canvases.style.width = window.innerWidth + 'px';
 canvases.style.height = window.innerHeight + 'px';
 document.body.appendChild(canvases);
 
+
+
 export default function main(project) {
   const defaultState = project.config || defaultConfig;
-  const shaders = Object.assign({}, project.shaders);
 
-  if (shaders.common) {
-    Object.entries(shaders).forEach(([name, shader]) => {
-      if (name !== 'common') {
-        shader.glsl = `${shaders.common.glsl}\n\n${shader.glsl}`;
-      }
-    });
-  }
+  const canvas = document.createElement('canvas');
+  canvas.style.position = 'absolute';
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  canvases.appendChild(canvas);
 
-  let webgl2 = Object.values(shaders).some(shader => shader.glsl.indexOf('#version 300 es') !== -1);
+  //const bitmapContext = canvas.getContext("bitmaprenderer");
 
-  const ctx = createContext({
-    type: webgl2 ? 'webgl2' : 'webgl',
-    //pixelRatio: .5,
-    //pixelRatio: 1,
-  });
-  ctx.gl.getExtension("EXT_frag_depth");
-  canvases.appendChild(ctx.gl.canvas);
+//  let gizmo = new Gizmo();
 
-  //ctx.debug(true);
-
-  window.ctx = ctx;
-
-  window.addEventListener('resize', () => {
-    canvases.style.width = window.innerWidth + 'px';
-    canvases.style.height = window.innerHeight + 'px';
-    ctx.set({ width: window.innerWidth, height: window.innerHeight });
-  });
-
-  let gizmo = new Gizmo();
-
-  gizmo.preprocessShaders(Object.values(shaders));
-
-  const events = new EventEmitter();
-  function triggerDraw() {
-    events.emit('draw');
-  }
-
-  const frag = shaders.main.glsl;
+//  gizmo.preprocessShaders(Object.values(shaders));
 
   const stats = new Stats();
   stats.showPanel(0);
   document.body.appendChild(stats.dom);
   stats.dom.classList.add('stats');
 
-  const canvas = ctx.gl.canvas;
-  const gl = ctx.gl;
-  canvas.style.position = 'absolute';
 
-  const renderNodes = buildRenderNodes(shaders);
-  let firstPass = true;
-
-  function attachDependencies(node, state) {
-    for (let i = node.dependencies.length - 1; i >= 0; i--) {
-      let dep = node.dependencies[i];
-      let depBuffer = dep.node == node ? dep.node.lastBuffer : dep.node.buffer;
-      let texture = pexHelpers.passTex(depBuffer);
-      //bindBuffer(texture, dep.filter, dep.wrap);
-      const s = {};
-      s[dep.uniform] = texture;
-      Object.assign(state, s);
-    }
-  }
-
-  function swapPingPong(node) {
-    if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
-      const lastBuffer = node.buffer;
-      node.buffer = node.lastBuffer;
-      node.lastBuffer = lastBuffer;
-    }
-  };
-
-  function setTarget(node, state) {
-    if ( ! node.final) {
-      Object.assign(state, {
-        pass: node.buffer,
-      });
-    }
-  }
-
-  const m4identity = mat4.identity([]);
-
-  const screenPass = ctx.pass({});
-
-  const uniforms = {
-    model: m4identity,
-    iOffset: (context, props) => (props.offset || [0, 0]),
-    cameraMatrix: pexHelpers.cmdProp('cameraMatrix'),
-    cameraPosition: pexHelpers.cmdProp('cameraPosition'),
-    debugPlaneMatrix: (context, props) => (props && props.debugPlane && props.debugPlane.matrix) || m4identity,
-    debugPlanePosition: (context, props) => (props && props.debugPlane && props.debugPlane.position) || [0, 0, 1],
-    iGlobalTime: (context, props) => props.timer.elapsed / 1000,
-    iTime: (context, props) => props.timer.elapsed / 1000,
-    firstPass: () => firstPass,
-    iMouse: (context, props) => {
-      const mouseProp = props.mouse.map(value => value * context.pixelRatio);
-      mouseProp[1] = context.viewportHeight - mouseProp[1];
-      //console.log(mouseProp[0] / context.viewportWidth, mouseProp[1] / context.viewportHeight);
-      return mouseProp;
-    },
-    projection: (context, props) => mat4.perspective(
-      [],
-      1 / props.cameraFov,
-      context.viewportWidth / context.viewportHeight,
-      0.01,
-      1000
-    ),
-    view: pexHelpers.cmdProp('view'),
-  };
-
-  renderNodes.forEach((node, i) => {
-    node.buffer = pexHelpers.createPass({
-      width: ctx.gl.drawingBufferWidth,
-      height: ctx.gl.drawingBufferHeight,
-      pixelFormat: ctx.PixelFormat.RGBA32F,
-    });
-    if (node.dependencies.map(dep => dep.node).indexOf(node) !== -1) {
-      node.lastBuffer = pexHelpers.createPass({
-        width: ctx.gl.drawingBufferWidth,
-        height: ctx.gl.drawingBufferHeight,
-        pixelFormat: ctx.PixelFormat.RGBA32F,
-      });
-    }
-    const nodeUniforms = {
-      iResolution: (context, props) => {
-        const resolution = [context.framebufferWidth, context.framebufferHeight];
-        return props.resolution || resolution;
-      },
-      drawIndex: (context, props) => props.drawIndex,
-      iFrame: pexHelpers.cmdProp('frame'),
-    };
-    node.dependencies.reduce((acc, dep) => {
-      acc[dep.uniform] = pexHelpers.cmdProp(dep.uniform);
-      acc[dep.uniform + 'Size'] = (context, props) => [
-        props[dep.uniform].width,
-        props[dep.uniform].height,
-      ];
-      return acc;
-    }, nodeUniforms);
-    Object.assign(nodeUniforms, textureUniforms(ctx, node.shader, triggerDraw));
-
-    const nodeCommand = {
-      pipeline: ctx.pipeline({
-        vert: node.vert,
-        frag: node.shader,
-        depthTest: true,
-      }),
-      pass: (context, props) => {
-        if (props.pass) {
-          return props.pass;
-        }
-        return screenPass;
-      },
-      attributes: {
-        position: ctx.vertexBuffer([
-          [-2, 0],
-          [0, -2],
-          [2, 2],
-        ]),
-      },
-      count: 3,
-      uniforms: nodeUniforms,
-      scissor: (context, props) => {
-        if ( ! node.tile) {
-          return null;
-        }
-        const i = props.tileIndex;
-        const w = Math.ceil(context.framebufferWidth / node.tile);
-        const h = Math.ceil(context.framebufferHeight / node.tile);
-        const x = i % node.tile;
-        const y = Math.floor(i / node.tile);
-        return [x * w, y * h, w, h]
-      },
-      viewport: (context, props) => {
-        let x = 0;
-        let y = 0;
-        let width = context.drawingBufferWidth;
-        let height = context.drawingBufferHeight;
-        if (props.screenQuad !== undefined) {
-          x = props.screenQuad % 2 === 1 ? -context.drawingBufferWidth : 0;
-          y = props.screenQuad < 2 ? -context.drawingBufferHeight : 0;
-          width = context.drawingBufferWidth * 2;
-          height = context.drawingBufferHeight * 2;
-        }
-        return [x, y, width, height];
-      },
-    };
-
-    node.draw = (state, partialCmd) => {
-      attachDependencies(node, state);
-      if (DO_CAPTURE)
-      {
-        console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
-      }
-      let cmds = [nodeCommand, { uniforms }];
-      if (partialCmd) {
-        cmds.push(partialCmd);
-      }
-      let cmd = pexHelpers.evalCmds(cmds, state);
-      ctx.submit(cmd);
-    }
-  });
+  //const renderNodes = buildRenderNodes(shaders);
 
   const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
 
@@ -288,9 +102,9 @@ export default function main(project) {
     if (controls) {
       state.controls = controls.toState();
     }
-    if (gizmo) {
-      Object.assign(state, gizmo.toState());
-    }
+    //if (gizmo) {
+    //  Object.assign(state, gizmo.toState());
+    //}
     return state;
   };
 
@@ -327,124 +141,19 @@ export default function main(project) {
 
   let frame = 0;
 
-  const resizeBuffers = (viewportWidth, viewportHeight) => {
-    renderNodes.forEach((node) => {
-      if ( ! node.buffer) return;
-      let width = viewportWidth;
-      let height = viewportHeight;
-      if (node.size) {
-        [width, height] = node.size;
-      }
-      if (pexHelpers.passTex(node.buffer).width !== width || pexHelpers.passTex(node.buffer).height !== height) {
-        pexHelpers.resizePass(node.buffer, width, height);
-        if (node.lastBuffer) {
-          pexHelpers.resizePass(node.lastBuffer, width, height);
-        }
-      }
-    });
+  const renderer = createRenderer(project);
+
+  
+  let resize = () => {
+    canvases.style.width = window.innerWidth + 'px';
+    canvases.style.height = window.innerHeight + 'px';
+    renderer.resize(window.innerWidth, window.innerHeight);
   }
 
-  const drawNode = (node, state) => {
+  window.addEventListener('resize', resize);
 
-    if (node.firstPassOnly && ! firstPass) {
-      return;
-    }
 
-    // Don't mutate the original state
-    state = Object.assign({}, state);
-
-    if (state.tileIndex == 0) {
-      // console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount);
-      swapPingPong(node);
-    }
-
-    setTarget(node, state);
-
-    //document.title = node.name + ' ' + state.drawIndex;
-    //console.log(node.name, state.drawIndex, node.drawCount);
-    node.draw(state);
-
-    gl.finish();
-  };
-
-  const drawNodes = (
-    state,
-    done,
-    nodeIndex,
-    nodeDrawIndex,
-    tileIndex
-  ) => {
-
-    if (nodeIndex == 0 && tileIndex == 0 && nodeDrawIndex == 0) {
-      resizeBuffers(ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight);
-    }
-
-    if (nodeIndex >= renderNodes.length) {
-      if (done) { done(); }
-      return;
-    }
-
-    let node = renderNodes[nodeIndex];
-
-    let initialDrawIndex = state.drawIndex;
-    if (node.drawCount) {
-      state.drawIndex = initialDrawIndex * node.drawCount + nodeDrawIndex;
-    }
-    state.tileIndex = tileIndex;
-    state.frame += state.drawIndex;
-
-    drawNode(node, state);
-
-    state.drawIndex = initialDrawIndex;
-
-    if ( ! node.tile) {
-      nodeDrawIndex += 1;
-    } else {
-      tileIndex += 1;
-      if (tileIndex >= node.tile * node.tile) {
-        tileIndex = 0;
-        nodeDrawIndex += 1;
-      }
-    }
-    if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
-      //console.clear();
-      nodeIndex += 1;
-      nodeDrawIndex = 0;
-      tileIndex = 0;
-    }
-
-    if (DO_CAPTURE) {
-      requestAnimationFrame(() => {
-        drawNodes(state, done, nodeIndex, nodeDrawIndex, tileIndex);
-      });
-    } else {
-      drawNodes(state, done, nodeIndex, nodeDrawIndex, tileIndex);
-    }
-  }
-
-  let draw;
-  let projectDraw;
-  let projectDrawRequestDraw = (force, done) => {
-    if (draw) {
-      draw(force, done);
-    }
-  };
-
-  if (project.createDraw) {
-    projectDraw = project.createDraw(
-      uniforms,
-      projectDrawRequestDraw,
-      camera,
-      project,
-    );
-  }
-
-  const clearScreenCmd = ctx.pass({
-    color: [0, 0, 0, 1],
-    depth: 1,
-  });
-
-  draw = (force, done) => {
+  let draw = (force, done) => {
     camera.tick();
     scrubber.update();
 
@@ -454,31 +163,22 @@ export default function main(project) {
     //console.log(stateChanged);
     if (stateChanged || force || accumulateControl.accumulate) {
 
-      ctx.apply(clearScreenCmd);
-
       state.frame = frame++;
 
-      gizmo.update(state);
-      gizmo.render();
+      // gizmo.update(state);
+      // gizmo.render();
 
-      if (projectDraw) {
-        projectDraw(state, () => {
-          drawNodes(state, done, 0, 0, 0);
-        })
-      } else {
-        drawNodes(state, done, 0, 0, 0);
-      }
+      renderer.draw(state, done);
 
-      firstPass = false;
     } else {
-      gizmo.render();
+      // gizmo.render();
       if (done) { done(); }
     }
 
     // this can be slow, so wait until we've drawn something first
-    if (!gizmo.initialised) {
-      gizmo.initialise(camera, mouse, renderNodes, uniforms);
-    }   
+    // if (!gizmo.initialised) {
+    //   gizmo.initialise(camera, mouse, renderNodes, uniforms);
+    // }   
   };
 
 
@@ -509,7 +209,6 @@ export default function main(project) {
     (function tick(t) {
       //console.log(t);
       stats.begin();
-      pexHelpers.poll();
       draw(false, () => {
         stats.end();
         if (dbt !== undefined) {
@@ -521,6 +220,7 @@ export default function main(project) {
     })(performance.now());
   }
 
+  /*
   const captureSetup = (width, height, done) => {
     console.log('captureSetup', width, height);
     timer.pause();
@@ -574,4 +274,5 @@ export default function main(project) {
     captureRender,
     captureConfig
   );
+  */
 };
