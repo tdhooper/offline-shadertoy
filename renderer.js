@@ -8,6 +8,7 @@ import { mat4 } from 'gl-matrix';
 import buildRenderNodes from './lib/multipass';
 import textureUniforms from './lib/textures';
 import createContext from 'pex-context';
+import GizmoWorker from './lib/gizmo/gizmo-worker';
 
 export default function createRenderer(project) {
   const shaders = Object.assign({}, project.shaders);
@@ -20,6 +21,9 @@ export default function createRenderer(project) {
     });
   }
 
+  let gizmoWorker = new GizmoWorker();
+  gizmoWorker.preprocessShaders(Object.values(shaders));
+
   let webgl2 = Object.values(shaders).some(shader => shader.glsl.indexOf('#version 300 es') !== -1);
 
   const ctx = createContext({
@@ -30,7 +34,12 @@ export default function createRenderer(project) {
   
   ctx.gl.getExtension("EXT_frag_depth");
 
-  ctx.debug(true);
+  ctx.gl.canvas.style.position = 'absolute';
+  ctx.gl.canvas.style.width = window.innerWidth + 'px';
+  ctx.gl.canvas.style.height = window.innerHeight + 'px';
+
+
+//  ctx.debug(true);
 
   window.ctx = ctx;
 
@@ -94,6 +103,8 @@ export default function createRenderer(project) {
     ),
     view: pexHelpers.cmdProp('view'),
   };
+
+  gizmoWorker.preprocessNodesAndUniforms(renderNodes, uniforms);
 
   renderNodes.forEach((node, i) => {
     node.buffer = pexHelpers.createPass({
@@ -310,7 +321,8 @@ export default function createRenderer(project) {
     ctx.set({ width: width, height: height });
   }
 
+  
   return {
-    draw, resize
+    draw, resize, gizmoWorker
   }
 };
