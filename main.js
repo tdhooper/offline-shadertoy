@@ -159,7 +159,7 @@ export default async function main(project) {
     gizmo.update(state);
     gizmo.render();
 
-    if (renderer.ready()) {
+    if (renderer.ready() || (! stateChanged && accumulateControl.accumulate)) {
 
       stats.begin();
 
