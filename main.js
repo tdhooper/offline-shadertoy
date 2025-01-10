@@ -153,7 +153,7 @@ export default async function main(project) {
 
     camera.tick();
     scrubber.update();
-    stateChanged = stateStore.update() || stateChanged;
+    stateChanged = stateStore.update(['accumulate']) || stateChanged;
     let state = stateStore.state;
 
     gizmo.update(state);
