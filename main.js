@@ -13,7 +13,7 @@ import Timer from './lib/timer';
 import AccumulateControl from './lib/accumulate';
 import createControls from './lib/uniform-controls';
 import Gizmo from './lib/gizmo/gizmo';
-import GizmoWorker from './lib/gizmo/gizmo-worker';
+import GizmoRendererHooks from './lib/gizmo/gizmo-renderer-hooks';
 import createRenderer from './renderer';
 import defaultConfig from './default-config.json';
 
@@ -35,11 +35,9 @@ export default async function main(project) {
   canvas.style.height = window.innerHeight + 'px';
   canvases.appendChild(canvas);
 
-  const gizmoWorker = new GizmoWorker();
-  const renderer = createRenderer(project, canvas, gizmoWorker);
-
-  const gizmo = new Gizmo(gizmoWorker, canvases);
-  gizmo.start();
+  const gizmoRendererHooks = new GizmoRendererHooks();
+  const renderer = createRenderer(project, canvas, gizmoRendererHooks);
+  const gizmo = new Gizmo(gizmoRendererHooks, canvases);
 
   const defaultState = project.config || defaultConfig;
 
@@ -147,8 +145,6 @@ export default async function main(project) {
   let resize = () => {
     canvases.style.width = window.innerWidth + 'px';
     canvases.style.height = window.innerHeight + 'px';
-    canvas.style.width = window.innerWidth + 'px';
-    canvas.style.height = window.innerHeight + 'px';
     renderer.resize(window.innerWidth, window.innerHeight);
   }
 

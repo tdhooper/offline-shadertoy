@@ -9,7 +9,7 @@ import buildRenderNodes from './lib/multipass';
 import textureUniforms from './lib/textures';
 import createContext from 'pex-context';
 
-export default function createRenderer(project, canvas, gizmoWorker) {
+export default function createRenderer(project, canvas, gizmoRendererHooks) {
   const shaders = Object.assign({}, project.shaders);
 
   if (shaders.common) {
@@ -20,7 +20,7 @@ export default function createRenderer(project, canvas, gizmoWorker) {
     });
   }
 
-  gizmoWorker.preprocessShaders(Object.values(shaders));
+  gizmoRendererHooks.preprocessShaders(Object.values(shaders));
 
   let webgl2 = Object.values(shaders).some(shader => shader.glsl.indexOf('#version 300 es') !== -1);
 
@@ -101,8 +101,8 @@ export default function createRenderer(project, canvas, gizmoWorker) {
     view: pexHelpers.cmdProp('view'),
   };
 
-  gizmoWorker.preprocessUniforms(uniforms);
-  gizmoWorker.preprocessRenderNodes(renderNodes);
+  gizmoRendererHooks.preprocessUniforms(uniforms);
+  gizmoRendererHooks.preprocessRenderNodes(renderNodes);
 
   renderNodes.forEach((node, i) => {
     node.buffer = pexHelpers.createPass({
@@ -231,6 +231,7 @@ export default function createRenderer(project, canvas, gizmoWorker) {
 
     node.draw(state);
 
+    // TODO: create a flag for 'priority draw'
     if (state.isAccumulationDraw) {
       done();
     } else {
