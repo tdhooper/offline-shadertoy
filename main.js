@@ -93,13 +93,15 @@ export default async function main(project) {
       cameraPosition: camera.position,
       cameraFov: fov,
       timer: timer.serialize(),
-      accumulateControl: accumulateControl.serialize(),
       mouse: mouse.toState(),
       screenQuad,
       r: [window.innerWidth, window.innerHeight],
       debugPlane,
       frame: 0,
     };
+    if (accumulateControl) {
+      Object.assign(state, accumulateControl.toState());
+    }
     if (controls) {
       state.controls = controls.toState();
     }
@@ -125,7 +127,7 @@ export default async function main(project) {
       controls.fromState(state.controls);
     }
     if (state.accumulateControl) {
-      accumulateControl.fromObject(state.accumulateControl);
+      accumulateControl.fromState(state);
     }
     debugPlane = state.debugPlane;
   };
@@ -138,10 +140,6 @@ export default async function main(project) {
     }
   }
 
-  const stateStore = new StateStore(toState, fromState, defaultState, project.name);
-
-  let frame = 0;
-
   let resize = () => {
     canvases.style.width = window.innerWidth + 'px';
     canvases.style.height = window.innerHeight + 'px';
@@ -151,83 +149,56 @@ export default async function main(project) {
   window.addEventListener('resize', resize);
 
 
-  let draw = (force, done) => {
+  const stateStore = new StateStore(toState, fromState, defaultState, project.name);
+  stateStore.update();
+  let state = stateStore.state;
+  let stateChanged = true;
 
-    let stateChanged = stateStore.update();
-    let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
+  (function appLoop(t) {
 
-    if (stateChanged || force || accumulateControl.accumulate) {
+    camera.tick();
+    scrubber.update();
+    stateChanged = stateStore.update() || stateChanged;
+    state = stateStore.state;
 
-      state.frame = frame++;
-      renderer.draw(state, done);
+    gizmo.update(state); // TODO: force fast draw path
+    gizmo.render();
 
-    } else {
+    requestAnimationFrame(appLoop);
 
-      if (done) { done(); }
+  })(performance.now());
 
-    }
-  };
-
-
-
-
-  // let i = -1;
-  // (function next () {
-  //   i += 1;
-  //   if (i >= node.drawCount) {
-  //     done();
-  //     return;
-  //   }
-
-  //   attachDependencies();
-  //   swapPingPong();
-  //   clearTarget();
-  //   setTarget();
-  //   Object.assign(state, {drawIndex: i});
-  //   repeatTile(state);
-  //   state.frame += 1;
-  //   gl.finish();
-    
-  //   next();          
-  // })();
 
   let gizmoInitialised = false;
 
-  if ( ! DO_CAPTURE)
-  {
-    (function tick(t) {
-      //console.log(t);
-      stats.begin();
-      draw(false, () => {
-        stats.end();
-        if (dbt !== undefined) {
-          console.log('dbt', performance.now() - dbt);
-          dbt = undefined;
-        }
+  (function drawLoop(t) {
 
-        // This can be slow, so wait until we've drawn something first
-        if ( ! gizmoInitialised) {
-          gizmo.initialise(camera, mouse);
-          gizmoInitialised = true;
-        }
+    let done = () => {
+      stats.end();
 
-        requestAnimationFrame(tick);
-      });
-    })(performance.now());
+      // This can be slow, so wait until we've drawn something first
+      if ( ! gizmoInitialised) {
+        gizmo.initialise(camera, mouse);
+        gizmoInitialised = true;
+      }
 
-    (function guiTick(t) {
-      camera.tick();
-      scrubber.update();
-      let state = Object.assign({
-        isAccumulationDraw: true, // force fast draw path
-        drawIndex: 0,
-      }, toState());
-      gizmo.update(state);
-      gizmo.render();
-      requestAnimationFrame(guiTick);
-    })(performance.now());
+      requestAnimationFrame(drawLoop);
+    }
 
-  }
+    stats.begin();
+
+    let drawState = Object.assign({}, state);
+    Object.assign(drawState, accumulateControl.drawState(stateChanged));
+
+    if (stateChanged || accumulateControl.accumulate) {
+      stateChanged = false;
+      renderer.draw(drawState, done);
+    } else {
+      done();
+    }
+
+  })(performance.now());
+
 
   /*
   const captureSetup = (width, height, done) => {

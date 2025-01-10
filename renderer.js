@@ -122,7 +122,7 @@ export default function createRenderer(project, canvas, gizmoRendererHooks) {
         const resolution = [context.framebufferWidth, context.framebufferHeight];
         return props.resolution || resolution;
       },
-      drawIndex: (context, props) => props.drawIndex,
+      drawIndex: (context, props) => props.accumulate.drawIndex,
       iFrame: pexHelpers.cmdProp('frame'),
     };
     node.dependencies.reduce((acc, dep) => {
@@ -188,7 +188,7 @@ export default function createRenderer(project, canvas, gizmoRendererHooks) {
       attachDependencies(node, state);
       if (DO_CAPTURE)
       {
-        console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
+        console.log(node.name, "scrubber: " + state.timer.elapsed, "drawindex: " + state.accumulate.drawIndex + "/" + node.drawCount, "tile: " + state.tileIndex);
       }
       let cmds = [nodeCommand, { uniforms }];
       if (partialCmd) {
@@ -232,7 +232,7 @@ export default function createRenderer(project, canvas, gizmoRendererHooks) {
     node.draw(state);
 
     // TODO: create a flag for 'priority draw'
-    if (state.isAccumulationDraw) {
+    if (state.accumulate.isAccumulationDraw) {
       done();
     } else {
       (function wait() {
@@ -268,15 +268,15 @@ export default function createRenderer(project, canvas, gizmoRendererHooks) {
 
     let node = renderNodes[nodeIndex];
 
-    let initialDrawIndex = state.drawIndex;
+    let initialDrawIndex = state.accumulate.drawIndex;
     if (node.drawCount) {
-      state.drawIndex = initialDrawIndex * node.drawCount + nodeDrawIndex;
+      state.accumulate.drawIndex = initialDrawIndex * node.drawCount + nodeDrawIndex;
     }
     state.tileIndex = tileIndex;
-    state.frame += state.drawIndex;
+    state.frame += state.accumulate.drawIndex;
 
     drawNode(node, state, () => {
-      state.drawIndex = initialDrawIndex;
+      state.accumulate.drawIndex = initialDrawIndex;
 
       if ( ! node.tile) {
         nodeDrawIndex += 1;
@@ -309,9 +309,13 @@ export default function createRenderer(project, canvas, gizmoRendererHooks) {
     clearDepth: 1,
   });
 
+  let frame = 0;
+
   let draw = (state, done) => {
 
     pexHelpers.poll();
+
+    state.frame = frame++;
 
     ctx.apply(clearScreenCmd);
 
