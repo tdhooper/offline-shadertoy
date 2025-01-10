@@ -9,7 +9,7 @@ import buildRenderNodes from './lib/multipass';
 import textureUniforms from './lib/textures';
 import createContext from 'pex-context';
 
-export default function createRenderer(project, canvas, gizmoRendererHooks) {
+export default function createRenderer(project, canvas, gizmoRendererHooks, controls) {
   const shaders = Object.assign({}, project.shaders);
 
   if (shaders.common) {
@@ -103,6 +103,8 @@ export default function createRenderer(project, canvas, gizmoRendererHooks) {
 
   gizmoRendererHooks.preprocessUniforms(uniforms);
   gizmoRendererHooks.preprocessRenderNodes(renderNodes);
+
+  if (controls) controls.addUniforms(uniforms);
 
   renderNodes.forEach((node, i) => {
     node.buffer = pexHelpers.createPass({
@@ -227,14 +229,13 @@ export default function createRenderer(project, canvas, gizmoRendererHooks) {
     state = Object.assign({}, state);
     setTarget(node, state);
 
-    const sync = ctx.gl.fenceSync(ctx.gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-
     node.draw(state);
 
     // TODO: create a flag for 'priority draw'
     if (state.accumulate.isAccumulationDraw) {
       done();
-    } else {
+    } else if (webgl2) {
+      const sync = ctx.gl.fenceSync(ctx.gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
       (function wait() {
         const signaled = ctx.gl.getSyncParameter(sync, ctx.gl.SYNC_STATUS);
         if (signaled == ctx.gl.SIGNALED) {
@@ -243,6 +244,9 @@ export default function createRenderer(project, canvas, gizmoRendererHooks) {
           setTimeout(wait, 0);
         }
       })();
+    } else {
+      ctx.gl.finish();
+      done();
     }
   };
 

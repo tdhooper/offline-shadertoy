@@ -35,19 +35,19 @@ export default async function main(project) {
   canvas.style.height = window.innerHeight + 'px';
   canvases.appendChild(canvas);
 
-  const gizmoRendererHooks = new GizmoRendererHooks();
-  const renderer = createRenderer(project, canvas, gizmoRendererHooks);
-  const gizmo = new Gizmo(gizmoRendererHooks, canvases);
-
   const defaultState = project.config || defaultConfig;
+
+  const controls = defaultState && defaultState.controls
+  ? createControls(defaultState.controls) : null;
+
+  const gizmoRendererHooks = new GizmoRendererHooks();
+  const renderer = createRenderer(project, canvas, gizmoRendererHooks, controls);
+  const gizmo = new Gizmo(gizmoRendererHooks, canvases);
 
   const stats = new Stats();
   stats.showPanel(0);
   document.body.appendChild(stats.dom);
   stats.dom.classList.add('stats');
-
-
-  //const renderNodes = buildRenderNodes(shaders);
 
   const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
 
@@ -60,9 +60,6 @@ export default async function main(project) {
   });
 
   window.camera = camera;
-
-  const controls = defaultState && defaultState.controls
-    ? createControls(defaultState.controls, uniforms) : null;
 
   let debugPlane = {};
 
