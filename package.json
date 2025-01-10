@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "clone-deep": "^4.0.1",
-    "comlink": "^4.4.2",
     "compression": "^1.7.5",
     "dat.gui": "^0.7.0",
     "deepmerge": "^2.1.0",
