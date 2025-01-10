@@ -101,6 +101,7 @@ export default async function main(project) {
       screenQuad,
       r: [window.innerWidth, window.innerHeight],
       debugPlane,
+      frame: 0,
     };
     if (controls) {
       state.controls = controls.toState();
@@ -160,21 +161,15 @@ export default async function main(project) {
     let stateChanged = stateStore.update();
     let state = Object.assign(accumulateControl.drawState(stateChanged, force), stateStore.state);
 
-    //console.log(stateChanged);
     if (stateChanged || force || accumulateControl.accumulate) {
 
       state.frame = frame++;
-
-      gizmo.update(state);
-      gizmo.render();
-
-      worker.rendererDraw(state).then(done);
+      worker.rendererDraw(state, Comlink.proxy(done));
 
     } else {
-      state.frame = frame;
-      gizmo.update(state);
-      gizmo.render();
+
       if (done) { done(); }
+
     }
   };
 
@@ -228,6 +223,12 @@ export default async function main(project) {
     (function guiTick(t) {
       camera.tick();
       scrubber.update();
+      let state = Object.assign({
+        isAccumulationDraw: true, // force fast draw path
+        drawIndex: 0,
+      }, toState());
+      gizmo.update(state);
+      gizmo.render();
       requestAnimationFrame(guiTick);
     })(performance.now());
 

@@ -216,7 +216,7 @@ export default function createRenderer(project, canvas, gizmoWorker) {
     });
   }
 
-  const drawNode = (node, state) => {
+  const drawNode = (node, state, done) => {
     if (node.firstPassOnly && ! firstPass) {
       return;
     }
@@ -226,8 +226,23 @@ export default function createRenderer(project, canvas, gizmoWorker) {
     // Don't mutate the original state TOOD: test this is necessary
     state = Object.assign({}, state);
     setTarget(node, state);
+
+    const sync = ctx.gl.fenceSync(ctx.gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
+
     node.draw(state);
-    ctx.gl.finish();
+
+    if (state.isAccumulationDraw) {
+      done();
+    } else {
+      (function wait() {
+        const signaled = ctx.gl.getSyncParameter(sync, ctx.gl.SYNC_STATUS);
+        if (signaled == ctx.gl.SIGNALED) {
+          done();
+        } else {
+          setTimeout(wait, 0);
+        }
+      })();
+    }
   };
 
   const drawNodes = (
@@ -237,6 +252,9 @@ export default function createRenderer(project, canvas, gizmoWorker) {
     nodeDrawIndex,
     tileIndex
   ) => {
+
+    // Don't mutate the original state TOOD: test this is necessary
+    state = Object.assign({}, state);
 
     if (nodeIndex == 0 && tileIndex == 0 && nodeDrawIndex == 0) {
       resizeBuffers(ctx.gl.drawingBufferWidth, ctx.gl.drawingBufferHeight);
@@ -256,33 +274,27 @@ export default function createRenderer(project, canvas, gizmoWorker) {
     state.tileIndex = tileIndex;
     state.frame += state.drawIndex;
 
-    drawNode(node, state);
+    drawNode(node, state, () => {
+      state.drawIndex = initialDrawIndex;
 
-    state.drawIndex = initialDrawIndex;
-
-    if ( ! node.tile) {
-      nodeDrawIndex += 1;
-    } else {
-      tileIndex += 1;
-      if (tileIndex >= node.tile * node.tile) {
-        tileIndex = 0;
+      if ( ! node.tile) {
         nodeDrawIndex += 1;
+      } else {
+        tileIndex += 1;
+        if (tileIndex >= node.tile * node.tile) {
+          tileIndex = 0;
+          nodeDrawIndex += 1;
+        }
       }
-    }
-    if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
-      //console.clear();
-      nodeIndex += 1;
-      nodeDrawIndex = 0;
-      tileIndex = 0;
-    }
-
-    if (DO_CAPTURE) {
-      requestAnimationFrame(() => {
-        drawNodes(state, done, nodeIndex, nodeDrawIndex, tileIndex);
-      });
-    } else {
+      if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
+        //console.clear();
+        nodeIndex += 1;
+        nodeDrawIndex = 0;
+        tileIndex = 0;
+      }
+  
       drawNodes(state, done, nodeIndex, nodeDrawIndex, tileIndex);
-    }
+    });
   }
 
   let projectDraw;
@@ -317,7 +329,6 @@ export default function createRenderer(project, canvas, gizmoWorker) {
     ctx.set({ width: width, height: height });
   }
 
-  
   return {
     draw, resize
   }

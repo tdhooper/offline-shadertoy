@@ -22,8 +22,8 @@ const obj = {
   gizmoFindTransforms(state) {
     return gizmoWorker.findTransforms(state);
   },
-  rendererDraw(state) {
-    return renderer.draw(state);
+  rendererDraw(state, done) {
+    return renderer.draw(state, done);
   },
   rendererResize(width, height) {
     return renderer.resize(width, height);
