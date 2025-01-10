@@ -1,4 +1,5 @@
-// framebuffer tile: 3
+#version 300 es
+
 
 precision highp float;
 
@@ -8,8 +9,8 @@ uniform vec4 iMouse;
 
 uniform mat4 cameraMatrix;
 
-varying vec3 eye;
-varying vec3 dir;
+in vec3 eye;
+in vec3 dir;
 
 uniform vec3 debugPlanePosition;
 uniform mat4 debugPlaneMatrix;
@@ -17,11 +18,14 @@ uniform mat4 debugPlaneMatrix;
 uniform sampler2D iChannel0; // images/blue-noise.png filter: linear wrap: repeat
 uniform vec2 iChannel0Size;
 
+out vec4 fragColor;
+
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
-    mainImage(gl_FragColor, gl_FragCoord.xy);
+    mainImage(fragColor, gl_FragCoord.xy);
 }
+
 
 
 //#define LIGHT_MODE
@@ -389,7 +393,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
 
         extinctionDist = 0.;
         wavelength = disperse / MAX_DISPERSE;
-		float rand = texture2D(iChannel0, fragCoord / iChannel0Size.xy).r;
+		float rand = texture(iChannel0, fragCoord / iChannel0Size.xy).r;
         wavelength += (rand * 2. - 1.) * (.5 / MAX_DISPERSE);
         
 		bounceCount = 0.;
