@@ -38,6 +38,8 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
 
   //ctx.debug(true);
 
+  //ctx.set({pixelRatio: .5});
+
   self.ctx = ctx;
 
   const renderNodes = buildRenderNodes(shaders);
@@ -218,7 +220,7 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
     });
   }
 
-  const drawNode = (node, state, done) => {
+  const drawNode = (node, state) => {
     if (node.firstPassOnly && ! firstPass) {
       return;
     }
@@ -230,29 +232,10 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
     setTarget(node, state);
 
     node.draw(state);
-
-    // TODO: create a flag for 'priority draw'
-    if (state.accumulate.isAccumulationDraw) {
-      done();
-    } else if (webgl2) {
-      const sync = ctx.gl.fenceSync(ctx.gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
-      (function wait() {
-        const signaled = ctx.gl.getSyncParameter(sync, ctx.gl.SYNC_STATUS);
-        if (signaled == ctx.gl.SIGNALED) {
-          done();
-        } else {
-          setTimeout(wait, 0);
-        }
-      })();
-    } else {
-      ctx.gl.finish();
-      done();
-    }
   };
 
   const drawNodes = (
     state,
-    done,
     nodeIndex,
     nodeDrawIndex,
     tileIndex
@@ -266,7 +249,6 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
     }
 
     if (nodeIndex >= renderNodes.length) {
-      if (done) { done(); }
       return;
     }
 
@@ -279,27 +261,31 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
     state.tileIndex = tileIndex;
     state.frame += state.accumulate.drawIndex;
 
-    drawNode(node, state, () => {
-      state.accumulate.drawIndex = initialDrawIndex;
+    drawNode(node, state);
 
-      if ( ! node.tile) {
-        nodeDrawIndex += 1;
-      } else {
-        tileIndex += 1;
-        if (tileIndex >= node.tile * node.tile) {
-          tileIndex = 0;
-          nodeDrawIndex += 1;
-        }
-      }
-      if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
-        //console.clear();
-        nodeIndex += 1;
-        nodeDrawIndex = 0;
+    // TODO: we can crash webgl when rendering large images with many samples
+    // add an option to insert a setTimeout or requestAnimationFrame wait here
+    // to break up the draws
+
+    state.accumulate.drawIndex = initialDrawIndex;
+
+    if ( ! node.tile) {
+      nodeDrawIndex += 1;
+    } else {
+      tileIndex += 1;
+      if (tileIndex >= node.tile * node.tile) {
         tileIndex = 0;
+        nodeDrawIndex += 1;
       }
-  
-      drawNodes(state, done, nodeIndex, nodeDrawIndex, tileIndex);
-    });
+    }
+    if ( ! node.drawCount || nodeDrawIndex >= node.drawCount) {
+      //console.clear();
+      nodeIndex += 1;
+      nodeDrawIndex = 0;
+      tileIndex = 0;
+    }
+
+    drawNodes(state, nodeIndex, nodeDrawIndex, tileIndex);
   }
 
   let projectDraw;
@@ -315,7 +301,22 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
 
   let frame = 0;
 
-  let draw = (state, done) => {
+  let sync;
+
+  let ready = () => {
+    if ( ! sync) {
+      return true;
+    }
+    let signaled = ctx.gl.getSyncParameter(sync, ctx.gl.SYNC_STATUS);
+    let complete = signaled == ctx.gl.SIGNALED;
+    if (complete) {
+      ctx.gl.deleteSync(sync);
+      sync = null;
+    }
+    return complete;
+  }
+
+  let draw = (state) => {
 
     pexHelpers.poll();
 
@@ -325,10 +326,14 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
 
     if (projectDraw) {
       projectDraw(state, () => {
-        drawNodes(state, done, 0, 0, 0);
+        drawNodes(state, 0, 0, 0);
       })
     } else {
-      drawNodes(state, done, 0, 0, 0);
+      drawNodes(state, 0, 0, 0);
+    }
+
+    if (webgl2) {
+      sync = ctx.gl.fenceSync(ctx.gl.SYNC_GPU_COMMANDS_COMPLETE, 0);
     }
 
     firstPass = false;
@@ -339,6 +344,6 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
   }
 
   return {
-    draw, resize
+    ready, draw, resize
   }
 };

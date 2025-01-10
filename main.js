@@ -145,32 +145,32 @@ export default async function main(project) {
 
   window.addEventListener('resize', resize);
 
-
   const stateStore = new StateStore(toState, fromState, defaultState, project.name);
-  stateStore.update();
-  let state = stateStore.state;
   let stateChanged = true;
+  let gizmoInitialised = false;
 
-  (function appLoop(t) {
+  (function tick(t) {
 
     camera.tick();
     scrubber.update();
     stateChanged = stateStore.update() || stateChanged;
-    state = stateStore.state;
+    let state = stateStore.state;
 
-    gizmo.update(state); // TODO: force fast draw path
+    gizmo.update(state);
     gizmo.render();
 
-    requestAnimationFrame(appLoop);
+    if (renderer.ready()) {
 
-  })(performance.now());
+      stats.begin();
 
+      let drawState = Object.assign({}, state);
+      Object.assign(drawState, accumulateControl.drawState(stateChanged));
 
-  let gizmoInitialised = false;
+      if (stateChanged || accumulateControl.accumulate) {
+        stateChanged = false;
+        renderer.draw(drawState);
+      }
 
-  (function drawLoop(t) {
-
-    let done = () => {
       stats.end();
 
       // This can be slow, so wait until we've drawn something first
@@ -178,23 +178,12 @@ export default async function main(project) {
         gizmo.initialise(camera, mouse);
         gizmoInitialised = true;
       }
-
-      requestAnimationFrame(drawLoop);
     }
 
-    stats.begin();
-
-    let drawState = Object.assign({}, state);
-    Object.assign(drawState, accumulateControl.drawState(stateChanged));
-
-    if (stateChanged || accumulateControl.accumulate) {
-      stateChanged = false;
-      renderer.draw(drawState, done);
-    } else {
-      done();
-    }
+    requestAnimationFrame(tick);
 
   })(performance.now());
+
 
 
   /*
