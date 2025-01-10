@@ -13,8 +13,9 @@ import Timer from './lib/timer';
 import AccumulateControl from './lib/accumulate';
 import createControls from './lib/uniform-controls';
 import Gizmo from './lib/gizmo/gizmo';
+import GizmoWorker from './lib/gizmo/gizmo-worker';
+import createRenderer from './renderer';
 import defaultConfig from './default-config.json';
-import * as Comlink from 'comlink';
 
 var dbt = performance.now();
 
@@ -34,13 +35,11 @@ export default async function main(project) {
   canvas.style.height = window.innerHeight + 'px';
   canvases.appendChild(canvas);
 
-  const worker = Comlink.wrap(new Worker(new URL('./worker.js', import.meta.url), {"type":"module"}));
+  const gizmoWorker = new GizmoWorker();
+  const renderer = createRenderer(project, canvas, gizmoWorker);
 
-  const offscreenCanvas = canvas.transferControlToOffscreen();
-  await worker.start(Comlink.transfer({ project, offscreenCanvas }, [offscreenCanvas]));
-
-  let gizmo = new Gizmo(worker, canvases);
-  await gizmo.start();
+  const gizmo = new Gizmo(gizmoWorker, canvases);
+  gizmo.start();
 
   const defaultState = project.config || defaultConfig;
 
@@ -150,7 +149,7 @@ export default async function main(project) {
     canvases.style.height = window.innerHeight + 'px';
     canvas.style.width = window.innerWidth + 'px';
     canvas.style.height = window.innerHeight + 'px';
-    worker.rendererResize(window.innerWidth, window.innerHeight);
+    renderer.resize(window.innerWidth, window.innerHeight);
   }
 
   window.addEventListener('resize', resize);
@@ -164,7 +163,7 @@ export default async function main(project) {
     if (stateChanged || force || accumulateControl.accumulate) {
 
       state.frame = frame++;
-      worker.rendererDraw(state, Comlink.proxy(done));
+      renderer.draw(state, done);
 
     } else {
 
