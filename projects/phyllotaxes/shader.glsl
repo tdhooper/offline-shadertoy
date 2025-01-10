@@ -66,5 +66,5 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
 	col = max(col, vec3(0));
     col = pow( col, vec3(0.4545) );
     col = aces(col);
-	fragColor.rgb = col;
+	fragColor = vec4(col,1);
 }
