@@ -126,7 +126,7 @@ export default async function main(project) {
     if (state.controls) {
       controls.fromState(state.controls);
     }
-    if (state.accumulateControl) {
+    if (accumulateControl) {
       accumulateControl.fromState(state);
     }
     debugPlane = state.debugPlane;
