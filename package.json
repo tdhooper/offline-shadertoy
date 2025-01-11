@@ -31,7 +31,6 @@
     "is-empty": "^1.2.0",
     "is-power-of-two": "^1.0.0",
     "key-pressed": "0.0.1",
-    "mouse-change": "^1.4.0",
     "pad-number": "0.0.4",
     "parse-wavefront-obj": "^1.0.3",
     "pem": "git+https://git@github.com:Dexus/pem.git#71dae3346801dafb5a8bcebcd4c7267fd182666f",

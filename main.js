@@ -16,6 +16,7 @@ import Gizmo from './lib/gizmo/gizmo';
 import GizmoRendererHooks from './lib/gizmo/gizmo-renderer-hooks';
 import createRenderer from './renderer';
 import defaultConfig from './default-config.json';
+import { InteractionManager, InteractionObject } from './lib/interaction-manager';
 
 var dbt = performance.now();
 
@@ -35,6 +36,14 @@ export default async function main(project) {
   canvas.style.height = window.innerHeight + 'px';
   canvases.appendChild(canvas);
 
+  const interactionManager = new InteractionManager();
+  interactionManager.attachToDOMElement(canvases);
+
+  const canvasInteractionObject = new InteractionObject(() => {
+    return 0;
+  });
+  interactionManager.add(canvasInteractionObject);
+
   const defaultState = project.config || defaultConfig;
 
   const controls = defaultState && defaultState.controls
@@ -42,7 +51,7 @@ export default async function main(project) {
 
   const gizmoRendererHooks = new GizmoRendererHooks();
   const renderer = createRenderer(project, canvas, gizmoRendererHooks, controls);
-  const gizmo = new Gizmo(gizmoRendererHooks, canvases);
+  const gizmo = new Gizmo(gizmoRendererHooks, canvases, interactionManager);
 
   const stats = new Stats();
   stats.showPanel(0);
@@ -51,7 +60,7 @@ export default async function main(project) {
 
   const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
 
-  const mouse = createMouse(canvases);
+  const mouse = createMouse(canvasInteractionObject);
 
   const camera = createCamera(mouse, {
     position: [0, 0, 5],
