@@ -17,7 +17,8 @@
       0,
       0,
       2.4
-    ]
+    ],
+    "positionSpeed": 1
   },
   "fov": 6,
   "timer": {
