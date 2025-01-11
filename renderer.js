@@ -86,6 +86,7 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
   const uniforms = {
     model: m4identity,
     iOffset: (context, props) => (props.offset || [0, 0]),
+    cameraViewMatrix: pexHelpers.cmdProp('view'),
     cameraMatrix: pexHelpers.cmdProp('cameraMatrix'),
     cameraPosition: pexHelpers.cmdProp('cameraPosition'),
     debugPlaneMatrix: (context, props) => (props && props.debugPlane && props.debugPlane.matrix) || m4identity,

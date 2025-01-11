@@ -6,7 +6,7 @@ uniform float iGlobalTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0;
 
-uniform mat4 cameraMatrix;
+uniform mat4 cameraViewMatrix;
 uniform vec3 cameraPosition;
 
 uniform float guiLead;
@@ -1077,7 +1077,7 @@ void mainImage( out vec4 fragColor, in vec2 fragCoord )
     camDist = length(camPos);
 
     // mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
-    mat4 camMat = cameraMatrix;
+    mat4 camMat = cameraViewMatrix;
     float focalLength = guiFocal;
     // focalLength = 3.;
     // vec3 rd = normalize(camMat * vec3(p, focalLength));

@@ -6,7 +6,8 @@ const DO_CAPTURE = false;
 import Stats from 'stats.js';
 //import webFramesCapture from 'web-frames-capture';
 import createMouse from './lib/mouse';
-import createCamera from './lib/camera';
+import { Camera } from './lib/camera';
+import { FreeFlyCameraControl } from './lib/free-fly-camera-control';
 import StateStore from './lib/state-store';
 import createScrubber from './lib/scrubber';
 import Timer from './lib/timer';
@@ -62,11 +63,8 @@ export default async function main(project) {
 
   const mouse = createMouse(canvasInteractionObject);
 
-  const camera = createCamera(mouse, {
-    position: [0, 0, 5],
-    positionSpeed: 10,
-    rotationSpeed: .1
-  });
+  const camera = new Camera();
+  const freeFlyCameraControl = new FreeFlyCameraControl(camera, canvasInteractionObject);
 
   window.camera = camera;
 
@@ -94,8 +92,9 @@ export default async function main(project) {
   const toState = () => {
     const state = {
       camera: camera.toState(),
+      freeFlyCameraControl: freeFlyCameraControl.toState(),
       view: camera.view(),
-      cameraMatrix: camera.view(),
+      cameraMatrix: camera.matrix(),
       cameraPosition: camera.position,
       cameraFov: fov,
       timer: timer.serialize(),
@@ -123,6 +122,10 @@ export default async function main(project) {
     } else if (state.cameraMatrix) {
       camera.fromState(state.cameraMatrix);
     }
+    freeFlyCameraControl.resetSimulation();
+    if (state.freeFlyCameraControl) {
+      freeFlyCameraControl.fromState(state.freeFlyCameraControl);
+    }
     if (state.mouse) {
       mouse.fromState(state.mouse);
     }
@@ -144,6 +147,7 @@ export default async function main(project) {
     } else if (defaultState.cameraMatrix) {
       camera.fromState(defaultState.cameraMatrix);
     }
+    freeFlyCameraControl.resetSimulation();
   }
 
   let resize = () => {
@@ -158,9 +162,19 @@ export default async function main(project) {
   let stateChanged = true;
   let gizmoInitialised = false;
 
+  // TODO: can we ignore unused props? so mouseup doesn't trigger a redraw
+  // would need a mapping of uniforms to state variables
+  
+  // each feature would be responsible for adding its own uniforms
+  // when parsing shaders, extract list of known uniforms
+  
+  // each feature has a ignoreDuringDraws flag
+  // we can build a list of ignored features 
+
+
   (function tick(t) {
 
-    camera.tick();
+    freeFlyCameraControl.tick();
     scrubber.update();
     stateChanged = stateStore.update(['accumulate']) || stateChanged;
     let state = stateStore.state;

@@ -6,7 +6,7 @@ precision highp float;
 uniform sampler2D sdfData; // buffer-a.glsl filter: linear wrap: clamp
 uniform vec2 sdfDataSize;
 
-uniform mat4 cameraMatrix;
+uniform mat4 cameraViewMatrix;
 uniform vec3 cameraPosition;
 
 uniform sampler2D previousSample; // buffer-b.glsl filter: linear

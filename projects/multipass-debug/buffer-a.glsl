@@ -3,7 +3,7 @@
 precision highp float;
 
 uniform vec2 iResolution;
-uniform mat4 cameraMatrix;
+uniform mat4 cameraViewMatrix;
 uniform float drawIndex;
 uniform int iFrame;
 uniform float iTime;

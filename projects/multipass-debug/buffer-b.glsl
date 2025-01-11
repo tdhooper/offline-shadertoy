@@ -3,7 +3,7 @@
 precision highp float;
 
 uniform vec2 iResolution;
-uniform mat4 cameraMatrix;
+uniform mat4 cameraViewMatrix;
 uniform sampler2D previousSample; // buffer-b.glsl filter: linear
 uniform sampler2D dataBuffer; // buffer-a.glsl filter: nearest
 uniform float drawIndex;

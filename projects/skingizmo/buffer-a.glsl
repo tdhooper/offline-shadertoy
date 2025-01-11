@@ -14,7 +14,7 @@ float gmTransform(inout vec3 p, vec3 t, vec4 r, vec3 s) {
 precision highp float;
 
 uniform vec2 iResolution;
-uniform mat4 cameraMatrix;
+uniform mat4 cameraViewMatrix;
 uniform sampler2D previousSample; // buffer-a.glsl filter: linear
 uniform float drawIndex;
 uniform int iFrame;

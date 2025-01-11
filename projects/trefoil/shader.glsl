@@ -7,7 +7,7 @@ uniform vec2 iOffset;
 uniform float iTime;
 uniform sampler2D iChannel0;
 
-uniform mat4 cameraMatrix;
+uniform mat4 cameraViewMatrix;
 uniform vec3 cameraPosition;
 
 uniform float guiFocalLength;
@@ -1519,7 +1519,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec3 rayDirection = normalize(camMat * vec3(p, focalLength));
 
     // camPos = cameraPosition;
-    // mat4 camMat = cameraMatrix;
+    // mat4 camMat = cameraViewMatrix;
     // focalLength = pow(guiFocalLength, 3.);
     // focalLength = 2.5;
     // vec3 rayDirection = normalize(

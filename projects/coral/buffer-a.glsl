@@ -6,7 +6,7 @@ precision highp float;
 
 uniform vec2 iResolution;
 
-uniform mat4 cameraMatrix;
+uniform mat4 cameraViewMatrix;
 uniform vec3 cameraPosition;
 
 uniform sampler2D previousSample; // buffer-a.glsl filter: linear

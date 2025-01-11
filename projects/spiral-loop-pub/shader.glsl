@@ -30,7 +30,7 @@ float guiZipSpeed = 3.3;
 float guiZoom = 0.1;
 float guiModelScale = 7.749066960348409;
 
-mat4 cameraMatrix = mat4(
+mat4 cameraViewMatrix = mat4(
     -0.7063226699829102,
     0.7052236199378967,
     0.06198469549417496,
@@ -558,7 +558,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     
     float camDist = length(camPosition);
 
-    mat4 camMat = cameraMatrix;
+    mat4 camMat = cameraViewMatrix;
     float focalLength = guiFocal;
     vec3 rd = normalize(
         (vec4(p, -focalLength, 1) * camMat).xyz

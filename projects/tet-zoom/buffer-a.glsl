@@ -7,7 +7,7 @@ uniform vec2 iResolution;
 uniform float iTime;
 uniform vec4 iMouse;
 
-uniform mat4 cameraMatrix;
+uniform mat4 cameraViewMatrix;
 
 in vec3 eye;
 in vec3 dir;
@@ -260,8 +260,8 @@ float intersectPlane(vec3 rOrigin, vec3 rayDir, vec3 origin, vec3 normal, vec3 u
 mat3 envOrientation;
 
 vec3 light(vec3 origin, vec3 rayDir) {
-    origin = -(cameraMatrix * vec4(origin, 1)).xyz;
-    rayDir = -(cameraMatrix * vec4(rayDir, 0)).xyz;
+    origin = -(cameraViewMatrix * vec4(origin, 1)).xyz;
+    rayDir = -(cameraViewMatrix * vec4(rayDir, 0)).xyz;
 
     origin *= envOrientation;
     rayDir *= envOrientation;
@@ -274,8 +274,8 @@ vec3 light(vec3 origin, vec3 rayDir) {
 
 vec3 env(vec3 origin, vec3 rayDir) {
     
-    origin = -(cameraMatrix * vec4(origin, 1)).xyz;
-    rayDir = -(cameraMatrix * vec4(rayDir, 0)).xyz;
+    origin = -(cameraViewMatrix * vec4(origin, 1)).xyz;
+    rayDir = -(cameraViewMatrix * vec4(rayDir, 0)).xyz;
 
     origin *= envOrientation;
     rayDir *= envOrientation;

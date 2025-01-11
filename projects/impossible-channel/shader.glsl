@@ -4,7 +4,7 @@ uniform vec2 iResolution;
 uniform vec2 iOffset;
 uniform float iTime;
 
-uniform mat4 cameraMatrix;
+uniform mat4 cameraViewMatrix;
 uniform vec3 cameraPosition;
 
 void mainImage(out vec4 a, in vec2 b);

@@ -8,7 +8,7 @@ uniform vec2 iResolution;
 
 uniform sampler2D volumeData; // volume-generate.glsl filter: linear wrap: clamp
 uniform vec2 volumeDataSize;
-uniform mat4 cameraMatrix;
+uniform mat4 cameraViewMatrix;
 
 uniform float guiDensityStart;
 uniform float guiDensityEnd;
@@ -709,7 +709,7 @@ float calcAO( in vec3 pos, in vec3 nor )
 }
 
 vec3 worldToCam(vec3 v) {
-    return (vec4(v, 1) * cameraMatrix).xyz;
+    return (vec4(v, 1) * cameraViewMatrix).xyz;
 }
 
 vec3 doShading(vec3 pos, vec3 rd, Model model) {
