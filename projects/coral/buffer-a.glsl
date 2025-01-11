@@ -1,4 +1,6 @@
-// framebuffer drawcount: 400, tile: 2
+#version 300 es
+
+// framexbuffer drawcount: 400, tile: 2
 
 precision highp float;
 
@@ -13,19 +15,20 @@ uniform int iFrame;
 uniform float iTime;
 uniform vec4 iMouse;
 
-varying vec3 eye;
-varying vec3 dir;
-varying float fov;
-varying float aspect;
-varying mat4 vView;
+in vec3 eye;
+in vec3 dir;
+in float fov;
+in float aspect;
+in mat4 vView;
 
-#pragma glslify: inverse = require(glsl-inverse)
+out vec4 fragColor;
 
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
-    mainImage(gl_FragColor, gl_FragCoord.xy);
+    mainImage(fragColor, gl_FragCoord.xy);
 }
+
 #define ANIMATE
 #define SSS
 #define DOF
@@ -609,7 +612,7 @@ vec4 traceDust(vec3 ro, vec3 rd, float depth) {
 //========================================================
 // Rendering
 //========================================================
-
+/*
 vec3 calcNormal( in vec3 p ) // for function f(p)
 {
     const float eps = 0.0001; // or some other value
@@ -618,7 +621,18 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
                            map(p+h.yxy).d - map(p-h.yxy).d,
                            map(p+h.yyx).d - map(p-h.yyx).d ) );
 }
-
+*/
+// https://iquilezles.org/articles/normalsSDF
+vec3 calcNormal( in vec3 pos )
+{
+    vec3 n = vec3(0.0);
+    for( int i=0; i<4; i++ )
+    {
+        vec3 e = 0.05773*(2.0*vec3((((i+3)>>1)&1),((i>>1)&1),(i&1))-1.0);
+        n += e*map(pos+0.001*e).d;
+    }
+    return normalize(n);
+}
 
 
 
@@ -995,7 +1009,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 col = draw(fragCoord, iFrame);
 
     if (drawIndex > 0.) {
-        vec4 lastCol = texture2D(previousSample, fragCoord.xy / iResolution.xy);
+        vec4 lastCol = texture(previousSample, fragCoord.xy / iResolution.xy);
         col = mix(lastCol, col, 1. / (drawIndex + 1.));
     }
     
