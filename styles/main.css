@@ -30,6 +30,10 @@ body {
     border-bottom-left-radius: 8px;
 }
 
+.dg ~ .gizmo-controls {
+    right: 280px;
+}
+
 .controls > * + * {
     margin-left: 5px;
 }
@@ -75,7 +79,8 @@ body {
     width: 5em;
 }
 
-body:hover .controls {
+body:hover .controls,
+body:hover .dg {
     opacity: .9;
 }
 
@@ -94,10 +99,7 @@ body:hover .stats {
 }
 
 .dg {
-    /*display: none;*/
-}
-
-.dg {
+    opacity: 0;
     z-index: 1 !important;
 }
 
