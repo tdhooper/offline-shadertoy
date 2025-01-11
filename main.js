@@ -129,7 +129,7 @@ export default async function main(project) {
     if (state.timer) {
       timer.fromObject(state.timer);
     }
-    if (state.controls) {
+    if (state.controls && controls) {
       controls.fromState(state.controls);
     }
     if (accumulateControl) {
