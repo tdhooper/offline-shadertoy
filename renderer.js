@@ -50,7 +50,13 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
       let dep = node.dependencies[i];
       let depBuffer = dep.node == node ? dep.node.lastBuffer : dep.node.buffer;
       let texture = pexHelpers.passTex(depBuffer);
-      //bindBuffer(texture, dep.filter, dep.wrap);
+      let filter = pexHelpers.filterConst(dep.filter);
+      //let wrap = pexHelpers.wrapConst(dep.wrap);
+      ctx.update(texture, {
+        min: filter,
+        mag: filter,
+        //wrap: ctx.gl.REPEAT,
+      });
       const s = {};
       s[dep.uniform] = texture;
       Object.assign(state, s);
