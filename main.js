@@ -162,21 +162,17 @@ export default async function main(project) {
   let stateChanged = true;
   let gizmoInitialised = false;
 
-  // TODO: can we ignore unused props? so mouseup doesn't trigger a redraw
-  // would need a mapping of uniforms to state variables
-  
-  // each feature would be responsible for adding its own uniforms
-  // when parsing shaders, extract list of known uniforms
-  
-  // each feature has a ignoreDuringDraws flag
-  // we can build a list of ignored features 
 
+  let ignoreChanges = ['accumulate'];
+  if ( ! renderer.requiredUniforms.has('iMouse')) {
+    ignoreChanges.push('mouse');
+  }
 
   (function tick(t) {
 
     freeFlyCameraControl.tick();
     scrubber.update();
-    stateChanged = stateStore.update(['accumulate']) || stateChanged;
+    stateChanged = stateStore.update(ignoreChanges) || stateChanged;
     let state = stateStore.state;
 
     gizmo.update(state);

@@ -83,6 +83,8 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
 
   const screenPass = ctx.pass({});
 
+  let requiredUniforms = new Set();
+
   const uniforms = {
     model: m4identity,
     iOffset: (context, props) => (props.offset || [0, 0]),
@@ -95,7 +97,7 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
     iTime: (context, props) => props.timer.elapsed / 1000,
     firstPass: () => firstPass,
     iMouse: (context, props) => {
-      const mouseProp = props.mouse.map(value => value * context.pixelRatio);
+      const mouseProp = props.mouse.map(value => value * ctx.pixelRatio);
       mouseProp[1] = context.viewportHeight - mouseProp[1];
       //console.log(mouseProp[0] / context.viewportWidth, mouseProp[1] / context.viewportHeight);
       return mouseProp;
@@ -194,6 +196,8 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
         return [x, y, width, height];
       },
     };
+
+    requiredUniforms = requiredUniforms.union(new Set(Object.keys(nodeCommand.pipeline.program.uniforms)));
 
     node.draw = (state, partialCmd) => {
       attachDependencies(node, state);
@@ -351,6 +355,6 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
   }
 
   return {
-    ready, draw, resize
+    ready, draw, resize, requiredUniforms
   }
 };
