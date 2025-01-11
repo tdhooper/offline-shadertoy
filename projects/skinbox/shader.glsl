@@ -3,7 +3,7 @@
 precision highp float;
 
 uniform vec2 iResolution;
-uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
+uniform sampler2D iChannel0; // blur-y.glsl filter: linear wrap: clamp
 
 out vec4 fragColor;
 

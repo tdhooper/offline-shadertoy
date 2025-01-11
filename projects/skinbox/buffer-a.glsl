@@ -1,13 +1,13 @@
 #version 300 es
 
-// framebuffer drawcount: 1
+// framexbuffer drawcount: 4
 
 precision highp float;
 
 uniform vec2 iResolution;
 uniform mat4 cameraMatrix;
 uniform sampler2D previousSample; // buffer-a.glsl filter: linear
-uniform float drawIndex;
+uniform int drawIndex;
 uniform int iFrame;
 uniform float iTime;
 uniform vec4 iMouse;
@@ -623,9 +623,9 @@ vec4 draw(vec2 fragCoord, int frame) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 col = draw(fragCoord, iFrame);
    
-    if (drawIndex > 0.) {
+    if (drawIndex > 0) {
         vec4 lastCol = texture(previousSample, fragCoord.xy / iResolution.xy);
-        col = mix(lastCol, col, 1. / (drawIndex + 1.));
+        col = mix(lastCol, col, 1. / float(drawIndex + 1));
     }
     
     fragColor = vec4(col.rgb, 1);
