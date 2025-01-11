@@ -4,6 +4,8 @@ precision highp float;
 
 uniform vec2 iResolution;
 uniform sampler2D iChannel0; // blur-y.glsl filter: linear wrap: clamp
+uniform sampler2D iChannel1; // buffer-a.glsl filter: linear wrap: clamp
+uniform int drawIndex;
 
 out vec4 fragColor;
 
@@ -28,7 +30,14 @@ vec3 aces(vec3 x) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
-    vec3 col = texture(iChannel0, uv).rgb;
+
+    vec3 col;
+
+    if (drawIndex == 0) {
+      col = texture(iChannel0, uv).rgb;
+    } else {
+      col = texture(iChannel1, uv).rgb;
+    }
     
     col = aces(col);
     col = pow( col, vec3(1./2.2) );
