@@ -311,7 +311,7 @@ struct Hit {
     vec3 pos;
 };
 
-Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
+Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep, float boundRadius) {
 
     vec3 rayPosition;
     float rayLength, dist = 0.;
@@ -401,7 +401,7 @@ vec3 sampleDirect(Hit hit, vec3 nor, vec3 throughput, inout vec2 seed) {
     float diffuse = dot(nor, lightSampleDir);
     vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightSampleDir, nor)));
     if (diffuse > 0.) {
-        Hit sh = march(shadowOrigin, lightSampleDir, 1., 1.);
+        Hit sh = march(shadowOrigin, lightSampleDir, 1., 1., boundRadius);
         if (sh.model.id == 0) {
             col += throughput * sunColor * diffuse;
         }
@@ -456,7 +456,7 @@ vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough) {
 
     vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightDir, nor)));
     if (specular > 0.) {
-        Hit sh = march(shadowOrigin, lightDir, 1., 1.);
+        Hit sh = march(shadowOrigin, lightDir, 1., 1., boundRadius);
         if (sh.model.id == 0) {
             col += sunColor * specular;
         }
@@ -509,10 +509,21 @@ vec4 draw(vec2 fragCoord, int frame) {
     rayDir = normalize(dir);
 
     #ifdef DOF
-    float fpd = length(origin) - .13;//.385 * focalLength;
-    vec3 fp = origin + rayDir * fpd;
-    origin = origin + camMat * vec3(rndunit2(seed), 0.) * .01;
-    rayDir = normalize(fp - origin);
+
+    // position on sensor plane
+    vec3 cameraForward = -transpose(vView)[2].xyz;
+    
+    Hit dofHit = march(origin, cameraForward, 100., 1., 100.);
+    float focalDistance = length(origin - dofHit.pos) - fov;
+
+    origin = origin + rayDir / dot(rayDir, cameraForward) * fov;
+    
+    // position on focal plane
+    //float focalDistance = length(origin);
+    vec3 focalPlanePosition = origin + focalDistance * rayDir / dot(rayDir, cameraForward);
+    origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .01;
+    rayDir = normalize(focalPlanePosition - origin);
+
     #endif
 
     Hit hit;
@@ -533,7 +544,7 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
 
-        hit = march(origin, rayDir, 100., 1.);
+        hit = march(origin, rayDir, 100., 1., boundRadius);
    
         if (hit.model.id == 0)
         {
