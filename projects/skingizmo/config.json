@@ -1,5 +1,4 @@
 {
-  "id": "skingizmo",
   "capture": {
     "fps": 30,
     "seconds": 6,
@@ -18,6 +17,10 @@
       0,
       2.4
     ]
+  },
+  "freeFlyCameraControl": {
+    "positionSpeed": 1,
+    "rotationSpeed": 0.05
   },
   "fov": 6,
   "timer": {

@@ -16,7 +16,7 @@ precision highp float;
 uniform vec2 iResolution;
 uniform mat4 cameraViewMatrix;
 uniform sampler2D previousSample; // buffer-a.glsl filter: linear
-uniform float drawIndex;
+uniform int drawIndex;
 uniform int iFrame;
 uniform float iTime;
 uniform vec4 iMouse;
@@ -161,26 +161,8 @@ void pR45(inout vec2 p) {
 }
 float time = 0.;
 
-Model skinbox(vec3 p) {
-
-    float o = 0.;
-
-    float scl = 1.;
-
-    scl *= gmTransform(p);
-
-    vec3 pp = p;
-    vec3 uvw = p;
-
-    float d = fBox(p, vec3(.4 * .2125)) - .1 * .2125;
-
-    d *= scl;
-
-    float thin = smoothstep(.3, .5, length(p.yz));
-    thin = 1.;
-
-    p = pp;    
-
+void deformSkin(inout float d, inout vec3 uvw, vec3 p, float scl, float thin) {
+    
     p /= .2125;
 
     vec3 p3 = p * 30.;
@@ -227,6 +209,44 @@ Model skinbox(vec3 p) {
     if (abs(d) < .01) {
         d += w * 600. * .2125 * scl;
     }
+    
+}
+
+Model skinbox(vec3 p) {
+
+    float o = 0.;
+
+    float scl = 1.;
+
+
+    vec3 pp = p;
+    vec3 uvw = p;
+
+    float d = 1e12;
+
+    vec3 p2;
+    float scl2 = scl;
+    
+    p2 = p - vec3(0,.1,0);
+    scl2 = scl * gmTransform(p2, vec3(0.3244217,-0.0338398,0.1749579), vec4(1,0,0,0), vec3(0.8952506,0.8952506,0.8952506));
+    d = (length(p2) - .1) * scl2;
+
+    p2 = p - vec3(.1,0,0);
+    scl2 = scl * gmTransform(p2, vec3(-0.0137466,-0.0892151,0.0981083), vec4(1,0,0,0), vec3(0.5306148,0.5306148,0.5306148));
+    d = smin(d, (length(p2) - .1) * scl2, .1);
+
+    p2 = p - vec3(0,0,.1);
+    scl2 = scl * gmTransform(p2, vec3(0.2137462,0.1401991,0.2364844), vec4(1,0,0,0), vec3(1.1116613,1.1116613,1.1116613));
+    d = smin(d, (length(p2) - .1) * scl2, .1);
+
+    d *= scl;
+
+    float thin = smoothstep(.3, .5, length(p.yz));
+    thin = 1.;
+
+    p = pp;    
+
+    deformSkin(d, uvw, p, scl, thin);
     
     p = pp;
     return Model(d, uvw, 1, 1.);
@@ -484,10 +504,21 @@ vec4 draw(vec2 fragCoord, int frame) {
     rayDir = normalize(dir);
 
     #ifdef DOF
-    float fpd = length(origin) - .13;//.385 * focalLength;
-    vec3 fp = origin + rayDir * fpd;
-    origin = origin + camMat * vec3(rndunit2(seed), 0.) * .01;
-    rayDir = normalize(fp - origin);
+
+    // position on sensor plane
+    vec3 cameraForward = -transpose(vView)[2].xyz;
+    
+    Hit dofHit = march(origin, cameraForward, 100., 1.);
+    float focalDistance = length(origin - dofHit.pos) - fov;
+
+    origin = origin + rayDir / dot(rayDir, cameraForward) * fov;
+    
+    // position on focal plane
+    //float focalDistance = length(origin);
+    vec3 focalPlanePosition = origin + focalDistance * rayDir / dot(rayDir, cameraForward);
+    origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .01;
+    rayDir = normalize(focalPlanePosition - origin);
+
     #endif
 
     Hit hit;
@@ -502,7 +533,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     //	return vec4(bgCol, 1);
     }
     
-    const int MAX_BOUNCE = 2;
+    const int MAX_BOUNCE = 3;
     
     //origin += rayDir * bound.x;
 
@@ -531,7 +562,7 @@ vec4 draw(vec2 fragCoord, int frame) {
             col += sampleDirectSpec(hit, rayDir, nor, material.roughness) * throughput * material.specular;
         }
 
-        bool doSSS = material.sss && bounce < 1 && ! doSpecular;
+        bool doSSS = material.sss && ! doSpecular;
         if (doSSS) {
             seed = hash22(seed);
             doSSS = hash12(seed) < .9;
@@ -541,7 +572,8 @@ vec4 draw(vec2 fragCoord, int frame) {
             throughput *= material.albedo;
         }
 
-        if (doSSS) {
+        if (doSSS) 
+        {
             origin = hit.pos;
             
             seed = hash22(seed);
@@ -587,9 +619,9 @@ vec4 draw(vec2 fragCoord, int frame) {
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 col = draw(fragCoord, iFrame);
    
-    if (drawIndex > 0.) {
+    if (drawIndex > 0) {
         vec4 lastCol = texture(previousSample, fragCoord.xy / iResolution.xy);
-        col = mix(lastCol, col, 1. / (drawIndex + 1.));
+        col = mix(lastCol, col, 1. / float(drawIndex + 1));
     }
     
     fragColor = vec4(col.rgb, 1);
