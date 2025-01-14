@@ -132,6 +132,7 @@ Material shadeModel(float rlen, Model model, inout vec3 nor) {
     float rough = .3;
 
     float px = .0005 * rlen;
+    px = 0.;
     float w = .003;
     float sp = 1.;
     float line = (1. - (  (abs(mod(model.uvw.x + sp / 2., sp) - sp / 2.) - w) / px  ));
@@ -253,9 +254,6 @@ Model skinbox(vec3 p) {
 }
 
 Model map(vec3 p) {
-    pR(p.yz, (.5 - .25) * PI / 2.);
-    pR(p.xz, (.5 - .6) * PI * 2.);
-
     Model m = skinbox(p);
 
     float d = p.y + .5 * .25 * .85;   
@@ -512,12 +510,15 @@ vec4 draw(vec2 fragCoord, int frame) {
     float focalDistance = length(origin - dofHit.pos) - fov;
 
     origin = origin + rayDir / dot(rayDir, cameraForward) * fov;
-    
+
     // position on focal plane
     //float focalDistance = length(origin);
     vec3 focalPlanePosition = origin + focalDistance * rayDir / dot(rayDir, cameraForward);
-    origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .01;
+
     rayDir = normalize(focalPlanePosition - origin);
+
+    // jitter for antialiasing
+    origin += vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView) * focalDistance * fov;
 
     #endif
 
