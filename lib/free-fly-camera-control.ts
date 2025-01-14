@@ -10,6 +10,7 @@ interface FreeFlyCameraOptions {
   rotationSpeed?: number;
   shiftModifier?: number;
   simDt?: number;
+  up?: vec3;
 }
 
 export class FreeFlyCameraControl {
@@ -18,6 +19,7 @@ export class FreeFlyCameraControl {
   private tiltSpeed: number;
   private rotationSpeed: number;
   private shiftModifier: number;
+  private up: vec3;
 
   private _dir: vec3 = vec3.create();
   private _rot: quat = quat.create();
@@ -49,6 +51,7 @@ export class FreeFlyCameraControl {
     this.rotationSpeed = options.rotationSpeed || 0.5;
     this.shiftModifier = options.shiftModifier || 10;
     this.simDt = options.simDt || 1;
+    this.up = options.up || vec3.fromValues(0, 1, 0);
 
     vec3.copy(this.simPosition, this.camera.position);
     vec3.copy(this.prevPosition, this.camera.position);
@@ -83,20 +86,22 @@ export class FreeFlyCameraControl {
     });
   }
 
-  toState(): any {
+  toState(): FreeFlyCameraOptions {
     return {
         positionSpeed: this.positionSpeed,
         tiltSpeed: this.tiltSpeed,
         rotationSpeed: this.rotationSpeed,
         shiftModifier: this.shiftModifier,
+        up: this.up,
     };
   }
 
-  fromState(state: any): void {
+  fromState(state: FreeFlyCameraOptions): void {
     this.positionSpeed = state.positionSpeed || this.positionSpeed;
     this.tiltSpeed = state.tiltSpeed || this.tiltSpeed;
     this.rotationSpeed = state.rotationSpeed || this.rotationSpeed;
     this.shiftModifier = state.shiftModifier || this.shiftModifier;
+    this.up = state.up || this.up;
   }
 
   tick(): void {
@@ -158,13 +163,26 @@ export class FreeFlyCameraControl {
     }
   }
 
-  private pointer(dx: number, dy: number, tilt: number): void {
-    const x = dx * this.rotationSpeed;
-    const y = dy * this.rotationSpeed;
-    const z = tilt * this.rotationSpeed;
+  private pointer(yaw: number, pitch: number, roll: number): void {
+    yaw *= this.rotationSpeed;
+    pitch *= this.rotationSpeed;
+    roll *= this.rotationSpeed;
 
-    quat.fromEuler(this._rot, -y, -x, -z);
-    quat.multiply(this.camera.rotation, this.camera.rotation, this._rot);
+    // create world-space roll rotation around the camera forward vector
+    vec3.set(this._dir, 0, 0, -1);
+    vec3.transformQuat(this._dir, this._dir, this.camera.rotation);
+    quat.setAxisAngle(this._rot, this._dir, -roll * Math.PI / 180);
+
+    // apply roll to world up vector, and the camera rotation
+    vec3.transformQuat(this.up, this.up, this._rot);
+    quat.multiply(this.camera.rotation, this._rot, this.camera.rotation);
+
+    // rotate around world up vector for yaw
+    quat.setAxisAngle(this._rot, this.up, -yaw * Math.PI / 180);
+    quat.multiply(this.camera.rotation, this._rot, this.camera.rotation);
+
+    // rotate around local X for pitch
+    quat.rotateX(this.camera.rotation, this.camera.rotation, -pitch * Math.PI / 180);
   }
 
   simulate(): void {

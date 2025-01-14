@@ -22,8 +22,8 @@ Free-fly-camera, when used, has the controls
 	Q - down
 	E - up
 
-	R - tilt right
-	F - tilt left
+	R - tilt left
+	F - tilt right
 
 	Mouse (click and drag) - look
 
