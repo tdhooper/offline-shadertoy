@@ -141,7 +141,7 @@ Model map2(vec3 p) {
     } else {  
         //pR(p.yz, (.5 - .8) * PI / 2.);
         //pR(p.xz, (.5 - .84) * PI * 2.);
-        pR(p.yz, (.5 - .25) * PI / 2.);
+        //pR(p.yz, (.5 - .25) * PI / 2.);
         pR(p.xz, (.5 - .6) * PI * 2.);
     }
 
@@ -297,7 +297,7 @@ vec3 calcNormal( in vec3 pos )
 }
 
 
-vec3 sunPos = normalize(vec3(-1,1,-.75)) * 100.;
+vec3 sunPos = normalize(vec3(-1,0.6368,-1.0756)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
 vec3 sunColor = vec3(8.10,6.00,4.20) * 3. * .1;
 

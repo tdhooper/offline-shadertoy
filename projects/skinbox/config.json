@@ -1,44 +1,21 @@
 {
-  "id": "skinbox2",
-  "capture": {
-    "fps": 30,
-    "seconds": 6,
-    "width": 1600,
-    "height": 1600
-  },
   "camera": {
-    "rotation": [
-      0,
-      0,
-      0,
-      1
-    ],
+    "version": "2",
     "position": [
       0,
-      0,
-      2.4
+      0.74,
+      2.31
+    ],
+    "rotation": [
+      -0.1581578105688095,
+      -2.672454701979632e-9,
+      -2.5560567551430324e-10,
+      0.9874120354652405
     ]
   },
   "freeFlyCameraControl": {
     "positionSpeed": 1,
     "rotationSpeed": 0.05
   },
-  "fov": 6,
-  "timer": {
-    "running": false,
-    "elapsed": 16530
-  },
-  "accumulateControl": {
-    "accumulate": false
-  },
-  "mouse": [
-    691,
-    680,
-    false,
-    0
-  ],
-  "r": [
-    1070,
-    1071
-  ]
+  "fov": 6
 }
