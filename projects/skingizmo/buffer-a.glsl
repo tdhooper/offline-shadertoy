@@ -53,6 +53,13 @@ float hash12(vec2 p)
     return fract((p3.x + p3.y) * p3.z);
 }
 
+vec4 hash42(vec2 p)
+{
+	vec4 p4 = fract(vec4(p.xyxy) * vec4(.1031, .1030, .0973, .1099));
+    p4 += dot(p4, p4.wzxy+33.33);
+    return fract((p4.xxyz+p4.yzzw)*p4.zywx);
+}
+
 // iq https://www.shadertoy.com/view/tl23Rm
 vec2 rndunit2(vec2 seed ) {
     vec2 h = seed * vec2(1,6.28318530718);
@@ -125,9 +132,9 @@ Material shadeModel(float rlen, Model model, inout vec3 nor) {
     }
 
 
-    float grout = step(model.uvw.y, 0.0002);
-    vec3 albedo = mix(vec3(.6,.2,.02), vec3(.02), grout);
-    float spec = mix(.5, .001, grout);
+    float grout = step(model.uvw.y, 0.0006);
+    vec3 albedo = mix(vec3(.01), vec3(.5), grout);
+    float spec = mix(.05, .001, grout);
     float rough = mix(.02, .5, grout);
 
     return Material(albedo, spec, rough, false);
@@ -254,15 +261,19 @@ Model map(vec3 p) {
     p.y += .2;
 
     Model m = skinbox(p);
+    //Model m;
 
 
     float tile = .2;
     vec2 c = floor(p.xz / tile);
     p.xz -= (c + .5) * tile;
-    vec2 rnd = hash22(c) - .5;
+    vec4 rnd = hash42(c) - .5;
     
     vec3 p2 = p + rnd.x;
     pR(p2.xz, rnd.y * PI);
+
+    float grout = .0015;
+    float round = .004;
 
     p2 /= 5.;
     float o = sin(sin(dot(p2, vec3(1.23,0,-.6)) * 15.) * 5.);
@@ -275,19 +286,22 @@ Model map(vec3 p) {
     o2 *= sin(dot(p2, vec3(-1.21,0,-1.)) * 32.);
 
     vec3 p3 = p;
-    pR(p3.zy, rnd.x * .015);
-    pR(p3.xy, rnd.y * .015);
 
-    float d = fBox(p3, vec2(tile / 2. - .004 - .0015, .01).xyx) - .004 - o * .0005 - o2 * .0002;
+    p3.xz += grout * rnd.zw;
+
+    pR(p3.zy, rnd.x * .005);
+    pR(p3.xy, rnd.y * .005);
+
+    float d = fBox(p3, vec2(tile / 2. - grout - round, .014 - round).xyx) - round - o * .0005 - o2 * .0002;
 
     p.y -= .012;
     float d2 = p.y;
 
-    d = min(d, d2);
+    d = smin(d, d2, .002);
 
     Model m2 = Model(d, p, 2, 1.);
 
-    if (m2.d < m.d) {
+   if (m2.d < m.d) {
         m = m2;
     }
 
