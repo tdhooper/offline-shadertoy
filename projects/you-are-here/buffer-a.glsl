@@ -343,7 +343,7 @@ Model fSofa(vec3 p) {
 
     p += sum(sin(erot(p, vec3(1), 1.) * 6000.)) * .000015;
     
-    float fade, d2, d3, d4, ar, armang, ar0, ar1, arw, footh, psx, vary, baseh, cs, cr, axisx, axisz, crw, seam, buttpatch, br;
+    float fade, d2, d3, d4, ar, armang, ar0, ar1, arw, footh, psx, vary, baseh, cs, cr, axisx, axisz, crw, seam, buttpatch, br, scl;
     vec2 armtopp;
     vec3 isofasz, pp, armsz, pc, col, backsz, cushionsz;
 
@@ -359,6 +359,7 @@ Model fSofa(vec3 p) {
     p.x = abs(p.x);
     p.x -= sofasz.x - armsz.x;
     p.y -= footh - sofasz.y + armsz.y;
+    scl = gmTransform(p);
     d2 = fHalfCapsule(p.xy - vec2(0, armsz.y), armsz.x);
     armtopp = p.xy - vec2(.004, armsz.y + .005);
     d2 = smin(d2, length(armtopp) - armsz.x - .002, .01);
@@ -382,12 +383,15 @@ Model fSofa(vec3 p) {
     d4 = smax(d3, abs(p.z) - armsz.z - .003, ar);
     d2 = min(d2, d4);
     d2 = smax(d2, -p.y - armsz.y, .003);
+    d2 *= scl;
 	
 
     // base
     p = pp;
     baseh = .012;
     p.y -= footh - sofasz.y + baseh;
+    scl = gmTransform(p);
+
     br = .002;
     br += sin(sin(sin(p.x * 55. + 2.) * 10.) * 5. + p.y * 100.) * .00025;
 	
@@ -420,6 +424,7 @@ Model fSofa(vec3 p) {
     vary += pReflect(p, normalize(vec3(0,-.66,1)), 0.);
     p.y += cushionsz.y;
     p.z -= cushionsz.z - .004;
+    scl = gmTransform(p);
 
     cs = mix(.95, 1.01, length(sin(sin((p + vary * 240.) * 30.) * 3.) * .5 + .5));
     cs = 1. + sum(sin((p + vary * 2. + 1.) * 100.) * vec3(1,0,1)) * .02;
@@ -444,6 +449,7 @@ Model fSofa(vec3 p) {
     d3 = (fBox(p / cs, cushionsz - cr - crw * .0001) - cr) * cs* .9;
     seam = abs(p.y) - cushionsz.y * .75;
     d3 = smax(d3, -abs(seam), .001);
+    d3 *= scl;
 
     if (d3 < d2) {
         d2 = d3;
@@ -475,7 +481,9 @@ Model fSofa(vec3 p) {
     p.y -= .0015;
     p.xz = abs(p.xz);
     p.xz -= sofasz.xz * vec2(.93,.68);
-    d3 = min(d2, max(fBox(p, vec3(0,.01,0)) - .005, -p.y));  
+    scl = gmTransform(p);
+    d3 = max(fBox(p, vec3(0,.01,0)) - .005, -p.y);  
+    d3 *= scl;
     if (d3 < d2) {
         d2 = d3;
         col = vec3(.01);
@@ -497,7 +505,8 @@ Model map(vec3 p) {
     p.y += sofasz.y;
     float d = fBox(p, vec3(.14,.003,.14));
         
-    Model m2 = Model(d, p, vec3(0.714,0.43,0.19), 2);
+    vec3 uvw = p;
+    Model m2 = Model(d, uvw, vec3(0.714,0.43,0.19), 2);
     if (m2.d < m.d) m = m2;    
     
     return m;
@@ -680,7 +689,7 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     getCamera(origin, rayDir, seed);
 
-    Hit hit = march(origin, rayDir, 1., .9);
+    Hit hit = march(origin, rayDir, 5., .9);
 
     vec3 nor, ref;
     Material material;
