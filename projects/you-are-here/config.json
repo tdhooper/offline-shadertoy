@@ -1,0 +1,21 @@
+{
+  "camera": {
+    "version": "2",
+    "position": [
+      0.288,
+      0.072,
+      0.72
+    ],
+    "rotation": [
+      -0.0458080880343914,
+      0.1905922293663025,
+      0.008903480134904385,
+      0.9805073738098145
+    ]
+  },
+  "freeFlyCameraControl": {
+    "positionSpeed": 1,
+    "rotationSpeed": 0.05
+  },
+  "fov": 3
+}
