@@ -514,11 +514,14 @@ vec4 draw(vec2 fragCoord, int frame) {
     // position on focal plane
     //float focalDistance = length(origin);
     vec3 focalPlanePosition = origin + focalDistance * rayDir / dot(rayDir, cameraForward);
+    origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .01;
 
     rayDir = normalize(focalPlanePosition - origin);
 
     // jitter for antialiasing
     origin += vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView) * focalDistance * fov;
+
+    origin -= rayDir * fov;
 
     #endif
 
