@@ -15,7 +15,7 @@
   },
   "freeFlyCameraControl": {
     "positionSpeed": 1,
-    "rotationSpeed": 0.05
+    "rotationSpeed": 0.03
   },
   "fov": 3
 }
