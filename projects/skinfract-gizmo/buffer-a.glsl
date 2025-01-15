@@ -1,3 +1,14 @@
+#version 300 es
+precision mediump float;
+
+float gmTransform(inout vec3 p, vec3 t, vec4 r, vec3 s) {
+  p -= t;
+  p = mix(dot(r.xyz,p)*r.xyz, p, cos(-r.w))+sin(-r.w)*cross(r.xyz,p);
+  p /= s;
+  return min(s.x, min(s.y, s.z));
+}
+
+
 
 // framebuffer drawcount: 1
 
@@ -11,31 +22,23 @@ uniform int iFrame;
 uniform float iTime;
 uniform vec4 iMouse;
 
-uniform float guiRotPhaseX;
-uniform float guiRotPhaseY;
-uniform float guiRotPhaseZ;
-uniform float guiAnimPhaseX;
-uniform float guiAnimPhaseY;
-uniform float guiAnimPhaseZ;
-uniform float guiOffsetX;
-uniform float guiOffsetY;
-uniform float guiOffsetZ;
+in vec3 eye;
+in vec3 dir;
+in float fov;
+in float aspect;
+in mat4 vView;
 
-varying vec3 eye;
-varying vec3 dir;
-varying float fov;
-varying float aspect;
-varying mat4 vView;
+out vec4 fragColor;
 
 
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
-    mainImage(gl_FragColor, gl_FragCoord.xy);
+    mainImage(fragColor, gl_FragCoord.xy);
 }
 
 //#define ANIMATE
-#define SSS
+//#define SSS
 #define DOF
 
 // Dave_Hoskins https://www.shadertoy.com/view/4djSRW
@@ -135,7 +138,7 @@ vec3 spectrum(float n) {
 }
 
 Material shadeModel(Model model, inout vec3 nor) {
-    //return Material(spectrum(abs(model.albedo.x) / 1.75), .15, .3, false);
+    return Material(spectrum(abs(model.albedo.x) / .5 + .1), .15, .3, false);
     vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
     float flush = smoothstep(-1.75, -.0, model.albedo.x);
     skin += mix(vec3(-.6,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
@@ -148,59 +151,10 @@ Material shadeModel(Model model, inout vec3 nor) {
     return Material(skin, .15, .3, sss);
 }
 
-// IFS from Connor Bell (macbooktall)
-Model mapOriginal(vec3 p) {
-
-    p.y += .12;
-    pR(p.yz, .75);
-
-    float s = .3;
-    p /= s;
-
-    vec3 pp = p;
-
-    float scale = startScale;
-
-    const int iterations = 20;
-
-    float l = 0.;
-    float len = length(p) * spaceAnimFreq*2.;
-
-    float phase = time * PI * 2. + len * -5.0;
-
-    vec3 rotPhase = vec3(guiRotPhaseX, guiRotPhaseY, guiRotPhaseZ) * PI * 2.;
-    vec3 animPhase = vec3(guiAnimPhaseX, guiAnimPhaseY, guiAnimPhaseZ) * PI * 2.;
-    vec3 offset = vec3(guiOffsetX, guiOffsetY, guiOffsetZ);
-
-    vec3 anim = len + rotPhase + sin(phase + animPhase) * animAmp;
- //anim = rotPhase;
-    float orbitTrap = 1e20;
-    for (int i=0; i<iterations; i++) {
-        p.xz = abs(p.zx);
-        p = p * scale - offset;
-        pR(p.xz, anim.x);
-        pR(p.yz, anim.y);
-        pR(p.xy, anim.z);
-        orbitTrap = min(orbitTrap, length(p)-scale);
-    }
-
-    float d = length(p) * pow(scale, -float(iterations));
-
-    p = pp;
-    d = smax(d, -(length(p * vec3(1,1,.75)) - .4), .1);
-
-    d *= s;
-
-
-    return Model(d, p, vec3(orbitTrap), 1);
-}
-
 
 // IFS from Connor Bell (macbooktall)
 Model map(vec3 p) {
 
-    Model m2 = mapOriginal(p);
-
     p.y += .12;
     pR(p.yz, .75);
     float s = .3;
@@ -215,49 +169,19 @@ Model map(vec3 p) {
     float l = 0.;
     float len = length(p) * spaceAnimFreq*2.;
 
-    float phase = time * PI * 2. + len * -5.0;
 
-    vec3 rotPhase = vec3(guiRotPhaseX, guiRotPhaseY, guiRotPhaseZ) * PI * 2.;
-    vec3 animPhase = vec3(guiAnimPhaseX, guiAnimPhaseY, guiAnimPhaseZ) * PI * 2.;
-    vec3 offset = vec3(guiOffsetX, guiOffsetY, guiOffsetZ);
-
-
-
-    vec3 anim = len + rotPhase + sin(phase + animPhase) * animAmp;
-    
-    vec3 animAdditive = len + sin(phase + animPhase) * animAmp;
-
-    // convert to matrix
-
-
-    //anim += .1;
     float orbitTrap = 1e20;
     for (int i=0; i<iterations; i++) {
         p.xz = abs(p.xz);
-        scale *= gmTransform(p, offset, vec4(0.810416043861541,-0.5338526710716723,0.24130304896840715,1.008795906828008), vec3(1./startScale));
+        scale *= gmTransform(p, vec3(0.1382838,0.2379586,0.4521101), vec4(0.9978985,-0.0067933,-0.0644392,1.8742778), vec3(0.6879278,0.6879278,0.6879278));
         orbitTrap = min(orbitTrap, length(p)-(startScale));
-
-        //p.xz = abs(p.zx);
-        //p = p * scale - offset;
-        //gmxTransform(p, vec3(0,0,0), vec4(0.810416043861541,-0.5338526710716723,0.24130304896840715,1.008795906828008), vec3(1,1,1));
-        //pR(p.xz, animAdditive.x);
-        //pR(p.yz, animAdditive.y);
-        //pR(p.xy, animAdditive.z);
-        //orbitTrap = min(orbitTrap, length(p)-scale);
     }
-
-//    float d = length(p) * pow(scale, -float(iterations));
 
     float d = length(p) * scale;
 
     p = pp;
-    //d = smax(d, -(length(p * vec3(1,1,.75)) - .4), .1);
 
     d *= s;
-
-    if (m2.d < d) {
-     //   return m2;
-    }
 
     return Model(d, p, vec3(orbitTrap), 1);
 
@@ -297,8 +221,11 @@ struct Hit {
     vec3 pos;
 };
 
+float closestRayLen;
+
 Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
 
+    float mind = 1e12;
     vec3 rayPosition;
     float rayLength, dist = 0.;
     Model model;
@@ -307,6 +234,12 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
         rayPosition = origin + rayDirection * rayLength;
         model = map(rayPosition);
         rayLength += model.d * understep;
+
+        if (model.d < mind)
+        {
+            mind = model.d;
+            closestRayLen = rayLength;
+        }
 
         if (model.d < .0002) break;
 
@@ -448,6 +381,46 @@ vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, inout vec2 se
     return col;
 }
 
+void getCamera(out vec3 origin, out vec3 rayDir, vec2 seed) {
+    origin = eye;
+    rayDir = normalize(dir);
+
+    #ifdef DOF
+
+    // position on sensor plane
+    vec3 cameraForward = -transpose(vView)[2].xyz;
+    Hit dofHit = march(origin, cameraForward, 100., .5);
+    float focalDistance = closestRayLen - fov;
+
+    float focalPlaneOffset = dot(rayDir, cameraForward) / fov;
+    origin = origin + rayDir / focalPlaneOffset;
+
+    // position on focal plane
+    vec3 focalPlanePosition = origin + focalDistance * rayDir / dot(rayDir, cameraForward);
+    origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .05;
+
+    rayDir = normalize(focalPlanePosition - origin);
+
+    // jitter for antialiasing
+    origin += vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView) * focalDistance * fov;
+
+    origin -= rayDir / focalPlaneOffset;
+
+    #else
+
+    // position on sensor plane
+    vec3 cameraForward = -transpose(vView)[2].xyz;
+    float focalPlaneOffset = dot(rayDir, cameraForward);
+    vec3 p = origin + rayDir / focalPlaneOffset;
+
+    // jitter for antialiasing
+    p += vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView) * fov;
+    
+    rayDir = normalize(p - origin);
+
+    #endif
+}
+
 const float sqrt3 = 1.7320508075688772;
 
 // main path tracing loop, based on yx's
@@ -479,8 +452,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
     vec3 origin = camPos;
 
-    origin = eye;
-    rayDir = normalize(dir);
+    getCamera(origin, rayDir, seed);
 
     //vec3 origin = eye;
     //vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
@@ -500,11 +472,11 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 bgCol = skyColor;
     bool doSpecular = true;
 
-    const int MAX_BOUNCE = 3;
+    const int MAX_BOUNCE = 2;
     
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
-        hit = march(origin, rayDir, 10., .5);
+        hit = march(origin, rayDir, 5., .5);
    
         if (hit.model.id == 0)
         {
@@ -585,7 +557,7 @@ void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec4 col = draw(fragCoord, iFrame);
    
     if (drawIndex > 0.) {
-        vec4 lastCol = texture2D(previousSample, fragCoord.xy / iResolution.xy);
+        vec4 lastCol = texture(previousSample, fragCoord.xy / iResolution.xy);
         col = mix(lastCol, col, 1. / (drawIndex + 1.));
     }
     

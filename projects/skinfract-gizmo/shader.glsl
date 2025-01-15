@@ -1,12 +1,16 @@
+#version 300 es
+
 precision highp float;
 
 uniform vec2 iResolution;
-uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
+uniform sampler2D iChannel0; // blur-y.glsl filter: linear wrap: clamp
+
+out vec4 fragColor;
 
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
-    mainImage(gl_FragColor, gl_FragCoord.xy);
+    mainImage(fragColor, gl_FragCoord.xy);
 }
 
 #ifdef GL_ES
@@ -24,7 +28,7 @@ vec3 aces(vec3 x) {
 
 void mainImage(out vec4 fragColor, in vec2 fragCoord) {
     vec2 uv = fragCoord.xy / iResolution.xy;
-    vec3 col = texture2D(iChannel0, uv).rgb;
+    vec3 col = texture(iChannel0, uv).rgb;
     
     col = aces(col);
     col = pow( col, vec3(1./2.2) );

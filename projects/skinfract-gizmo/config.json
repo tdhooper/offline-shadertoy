@@ -7,17 +7,22 @@
     "height": 1600
   },
   "camera": {
-    "rotation": [
-      0,
-      0,
-      0,
-      1
-    ],
+    "version": "2",
     "position": [
-      0,
-      0,
-      2.4
+      -1.1413841247558594,
+      0.16313931345939636,
+      0.3477157652378082
+    ],
+    "rotation": [
+      -0.051835622638463974,
+      -0.5746200084686279,
+      -0.03757135197520256,
+      0.8159075975418091
     ]
+  },
+  "freeFlyCameraControl": {
+    "positionSpeed": 1,
+    "rotationSpeed": 0.05
   },
   "fov": 4,
   "timer": {
@@ -36,77 +41,5 @@
   "r": [
     1070,
     1071
-  ],
-  "controls": {
-    "closed": true,
-    "rotPhaseX": {
-      "type": "range",
-      "controller": 11,
-      "step": 0.0005,
-      "min": 0,
-      "max": 1,
-      "value": 0.591
-    },
-    "rotPhaseY": {
-      "type": "range",
-      "controller": 12,
-      "step": 0.0005,
-      "min": 0,
-      "max": 1,
-      "value": 0.366
-    },
-    "rotPhaseZ": {
-      "type": "range",
-      "controller": 13,
-      "step": 0.0005,
-      "min": 0,
-      "max": 1,
-      "value": 0.5005000000000001
-    },
-    "animPhaseX": {
-      "type": "range",
-      "controller": 14,
-      "step": 0.005,
-      "min": -1,
-      "max": 1,
-      "value": -0.42
-    },
-    "animPhaseY": {
-      "type": "range",
-      "controller": 15,
-      "step": 0.005,
-      "min": -1,
-      "max": 1,
-      "value": 0.33
-    },
-    "animPhaseZ": {
-      "type": "range",
-      "controller": 16,
-      "step": 0.005,
-      "min": -1,
-      "max": 1,
-      "value": 0
-    },
-    "offsetX": {
-      "type": "range",
-      "step": 0.005,
-      "min": 0,
-      "max": 1,
-      "value": 0.66
-    },
-    "offsetY": {
-      "type": "range",
-      "step": 0.005,
-      "min": 0,
-      "max": 1,
-      "value": 0.37
-    },
-    "offsetZ": {
-      "type": "range",
-      "step": 0.005,
-      "min": 0,
-      "max": 1,
-      "value": 0.18
-    }
-  }
+  ]
 }
