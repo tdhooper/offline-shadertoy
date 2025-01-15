@@ -126,7 +126,7 @@ Material shadeModel(float rlen, Model model, inout vec3 nor) {
 
 
     float grout = step(model.uvw.y, 0.0002);
-    vec3 albedo = mix(vec3(.5), vec3(.02), grout);
+    vec3 albedo = mix(vec3(.6,.2,.02), vec3(.02), grout);
     float spec = mix(.5, .001, grout);
     float rough = mix(.02, .5, grout);
 
@@ -145,7 +145,7 @@ float time = 0.;
 void deformSkin(inout float d, inout vec3 uvw, vec3 p, float scl, float thin) {
     
     float scl2 = .2125;
-    //scl2 *= gmTransform(p);
+    scl2 *= gmTransform(p);
 
     p /= scl2;
 
@@ -215,15 +215,19 @@ Model skinbox(vec3 p) {
     float scl2 = scl;
     
     p2 = p - vec3(0,.1,0);
-    scl2 = scl * gmTransform(p2, vec3(0.2851654,-0.2848229,0.0443381), vec4(1,0,0,0), vec3(0.8952506,0.8952506,0.8952506));
+    scl2 = scl * gmTransform(p2, vec3(0.2301247,-0.2733274,0.012867), vec4(0,-1,0,0.2881141), vec3(0.9059986,0.9059986,1.3178235));
     d = (length(p2) - .1) * scl2;
 
     p2 = p - vec3(.1,0,0);
-    scl2 = scl * gmTransform(p2, vec3(0.1806653,-0.0465484,-0.0252968), vec4(1,0,0,0), vec3(0.5306148,0.5306148,0.5306148));
+    scl2 = scl * gmTransform(p2, vec3(0.1339884,-0.0465484,-0.0252968), vec4(-0.6414635,0.7654597,-0.0509522,1.3963444), vec3(0.1676831,0.7112394,0.1676831));
     d = smin(d, (length(p2) - .1) * scl2, .1);
 
     p2 = p - vec3(0,0,.1);
-    scl2 = scl * gmTransform(p2, vec3(0.2114407,-0.183688,0.212116), vec4(1,0,0,0), vec3(1.1116613,1.1116613,1.1116613));
+    scl2 = scl * gmTransform(p2, vec3(0.2114407,-0.1575677,0.3151726), vec4(1,0,0,0.296111), vec3(1.3055332,1.3055332,2.9995362));
+    d = smin(d, (length(p2) - .1) * scl2, .1);
+
+    p2 = p - vec3(0,0,.1);
+    scl2 = scl * gmTransform(p2, vec3(0.358021,-0.0245918,-0.1457349), vec4(-0.4970435,0.7628595,-0.4135131,0.9145374), vec3(0.1676831,0.7112394,0.1676831));
     d = smin(d, (length(p2) - .1) * scl2, .1);
 
     d *= scl;
