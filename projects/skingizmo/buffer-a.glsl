@@ -124,31 +124,11 @@ Material shadeModel(float rlen, Model model, inout vec3 nor) {
         return Material(skin, .005, .2, true);
     }
 
-    model.uvw /= .25 * .85;
 
-    vec3 floorAlbedo = vec3(0.50,0.70,1.00);
-    vec3 albedo = floorAlbedo * .05;
-    float spec = .02;
-    float rough = .3;
-
-    float px = .0005 * rlen;
-    px = 0.;
-    float w = .003;
-    float sp = 1.;
-    float line = (1. - (  (abs(mod(model.uvw.x + sp / 2., sp) - sp / 2.) - w) / px  ));
-    line = max(line, (1. - (  (abs(mod(model.uvw.z + sp / 2., sp) - sp / 2.) - w) / px  )));
-    line = clamp(line, 0., 1.);
-    spec = mix(spec, .1, line);
-    albedo = mix(albedo, floorAlbedo * .1, line);
-    float line2 = line;
-
-    w /= 4.;
-    sp /= 8.;
-    line = (1. - (  (abs(mod(model.uvw.x + sp / 2., sp) - sp / 2.) - w) / px  ));
-    line = max(line, (1. - (  (abs(mod(model.uvw.z + sp / 2., sp) - sp / 2.) - w) / px  )));
-    line = clamp(line, 0., 1.);
-    spec = mix(spec, .1, line);
-    albedo = mix(albedo, floorAlbedo * .0666, line * (1.-line2));
+    float grout = step(model.uvw.y, 0.0002);
+    vec3 albedo = mix(vec3(.5), vec3(.02), grout);
+    float spec = mix(.5, .001, grout);
+    float rough = mix(.02, .5, grout);
 
     return Material(albedo, spec, rough, false);
 }
@@ -164,7 +144,10 @@ float time = 0.;
 
 void deformSkin(inout float d, inout vec3 uvw, vec3 p, float scl, float thin) {
     
-    p /= .2125;
+    float scl2 = .2125;
+    //scl2 *= gmTransform(p);
+
+    p /= scl2;
 
     vec3 p3 = p * 30.;
     pR45(p3.xy);
@@ -204,11 +187,11 @@ void deformSkin(inout float d, inout vec3 uvw, vec3 p, float scl, float thin) {
     w *= thin;
             
     if (abs(d) < .1) {
-        d += l * .2125 * scl;
+        d += l * scl2 * scl;
     }
     
     if (abs(d) < .01) {
-        d += w * 600. * .2125 * scl;
+        d += w * 600. * scl2 * scl;
     }
     
 }
@@ -219,6 +202,9 @@ Model skinbox(vec3 p) {
 
     float scl = 1.;
 
+    float f = p.y;
+
+    p.y -= .2;
 
     vec3 pp = p;
     vec3 uvw = p;
@@ -229,15 +215,15 @@ Model skinbox(vec3 p) {
     float scl2 = scl;
     
     p2 = p - vec3(0,.1,0);
-    scl2 = scl * gmTransform(p2, vec3(0.3244217,-0.0338398,0.1749579), vec4(1,0,0,0), vec3(0.8952506,0.8952506,0.8952506));
+    scl2 = scl * gmTransform(p2, vec3(0.2851654,-0.2848229,0.0443381), vec4(1,0,0,0), vec3(0.8952506,0.8952506,0.8952506));
     d = (length(p2) - .1) * scl2;
 
     p2 = p - vec3(.1,0,0);
-    scl2 = scl * gmTransform(p2, vec3(-0.0137466,-0.0892151,0.0981083), vec4(1,0,0,0), vec3(0.5306148,0.5306148,0.5306148));
+    scl2 = scl * gmTransform(p2, vec3(0.1806653,-0.0465484,-0.0252968), vec4(1,0,0,0), vec3(0.5306148,0.5306148,0.5306148));
     d = smin(d, (length(p2) - .1) * scl2, .1);
 
     p2 = p - vec3(0,0,.1);
-    scl2 = scl * gmTransform(p2, vec3(0.2137462,0.1401991,0.2364844), vec4(1,0,0,0), vec3(1.1116613,1.1116613,1.1116613));
+    scl2 = scl * gmTransform(p2, vec3(0.2114407,-0.183688,0.212116), vec4(1,0,0,0), vec3(1.1116613,1.1116613,1.1116613));
     d = smin(d, (length(p2) - .1) * scl2, .1);
 
     d *= scl;
@@ -245,18 +231,56 @@ Model skinbox(vec3 p) {
     float thin = smoothstep(.3, .5, length(p.yz));
     thin = 1.;
 
-    p = pp;    
+    p = pp;
+
+    float d2 = d;
+    d = smin(d, f, .15);
+    d = smax(d, d2 - .05, .005);
 
     deformSkin(d, uvw, p, scl, thin);
-    
+
+    d = smax(d, -f, .025);
+
     p = pp;
     return Model(d, uvw, 1, 1.);
 }
 
 Model map(vec3 p) {
+
+    p.y += .2;
+
     Model m = skinbox(p);
 
-    float d = p.y + .5 * .25 * .85;   
+
+    float tile = .2;
+    vec2 c = floor(p.xz / tile);
+    p.xz -= (c + .5) * tile;
+    vec2 rnd = hash22(c) - .5;
+    
+    vec3 p2 = p + rnd.x;
+    pR(p2.xz, rnd.y * PI);
+
+    p2 /= 5.;
+    float o = sin(sin(dot(p2, vec3(1.23,0,-.6)) * 15.) * 5.);
+    o *= sin(dot(p2, vec3(1.,0,-1.66)) * 25.);
+    o *= sin(dot(p2, vec3(-1.21,0,-1.)) * 32.);
+
+    p2 *= 3.;
+    float o2 = sin(sin(dot(p2, vec3(1.23,0,-.6)) * 15.) * 5.);
+    o2 *= sin(dot(p2, vec3(1.,0,-1.66)) * 25.);
+    o2 *= sin(dot(p2, vec3(-1.21,0,-1.)) * 32.);
+
+    vec3 p3 = p;
+    pR(p3.zy, rnd.x * .015);
+    pR(p3.xy, rnd.y * .015);
+
+    float d = fBox(p3, vec2(tile / 2. - .004 - .0015, .01).xyx) - .004 - o * .0005 - o2 * .0002;
+
+    p.y -= .012;
+    float d2 = p.y;
+
+    d = min(d, d2);
+
     Model m2 = Model(d, p, 2, 1.);
 
     if (m2.d < m.d) {
