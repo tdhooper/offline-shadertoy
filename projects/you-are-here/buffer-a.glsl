@@ -339,6 +339,8 @@ vec3 sofasz = vec3(.2, .1, .1) / 2.;
     
 Model fSofa(vec3 p) {
     
+    vec3 ppp = p;
+
     p += sum(sin(erot(p, vec3(1), 1.) * 6000.)) * .000015;
     
     float fade, d2, d3, d4, ar, armang, ar0, ar1, arw, footh, psx, vary, baseh, cs, cr, axisx, axisz, crw, seam, buttpatch, br;
@@ -465,14 +467,32 @@ Model fSofa(vec3 p) {
     col.b += .006;
     col = mix(col, mix(col * 1.75, vec3(.2), .04), fade);
 
+    int id = 15;
+
+    p = ppp;
+    p.y += sofasz.y;
+   
+    p.y -= .0015;
+    p.xz = abs(p.xz);
+    p.xz -= sofasz.xz * vec2(.93,.68);
+    d3 = min(d2, max(fBox(p, vec3(0,.01,0)) - .005, -p.y));  
+    if (d3 < d2) {
+        d2 = d3;
+        col = vec3(.01);
+        id = 3;
+    }
+
     return Model(d2, p, col, 15);
 }
 
 
 Model map(vec3 p) {
-    p.x = -p.x;
+    // p.x = -p.x;
 
-    Model m = fSofa(p);
+    vec3 p2 = p;
+    float scl2 = gmTransform(p2);
+    Model m = fSofa(p2);
+    m.d *= scl2;
     
     p.y += sofasz.y;
     float d = fBox(p, vec3(.14,.003,.14));
@@ -480,16 +500,12 @@ Model map(vec3 p) {
     Model m2 = Model(d, p, vec3(0.714,0.43,0.19), 2);
     if (m2.d < m.d) m = m2;    
     
-    p.y -= .0015;
-    p.xz = abs(p.xz);
-    p.xz -= sofasz.xz * vec2(.93,.68);
-    d = min(d, max(fBox(p, vec3(0,.01,0)) - .005, -p.y));  
-    m2 = Model(d, p, vec3(.01), 3);
-    if (m2.d < m.d) m = m2;    
-    
     return m;
 }
 
+float GIZMO_MAP(vec3 p) {
+    return map(p).d;
+}
 
 //========================================================
 // Rendering
