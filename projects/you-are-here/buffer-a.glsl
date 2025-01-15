@@ -496,15 +496,16 @@ Model fSofa(vec3 p) {
 
 Model map(vec3 p) {
     // p.x = -p.x;
+    vec3 pp = p;
 
-    vec3 p2 = p;
-    float scl2 = gmTransform(p2);
-    Model m = fSofa(p2);
-    m.d *= scl2;
-    
+    float scl = gmTransform(p);
+    Model m = fSofa(p);
+    m.d *= scl;
+
+    p = pp;
     p.y += sofasz.y;
-    float d = fBox(p, vec3(.14,.003,.14));
-        
+    scl = gmTransform(p);
+    float d = fBox(p, vec3(.14,.003,.14)) * scl;
     vec3 uvw = p;
     Model m2 = Model(d, uvw, vec3(0.714,0.43,0.19), 2);
     if (m2.d < m.d) m = m2;    
