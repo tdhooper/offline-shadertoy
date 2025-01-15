@@ -615,10 +615,15 @@ void getCamera(out vec3 origin, out vec3 rayDir, vec2 seed) {
 
     #else
 
+    // position on sensor plane
+    vec3 cameraForward = -transpose(vView)[2].xyz;
+    float focalPlaneOffset = dot(rayDir, cameraForward);
+    vec3 p = origin + rayDir / focalPlaneOffset;
+
     // jitter for antialiasing
-    vec3 aa = vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView) * fov * .5;
-    origin += aa;
-    rayDir += aa;
+    p += vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView) * fov;
+    
+    rayDir = normalize(p - origin);
 
     #endif
 }
