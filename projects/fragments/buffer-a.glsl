@@ -435,6 +435,42 @@ vec2 rndunit2(vec2 seed ) {
 	return r*vec2(sin(phi),cos(phi));
 }
 
+#define DOF;
+
+void getCamera(out vec3 origin, out vec3 rayDir, vec2 seed, float coc) {
+    origin = eye;
+    rayDir = normalize(dir);
+
+    vec3 cameraForward = -transpose(vView)[2].xyz;
+
+    // position on screen
+    vec3 p = origin + rayDir / dot(rayDir, cameraForward) / fov;
+
+    // jitter for antialiasing
+    p += vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView);
+    rayDir = normalize(p - origin);
+
+    #ifdef DOF
+
+    // position on focal plane
+    Hit dofHit = march(origin, cameraForward, 50.);
+    float focalDistance = length(origin - dofHit.pos);
+    vec3 focalPlanePosition = origin + rayDir / dot(rayDir, cameraForward) * focalDistance;
+    
+    // position on sensor plane
+    vec3 sensorPlanePosition = origin - (p - origin);
+    sensorPlanePosition += vec3(rndunit2(seed), 0.) * mat3(vView) * coc;
+
+    rayDir = normalize(focalPlanePosition - sensorPlanePosition);
+    origin = sensorPlanePosition + rayDir / dot(rayDir, cameraForward) / fov;
+
+    #else
+
+    origin = p - rayDir / dot(rayDir, cameraForward) / fov;
+
+    #endif
+}
+
 vec4 draw(vec2 fragCoord) {
 
     vec2 seed = hash22(fragCoord + (float(iFrame)) * sqrt3);
@@ -452,7 +488,6 @@ vec4 draw(vec2 fragCoord) {
     vec3 camPos = vec3(0, 0, 1.5) * focalLength;
     vec3 camTar = vec3(0, 0, 0);
     
-    // DOF
     camPos.xy += rndcircle(seed) * .05;
     seed = hash22(seed);
     
@@ -464,18 +499,7 @@ vec4 draw(vec2 fragCoord) {
     vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
     vec3 origin = camPos;
 
-    origin = eye;
-    rayDir = normalize(dir);
-
-    // position on sensor plane
-    vec3 cameraForward = -transpose(vView)[2].xyz;
-    origin = origin + rayDir / dot(rayDir, cameraForward) * fov;
-    
-    // position on focal plane
-    float focalDistance = length(origin);
-    vec3 focalPlanePosition = origin + focalDistance * rayDir / dot(rayDir, cameraForward);
-    origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .05;
-    rayDir = normalize(focalPlanePosition - origin);
+    getCamera(origin, rayDir, seed, .05);
 
     Hit hit = march(origin, rayDir, 4. * focalLength);
 

@@ -381,45 +381,41 @@ vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, inout vec2 se
     return col;
 }
 
-void getCamera(out vec3 origin, out vec3 rayDir, vec2 seed) {
+void getCamera(out vec3 origin, out vec3 rayDir, vec2 seed, float coc) {
     origin = eye;
     rayDir = normalize(dir);
 
-    #ifdef DOF
-
-    // position on sensor plane
     vec3 cameraForward = -transpose(vView)[2].xyz;
-    Hit dofHit = march(origin, cameraForward, 100., .5);
-    float focalDistance = closestRayLen - fov;
 
-    float focalPlaneOffset = dot(rayDir, cameraForward) / fov;
-    origin = origin + rayDir / focalPlaneOffset;
-
-    // position on focal plane
-    vec3 focalPlanePosition = origin + focalDistance * rayDir / dot(rayDir, cameraForward);
-    origin = origin + vec3(rndunit2(seed), 0.) * mat3(vView) * .05;
-
-    rayDir = normalize(focalPlanePosition - origin);
+    // position on screen
+    vec3 p = origin + rayDir / dot(rayDir, cameraForward) / fov;
 
     // jitter for antialiasing
-    origin += vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView) * focalDistance * fov;
+    p += vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView);
+    rayDir = normalize(p - origin);
 
-    origin -= rayDir / focalPlaneOffset;
+    #ifdef DOF
+
+    // position on focal plane
+    Hit dofHit = march(origin, cameraForward, 100., .5);
+    //float focalDistance = length(origin - dofHit.pos);
+    float focalDistance = closestRayLen;
+    vec3 focalPlanePosition = origin + rayDir / dot(rayDir, cameraForward) * focalDistance;
+    
+    // position on sensor plane
+    vec3 sensorPlanePosition = origin - (p - origin);
+    sensorPlanePosition += vec3(rndunit2(seed), 0.) * mat3(vView) * coc;
+
+    rayDir = normalize(focalPlanePosition - sensorPlanePosition);
+    origin = sensorPlanePosition + rayDir / dot(rayDir, cameraForward) / fov;
 
     #else
 
-    // position on sensor plane
-    vec3 cameraForward = -transpose(vView)[2].xyz;
-    float focalPlaneOffset = dot(rayDir, cameraForward);
-    vec3 p = origin + rayDir / focalPlaneOffset;
-
-    // jitter for antialiasing
-    p += vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView) * fov;
-    
-    rayDir = normalize(p - origin);
+    origin = p - rayDir / dot(rayDir, cameraForward) / fov;
 
     #endif
 }
+
 
 const float sqrt3 = 1.7320508075688772;
 
@@ -452,7 +448,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
     vec3 origin = camPos;
 
-    getCamera(origin, rayDir, seed);
+    getCamera(origin, rayDir, seed, .5);
 
     //vec3 origin = eye;
     //vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
