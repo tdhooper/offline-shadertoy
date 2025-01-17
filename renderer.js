@@ -36,7 +36,9 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
   
   ctx.gl.getExtension("EXT_frag_depth");
 
-  //ctx.debug(true);
+  if (new URL(document.location.toString()).searchParams.has('debug')) {
+    ctx.debug(true);
+  }
 
   //ctx.set({pixelRatio: .5});
 
