@@ -40,7 +40,7 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
     ctx.debug(true);
   }
 
-  //ctx.set({pixelRatio: .5});
+  // ctx.set({pixelRatio: .5});
 
   self.ctx = ctx;
 
@@ -104,13 +104,7 @@ export default function createRenderer(project, canvas, gizmoRendererHooks, cont
       //console.log(mouseProp[0] / context.viewportWidth, mouseProp[1] / context.viewportHeight);
       return mouseProp;
     },
-    projection: (context, props) => mat4.perspective(
-      [],
-      1 / props.cameraFov,
-      context.viewportWidth / context.viewportHeight,
-      0.01,
-      1000
-    ),
+    projection: pexHelpers.cmdProp('cameraProjection'),
     view: pexHelpers.cmdProp('view'),
   };
 

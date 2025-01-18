@@ -59,11 +59,10 @@ export default async function main(project) {
   document.body.appendChild(stats.dom);
   stats.dom.classList.add('stats');
 
-  const fov = (defaultState && defaultState.fov) || 1 / (Math.PI / 5);
-
   const mouse = createMouse(canvasInteractionObject);
 
   const camera = new Camera();
+  camera.aspect = window.innerWidth / window.innerHeight;
   const freeFlyCameraControl = new FreeFlyCameraControl(camera, canvasInteractionObject);
 
   window.camera = camera;
@@ -91,12 +90,11 @@ export default async function main(project) {
 
   const toState = () => {
     const state = {
-      camera: camera.toState(),
       freeFlyCameraControl: freeFlyCameraControl.toState(),
       view: camera.view(),
       cameraMatrix: camera.matrix(),
       cameraPosition: camera.position,
-      cameraFov: fov,
+      cameraProjection: camera.projection(),
       timer: timer.serialize(),
       mouse: mouse.toState(),
       screenQuad,
@@ -104,6 +102,9 @@ export default async function main(project) {
       debugPlane,
       frame: 0,
     };
+    if (camera) {
+      Object.assign(state, camera.toState());
+    }
     if (accumulateControl) {
       Object.assign(state, accumulateControl.toState());
     }
@@ -117,10 +118,8 @@ export default async function main(project) {
   };
 
   const fromState = (state) => {
-    if (state.camera) {
-      camera.fromState(state.camera);
-    } else if (state.cameraMatrix) {
-      camera.fromState(state.cameraMatrix);
+    if (camera) {
+      camera.fromState(state);
     }
     freeFlyCameraControl.resetSimulation();
     if (state.freeFlyCameraControl) {
@@ -154,6 +153,7 @@ export default async function main(project) {
     canvases.style.width = window.innerWidth + 'px';
     canvases.style.height = window.innerHeight + 'px';
     renderer.resize(window.innerWidth, window.innerHeight);
+    camera.aspect = window.innerWidth / window.innerHeight;
   }
 
   window.addEventListener('resize', resize);
