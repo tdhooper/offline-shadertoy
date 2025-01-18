@@ -18,12 +18,12 @@ uniform mat4 debugPlaneMatrix;
 uniform sampler2D iChannel0; // images/blue-noise.png filter: linear wrap: repeat
 uniform vec2 iChannel0Size;
 
-out vec4 fragColor;
+out vec4 fragColorx;
 
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
-    mainImage(fragColor, gl_FragCoord.xy);
+    mainImage(fragColorx, gl_FragCoord.xy);
 }
 
 

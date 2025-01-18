@@ -7,12 +7,12 @@ uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
 uniform sampler2D iChannel1; // images/blue-noise.png filter: linear wrap: clamp
 uniform vec2 iChannel1Size;
 
-out vec4 fragColor;
+out vec4 fragColorx;
 
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
-    mainImage(fragColor, gl_FragCoord.xy);
+    mainImage(fragColorx, gl_FragCoord.xy);
 }
 
 #ifdef GL_ES
