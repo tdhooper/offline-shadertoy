@@ -16,12 +16,12 @@ in float fov;
 in float aspect;
 in mat4 vView;
 
-out vec4 fragColor;
+out vec4 fragColorOut;
 
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
-    mainImage(fragColor, gl_FragCoord.xy + iOffset.xy);
+    mainImage(fragColorOut, gl_FragCoord.xy + iOffset.xy);
 }
 
 #ifdef GL_ES

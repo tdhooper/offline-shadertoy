@@ -7,12 +7,12 @@ uniform sampler2D iChannel0; // blur-y.glsl filter: linear wrap: clamp
 uniform sampler2D iChannel1; // buffer-a.glsl filter: linear wrap: clamp
 uniform int drawIndex;
 
-out vec4 fragColor;
+out vec4 fragColorOut;
 
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
-    mainImage(fragColor, gl_FragCoord.xy);
+    mainImage(fragColorOut, gl_FragCoord.xy);
 }
 
 #ifdef GL_ES

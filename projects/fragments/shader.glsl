@@ -8,12 +8,12 @@ uniform float iGlobalTime;
 uniform vec4 iMouse;
 uniform sampler2D iChannel0; // buffer-a.glsl filter: linear wrap: clamp
 
-out vec4 fragColor;
+out vec4 fragColorOut;
 
 void mainImage(out vec4 a, in vec2 b);
 
 void main() {
-    mainImage(fragColor, gl_FragCoord.xy + iOffset.xy);
+    mainImage(fragColorOut, gl_FragCoord.xy + iOffset.xy);
 }
 
 #ifdef GL_ES
