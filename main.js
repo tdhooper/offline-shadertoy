@@ -141,11 +141,7 @@ export default async function main(project) {
   };
 
   window.resetCamera = function() {
-    if (defaultState.camera) {
-      camera.fromState(defaultState.camera);
-    } else if (defaultState.cameraMatrix) {
-      camera.fromState(defaultState.cameraMatrix);
-    }
+    camera.fromState(defaultState);
     freeFlyCameraControl.resetSimulation();
   }
 
