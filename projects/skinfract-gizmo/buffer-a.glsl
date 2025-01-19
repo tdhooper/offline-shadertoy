@@ -138,9 +138,9 @@ vec3 spectrum(float n) {
 }
 
 Material shadeModel(Model model, inout vec3 nor) {
-    return Material(spectrum(abs(model.albedo.x) / .5 + .1), .15, .3, false);
+    return Material(spectrum(model.albedo.x * 2.), .15, .3, false);
     vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
-    float flush = smoothstep(-1.75, -.0, model.albedo.x);
+    float flush = smoothstep(.5, .6, abs(model.albedo.x));
     skin += mix(vec3(-.6,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
     skin *= vec3(1.1,.8,.7);
     skin = clamp(skin, vec3(0,0,0), vec3(1,1,1));
@@ -164,7 +164,7 @@ Model map(vec3 p) {
     float orbitTrap = 1e20;
     for (int i=0; i<iterations; i++) {
         p.xz = abs(p.xz);
-        scale *= gmTransform(p, vec3(0.1382838,0.2379586,0.4521101), vec4(0.9978985,-0.0067933,-0.0644392,1.8742778), vec3(0.6879278,0.6879278,0.6879278));
+        scale *= gmTransform(p, vec3(0.10164556168322025, 0.1531936142180278, 0.4445725737602564), vec4(-0.7084094967332603, -0.6534381469761232, 0.266785631199543, 4.955217398967592), vec3(0.6752857520548219));
         orbitTrap = min(orbitTrap, length(p)-(startScale));
     }
 
