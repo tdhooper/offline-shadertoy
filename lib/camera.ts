@@ -15,10 +15,12 @@ export class Camera {
 
   toState(): any {
     return {
-      version: this.version,
-      position: Array.from(this.position),
-      rotation: Array.from(this.rotation),
-      fov: this.fov,
+      camera: {
+        version: this.version,
+        position: Array.from(this.position),
+        rotation: Array.from(this.rotation),
+        fov: this.fov,
+      }
     };
   }
 
