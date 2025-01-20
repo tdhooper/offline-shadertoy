@@ -155,20 +155,11 @@ Material shadeModel(Model model, inout vec3 nor) {
 // IFS from Connor Bell (macbooktall)
 Model map(vec3 p) {
 
-    p.y += .12;
-    pR(p.yz, .75);
-    float s = .3;
-    p /= s;
+    float scale = 1.;
 
-    vec3 pp = p;
-
-    float scale = startScale;
+    scale *= gmTransform(p, vec3(0, -.12, 0), vec4(1,0,0,.75), vec3(.3));
 
     const int iterations = 20;
-
-    float l = 0.;
-    float len = length(p) * spaceAnimFreq*2.;
-
 
     float orbitTrap = 1e20;
     for (int i=0; i<iterations; i++) {
@@ -178,11 +169,7 @@ Model map(vec3 p) {
     }
 
     float d = length(p) * scale;
-
-    p = pp;
-
-    d *= s;
-
+    
     return Model(d, p, vec3(orbitTrap), 1);
 
 }
@@ -397,7 +384,7 @@ void getCamera(out vec3 origin, out vec3 rayDir, vec2 seed, float coc) {
     #ifdef DOF
 
     // position on focal plane
-    Hit dofHit = march(origin, cameraForward, 100., .5);
+    Hit dofHit = march(origin, cameraForward, 100., 1.);
     //float focalDistance = length(origin - dofHit.pos);
     float focalDistance = closestRayLen;
     vec3 focalPlanePosition = origin + rayDir / dot(rayDir, cameraForward) * focalDistance;
@@ -472,7 +459,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
-        hit = march(origin, rayDir, 5., .5);
+        hit = march(origin, rayDir, 5., 1.);
    
         if (hit.model.id == 0)
         {
