@@ -307,7 +307,7 @@ Hit walkOnSpheres(vec3 origin, vec3 normal, float startdepth, inout vec2 seed) {
     for (int v = 0; v < 250; v++) {
         model = map(origin);
 
-        if (abs(model.d) < .00002) break;
+        if (abs(model.d) < .0002) break;
         
         vec2 lastSeed = seed;
         seed = hash22(seed);
@@ -500,7 +500,7 @@ vec4 draw(vec2 fragCoord, int frame) {
         bool doSSS = material.sss && bounce < 1 && ! doSpecular;
         if (doSSS) {
             seed = hash22(seed);
-            doSSS = hash12(seed) < .8;
+            doSSS = hash12(seed) < .5;
         }
         
         if ( ! doSpecular) {
@@ -512,16 +512,16 @@ vec4 draw(vec2 fragCoord, int frame) {
             origin = hit.pos;
             
             seed = hash22(seed);
-            hit = walkOnSpheres(origin, nor, .05, seed);
+            hit = walkOnSpheres(origin, nor, .0005, seed);
             nor = calcNormal(hit.pos);
 
             float extinctionDist = distance(origin, hit.pos) * 10.;
             vec3 extinctionCol = material.albedo;
-            extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .5), vec3(1,0,0), clamp(extinctionDist - 1., 0., 1.));
+            //extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .5), vec3(1,0,0), clamp(extinctionDist - 1., 0., 1.));
             vec3 extinction = (1. - extinctionCol);
             extinction = 1. / (1. + (extinction * extinctionDist));	
             extinction = clamp(extinction, vec3(0), vec3(1));
-            throughput *= extinction;
+            //throughput *= material.albedo;
         }
 
         // Calculate diffuse ray direction
