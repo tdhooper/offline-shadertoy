@@ -157,14 +157,22 @@ Model map(vec3 p) {
 
     float scale = 1.;
 
-    scale *= gmTransform(p, vec3(0, -.12, 0), vec4(1,0,0,.75), vec3(.3));
+    scale *= gmTransform(p, vec3(-0.008413,-0.1313171,0.0191645), vec4(0.8826203,0.2498212,-0.3982095,2.1572568), vec3(0.3,0.3,0.3));
 
     const int iterations = 20;
+
+    vec3 p2 = p;
+    gmTransform(p2);
+    float len = length(p2);
+    vec3 anim = sin(vec3(len * 200.) + iTime) * .001;
 
     float orbitTrap = 1e20;
     for (int i=0; i<iterations; i++) {
         p.xz = abs(p.xz);
-        scale *= gmTransform(p, vec3(0.10164556168322025, 0.1531936142180278, 0.4445725737602564), vec4(-0.7084094967332603, -0.6534381469761232, 0.266785631199543, 4.955217398967592), vec3(0.6752857520548219));
+        pR(p.xz, anim.x);
+        pR(p.yz, anim.y);
+        pR(p.xy, anim.z);
+        scale *= gmTransform(p, vec3(0.2493258,0.8562976,-0.0111091), vec4(-0.9764956,0.0815134,0.1995294,4.4621497), vec3(0.6925212,0.6925212,0.6925212));
         orbitTrap = min(orbitTrap, length(p)-(startScale));
     }
 
@@ -217,7 +225,7 @@ Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
     float rayLength, dist = 0.;
     Model model;
 
-    for (int i = 0; i < 400; i++) {
+    for (int i = 0; i < 800; i++) {
         rayPosition = origin + rayDirection * rayLength;
         model = map(rayPosition);
         rayLength += model.d * understep;
@@ -391,7 +399,7 @@ void getCamera(out vec3 origin, out vec3 rayDir, vec2 seed, float coc) {
     
     // position on sensor plane
     vec3 sensorPlanePosition = origin - (p - origin);
-    sensorPlanePosition += vec3(rndunit2(seed), 0.) * mat3(vView) * coc;
+    sensorPlanePosition += vec3(rndunit2(seed), 0.) * mat3(vView) * coc / fov * .1;
 
     rayDir = normalize(focalPlanePosition - sensorPlanePosition);
     origin = sensorPlanePosition + rayDir / dot(rayDir, cameraForward) / fov;
@@ -414,6 +422,7 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
     
+    float crosshair = 1. - clamp(min(abs(p.x), abs(p.y)) / fwidth(length(p)), 0., 1.);
     //p *= .85;
 
     vec2 seed = hash22(fragCoord + (float(frame)) * sqrt3);
@@ -455,7 +464,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 bgCol = skyColor;
     bool doSpecular = true;
 
-    const int MAX_BOUNCE = 2;
+    const int MAX_BOUNCE = 3;
     
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
    
@@ -527,6 +536,8 @@ vec4 draw(vec2 fragCoord, int frame) {
         // offset from sufrace https://www.shadertoy.com/view/lsXGzH
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
     }
+
+   // col = mix(col, vec3(1), crosshair);
 
     return vec4(col, 1);
 }

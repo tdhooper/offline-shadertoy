@@ -1,46 +1,35 @@
 {
   "id": "skinfract51",
+  "freeFlyCameraControl": {
+    "positionSpeed": 0.25,
+    "tiltSpeed": 10,
+    "rotationSpeed": 0.025,
+    "shiftModifier": 10,
+    "up": [
+      -0.93730724186377,
+      0.24149232608053425,
+      -0.25126984820451526
+    ]
+  },
+  "camera": {
+    "version": "3",
+    "position": [
+      -0.1376347839832306,
+      -0.27322229743003845,
+      0.4128005802631378
+    ],
+    "rotation": [
+      0.38321733474731445,
+      0.3594229221343994,
+      -0.4791284501552582,
+      -0.7032116055488586
+    ],
+    "fov": 8
+  },
   "capture": {
     "fps": 30,
     "seconds": 6,
     "width": 1600,
     "height": 1600
-  },
-  "camera": {
-    "version": "3",
-    "position": [
-      -2.433187961578369,
-      -0.4807361364364624,
-      -1.141963005065918
-    ],
-    "rotation": [
-      0.1582493782043457,
-      -0.8407359719276428,
-      -0.01765633001923561,
-      0.517663300037384
-    ],
-    "fov": 4
-  },
-  "freeFlyCameraControl": {
-    "positionSpeed": 1,
-    "rotationSpeed": 0.05
-  },
-  "fov": 4,
-  "timer": {
-    "running": false,
-    "elapsed": 16530
-  },
-  "accumulateControl": {
-    "accumulate": false
-  },
-  "mouse": [
-    691,
-    680,
-    false,
-    0
-  ],
-  "r": [
-    1070,
-    1071
-  ]
+  }
 }
