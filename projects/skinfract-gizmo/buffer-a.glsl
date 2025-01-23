@@ -162,22 +162,35 @@ Model map(vec3 p) {
     const int iterations = 20;
 
     vec3 p2 = p;
-    gmTransform(p2);
+    vec3 k = vec3(-0.8722401,0.8990644,0.1662894);
+    p2 -= k;
     float len = length(p2);
-    vec3 anim = sin(vec3(len * 200.) + iTime) * .001;
+    vec3 anim = sin(vec3(len * 75.) - iTime);
+
+    float gg = (length(p2) - .001) * scale;
 
     float orbitTrap = 1e20;
     for (int i=0; i<iterations; i++) {
+        
+        float sl = 1. + anim.x;
+        //if (i == iterations - 2) {
+            float a = pow(float(i) / float(iterations - 1), 8.) * .25;
+            pR(p.xy, anim.z * a);
+            //pR(p.xz, anim.x * a);
+            pR(p.yz, anim.y * a);
+        //}
         p.xz = abs(p.xz);
-        pR(p.xz, anim.x);
-        pR(p.yz, anim.y);
-        pR(p.xy, anim.z);
+        
+        //p /= sl;
+        //scale *= sl;
         scale *= gmTransform(p, vec3(0.2493258,0.8562976,-0.0111091), vec4(-0.9764956,0.0815134,0.1995294,4.4621497), vec3(0.6925212,0.6925212,0.6925212));
         orbitTrap = min(orbitTrap, length(p)-(startScale));
     }
 
     float d = length(p) * scale;
     
+    //d = min(d, gg);
+
     return Model(d, p, vec3(orbitTrap), 1);
 
 }
