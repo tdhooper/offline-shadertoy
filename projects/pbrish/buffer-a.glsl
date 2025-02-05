@@ -114,18 +114,20 @@ struct Model {
 
 Material shadeModel(Model model, inout vec3 nor) {
     
-    vec3 albedo = vec3(.5);
+    vec3 albedo = vec3(.01);
     vec3 specularColor = vec3(1);
 
-    if (model.uvw.z == 5.) albedo = vec3(.5,0,0);
-    if (model.uvw.z == 4.) albedo = vec3(0,.5,0);
-    if (model.uvw.z == 3.) albedo = vec3(0,0,.5);
+    if (model.uvw.z == 0.) albedo = vec3(1);
+
+    if (model.uvw.z == 2.) albedo = vec3(.3,0,0);
+    if (model.uvw.z == 3.) albedo = vec3(0,.3,0);
+    if (model.uvw.z == 4.) albedo = vec3(0,0,.3);
 
     if (model.uvw.z == 5.) specularColor = vec3(1,0,0);
-    if (model.uvw.z == 4.) specularColor = vec3(0,1,0);
-    if (model.uvw.z == 3.) specularColor = vec3(0,0,1);
+    if (model.uvw.z == 6.) specularColor = vec3(0,1,0);
+    if (model.uvw.z == 7.) specularColor = vec3(0,0,1);
 
-    float roughness = model.uvw.x / 3.;
+    float roughness = max(0.001, model.uvw.x / 3.);
     float metalness = model.uvw.y / 3.;
 
     return Material(albedo, specularColor, roughness, metalness);
@@ -133,15 +135,16 @@ Material shadeModel(Model model, inout vec3 nor) {
 
 Model map(vec3 p) {
 
-    vec3 count = vec3(4,4,7);
+    vec3 space = vec3(1,4,1);
+    vec3 count = vec3(4,4,8);
 
-    p += (count - 1.) / 2.;
+    p += ((count * space) - 1.) / 2.;
 
-    vec3 c = floor(p + .5);
+    vec3 c = floor(p / space  + .5);
 
     c = clamp(c, vec3(0), count - 1.);
 
-    p -= c;
+    p -= c * space;
 
     float d = length(p) - .3;
 
@@ -166,7 +169,7 @@ vec3 calcNormal( in vec3 p ) // for function f(p)
 
 vec3 sunPos = normalize(vec3(-.5,.5,-.25)) * 100.;
 vec3 skyColor = vec3(0.50,0.70,1.00);
-vec3 sunColor = vec3(8.10,6.00,4.20) * 4.5;
+vec3 sunColor = vec3(8.10,6.00,4.20) * 4.5 * .1;
 
 
 vec3 env(vec3 dir) {
@@ -242,17 +245,17 @@ vec3 getConeSample(vec3 dir, float extent, vec2 seed) {
 	return cos(r.x)*oneminus*o1+sin(r.x)*oneminus*o2+r.y*dir;
 }
 
-vec3 sampleDirect(Hit hit, vec3 nor, vec3 throughput, inout vec2 seed) {
+vec3 sampleDirect(Hit hit, vec3 nor, inout vec2 seed) {
     vec3 col = vec3(0);
     vec3 lightDir = (sunPos - hit.pos);
-    vec3 lightSampleDir = getConeSample(lightDir, .0005, seed);
+    vec3 lightSampleDir = getConeSample(lightDir, .00001, seed);
     seed = hash22(seed);
     float diffuse = dot(nor, lightSampleDir);
     vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightSampleDir, nor)));
     if (diffuse > 0.) {
-        Hit sh = march(shadowOrigin, lightSampleDir, 1., 1.);
+        Hit sh = march(shadowOrigin, lightSampleDir, 20., 1.);
         if (sh.model.id == 0) {
-            col += throughput * sunColor/10. * diffuse;
+            col += sunColor * diffuse;
         }
     }
     return col;
@@ -291,23 +294,23 @@ vec3 sphereLight(vec3 lightPos, float radius, vec3 pos, vec3 rayDir, vec3 nor) {
     return closestPoint;
 }
 
-vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, inout vec2 seed) {
-    vec3 lpos = sphereLight(sunPos, 5., hit.pos, rayDir, nor);
-    
-    vec3 lightDir = normalize(lpos - hit.pos);
+vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, float metalness, inout vec2 seed) {
+    vec3 lightDir = normalize(sunPos - hit.pos);
+    vec3 lightSampleDir = getConeSample(lightDir, .00001, seed);
     vec3 h = normalize(rayDir + lightDir);
     float specular = pow(clamp(dot(h, nor), 0., 1.), 64.0);
 
     vec3 col = vec3(0);
 
-    float fresnel = pow(max(0., 1. + dot(nor, rayDir)), 5.);
+    float fresnel = mix(.005, 1., pow(max(0., 1. + dot(nor, rayDir)), 5.));
+    fresnel = mix(fresnel, 1., metalness);
     specular = ggx(nor, rayDir, lightDir, rough, fresnel);
 
     vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightDir, nor)));
     if (specular > 0.) {
-        Hit sh = march(shadowOrigin, lightDir, 1., 1.);
+        Hit sh = march(shadowOrigin, lightDir, 20., 1.);
         if (sh.model.id == 0) {
-            col += sunColor * specular * .1;
+            col += sunColor * specular;
         }
     }
     return col;
@@ -414,38 +417,46 @@ vec4 draw(vec2 fragCoord, int frame) {
         nor = calcNormal(hit.pos);
         material = shadeModel(hit.model, nor);
 
-        // calculate whether we are going to do a diffuse or specular reflection ray 
+        bool doMetallic = seed.x < material.metalness;
+
+        float fresnel = mix(.05, 1., pow(max(0., 1. + dot(nor, rayDir)), 5.));
+        float specular = fresnel * (1. - (material.roughness * material.roughness));
+        bool doSpecular = seed.y < specular;
+
         seed = hash22(seed);
-        // doSpecular = hash12(seed) < material.specular;
 
-        // if ( ! doSpecular) {
-        //     // update the colorMultiplier
-            throughput *= material.albedo;
-        // }
+        if (
+            bounce == 0  // fix fireflies from diffuse-bounce specular
+        ) {
+            col += sampleDirectSpec(hit, rayDir, nor, material.roughness, 0., seed) * throughput * material.specularColor * (1. - material.metalness) * (1. - (material.roughness * material.roughness));
+        }
 
-        // // Calculate diffuse ray direction
-        // seed = hash22(seed);
         vec3 diffuseRayDir = getSampleBiased(nor, 1., seed);
+        vec3 specularRayDir = reflect(rayDir, nor);
 
-        // if ( ! doSpecular)
-        // {
+        if (doMetallic)
+        {
+            throughput *= material.albedo;
+            if (
+                bounce == 0 // fix fireflies from diffuse-bounce specular
+            ) {
+                col += sampleDirectSpec(hit, rayDir, nor, material.roughness, material.metalness, seed) * throughput;
+            }
+            rayDir = normalize(mix(specularRayDir, diffuseRayDir, material.roughness * material.roughness));
+        }
+        else if (doSpecular)
+        {
+            throughput *= material.specularColor;
+            rayDir = normalize(mix(specularRayDir, diffuseRayDir, material.roughness * material.roughness));
+        }
+        else
+        {
+            throughput *= material.albedo;
+            col += sampleDirect(hit, nor, seed) * throughput;
             seed = hash22(seed);
-            col += sampleDirect(hit, nor, throughput, seed);
             rayDir = diffuseRayDir;
-        // }
-        // else
-        // {
-        //     if (bounce == 0) { // fix fireflies from diffuse-bounce specular
-        //         seed = hash22(seed);
-        //         col += sampleDirectSpec(hit, rayDir, nor, material.roughness, seed) * throughput;
-        //     }
-            
-        //     // Calculate specular ray direction
-        //     vec3 specularRayDir = reflect(rayDir, nor);
-        //     rayDir = normalize(mix(specularRayDir, diffuseRayDir, material.roughness * material.roughness));
-        // }
+        }
 
-        // offset from sufrace https://www.shadertoy.com/view/lsXGzH
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
     }
 
