@@ -535,7 +535,11 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     vec2 bound = iSphere(origin, rayDir, boundRadius);
     if (bound.x < 0.) {
-    //	return vec4(bgCol, 1);
+    	//return vec4(bgCol, 1);
+    }
+    else
+    {
+        origin += rayDir * bound.x;
     }
     
     const int MAX_BOUNCE = 2;
