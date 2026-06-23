@@ -1,0 +1,679 @@
+#version 300 es
+precision mediump float;
+
+float gmTransform(inout vec3 p, vec3 t, vec4 r, vec3 s) {
+  p -= t;
+  p = mix(dot(r.xyz,p)*r.xyz, p, cos(-r.w))+sin(-r.w)*cross(r.xyz,p);
+  p /= s;
+  return min(s.x, min(s.y, s.z));
+}
+
+
+
+// framebuffer drawcount: 1
+
+precision highp float;
+
+uniform vec2 iResolution;
+uniform mat4 cameraViewMatrix;
+uniform sampler2D previousSample; // buffer-a.glsl filter: linear
+uniform float drawIndex;
+uniform int iFrame;
+uniform float iTime;
+uniform vec4 iMouse;
+
+in vec3 eye;
+in vec3 dir;
+in float fov;
+in float aspect;
+in mat4 vView;
+
+out vec4 fragColorOut;
+
+
+void mainImage(out vec4 a, in vec2 b);
+
+void main() {
+    mainImage(fragColorOut, gl_FragCoord.xy);
+}
+
+//#define ANIMATE
+//#define SSS
+//#define DOF
+
+// Dave_Hoskins https://www.shadertoy.com/view/4djSRW
+vec2 hash22(vec2 p)
+{
+    p += 1.61803398875; // fix artifacts when reseeding
+	vec3 p3 = fract(vec3(p.xyx) * vec3(.1031, .1030, .0973));
+    p3 += dot(p3, p3.yzx+33.33);
+    return fract((p3.xx+p3.yz)*p3.zy);
+}
+
+// Dave_Hoskins https://www.shadertoy.com/view/4djSRW
+float hash12(vec2 p)
+{
+	vec3 p3  = fract(vec3(p.xyx) * .1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+// iq https://www.shadertoy.com/view/tl23Rm
+vec2 rndunit2(vec2 seed ) {
+    vec2 h = seed * vec2(1,6.28318530718);
+    float phi = h.y;
+    float r = sqrt(h.x);
+	return r*vec2(sin(phi),cos(phi));
+}
+
+#define PI 3.14159265359
+
+void pR(inout vec2 p, float a) {
+    p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+float smin(float a, float b, float k){
+    float f = clamp(0.5 + 0.5 * ((a - b) / k), 0., 1.);
+    return (1. - f) * a + f  * b - f * (1. - f) * k;
+}
+
+float smax(float a, float b, float k) {
+    return -smin(-a, -b, k);
+}
+
+float vmax(vec2 v) {
+	return max(v.x, v.y);
+}
+
+float vmin(vec2 v) {
+	return min(v.x, v.y);
+}
+
+float vmax(vec3 v) {
+	return max(max(v.x, v.y), v.z);
+}
+
+float vmin(vec3 v) {
+	return min(min(v.x, v.y), v.z);
+}
+
+float fBox(vec2 p, vec2 b) {
+	vec2 d = abs(p) - b;
+	return length(max(d, vec2(0))) + vmax(min(d, vec2(0)));
+}
+
+float fBox(vec3 p, vec3 b) {
+	vec3 d = abs(p) - b;
+	return length(max(d, vec3(0))) + vmax(min(d, vec3(0)));
+}
+
+float time;
+
+float spaceAnimFreq = .06;
+float startScale = 1.5;
+
+vec3 animAmp = vec3(-.02,.02,-.06) * 3.;
+ 
+struct Material {
+    vec3 albedo;
+    float specular;
+    float roughness;
+    bool sss;
+};
+
+struct Model {
+    float d;
+    vec3 uvw;
+    vec3 albedo;
+    int id;
+};
+
+
+vec3 pal( in float t, in vec3 a, in vec3 b, in vec3 c, in vec3 d ) {
+    return a + b*cos( 6.28318*(c*t+d) );
+}
+
+vec3 spectrum(float n) {
+    return pal( n, vec3(0.5,0.5,0.5),vec3(0.5,0.5,0.5),vec3(1.0,1.0,1.0),vec3(0.0,0.33,0.67) );
+}
+
+Material shadeModel(Model model, inout vec3 nor) {
+    return Material(spectrum(model.albedo.x * 2.), .0, .3, false);
+    vec3 skin = pow(vec3(0.890,0.769,0.710), vec3(2.2));
+    float flush = smoothstep(.5, .6, abs(model.albedo.x));
+    skin += mix(vec3(-.6,.0,.15) * .5, vec3(.4,-.03,-.05), flush);
+    skin *= vec3(1.1,.8,.7);
+    skin = clamp(skin, vec3(0,0,0), vec3(1,1,1));
+    bool sss = false;
+    #ifdef SSS
+    sss = true;
+    #endif
+    return Material(skin, .15, .3, sss);
+}
+
+Model map(vec3 p) {
+    vec3 pf = floor(p);
+    p = fract(p) - .5;
+    float d = length(p) - .1;
+    return Model(d, p, pf / 10., 1);
+}
+
+// IFS from Connor Bell (macbooktall)
+Model mapx(vec3 p) {
+
+    float scale = 1.;
+
+    scale *= gmTransform(p, vec3(0, -.12, 0), vec4(1,0,0,.75), vec3(.3));
+
+    const int iterations = 20;
+
+    float orbitTrap = 1e20;
+    for (int i=0; i<iterations; i++) {
+        p.xz = abs(p.xz);
+        scale *= gmTransform(p, vec3(0.10164556168322025, 0.1531936142180278, 0.4445725737602564), vec4(-0.7084094967332603, -0.6534381469761232, 0.266785631199543, 4.955217398967592), vec3(0.6752857520548219));
+        orbitTrap = min(orbitTrap, length(p)-(startScale));
+    }
+
+    float d = length(p) * scale;
+    
+    return Model(d, p, vec3(orbitTrap), 1);
+
+}
+
+float GIZMO_MAP(vec3 p) {
+    return map(p).d;
+}
+
+
+//========================================================
+// Rendering
+//========================================================
+
+vec3 calcNormal( in vec3 p ) // for function f(p)
+{
+    const float eps = 0.0001; // or some other value
+    const vec2 h = vec2(eps,0);
+    return normalize( vec3(map(p+h.xyy).d - map(p-h.xyy).d,
+                           map(p+h.yxy).d - map(p-h.yxy).d,
+                           map(p+h.yyx).d - map(p-h.yyx).d ) );
+}
+
+
+vec3 sunPos = normalize(vec3(-.5,.5,-.25)) * 100.;
+vec3 skyColor = vec3(0.50,0.70,1.00);
+vec3 sunColor = vec3(8.10,6.00,4.20) * 4.5;
+
+
+vec3 env(vec3 dir, bool includeSun) {
+    vec3 col = mix(vec3(.5,.7,1) * .0, vec3(.5,.7,1) * 1., smoothstep(-.2, .2, dir.y));
+    return col * .6;
+}
+
+struct Hit {
+    Model model;
+    vec3 pos;
+};
+
+float closestRayLen;
+
+Hit march(vec3 origin, vec3 rayDirection, float maxDist, float understep) {
+
+    float mind = 1e12;
+    vec3 rayPosition;
+    float rayLength, dist = 0.;
+    Model model;
+
+    for (int i = 0; i < 1000; i++) {
+        rayPosition = origin + rayDirection * rayLength;
+        model = map(rayPosition);
+        rayLength += model.d * understep;
+
+        if (model.d < mind)
+        {
+            mind = model.d;
+            closestRayLen = rayLength;
+        }
+
+        if (model.d < .0002) break;
+
+        if (rayLength > maxDist) {
+            model.id = 0;
+            break;
+        }
+    }
+    return Hit(model, rayPosition);
+}
+
+
+// tracing/lighting setup from yx
+// https://www.shadertoy.com/view/ts2cWm
+vec3 ortho(vec3 a){
+    vec3 b=cross(vec3(-1,-1,.5),a);
+    // assume b is nonzero
+    return (b);
+}
+
+// re-borrowed from yx from
+// http://blog.hvidtfeldts.net/index.php/2015/01/path-tracing-3d-fractals/
+vec3 getSampleBiased(vec3 dir, float power, vec2 seed) {
+	dir = normalize(dir);
+	vec3 o1 = normalize(ortho(dir));
+	vec3 o2 = normalize(cross(dir, o1));
+	vec2 r = seed;
+	r.x=r.x*2.*PI;
+	r.y=pow(r.y,1.0/(power+1.0));
+	float oneminus = sqrt(1.0-r.y*r.y);
+	return cos(r.x)*oneminus*o1+sin(r.x)*oneminus*o2+r.y*dir;
+}
+
+vec3 getConeSample(vec3 dir, float extent, vec2 seed) {
+	dir = normalize(dir);
+	vec3 o1 = normalize(ortho(dir));
+	vec3 o2 = normalize(cross(dir, o1));
+	vec2 r =  seed;
+	r.x=r.x*2.*PI;
+	r.y=1.0-r.y*extent;
+	float oneminus = sqrt(1.0-r.y*r.y);
+	return cos(r.x)*oneminus*o1+sin(r.x)*oneminus*o2+r.y*dir;
+}
+
+// Walk on spheres subsurface scattering
+// inspired by blackle https://www.shadertoy.com/view/wsfBDB
+Hit walkOnSpheres(vec3 origin, float startdepth, inout vec2 seed) {
+    Model model;
+    
+    vec2 lastSeed = seed;
+    seed = hash22(seed);
+    vec3 normal = normalize(tan(vec3(seed.x, seed.y, lastSeed.x) * 2. - 1.));
+    
+    model = map(origin - normal * startdepth);
+    origin -= normal * abs(model.d);
+    
+    for (int v = 0; v < 250; v++) {
+        model = map(origin);
+
+        if (abs(model.d) < .00002) break;
+        
+        vec2 lastSeed = seed;
+        seed = hash22(seed);
+        vec3 dir = normalize(tan(vec3(seed.x, seed.y, lastSeed.x) * 2. - 1.));
+        
+        origin += dir * abs(model.d);
+    }
+    return Hit(model, origin);
+}
+
+vec3 sampleDirect(Hit hit, vec3 nor, vec3 throughput, inout vec2 seed) {
+    vec3 col = vec3(0);
+    vec3 lightDir = (sunPos - hit.pos);
+    vec3 lightSampleDir = getConeSample(lightDir, .0005, seed);
+    seed = hash22(seed);
+    float diffuse = dot(nor, lightSampleDir);
+    //diffuse = mix(diffuse, 1., .5);
+    vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightSampleDir, nor)));
+    if (diffuse > 0.) {
+       // Hit sh = march(shadowOrigin, lightSampleDir, 100., 1.);
+       // if (sh.model.id == 0) {
+            col += throughput * sunColor/10. * diffuse;
+        //}
+    }
+    return col;
+}
+
+float G1V(float dnv, float k){
+    return 1.0/(dnv*(1.0-k)+k);
+}
+
+// noby https://www.shadertoy.com/view/lllBDM
+float ggx(vec3 nor, vec3 rayDir, vec3 l, float rough, float f0){
+    float alpha = rough*rough;
+    vec3 h = normalize(-rayDir + l);
+    float dnl = clamp(dot(nor,l), 0.0, 1.0);
+    float dnv = clamp(dot(nor,rayDir), 0.0, 1.0);
+    float dnh = clamp(dot(nor,h), 0.0, 1.0);
+    float dlh = clamp(dot(l,h), 0.0, 1.0);
+    float f, d, vis;
+    float asqr = alpha*alpha;
+    const float pi = 3.14159;
+    float den = dnh*dnh*(asqr-1.0)+1.0;
+    d = asqr/(pi * den * den);
+    dlh = pow(1.0-dlh, 5.0);
+    f = f0 + (1.0-f0)*dlh;
+    float k = alpha/1.0;
+    vis = G1V(dnl, k)*G1V(dnv, k);
+    float spec = dnl * d * f * vis;
+    return spec;
+}
+
+vec3 sphereLight(vec3 lightPos, float radius, vec3 pos, vec3 rayDir, vec3 nor) {
+    vec3 L = (lightPos - pos);
+    vec3 ref = reflect(rayDir, nor);
+    vec3 centerToRay = dot(L, ref) * ref - L;
+    vec3 closestPoint = L + centerToRay * clamp(radius / length(centerToRay), 0., 1.);
+    return closestPoint;
+}
+
+vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough, inout vec2 seed) {
+    vec3 lpos = sphereLight(sunPos, 5., hit.pos, rayDir, nor);
+    
+    vec3 lightDir = normalize(lpos - hit.pos);
+    vec3 h = normalize(rayDir + lightDir);
+    float specular = pow(clamp(dot(h, nor), 0., 1.), 64.0);
+
+    vec3 col = vec3(0);
+
+    float fresnel = pow(max(0., 1. + dot(nor, rayDir)), 5.);
+    specular = ggx(nor, rayDir, lightDir, rough, fresnel);
+
+    vec3 shadowOrigin = hit.pos + nor * (.0002 / abs(dot(lightDir, nor)));
+    if (specular > 0.) {
+        Hit sh = march(shadowOrigin, lightDir, 100., 1.);
+        if (sh.model.id == 0) {
+            col += sunColor * specular * .1;
+        }
+    }
+    return col;
+}
+
+void getCamera(out vec3 origin, out vec3 rayDir, vec2 seed, float coc) {
+    origin = eye;
+    rayDir = normalize(dir);
+
+    vec3 cameraForward = -transpose(vView)[2].xyz;
+
+    // position on screen
+    vec3 p = origin + rayDir / dot(rayDir, cameraForward) / fov;
+
+    // jitter for antialiasing
+    p += vec3(2. * (seed - .5) / iResolution.y, 0) * mat3(vView);
+    rayDir = normalize(p - origin);
+
+    #ifdef DOF
+
+    // position on focal plane
+    Hit dofHit = march(origin, cameraForward, 100., 1.);
+    //float focalDistance = length(origin - dofHit.pos);
+    float focalDistance = closestRayLen;
+    vec3 focalPlanePosition = origin + rayDir / dot(rayDir, cameraForward) * focalDistance;
+    
+    // position on sensor plane
+    vec3 sensorPlanePosition = origin - (p - origin);
+    sensorPlanePosition += vec3(rndunit2(seed), 0.) * mat3(vView) * coc;
+
+    rayDir = normalize(focalPlanePosition - sensorPlanePosition);
+    origin = sensorPlanePosition + rayDir / dot(rayDir, cameraForward) / fov;
+
+    #else
+
+    origin = p - rayDir / dot(rayDir, cameraForward) / fov;
+
+    #endif
+}
+
+
+const float sqrt3 = 1.7320508075688772;
+
+#define FLT_MIN 1.175494351e-38
+
+
+// main path tracing loop, based on yx's
+// https://www.shadertoy.com/view/ts2cWm
+// with a bit of demofox's
+// https://www.shadertoy.com/view/WsBBR3
+vec4 draw(vec2 fragCoord, int frame) {
+
+
+    vec2 p = (-iResolution.xy + 2.* fragCoord) / iResolution.y;
+
+    bool split = p.x > 0.;
+
+    //p *= .85;
+
+    vec2 seed = hash22(fragCoord + (float(frame)) * sqrt3);
+    
+    // jitter for antialiasing
+    p += 2. * (seed - .5) / iResolution.xy;
+
+    vec3 col = vec3(0);
+
+    float focalLength = 6.;
+    vec3 camPos = vec3(0,0,.4) * focalLength * 1.;
+    vec3 camTar = vec3(0);
+    
+    vec3 ww = normalize(camTar - camPos);
+    vec3 uu = normalize(cross(vec3(0,1,0),ww));
+    vec3 vv = normalize(cross(ww,uu));
+    mat3 camMat = mat3(-uu, vv, ww);
+    
+    vec3 rayDir = normalize(camMat * vec3(p.xy, focalLength));
+    vec3 origin = camPos;
+
+    getCamera(origin, rayDir, seed, .5);
+
+    //vec3 origin = eye;
+    //vec3 rayDir = normalize(vec3(p.x * fov, p.y * fov, -1.) * mat3(vView));
+
+/*
+    #ifdef DOF
+    float fpd = .36 * focalLength;
+    vec3 fp = origin + rayDir * fpd;
+    origin = origin + camMat * vec3(rndunit2(seed), 0.) * .02;
+    rayDir = normalize(fp - origin);
+    #endif
+*/
+    Hit hit;
+    vec3 nor, ref;
+    Material material;
+    vec3 throughput = vec3(1);
+    vec3 bgCol = skyColor;
+    bool doSpecular = true;
+
+    seed = hash22(seed);
+    //return vec4(fract(abs(((fragCoord.x / iResolution.x * 2. - 1.)))));
+    float originalMaxLen = mix(200., 20., fract(abs(fragCoord.x / iResolution.x * 2. - 1.) * 10.));
+    //originalMaxLen = mix(20., 200., fract(p.x * 5.));
+    float maxLen = originalMaxLen;
+//maxLen = 10.;
+    float maxLenExp = 1.;
+
+    float maxLenFactor = pow(seed.x, maxLenExp);
+
+    if (split) {
+        maxLen *= maxLenFactor;
+    }
+
+        vec3 origin1 = origin;
+   
+        hit = march(origin, rayDir, maxLen, 1.);
+
+       // hit.pos = origin + rayDir * maxLen;
+       // hit.model.id = 0;
+   
+        //if (hit.model.id == 0) return vec4(env(rayDir, false), 1.);
+        
+        //{
+            //if (bounce > 0 && ! doSpecular)
+               // col += env(rayDir, doSpecular) * throughput;
+        //    return vec4(col, 1);
+            //break;
+        //}
+
+
+        float rayLen = distance(origin, hit.pos);
+
+
+        bool hitModel = hit.model.id != 0;
+
+        if (!hitModel && split)
+        {
+            origin = hit.pos;
+            seed = hash22(seed);
+            hit = walkOnSpheres(origin, 0., seed);
+        }
+
+
+        float extinctionDist = distance(origin, hit.pos);
+        //vec3 extinctionCol = material.albedo;
+        //extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .5), vec3(1,0,0), clamp(extinctionDist - 1., 0., 1.));
+        //vec3 extinction = (1. - extinctionCol);
+        //extinction = 1. / (1. + (extinction * extinctionDist));	
+        //extinction = clamp(extinction, vec3(0), vec3(1));
+        //throughput *= extinction;
+
+        float fog = clamp(1. - exp(-extinctionDist * 100.), 0., 1.);
+        //fog = clamp(fog, 0., 1.);
+
+        nor = calcNormal(hit.pos);
+        material = shadeModel(hit.model, nor);
+        seed = hash22(seed);
+        vec3 hitCol = sampleDirect(hit, nor, material.albedo, seed);
+
+        //col = mix(hitCol, vec3(.5), 1. - exp(-extinctionDist * 2.));
+
+        float fogPower = .05;
+
+        float f = 1. - exp(-distance(origin1, hit.pos) * fogPower);
+        float f3 = 1. - exp(-distance(origin1, hit.pos) * .03);
+
+        vec3 fogcol = vec3(.5,0,0);
+
+        if (split) {
+
+            float x = distance(origin1, hit.pos) / originalMaxLen;
+
+            if (!hitModel) {
+                    
+                // col = mix(hitCol * max(0., -log(extinctionDist)), vec3(.5), clamp(1. - exp(-distance(origin1, hit.pos) * .05), 0., 1.));
+                float n = exp(-rayLen) * 10000.;
+                n = 5.;
+               // col = mix(hitCol * max(0., -log(extinctionDist*n)*n*n*n), vec3(.5), clamp(f, 0., 1.));
+                //col = hitCol * f;
+                //float f2 = exp(-extinctionDist * .05);
+                //col += hitCol * f2;
+
+                // frequencey of this is dependent on maxlen
+                // so we need to scale this relative to maxlen
+                
+                // we're trying to match exp fog with our random maxlen sampling
+                // if we have a short maxlen, we'll have lots more fog samples
+                // so we'd need to reduce the fog strength, and increase the model strength
+
+                float rl = distance(origin1, hit.pos);
+
+                col = fogcol;
+
+                col = mix(hitCol*10., fogcol, clamp(pow(extinctionDist * 6., 6.), 0., 1.));
+                //col = hitCol;
+
+                // actual ratio is x
+                // desired ratio is exp(-distance(origin1, hit.pos) * fogPower)
+
+                // so multiply by 
+
+                //col *= originalMaxLen;
+                //col /= 50.;
+                col *= (1. - exp(-rl * fogPower));
+
+                col /= (max(rl, .000000001) / originalMaxLen);
+                //col *= .1;
+
+                //col /= x;
+
+                //col *= (1. - exp(-rl * fogPower));
+
+                // sampling extinction = x
+
+                //col *= .87;
+
+
+                //col /= -log(max(FLT_MIN, 1. - pow(x, 2.))) * 4. + 1.;
+                //col *= 1.-exp(-distance(origin1, hit.pos) * fogPower);
+                //col *= 1.-exp(-distance(origin1, hit.pos) * fogPower);
+
+               // col *= 2.3;
+                //col *= (1. - exp(-distance(origin1, hit.pos) * fogPower));// * clamp(1.-f, 0., 1.) * .6;
+            } else {
+                //col = mix(hitCol, vec3(.0), clamp(f, 0., 1.));
+                col = hitCol;
+                col *= -log(max(FLT_MIN, 1. - pow(x, 2.))) * 4. + 1.;
+                col *= exp(-distance(origin1, hit.pos) * fogPower);
+            }
+        } else {
+            if (hitModel) {
+                col = hitCol;
+            }
+        }
+
+        if (split) {
+           // col = mix(col, fogcol, clamp(f3, 0., 1.));
+        } else {
+            //col = mix(col, fogcol, clamp(f, 0., 1.));
+            col = col * (exp(-distance(origin1, hit.pos) * fogPower));
+            col += fogcol * (1. - exp(-distance(origin1, hit.pos) * fogPower));
+        }
+        if (!split && !hitModel) {
+            col = fogcol;
+        }
+
+        if (split) {
+//            col *= exp(distance(origin1, hit.pos)/originalMaxLen);
+            //float x = distance(origin1, hit.pos)/originalMaxLen;
+            //col *= -log(max(FLT_MIN, 1. - pow(x, 2.))) * 4. + 1.;
+        // col *= .1;
+        }
+
+
+
+        // calculate whether we are going to do a diffuse or specular reflection ray 
+        //seed = hash22(seed);
+        //doSpecular = hash12(seed) < material.specular;
+        
+        //bool doSSS = material.sss && bounce < 1 && ! doSpecular;
+        //if (doSSS) {
+        //    seed = hash22(seed);
+        //    doSSS = hash12(seed) < .8;
+        //}
+        
+        //if ( ! doSpecular) {
+            // update the colorMultiplier
+            //throughput *= material.albedo;
+        //}
+
+        // if (false) {
+        //     origin = hit.pos;
+            
+        //     seed = hash22(seed);
+        //     hit = walkOnSpheres(origin, nor, .05, seed);
+        //     nor = calcNormal(hit.pos);
+
+        //     float extinctionDist = distance(origin, hit.pos) * 10.;
+        //     vec3 extinctionCol = material.albedo;
+        //     extinctionCol = mix(mix(extinctionCol, vec3(0,0,1), .5), vec3(1,0,0), clamp(extinctionDist - 1., 0., 1.));
+        //     vec3 extinction = (1. - extinctionCol);
+        //     extinction = 1. / (1. + (extinction * extinctionDist));	
+        //     extinction = clamp(extinction, vec3(0), vec3(1));
+        //     throughput *= extinction;
+        // }
+
+
+
+    //}
+
+    return vec4(col, 1);
+}
+
+void mainImage(out vec4 fragColor, in vec2 fragCoord) {
+    time = fract(iTime / 6.);
+    
+    time = fract(time + 0.5);
+
+
+    vec4 col = draw(fragCoord, iFrame);
+   
+    if (drawIndex > 0.) {
+        vec4 lastCol = texture(previousSample, fragCoord.xy / iResolution.xy);
+        col = mix(lastCol, col, 1. / (drawIndex + 1.));
+    }
+    
+    fragColor = vec4(col.rgb, 1);
+}
