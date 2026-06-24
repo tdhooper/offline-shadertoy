@@ -198,14 +198,8 @@ vec2 modelUv;
 bool hitDebugTorus = false;
 
 float warpSpace(inout vec3 p) {
-
     float k;
     vec4 p4 = inverseStereographic(p,k);
-
-    // The inside-out rotation puts the torus at a different
-    // orientation, so rotate to point it at back in the same
-    // direction
-   	pR(p4.zy, spintime * -PI / 2.);
 
     // Rotate in 4D, turning the torus inside-out
     pR(p4.xw, spintime * -PI / 2.);
@@ -227,7 +221,6 @@ float warpSpace(inout vec3 p) {
     p = vec3(uv, d);
     
     return k;
-
 }
 
 float vmax(vec3 v) {
@@ -240,6 +233,15 @@ float fBox(vec3 p, vec3 b) {
 }
 
 //#define FOO
+
+//========================================================
+// Camera
+//========================================================
+
+vec3 calcCamPos(float camTime)
+{
+    return mix(vec3(-0.211, -0.631, 0.0), vec3(-0.473, -1.231, 0.0), pow((sin(camTime * PI * 4. + PI * 1.45) * .5 + .5), 2.));
+}
 
 
 //========================================================
@@ -263,10 +265,20 @@ Material shadeModel(float rlen, Model model, inout vec3 nor) {
     return Material(vec3(.3), .02, .3);
 }
 
-Model map(vec3 p) {
+//#define FREE_FLY;
+
+Model map2(vec3 p) {
     
-    float d;
-    
+    float camd = 1e12;
+#ifdef FREE_FLY
+    int ci = 30;
+    for (int i = 0; i < ci; i++)
+    {
+        vec3 camPos = calcCamPos(float(i) / float(ci - 1));
+        camd = min(camd, length(p - camPos) - .01);
+    }
+    camd = min(camd, length(p - calcCamPos(time)) - .03);
+#endif
     //p.xy = mod(p.xy, 1.0);
     
     float db = length(p) - 2.;
@@ -275,6 +287,11 @@ Model map(vec3 p) {
 
     //pR(p.xy, iTime * PI * -.25);
     //pR(p.yz, iTime * PI * -1.25);
+
+    // The inside-out rotation puts the torus at a different
+    // orientation, so rotate to point it at back in the same
+    // direction
+ 	pR(p.zy, spintime * -PI / 2.);
 
     #ifndef FOO
     k = warpSpace(p);
@@ -315,12 +332,15 @@ Model map(vec3 p) {
        p.x = -p.x;
     }
 
-    
+    float d;
+
     p.z = abs(p.z);
-    float hs = 2.7/repeat;
-    d = smin(d, abs(p.z) - .005, .005);
-    d = abs(p.z)- .005;
-    d = smax(d, length(p.xy) - repeat * .3, .003);
+    
+    //float hs = 2.7/repeat;
+    //d = smin(d, abs(p.z) - .005, .005);
+    //d = abs(p.z)- .005;
+    //d = smax(d, length(p.xy) - repeat * .3, .003);
+
     d = fBox(p, vec3(vec2(.3*repeat), 100.)) - .15 * repeat;
     d = mix(d, length(p.xy) - .45 * repeat, .5);
     d = smax(d, abs(p.z) - .005, .005);
@@ -331,6 +351,7 @@ Model map(vec3 p) {
         dot(p, normalize(vec3(1,1,.8))),
         dot(p, -normalize(vec3(1,1,-.8)))
     ), .001);
+
     d = smin(d, d2, repeat * .1);
     d2 = length(p) - repeat * .26;
     pR(p.xy, PI/4.);
@@ -359,8 +380,8 @@ Model map(vec3 p) {
     }
 
     
-    float scale = 1.;
-    p /= scale;
+    //float scale = 1.;
+    //p /= scale;
     
     //p.z = abs(p.z);
     //d = smin(d, mHead(p * 15.)/15., .01);
@@ -389,13 +410,17 @@ Model map(vec3 p) {
     #ifdef FOO
     d = max(d, bound);
     #endif
-    
-    d *= scale;
+
+    //d = length(p) - .01;
+
+    //d *= scale;
     
     #ifndef FOO
     d = fixDistance(d, k) * 2.;
 	#endif
     
+    d = min(d, camd);
+
    // d = min(d, db);
     
     vec3 uvw = p;
@@ -404,7 +429,21 @@ Model map(vec3 p) {
     return Model(d, uvw, id, understep);
 }
 
-
+Model map(vec3 p) {
+    return map2(p);
+    float d = 1e12;
+    int s = 10;
+    float spintime_g = spintime;
+    for (int i = 0; i < s; i++) {
+        d = min(d, map2(p).d);
+        spintime += 2. / float(s);
+    }
+    spintime = spintime_g;
+    vec3 uvw = p;
+    int id = 1;
+    float understep = 1.;
+    return Model(d, uvw, id, understep);
+}
 
 // --------------------------------------------------------
 // Rendering - clifford
@@ -420,16 +459,6 @@ mat3 calcLookAtMatrix(vec3 ro, vec3 ta, vec3 up) {
 
 #define TAU 6.2831853
 
-vec3 sphereCam(in vec2 p){
-    
-    //return normalize(vec3(p, 2)); // Debug.
-    
-    // A more conventional way to spherize.
-    //return vec3(sin(p.x)*cos(p.y), sin(p.y), cos(p.x)*cos(p.y));
-  
-    float t = 1./(1. + dot(p, p)/3.);
-    return vec3(p*t, 2.*t - 1.);
-}
 
 //========================================================
 // Rendering
@@ -590,6 +619,26 @@ vec3 sampleDirectSpec(Hit hit, vec3 rayDir, vec3 nor, float rough) {
 
 const float sqrt3 = 1.7320508075688772;
 
+
+vec3 sphereCam(in vec2 p){
+    //float t = 1./(1. + dot(p, p)/3.);
+    //float k = iTime / 4.;
+    float k = 1./3.;
+    float t = 1./(1. + dot(p, p) * k);
+    return normalize(vec3(p*t, 2.*t - 1.));
+}
+
+vec3 getStereoDir(vec2 p) {
+  //float k = iTime;
+  float k = 1.33;
+  p /= 2.;
+  vec3 dir = vec3(
+    p * 2. / k,
+    dot(p, p) - 1. / k
+  );
+  return normalize(dir);
+}
+
 // main path tracing loop, based on yx's
 // https://www.shadertoy.com/view/ts2cWm
 // with a bit of demofox's
@@ -614,16 +663,23 @@ vec4 draw(vec2 fragCoord, int frame) {
     //time = .5 / 8.;
     //time = 1.5 / 8.;
 
+    //time = 0.;
+
     //time = mod(iTime / 3., 2.);
     spintime = time * 8.;
     #ifdef DEBUG
         time = iTime / 6.;
     #endif
 
-    vec3 camPos = mix(vec3(-0.211, -0.631, 0.0), vec3(-0.473, -1.231, 0.0), pow((sin(time * PI * 4. + PI * 1.45) * .5 + .5), 2.));
+    vec3 camPos = calcCamPos(time);
     vec3 camTar = vec3(.1,0,.1);
     vec3 camUp = vec3(-1,0,-1.5);
-    
+
+    float FOV = TAU/6.; // FOV - Field of view.
+
+    //camPos = mix(vec3(-0.211, -0.631, 0.0), vec3(-0.473, -1.231, 0.0), .5);
+    //FOV *= mix(2., .5, sin(time * PI * 4. + PI * 1.45) * .5 + .5);
+
     mat3 camMat = calcLookAtMatrix(camPos, camTar, camUp);
 
     float focalLength = 0.886;
@@ -638,16 +694,17 @@ vec4 draw(vec2 fragCoord, int frame) {
     lookAt = vec3(0.0, 0.0, 0.0);
 
     // Using the above to produce the unit ray-direction vector.
-    float FOV = TAU/6.; // FOV - Field of view.
     vec3 forward = normalize(lookAt - camPos);
     vec3 right = normalize(vec3(forward.z, 0, forward.x )); 
     vec3 up = cross(forward, right);
 
+
     // rd - Ray direction.
     //vec3 rd = normalize(uv.x*right + uv.y*up + forward/FOV );
     mat3 cam = mat3(right, up, forward);
-    //vec3 rd = cam*normalize(vec3(uv, 1./FOV));
-    vec3 rd = cam*sphereCam(uv*PI*.7/FOV);
+    //vec3 rd = cam*normalize(vec3(uv, .5/FOV));
+    //vec3 rd = cam*sphereCam(uv*PI*.7/FOV);
+    vec3 rd = cam * sphereCam(uv * PI * .7/FOV);
 
     pR(rd.xz, time * PI * -2.0f);
     //pR(rd.yz, sin(time * PI * -4.0) * -.5);
@@ -656,9 +713,18 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 origin = camPos;
     vec3 rayDir = rd;
 
-    //origin = eye;
-    //rayDir = normalize(dir);
+    //rayDir = getStereoDir(uv * PI * .7/FOV);
+    //pR(rayDir.xz, PI * .5);
+    //pR(rayDir.xy, PI * -1.398);
 
+    //if (p.x > 0.) {
+    //    rayDir = rd;
+    //}
+
+#ifdef FREE_FLY
+    origin = eye;
+    rayDir = normalize(dir);
+#endif
 
 
 /*

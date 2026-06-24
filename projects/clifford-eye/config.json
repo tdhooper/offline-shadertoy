@@ -1,6 +1,7 @@
 {
+  "id": "clifford-eye-0",
   "camera": {
-    "version": "2",
+    "version": "3",
     "position": [
       0,
       0.74,
@@ -11,11 +12,11 @@
       -2.672454701979632e-9,
       -2.5560567551430324e-10,
       0.9874120354652405
-    ]
+    ],
+    "fov": 0.8
   },
   "freeFlyCameraControl": {
-    "positionSpeed": 1,
-    "rotationSpeed": 0.05
-  },
-  "fov": 6
+    "positionSpeed": 2,
+    "rotationSpeed": 0.3
+  }
 }
