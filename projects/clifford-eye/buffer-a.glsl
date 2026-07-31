@@ -238,9 +238,34 @@ float fBox(vec3 p, vec3 b) {
 // Camera
 //========================================================
 
+//#define FREE_FLY;
+//#define FREE_FLY_CAM0;
+//#define FREE_FLY_CAM1
+#define CAM 2
+
+float camzoom;
 vec3 calcCamPos(float camTime)
 {
-    return mix(vec3(-0.211, -0.631, 0.0), vec3(-0.473, -1.231, 0.0), pow((sin(camTime * PI * 4. + PI * 1.45) * .5 + .5), 2.));
+    #if CAM == 0
+        float t = sin(camTime * PI * 4. + PI * 1.45) * .5 + .5;
+        t = pow(t, 2.);
+        return mix(vec3(-0.211, -0.631, 0.0), vec3(-0.473, -1.231, 0.0), t);
+    #elif CAM == 1
+        float t = sin(camTime * PI * 2. + PI * 1.5) * .5 + .5;
+        t = pow(t, 3.);
+        camzoom = t;
+        //return vec3(-.0,-1.5,0) * t * 2.;
+        return vec3(-0.2, -0.5, 0.0) * 8.;
+    #elif CAM == 2
+        return vec3(-0.211, -0.631, 0.0) * 1.5;
+    #elif CAM == 3
+        //float t = sin(camTime * PI * 4. + PI * 1.45) * .5 + .5;
+        float t = sin(camTime * PI * 2. + PI * 1.5) * .5 + .5;
+        t = pow(t, 3.);
+        camzoom = t;
+        //return vec3(-.0,-1.5,0) * t * 2.;
+        return mix(vec3(-0.21, -0.65, 0.0) * .97, vec3(-0.2, -0.67, 0.0) * 2.3, t);
+    #endif
 }
 
 
@@ -262,10 +287,13 @@ struct Model {
 };
 
 Material shadeModel(float rlen, Model model, inout vec3 nor) {
-    return Material(vec3(.3), .02, .3);
+    if (model.id == 2)
+    {
+        return Material(vec3(.5,0,0), .02, .3);
+    }
+    return Material(model.uvw, .02, .3);
 }
 
-//#define FREE_FLY;
 
 Model map2(vec3 p) {
     
@@ -292,6 +320,8 @@ Model map2(vec3 p) {
     // orientation, so rotate to point it at back in the same
     // direction
  	pR(p.zy, spintime * -PI / 2.);
+ 	//pR(p.zy, spintime * -PI / 4.);
+ 	//pR(p.xy, spintime * PI / 2.);
 
     #ifndef FOO
     k = warpSpace(p);
@@ -300,6 +330,7 @@ Model map2(vec3 p) {
     
     float bound = fBox(p-vec3(.5), vec3(.5));
         
+    vec3 ppp = p;
     
     // Draw some repeated circles
 
@@ -311,7 +342,8 @@ Model map2(vec3 p) {
     
     p.xy += repeat / 2.;
 
-    //p.xy += iTime * -.15;
+
+    //p.yx += iTime * -.1;
     
     float aa = spintime * PI * 1.;
     aa += PI * .25;
@@ -319,6 +351,8 @@ Model map2(vec3 p) {
    // p.xy += repeat / 2.;
 
     vec2 c = floor((p.xy + repeat*0.5)/repeat);
+    c = mod(c + 3., 8.);
+    //p.x += iTime * (mod(c.y, 2.) - .5) * .1;
     p.xy = mod(p.xy + repeat*0.5,repeat) - repeat*0.5;
 
     
@@ -333,7 +367,7 @@ Model map2(vec3 p) {
     }
 
     float d;
-
+    //p.z -= .05;
     p.z = abs(p.z);
     
     //float hs = 2.7/repeat;
@@ -362,6 +396,32 @@ Model map2(vec3 p) {
     p = pp;
     //d = smax(d, -(length(p.xy) - repeat * .05), .003);
     
+    //d = min(d, max(p.z - .11, length(p.xy)) - .001);
+p = ppp;
+
+    //d = min(d, -(p.z - .13));
+    //d = min(d, (p.z + .13));
+
+    float rr = .03;
+  //  p.xy -= iTime * -.25 + .5;
+    //p.y += .5;
+//    p.xy = mod(p.xy - .125, .25) + .125;
+    //p.xy = mod(p.xy, .25) + .125;
+    
+    //p.xy += .25;
+    p.xy = mod(p.xy, .5);
+    //p.xy = mod(p.xy, 1.);
+    
+    //d = min(d, smax(-p.z + .15 - rr, abs(p.y - .25) - rr, rr));
+    //d = min(d, smax(p.z + .15 - rr, abs(p.x - .25) - rr, rr));
+
+    //d = min(d, max((abs(p.x) - .5), (abs(p.y) - .5)));
+        //d = min(d, (abs(p.y - .5)));
+        //d = min(d, (abs(p.x - .5)));
+
+///    d = min(d, max(-p.y + .01, -(p.z - .11)));
+   // d = min(d, length(p - vec3(.6,-.04,.0)) - .1);
+
     //d = length(p.xy) - repeat * .3;
     //d = smax(d, abs(p.z) - .01, .005);
     //d = length(p) - repeat * .4;
@@ -419,13 +479,20 @@ Model map2(vec3 p) {
     d = fixDistance(d, k) * 2.;
 	#endif
     
-    d = min(d, camd);
+    int id = 1;
+
+    if (camd < d) {
+        d = camd;
+        id = 2;
+    }
 
    // d = min(d, db);
     
-    vec3 uvw = p;
-    int id = 1;
-    float understep = 1.;
+    vec3 uvw = vec3(1);
+
+//    uvw = spectrum(c.x / 8.);
+
+    float understep = .25;
     return Model(d, uvw, id, understep);
 }
 
@@ -704,12 +771,28 @@ vec4 draw(vec2 fragCoord, int frame) {
     mat3 cam = mat3(right, up, forward);
     //vec3 rd = cam*normalize(vec3(uv, .5/FOV));
     //vec3 rd = cam*sphereCam(uv*PI*.7/FOV);
+
+    //FOV *= mix(1., 2., camzoom);
+
+    //FOV *= 2.;
+
     vec3 rd = cam * sphereCam(uv * PI * .7/FOV);
 
-    pR(rd.xz, time * PI * -2.0f);
-    //pR(rd.yz, sin(time * PI * -4.0) * -.5);
-    //pR(rd.yz, -1.);
+    #if CAM == 0
+        pR(rd.xz, time * PI * -2.0f);
+    #elif CAM == 1
+        pR(rd.yz, PI * -.05f);
+        pR(rd.xy, PI * .28f);
+        pR(rd.xz, PI * 0.166f);
+    #elif CAM == 3
+       pR(rd.xz, time * PI * 2.0f);
+    #endif
+    //pR(rd.yz, sin(time * PI * 4.0) * -1.);
 
+    //pR(rd.xz, time * PI * -4.0f);
+    //pR(rd.yz, -1.);
+    //pR(rd.xz, PI * .25f);
+    
     vec3 origin = camPos;
     vec3 rayDir = rd;
 
@@ -726,7 +809,57 @@ vec4 draw(vec2 fragCoord, int frame) {
     rayDir = normalize(dir);
 #endif
 
+#ifdef FREE_FLY_CAM0
+    origin = vec3(    -0.08242086321115494,
+      0.14857783913612366,
+      -1.7797837257385254);
+    mat4 vview = mat4(
+        -0.4924965798854828,
+        0.868827760219574,
+        -0.04798750579357147,
+        0,
+        0.862363874912262,
+        0.4948953688144684,
+        0.10635580122470856,
+        0,
+        0.11616011708974838,
+        0.011008289642632008,
+        -0.9929795861244202,
+        0,
+        0.03801973536610603,
+        0.01767142489552498,
+        -1.787046194076538,
+        1
+    );
+    rayDir = normalize(vec3(uv * .72,-1.0) * mat3(vview));
+#endif
 
+#ifdef FREE_FLY_CAM1
+
+    mat4 vview = mat4(
+    -0.6581622362136841,
+     0.1991388499736786,
+     -0.7257429957389832,
+     0,
+     0.544807493686676,
+     0.7914337515830994,
+     -0.2770546078681946,
+     0,
+     0.5191762447357178,
+     -0.5778564810752869,
+     -0.6293509602546692,
+     0,
+     0.2808123826980591,
+     -0.1893066018819809,
+     -2.976214647293091,
+     1
+    );
+    origin = vec3(-1.9383219480514526,
+    -0.8278401494026184,
+    -2.1293909549713135);
+
+    rayDir = normalize(vec3(uv * .72,-1.0) * mat3(vview));
+#endif
 /*
     // TODO: Figure out accurate DOF for sphere camera
     #ifdef DOF
@@ -765,7 +898,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
 
         hit = march(origin, rayDir, 100., 1., boundRadius);
-   
+
         if (hit.model.id == 0)
         {
             if (bounce > 0) {
@@ -777,6 +910,14 @@ vec4 draw(vec2 fragCoord, int frame) {
         }
 
         nor = calcNormal(hit.pos);
+
+        {
+            col = vec3(dot(normalize(vec3(1,.5,0)), nor) * .5 + .5);
+            col = mix(col, vec3(1), .1);
+            col *= hit.model.uvw;
+            break;
+        }
+
         material = shadeModel(distance(camPos, hit.pos), hit.model, nor);
 
         // calculate whether we are going to do a diffuse or specular reflection ray 
