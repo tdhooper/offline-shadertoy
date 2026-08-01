@@ -368,6 +368,7 @@ Model map2(vec3 p) {
 
     float d;
     //p.z -= .05;
+    float side = sign(p.z);
     p.z = abs(p.z);
     
     //float hs = 2.7/repeat;
@@ -381,18 +382,25 @@ Model map2(vec3 p) {
     vec3 pp = p;
     p -= vec3(0,0,repeat * -.02);
     float d2 = length(p) - repeat * .3;
-    d2 = smax(d2, min(
-        dot(p, normalize(vec3(1,1,.8))),
-        dot(p, -normalize(vec3(1,1,-.8)))
-    ), .001);
-
-    d = smin(d, d2, repeat * .1);
-    d2 = length(p) - repeat * .26;
-    pR(p.xy, PI/4.);
-    pR(p.xz, -.2);
-    d2 = smax(d2, -smax(-d2-1.002, length(p.xy) - repeat * .06, .001), .001);
-    d2 = smax(d2, -abs(length(p.xy) - repeat * .13), .001);
-    d = min(d, d2);
+    if (side > 0.)
+    {
+        d2 = smax(d2, min(
+            dot(p, normalize(vec3(1,1,.8))),
+            dot(p, -normalize(vec3(1,1,-.8)))
+        ), .001);
+        d = smin(d, d2, repeat * .1);
+        d2 = length(p) - repeat * .26;
+        pR(p.xy, PI/4.);
+        pR(p.xz, -.2);
+        d2 = smax(d2, -smax(-d2-1.002, length(p.xy) - repeat * .06, .001), .001);
+        d2 = smax(d2, -abs(length(p.xy) - repeat * .13), .001);
+        d = min(d, d2);
+    }
+    else
+    {
+        d2 = smax(d2, -abs(dot(p, normalize(vec3(1,1,.8)))), .005);
+        d = smin(d, d2, repeat * .1);
+    }
     p = pp;
     //d = smax(d, -(length(p.xy) - repeat * .05), .003);
     
@@ -402,17 +410,17 @@ p = ppp;
     //d = min(d, -(p.z - .13));
     //d = min(d, (p.z + .13));
 
-    float rr = .03;
+    float rr = .04;
   //  p.xy -= iTime * -.25 + .5;
     //p.y += .5;
 //    p.xy = mod(p.xy - .125, .25) + .125;
-    //p.xy = mod(p.xy, .25) + .125;
+    p.xy = mod(p.xy, .25) + .125;
     
     //p.xy += .25;
-    p.xy = mod(p.xy, .5);
+    //p.xy = mod(p.xy, .5);
     //p.xy = mod(p.xy, 1.);
     
-    //d = min(d, smax(-p.z + .15 - rr, abs(p.y - .25) - rr, rr));
+    d = min(d, smax(-p.z + .15 - rr, abs(p.y - .25) - rr, rr));
     //d = min(d, smax(p.z + .15 - rr, abs(p.x - .25) - rr, rr));
 
     //d = min(d, max((abs(p.x) - .5), (abs(p.y) - .5)));
@@ -784,6 +792,8 @@ vec4 draw(vec2 fragCoord, int frame) {
         pR(rd.yz, PI * -.05f);
         pR(rd.xy, PI * .28f);
         pR(rd.xz, PI * 0.166f);
+    #elif CAM == 2
+       pR(rd.xz, time * PI * 2.0f);
     #elif CAM == 3
        pR(rd.xz, time * PI * 2.0f);
     #endif
