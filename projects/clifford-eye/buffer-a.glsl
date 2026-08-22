@@ -322,7 +322,11 @@ Material shadeModel(float rlen, Model model, inout vec3 nor) {
     {
         return Material(vec3(.5,0,0), .02, .3);
     }
-    return Material(model.uvw, .02, .3);
+    if (model.id == 3)
+    {
+        return Material(model.uvw * .5, .9, .6);
+    }
+    return Material(model.uvw * .5, .9, .6);
 }
 
 
@@ -397,6 +401,9 @@ Model map2(vec3 p) {
     	pR(p.xy, PI/2.);
     }
     p.z = abs(p.z);*/
+
+        int id = 1;
+
     
     if (p.z < 0.) {
        p.x = -p.x;
@@ -418,7 +425,7 @@ Model map2(vec3 p) {
     vec3 pp = p;
     p -= vec3(0,0,repeat * -.02);
     float d2 = length(p) - repeat * .3;
-    if (side > 0.)
+    if (side < 0.)
     {
         d2 = smax(d2, min(
             dot(p, normalize(vec3(1,1,.8))),
@@ -430,7 +437,13 @@ Model map2(vec3 p) {
         pR(p.xz, -.2);
         d2 = smax(d2, -smax(-d2-1.002, length(p.xy) - repeat * .06, .001), .001);
         d2 = smax(d2, -abs(length(p.xy) - repeat * .13), .001);
-        d = min(d, d2);
+        if (d2 < d)
+        {
+            d = d2;
+            id = 3;
+        }
+        //d = min(d, d2);
+
     }
     else
     {
@@ -532,7 +545,6 @@ p = ppp;
     d = fixDistance(d, k) * 2.;
 	#endif
     
-    int id = 1;
 
     if (camd < d) {
         d = camd;
@@ -541,7 +553,7 @@ p = ppp;
 
    // d = min(d, db);
     
-    vec3 uvw = vec3(1);
+    vec3 uvw = vec3(1,.9,.8);
 
     //uvw *= mix(1., .1, step(ppp.z, 0.));
 
@@ -630,6 +642,7 @@ vec3 sunColor = vec3(8.10,6.00,4.20) * 3. * .1;
 
 vec3 env(vec3 dir, bool includeSun) {
    vec3 col = mix(vec3(.5,.7,1) * .0, vec3(.5,.7,1) * 1., smoothstep(-.2, .2, dir.y));
+   col *= vec3(1.1,.9,.6);
    return col * .5;
 }
 
@@ -1054,12 +1067,21 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 bgCol = vec3(.2);
     bool doSpecular = true;
 
-    const int MAX_BOUNCE = 2;
+    //bgCol = sunColor * .3;
+    bgCol = mix(sunColor * .2, vec3(.2), .5);
+
+
+    int MAX_BOUNCE = 4;
     
+    float firstHitDist;
 
     for (int bounce = 0; bounce < MAX_BOUNCE; bounce++) {
 
         hit = march(origin, rayDir, 100., 1., boundRadius);
+
+        if (bounce == 0) {
+        firstHitDist = distance(origin, hit.pos);
+        }
 
         if (hit.model.id == 0)
         {
@@ -1067,6 +1089,8 @@ vec4 draw(vec2 fragCoord, int frame) {
                 col += env(rayDir, doSpecular) * throughput;
             } else {
                 col = bgCol;
+                //col = mix((sunColor * sunColor) * .2, mix(vec3(.2), env(vec3(0,.0,0), false), .5), .95) * .7;
+                //col = sunColor * .3;
             } 
             break;
         }
@@ -1074,10 +1098,10 @@ vec4 draw(vec2 fragCoord, int frame) {
         nor = calcNormal(hit.pos);
 
         {
-            col = vec3(dot(normalize(vec3(1,.5,-.5)), nor) * .5 + .5);
-            col = mix(col, vec3(1), .1);
-            col *= hit.model.uvw;
-            break;
+            //col = vec3(dot(normalize(vec3(1,.5,-.5)), nor) * .5 + .5);
+            //col = mix(col, vec3(1), .1);
+            //col *= hit.model.uvw;
+            //break;
         }
 
         material = shadeModel(distance(camPos, hit.pos), hit.model, nor);
@@ -1115,6 +1139,9 @@ vec4 draw(vec2 fragCoord, int frame) {
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
     }
 
+    col = mix(col, bgCol, 1.0 - exp(-(firstHitDist) * .15) );
+
+    //col = vec3(firstHitDist * .1);
    // col = mix(col, vec3(0), 1.-clamp(distance(hit.pos, focalSpherePosition), 0., 1.));
     //col = mix(col, vec3(0), 1.-clamp(distance(hit.pos, closestpt), 0., 1.));
     //col = mix(col, vec3(0), (1./(distance(focalpt, closestpt) + 1.)));
