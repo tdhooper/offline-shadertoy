@@ -37,6 +37,14 @@ vec2 hash22(vec2 p)
 }
 
 // Dave_Hoskins https://www.shadertoy.com/view/4djSRW
+vec3 hash31(float p)
+{
+   vec3 p3 = fract(vec3(p) * vec3(.1031, .1030, .0973));
+   p3 += dot(p3, p3.yzx+33.33);
+   return fract((p3.xxy+p3.yzz)*p3.zyx); 
+}
+
+// Dave_Hoskins https://www.shadertoy.com/view/4djSRW
 float hash12(vec2 p)
 {
 	vec3 p3  = fract(vec3(p.xyx) * .1031);
@@ -50,6 +58,24 @@ vec2 rndunit2(vec2 seed ) {
     float phi = h.y;
     float r = sqrt(h.x);
 	return r*vec2(sin(phi),cos(phi));
+}
+
+// blackle https://suricrasia.online/demoscene/functions/
+vec3 rndunit(float seed) {
+  return normalize(tan(hash31(seed) * 2. - 1.));
+}
+
+vec2 rndunit2X(vec2 seed ) {
+    vec2 u = rndunit2(seed);
+    if (abs(u.x) > abs(u.y))
+    {
+        u.x = 0.;
+    }
+    else
+    {
+        u.y = 0.;
+    }
+    return u;
 }
 
 // Fork of "Clifford Torus Rotation" by tdhooper. https://shadertoy.com/view/wsfGDS
@@ -87,6 +113,11 @@ vec2 rndunit2(vec2 seed ) {
 
 void pR(inout vec2 p, float a) {
     p = cos(a)*p + sin(a)*vec2(p.y, -p.x);
+}
+
+void pR2(inout vec2 p, inout vec2 p2, float a) {
+    pR(p, a);
+    pR(p2, a);
 }
 
 vec2 pMod2(inout vec2 p, vec2 size) {
@@ -298,6 +329,7 @@ Material shadeModel(float rlen, Model model, inout vec3 nor) {
 Model map2(vec3 p) {
     
     float camd = 1e12;
+    /*
 #ifdef FREE_FLY
     int ci = 30;
     for (int i = 0; i < ci; i++)
@@ -307,10 +339,14 @@ Model map2(vec3 p) {
     }
     camd = min(camd, length(p - calcCamPos(time)) - .03);
 #endif
+*/
     //p.xy = mod(p.xy, 1.0);
     
     float db = length(p) - 2.;
     
+    float df = abs(length(p - calcCamPos(time)) - .6);
+
+
     float k = 1.;
 
     //pR(p.xy, iTime * PI * -.25);
@@ -407,6 +443,12 @@ Model map2(vec3 p) {
     //d = min(d, max(p.z - .11, length(p.xy)) - .001);
 p = ppp;
 
+    if (c.x < 4.) {
+       // d = 1e12;
+        
+    }
+
+
     //d = min(d, -(p.z - .13));
     //d = min(d, (p.z + .13));
 
@@ -420,7 +462,10 @@ p = ppp;
     //p.xy = mod(p.xy, .5);
     //p.xy = mod(p.xy, 1.);
     
-    d = min(d, smax(-p.z + .15 - rr, abs(p.y - .25) - rr, rr));
+    // orb
+    //d = min(d, smax(-p.z + .15 - rr, abs(p.y - .25) - rr, rr));
+    
+    
     //d = min(d, smax(p.z + .15 - rr, abs(p.x - .25) - rr, rr));
 
     //d = min(d, max((abs(p.x) - .5), (abs(p.y) - .5)));
@@ -498,14 +543,40 @@ p = ppp;
     
     vec3 uvw = vec3(1);
 
-//    uvw = spectrum(c.x / 8.);
+    //uvw *= mix(1., .1, step(ppp.z, 0.));
+
+    //uvw.x = k;
+
+   // uvw = spectrum(c.x / 8.);
+    //uvw = (c.x != 2. && c.y != 2.) ? vec3(1) : vec3(1,0,0);
+    //uvw = ((c.x - c.y) < 0.) ? vec3(1) : vec3(1,0,0);
+   // uvw = (c.x < 4.) ? vec3(1) : vec3(1,0,0);
+
+    //d = min(d, max(d - .1, df));
 
     float understep = .25;
     return Model(d, uvw, id, understep);
 }
 
+Model map3(vec3 p) {
+
+    float d = abs(fBox(p, vec3(5.)));
+    //d = 1e12;
+    vec3 uvw = fract(p);
+    uvw = vec3(.5);
+
+    float r = 2.;
+    p = mod(p + r / 2., vec3(r)) - r / 2.;
+    d = min(d, length(p) - r * .125);
+    
+    int id = 1;
+    float understep = 1.;
+    return Model(d, uvw, id, understep);
+}
+
 Model map(vec3 p) {
     return map2(p);
+    return map3(p);
     float d = 1e12;
     int s = 10;
     float spintime_g = spintime;
@@ -714,6 +785,16 @@ vec3 getStereoDir(vec2 p) {
   return normalize(dir);
 }
 
+float sphIntersect( vec3 ro, vec3 rd, vec4 sph ) {
+    vec3 oc = ro - sph.xyz;
+    float b = dot( oc, rd );
+    float c = dot( oc, oc ) - sph.w*sph.w;
+    float h = b*b - c;
+    if( h<0.0 ) return -1.0;
+    h = sqrt( h );
+    return -b + h;
+}
+
 // main path tracing loop, based on yx's
 // https://www.shadertoy.com/view/ts2cWm
 // with a bit of demofox's
@@ -784,18 +865,22 @@ vec4 draw(vec2 fragCoord, int frame) {
 
     //FOV *= 2.;
 
-    vec3 rd = cam * sphereCam(uv * PI * .7/FOV);
+    vec2 uv2 = uv * PI * .7/FOV;
+    vec3 rd = cam * sphereCam(uv2);
+    vec3 camF = cam * vec3(0,0,1);
+    vec3 screenX = normalize(cam * sphereCam(uv2 + vec2(.1,0)) - rd);
+    vec3 screenY = normalize(cam * sphereCam(uv2 + vec2(0,.1)) - rd);
 
     #if CAM == 0
-        pR(rd.xz, time * PI * -2.0f);
+        pR2(rd.xz, camF.xz, time * PI * -2.0f);
     #elif CAM == 1
-        pR(rd.yz, PI * -.05f);
-        pR(rd.xy, PI * .28f);
-        pR(rd.xz, PI * 0.166f);
+        pR2(rd.yz, camF.yz, PI * -.05f);
+        pR2(rd.xy, camF.xy, PI * .28f);
+        pR2(rd.xz, camF.xz, PI * 0.166f);
     #elif CAM == 2
-       pR(rd.xz, time * PI * 2.0f);
+       //pR2(rd.xz, camF.xz, time * PI * 2.0f);
     #elif CAM == 3
-       pR(rd.xz, time * PI * 2.0f);
+       pR2(rd.xz, camF.xz, time * PI * 2.0f);
     #endif
     //pR(rd.yz, sin(time * PI * 4.0) * -1.);
 
@@ -805,6 +890,73 @@ vec4 draw(vec2 fragCoord, int frame) {
     
     vec3 origin = camPos;
     vec3 rayDir = rd;
+
+// can we set our focal point as the 
+
+    // position on focal sphere
+    float focalDistance = .6;
+    vec3 focalSpherePosition = origin + focalDistance * rayDir;
+
+    // try intersecting ray with larger sphere that's offset, similar to plane
+    float u = 10000.;
+    //focalSpherePosition = origin + rayDir * sphIntersect(origin, rayDir, vec4(origin - camF * u, u + focalDistance));
+
+    // position on sensor sphere
+    float sensorDistance = .05;
+    vec3 fwdDof = rayDir;
+    vec3 rayBasisX = normalize(cross(fwdDof, vec3(0,1,0)));
+    vec3 rayBasisY = normalize(cross(rayBasisX, fwdDof));
+    mat3 rayBasis = mat3(rayBasisX, rayBasisY, fwdDof);
+
+    // we want to calculate the screen space frame for the pixel
+    // would have thought using ray dir would work
+ 
+    rayBasis = mat3(screenX, screenY, normalize(cross(screenX, screenY)));
+
+
+
+    //origin += rayDir * sensorDistance;
+    // try jitter wit sphere intead of circle 
+    origin += rayBasis * vec3(rndunit2(seed), 0.) * .03;
+    //origin += normalize(cross(rayDir, normalize(cross(camF, vec3(0,1,0))))) * rndunit2(seed).x * .6;
+    //origin += screenY * rndunit2(seed).x * .6;
+    //origin += cross(rayDir, normalize(cross(rayDir, normalize(cross(camF, vec3(0,1,0)))))) * rndunit2(seed).y * .3;
+    
+    //origin += rndunit(seed.x * 1000. + 1.) * .03;
+    //origin -= .5;
+    
+    rayDir = normalize(focalSpherePosition - origin);
+    
+    //origin -= rayDir * sensorDistance;
+
+
+    // ray closest distance from focal point
+    // 
+
+    //float bl = 1.-dot(rayDir, camF);
+    //rayDir = normalize(rayDir + rndunit(seed.x * 1000. + 1.) * .1 * bl);
+
+/*
+
+    // calc closest point on ray to focal point
+    vec3 focalpt = origin + camF * .6;
+    //focalpt = vec3(0);
+    vec3 closestpt = origin + rayDir * dot(rayDir, focalpt - origin);
+
+    // jitter ray dir constantly
+    rayDir = normalize(rayDir + rndunit(seed.x * 1000. + 1.) * .1);
+    //rayDir = normalize(rayDir + rndunit(seed.x * 1000. + 1.) * .2 * distance(focalpt, closestpt));
+
+    // offset origin such that ray passes through closest point 
+    //origin = closestpt - rayDir * distance(origin, closestpt);
+    vec3 originOffset = closestpt - rayDir * distance(origin, closestpt) - origin;
+    //origin += originOffset * (1./(distance(focalpt, closestpt) + 1.));
+    //origin += rndunit(seed.y * 1000. + 1.) * .01;
+    origin += mix(originOffset, rndunit(seed.y * 1000. + 1.) * .01, distance(focalpt, closestpt) * 3.);
+    // adjust this offset according to closest point distance
+*/
+
+    // 
 
     //rayDir = getStereoDir(uv * PI * .7/FOV);
     //pR(rayDir.xz, PI * .5);
@@ -899,7 +1051,7 @@ vec4 draw(vec2 fragCoord, int frame) {
     vec3 nor, ref;
     Material material;
     vec3 throughput = vec3(1);
-    vec3 bgCol = skyColor * .05;
+    vec3 bgCol = vec3(.2);
     bool doSpecular = true;
 
     const int MAX_BOUNCE = 2;
@@ -922,7 +1074,7 @@ vec4 draw(vec2 fragCoord, int frame) {
         nor = calcNormal(hit.pos);
 
         {
-            col = vec3(dot(normalize(vec3(1,.5,0)), nor) * .5 + .5);
+            col = vec3(dot(normalize(vec3(1,.5,-.5)), nor) * .5 + .5);
             col = mix(col, vec3(1), .1);
             col *= hit.model.uvw;
             break;
@@ -962,6 +1114,10 @@ vec4 draw(vec2 fragCoord, int frame) {
         // offset from sufrace https://www.shadertoy.com/view/lsXGzH
         origin = hit.pos + nor * (.0002 / abs(dot(rayDir, nor)));
     }
+
+   // col = mix(col, vec3(0), 1.-clamp(distance(hit.pos, focalSpherePosition), 0., 1.));
+    //col = mix(col, vec3(0), 1.-clamp(distance(hit.pos, closestpt), 0., 1.));
+    //col = mix(col, vec3(0), (1./(distance(focalpt, closestpt) + 1.)));
 
     return vec4(col, 1);
 }
